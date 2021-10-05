@@ -1,0 +1,491 @@
+<!--
+***************************************************************************  
+**  Program  : DSMRindex_body.html, part of DSMRloggerAPI
+**  Version  : v2.3.0
+**
+**  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**
+**  TERMS OF USE: MIT License. See bottom of file.                                                            
+***************************************************************************      
+-->
+<!-- <div class="dev-header"> -->
+<div class="header">
+  <div class="nav-container">
+  	<div class="inner-nav">
+    <nav id='nav-main'>
+      <a id='Home'   		class='nav-item nav-img' href="#DashTab"><span class="mdi mdi-chart-box-outline"></span></a>
+	  <a id='bDashTab'    	class='nav-item tabButton active' href="#DashTab">Dash</a>
+	  <a id='bActualTab'    class='nav-item tabButton' href="#ActualTab">Actueel</a>
+      <a id='bHoursTab'     class='nav-item tabButton' href="#HoursTab">Uur</a>
+      <a id='bDaysTab'      class='nav-item tabButton' href="#DaysTab">Dag</a>
+      <a id='bMonthsTab'    class='nav-item tabButton' href="#MonthsTab">Maand</a>
+	  <a id='bSysInfoTab'   class='nav-item nav-img' href="#SysInfoTab"><span class="mdi mdi-information-outline"></span></a>
+      <a id='bFSexplorer'    class='nav-item nav-img' href="#FileExplorer"><span class="mdi mdi-folder-outline"></span></a>
+      <a id='bSettings'      class='nav-item nav-img' href="#Settings"><span class="mdi mdi-cog"></span></a>
+   </nav> <!-- end nav-main -->  
+   </div> <!-- innner nav -->
+  </div> <!-- end main-nav container-->
+  <div id="nav-settings" class="subnav">
+	<div class="subnav-container">
+      <a id='bEditSettings' class='subnav-item tabButton' href="#Settings">Settings</a>
+      <a id='bEditMonths'   class='subnav-item tabButton' href="#Settings">Meterstanden</a>
+    </div>
+  </div>  <!-- END subnav-container -->
+  <div id="nav-info"  class="subnav">
+	<div class="subnav-container">
+      <a id='bInfo_SysInfo'   class='subnav-item tabButton' href="#SysInfoTab">Systeeminformatie</a>
+      <a id='bInfo_Telegram'  class='subnav-item tabButton' href="#TelegramTab">Telegram</a>
+      <a id='bInfo_Fields'    class='subnav-item tabButton' href="#FieldsTab">Alle Velden</a>
+      <a id='bInfo_APIdoc'    class='subnav-item tabButton' href="#APIdocTab">API Docs</a>
+    </div>
+  </div>  <!-- END subnav-container -->
+   <div class="nav-clock topcorner">
+	  <span id="theTime">n/a</span>
+	</div> <!-- end date/time -->
+</div> <!-- end header -->    
+
+<div id="mainPage" style="display:block">
+    <!-- START HoursTab -->
+  <section id="HoursTab" class="tabName">
+    <h2>Afgelopen Uren</h2>
+	<div>
+      <label for="pType"><b>Presentatie: </b></label>
+      Tabel
+      <input type="radio" id="hTAB" onchange="setPresentationType('TAB')" checked/>
+      &nbsp;&nbsp;
+      Grafisch
+      <input type="radio" id="hGRAPH" onchange="setPresentationType('GRAPH')"/>
+      &nbsp;&nbsp;
+    </div>
+    <div id="lastHours">
+      <table id="lastHoursTable">
+        <thead>
+          <tr>
+            <th>Date/Time</th>
+            <th>Energie<br>Verbruik<br>(Watt)</th>
+            <th>Energie<br>Teruglevering<br>(Watt)</th>
+            <th>Gas-<br>verbruik<br>(m3)</th>
+        <!--<th style="text-align: right;  border-bottom: 2px solid #ddd;">Kosten</th>-->
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+  </section> <!-- END HoursTab -->
+
+  <!-- START DaysTab -->
+  <section id="DaysTab" class="tabName">
+    <h2>Afgelopen Dagen</h2>
+    <div>
+      <label for="pType"><b>Presentatie: </b></label>
+      Tabel
+      <input type="radio" id="dTAB" onchange="setPresentationType('TAB')" checked/>
+      &nbsp;&nbsp;
+      Grafisch
+      <input type="radio" id="dGRAPH" onchange="setPresentationType('GRAPH')"/>
+      &nbsp;&nbsp;
+    </div>
+    <div id='lastDays'>
+      <table id="lastDaysTable">
+      <thead>
+        <tr>
+            <th>Date/Time</th>
+            <th>Energie<br>Verbruik<br>(Watt)</th>
+            <th>Energie<br>Teruglevering<br>(Watt)</th>
+            <th>Gas-<br>verbruik<br>(m3)</th>
+            <th>Kosten</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+      </table>
+    </div>
+  </section> <!-- END DaysTab -->
+
+  <!-- START MonthsTab -->
+  <section id="MonthsTab" class="tabName">
+	<h2>Afgelopen Maanden</h2>
+	<div>
+      <label for="pType"><b>Presentatie: </b></label>
+      Tabel
+      <input type="radio" id="mTAB" onchange="setPresentationType('TAB')" checked/>
+      &nbsp;&nbsp;
+      Kosten
+      <input type="checkbox" id="mCOST" onchange="setMonthTableType()"/>
+      &nbsp;&nbsp;
+      Grafisch
+      <input type="radio" id="mGRAPH" onchange="setPresentationType('GRAPH')"/>
+      &nbsp;&nbsp;
+    </div>
+    <div id='lastMonths'>
+      <table id="lastMonthsTable" style="display:block">
+      <thead>
+        <tr>
+            <th></th>
+            <th colspan=4>Verbruik</th>
+            <th style="text-align:center" colspan=4>Opgewekt</th>
+            <th colspan=4>Gasverbruik</th>
+        </tr>
+        <tr>
+            <th>Maand</th>
+            <th>Jaar</th>
+            <th>(kWh)</th>
+            <th>Jaar</th>
+            <th>(kWh)</th>
+
+            <th>Jaar</th>
+            <th>(kWh)</th>
+            <th>Jaar</th>
+            <th>(kWh)</th>
+            
+            <th>Jaar</th>
+            <th>(m3)</th>
+            <th>Jaar</th>
+            <th>(m3)</th>
+        </tr>
+      </thead>
+      <tbody>
+	  </tbody>
+      </table>
+      
+      <table id="lastMonthsTableCosts" style="display:none">
+      <thead>
+        <tr>
+            <th style="text-align: right;" width='80px'>Maand</th>
+            <th>Jaar</th>
+            <th style="text-align: right;" width='70px'>Electra</th>
+            <th>Gas</th>
+            <th>Netw.</th>
+            <th style="text-align: right;" width='70px'>Totaal</th>
+
+            <th>Jaar</th>
+            <th style="text-align: right;" width='70px'>Electra</th>
+            <th>Gas</th>
+            <th>Netw.</th>
+            <th style="text-align: right;" width='70px'>Totaal</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+      </table>
+    </div>
+  </section> <!-- END MonthsTab -->
+
+  <!-- START SysInfo Tab -->
+  <section id="SysInfoTab" class="tabName">
+    <h2>Systeeminformatie</h2>
+    <div id='devInfo'>
+      <table id="devInfoTable">
+      <thead>
+        <tr>
+            <th>Name</th>
+            <th>Value</th>
+            <th>Unit</th>
+        </tr>
+      </thead>
+      <tbody id="tb_info">
+      </tbody>
+      <tfoot>
+        <tr>
+            <td colspan=3>Data uit de DSMR-logger</td>
+        </tr>
+      <tfoot>
+      </table>
+    </div>
+  
+  </section>  <!-- END SysInfo Tab -->
+
+  <!-- START TelegramTab -->
+  <section id="TelegramTab" class="tabName">
+    <h2>Ruwe Telegram data</h2>
+    <div id="rawTelegram">
+    </div>
+    
+  </section> <!-- END TelegramTab -->
+
+  <!-- START Fields Tab -->
+  <section id="FieldsTab" class="tabName">
+    <!-- START fieldsTab Dummy -->
+    <h2>Alle Velden</h2>
+    <div id='fields'>
+      <table id="fieldsTable">
+      <thead>
+        <tr>
+            <th>DSMR Name</th>
+            <th>Human Name</th>
+            <th>Value</th>
+            <th>Unit</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+      <tfoot>
+        <tr>
+            <td colspan=4>Data uit de Slimme Meter</td>
+        </tr>
+      <tfoot>
+      </table>
+    </div>
+  
+  </section>  <!-- END fields Tab -->
+
+  <!-- START Api Docs Tab -->
+  <section id="APIdocTab" class="tabName">
+    <!-- START APIdocTab Dummy -->
+    <h2>API documentatie</h2>
+    <table id=ApiDocTable>
+  <tr>
+    <th>url</th>
+    <th>omchrijving</th>
+  </tr>
+  <tr>
+    <td><a href="api/v2/dev/info" target="_blank">api/v2/dev/info</a></td>
+    <td>Device info in JSON format</td>
+  </tr>
+  <tr>
+    <td><a href="api/v2/dev/time" target="_blank">api/v2/dev/time</a></td>
+    <td>Device time (epoch) in JSON format</td>
+  </tr>
+  <tr>
+    <td><a href="api/v2/dev/settings" target="_blank">api/v2/dev/settings</a></td>
+    <td>Device settings in JSON format</td>
+  </tr>
+  <tr>
+    <td><a href="api/v2/dev/settings" target="_blank">api/v2/dev/settings{jsonObj}</a></td>
+    <td>[POST] update Device settings in JSON format. </br>Test with:
+        curl -X POST -H \"Content-Type: application/json\" --data '{\"name\":\"mqtt_broker\",\"value\":\"hassio.local\"}'</td>
+  </tr>
+  <tr>
+    <td><a href="api/v2/sm/info" target="_blank">api/v2/sm/info</a></td>
+    <td>Smart Meter info in JSON format</td>
+  </tr>
+  <tr>
+    <td><a href="api/v2/sm/actual" target="_blank">api/v2/sm/actual</a></td>
+    <td>Smart Meter Actual data in JSON format</td>
+  </tr>
+  <tr>
+    <td><a href="api/v2/sm/fields" target="_blank">api/v2/sm/fields</a></td>
+    <td>Smart Meter all fields data in JSON format<br>JSON format: {\"name\":[{\"value\":&lt;value&gt;,\"unit\":\"&lt;unit&gt;\"}]}</td>
+  </tr>
+    <tr>
+    <td><a href="api/v2/sm/fields/{fieldName}" target="_blank">api/v2/sm/fields/{fieldName}</a></td>
+    <td>Smart Meter one field data in JSON format</td>
+  </tr>
+  </tr>
+    <tr>
+    <td><a href="api/v2/sm/telegram" target="_blank">api/v2/sm/telegram</a></td>
+    <td>raw telegram as send by the Smart Meter including all \"\\r\\n\" line endings</td>
+  </tr>
+  </tr>
+    <tr>
+    <td><a href="api/v2/hist/hours" target="_blank">api/v2/hist/hours</a></td>
+    <td>History data per hour in JSON format</td>
+  </tr>
+    <tr>
+    <td><a href="api/v2/hist/days" target="_blank">api/v2/hist/days</a></td>
+    <td>History data per day in JSON format</td>
+  </tr>
+  <tr>
+    <td><a href="api/v2/hist/months" target="_blank">api/v2/hist/months</a></td>
+    <td>History data per month in JSON format</td>
+  </tr>  
+   <tr>
+    <td>History data file structure (month, day, hour)</td>
+	<td>{"actSlot":&lt;actual slot#&gt;,"data":[{"date":&lt;YYMMDDHH&gt;,"values":[&lt;EDT1&gt;,&lt;EDT2&gt;,&lt;ERT1&gt;,&lt;ERT2&gt;,&lt;GDT&gt;]}, ...]}</td>
+  </tr>  
+  
+</table>
+  </section>  <!-- END API docs Tab -->
+    
+  <section id="Settings" class="tabName">
+      <!-- START Tabbladen -->
+  <h2>Instellingen</h2>
+  <div id="tabEditMonths" class="tabName">
+    <label for="Period"><b>Meterstand: </b></label>
+      Energy Delivered
+      <input type="radio" name="editType" id="MED" onchange="setEditType('ED')" checked/>
+      Energy Returned
+      <input type="radio" name="editType" id="MER" onchange="setEditType('ER')"/>
+      Gas Delivered
+      <input type="radio" name="editType" id="MGD" onchange="setEditType('GD')"/>  
+	  <div id="tabMaanden" class="outer-div">
+		<!-- START edit tabMonths -->
+		  <div id="editMonths" class="inner-div"></div> 
+	  </div>  <!-- END tabMonthss -->
+  </div> <!-- tabMonths -->
+  <div id="tabEditSettings" class="outer-div"">
+    <!-- START settingsTab Settings -->
+      <div id="settings_table" class="inner-div"></div>          
+  </div>  <!-- END tabSettings -->
+  <div id="settings_btns">
+      <a id='bUndo'   class='btn' onclick="undoReload()">Undo</a>
+      <a id='bSave'   class='btn' onclick="saveData()">Opslaan</a>
+      </div>
+  </section> <!-- end Settings Page -->
+  
+  <!-- START FileExplorer Tab -->
+  <section id="FileExplorer" class="tabName"><h2>Bestandsbeheer</h2>
+      <div>
+         <main id="FSmain"></main>
+      </div>
+		<form action="/upload" method="POST" enctype="multipart/form-data">
+		  <input id="Ifile" type="file" name="upload">
+          <input id="Iupload" type="submit" value="Upload" disabled />
+      </form>
+
+      <span></span>
+      <fileSize></fileSize>
+      <hr>
+      <div id="btnReboot" class="act_btn">
+        <span>
+        <form  action='/ReBoot'>
+          <input type='submit' class='button' name='SUBMIT' value='ReBoot'>
+        </form>
+      </div> 
+      <div id="btnFirmware" class="act_btn">
+        <span>
+        <form  action='/update' method='GET'>
+          <input id="update" type='submit' class='button' name='SUBMIT' value='Update Firmware' hidden/>
+        </form>
+        </span>
+      </div>
+      <div id="btnResetWifi" class="act_btn">
+        <span>
+        <form action='/ResetWifi' >
+          <input id="resetWifi" type='submit' class='button' name='SUBMIT' value='Reset Wifi' hidden/>
+        </form>
+      </div>  
+  </section>
+	<section id="Redirect" class="tabName">
+	<h2>Opnieuw opstarten</h2>
+	<h3><div id="RedirectMessage"></div></h3>
+	<div><b>Redirect over <span id='counter'>45</span> seconden.</b>
+	<hr>Indien de pagina niet automatisch getoond wordt klik dan op <a href='/'>Home pagina</a></div>
+    </section>  
+   
+<!-- START ActualTab Tab -->
+  <section id="ActualTab" class="tabName">
+    <!-- START actueelTab Dummy -->
+        <h2>Actueel</h2>
+    <div>
+        <label for="pType"><b>Presentatie: </b></label>
+        Tabel
+        <input type="radio" id="aTAB" onchange="setPresentationType('TAB')" checked/>
+        &nbsp;&nbsp;
+        Grafisch
+        <input type="radio" id="aGRAPH" onchange="setPresentationType('GRAPH')"/>
+        &nbsp;&nbsp;
+    </div>
+    <div id="actual" >
+      <table id="actualTable">
+      <thead>
+        <tr>
+            <th>Name</th>
+            <th>Value</th>
+            <th style="text-align: center;">Unit</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+      <tfoot>
+        <tr>
+            <td colspan=3>Data uit de Slimme Meter</td>
+        </tr>
+      <tfoot>
+      </table>
+    </div>
+  
+  </section>  <!-- END ActualTab Tab -->
+  
+  <!-- START Dash Tab -->
+  <section id="DashTab" class="tabName default">
+        <h2>Dashboard</h2>
+    <div class=outer>
+        <div class=card id=l1>
+            <h1 id=power_delivered_l1h>Actueel</h1>
+	        <div class="chart-container" id="gauge"></div>
+            <hr/>
+            <div style="text-align:center">Vandaag [kW]</div>
+            <h2 id="power_delivered">0.0</h2>
+            <h3>max: <span id="power_delivered_1max">0.0</span> kW</h3>
+            <h3>min: <span id="power_delivered_1min">0.0</span> kW</h3>
+        </div>
+        <div class=card id=l2>
+            <h1 id=power_delivered_l2h>Spanning</h1>
+            <div class="chart-container" id="gauge-v"></div>
+            <hr/>
+            <div style="text-align:center">Aantal fases</div>
+            <h2 id="fases">1</h2>
+            <h3>max: <span id="power_delivered_2max">0.0</span> Volt</h3>
+            <h3>min: <span id="power_delivered_2min">0.0</span> Volt</h3>
+        </div>
+        <div class=card id=l3>
+            <h1 id=Ph>Stroomverbruik</h1>
+            <canvas class="chart-container" id="container-3"></canvas>
+            <div class="label">STROOM</div>        
+			<div id=legenda>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+			</div>
+    		<hr/>
+            <div style="text-align:center">Vandaag [kWh]</div>
+            <h2 id=P>0.0</h2>
+            <h3>max: <span id="Pmax">0.0</span></h3>
+            <h3>min: <span id="Pmin">0.0</span></h3>
+        </div>
+        <div class=card id=l4>
+            <h1 id=Gh>Gasverbruik</h1>
+            <canvas class="chart-container" id="container-4"></canvas>
+			<div class="label stroom">GAS</div>
+			<div id=legenda>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+			</div>
+            <hr/>
+            <div style="text-align:center">Vandaag [㎥]</div>
+            <h2 id="G">0.0</h2>
+            <h3>max: <span id="Gmax">0.0</span></h3>
+            <h3>min: <span id="Gmin">0.0</span></h3>
+        </div>
+
+    </div> <!-- outer -->  
+  </section>  <!-- END Dash Tab --> 
+  
+  <div hidden id="loader"></div>
+  <!-- REST -->
+  <div style="margin: 30px;">
+    <canvas id="dataChart" style="display: none;" width="900" height="300"></canvas>
+    <canvas id="gasChart"  style="display: none;" width="900" height="125"></canvas>
+  </div>
+<!-- Pin to bottom right corner -->
+    <div class="bottom right-0"><span id="devVersion">[version]</span>  |  2021 &copy; Martijn Hendriks</div>
+    <!-- Pin to bottom left corner -->
+    <div id="message" class="bottom left-0">-</div>    
+</div> <!-- main page-->
+<!--
+***************************************************************************
+*
+* Permission is hereby granted, free of charge, to any person obtaining a
+* copy of this software and associated documentation files (the
+* "Software"), to deal in the Software without restriction, including
+* without limitation the rights to use, copy, modify, merge, publish,
+* distribute, sublicense, and/or sell copies of the Software, and to permit
+* persons to whom the Software is furnished to do so, subject to the
+* following conditions:
+*
+* The above copyright notice and this permission notice shall be included
+* in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
+* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
+* THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+* 
+***************************************************************************
+-->

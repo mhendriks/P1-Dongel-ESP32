@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang=nl>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Slimme Meter DSMR-API</title>
+ 	<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@2.1.0/edge/DSMRindex.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@mdi/font@latest/css/materialdesignicons.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js"></script>
+    <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@2.1.0/edge/favicon/favicon-32x32.png" sizes="32x32" />
+    <link rel="apple-touch-icon" sizes="180x180" href="https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@2.1.0/edge/favicon/apple-icon-180x180.png">
+	<meta name="msapplication-TileImage" content="https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@2.1.0/edge/favicon/ms-icon-310x310.png">
+  </head>
+  <body>
+    <script src="https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@2.1.0/edge/DSMRgraphics.min.js"></script>
+   	<script src="https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@2.1.0/edge/DSMRindex.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/7.0.0/math.min.js" type="text/javascript"></script>
+
+  <script>
+  //============================================================================  
+      window.onload= function() {
+        console.log("window.onload .. ");
+        readPageBody();
+      }
+  //============================================================================  
+  function readPageBody()
+  {
+    console.log("readPageBody() ..");
+    fetch("https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@2.1.0/edge/DSMRindex.html.inc")
+      .then(response => {
+        if (response.ok) {
+          return response.text();
+        } else {
+          console.log('Something went wrong');
+          return "";
+        }
+      })
+      .then(text => {
+        document.body.innerHTML = text + document.body.innerHTML;
+        bootsTrapMain();
+      })
+      .catch(function(error) {
+        console.log("readPageBody: "+error);
+      });     
+
+  } // readPageBody() 
+  </script>
+  </body>
+</html>

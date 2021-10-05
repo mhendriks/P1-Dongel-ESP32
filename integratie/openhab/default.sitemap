@@ -1,0 +1,16 @@
+sitemap default label="Thuis"
+{
+    Frame label="Slimmemeter" {
+    Text item=P1_T1 label="kWh Teller Dal: [%.1f kWh]"
+    Text item=P1_T2 label="kWh Teller Normaal: [%.1f kWh]"
+    Text item=P1_P label="Actuele vermogen: [%.3f kW]"
+    Text item=P1_I label="Actuele stroom: [%.0f A]"
+    Text item=P1_U label="Actuele Spanning: [%.1f V]"
+    Text item=P1_GAS label="Gasmeter: [%.1f m3]"
+   	Text item=P1_tijd label="Laatste P1 update: [%s]"
+   	Text item=P1_time label="Laatste P1 update: [%s]"
+    }
+    
+}
+
+

@@ -1,0 +1,21 @@
+Bridge mqtt:broker:mosquitto "Mosquitto" [ host="localhost", port=1883, secure=false, clientID="openHAB2" ]
+{
+// P1 - slimmemeter P1 firmware implementatie
+     Thing topic slimmemeter "Slimmemeter" @ "Hal" {
+    Channels:
+		Type string : time	"update tijd"	[ stateTopic="DSMR-API/timestamp", transformationPattern="JSONPATH:$.timestamp.[0].value" ]	
+        Type number : T1     "kWh Teller 1" [ stateTopic="DSMR-API/energy_delivered_tariff1", transformationPattern="JSONPATH:$.energy_delivered_tariff1.[0].value" ]
+        Type number : T2     "kWh Teller 2" [ stateTopic="DSMR-API/energy_delivered_tariff2", transformationPattern="JSONPATH:$.energy_delivered_tariff2.[0].value" ]
+        Type number : P     "W"             [ stateTopic="DSMR-API/power_delivered", transformationPattern="JSONPATH:$.power_delivered.[0].value" ]   
+        Type number : U     "V"        		[ stateTopic="DSMR-API/voltage_l1", transformationPattern="JSONPATH:$.voltage_l1.[0].value" ]
+        Type number : I     "A"        		[ stateTopic="DSMR-API/current_l1", transformationPattern="JSONPATH:$.current_l1.[0].value" ]
+        Type number : G     "m3"            [ stateTopic="DSMR-API/gas_delivered", transformationPattern="JSONPATH:$.gas_delivered.[0].value" ]     
+    }
+    
+// P1 - slimmemeter Tasmota implementatie
+     Thing topic slimmemeter_tas "Slimmemeter" @ "Hal" {
+    Channels:
+		Type string : p1	"receive data"	[ stateTopic="tele/tasmota_C3C439/RESULT", transformationPattern="JSONPATH:SSerialReceived" ]	
+    }
+        
+}

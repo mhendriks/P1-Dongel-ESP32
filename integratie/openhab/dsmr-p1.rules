@@ -1,0 +1,49 @@
+rule "P2 P"
+when
+    Item P2 received update
+then
+	if (P2.state == NULL || P2 == "") return;
+    var rawString = P2.state.toString
+	//P1_I 		1-0:31.7.0(002*A)
+	val rawString3 = transform("REGEX", ".*([0-9]{3}).A.*", rawString)
+	if ( rawString3 != NULL && rawString3 !== null && rawString3 != "") { 
+		P1_I.postUpdate(rawString3) 
+		} 
+	//P1_T1		1-0:1.8.1(000013.000*kWh) (Totaal geleverd tarief 1 (nacht))
+	 rawString3 = transform("REGEX", ".*1.8.1.([0-9]{6}.[0-9]{3}).kWh.*", rawString)
+	if ( rawString3 != NULL && rawString3 !== null && rawString3 != "") { 
+		P1_T1.postUpdate(rawString3) 
+		} 
+	//P1_T2 	1-0:1.8.2(000084.000*kWh) (Totaal verbruik tarief 2 (dag))
+	 rawString3 = transform("REGEX", ".*1.8.2.([0-9]{6}.[0-9]{3}).kWh.*", rawString)
+	if ( rawString3 != NULL && rawString3 !== null && rawString3 != "") { 
+		P1_T2.postUpdate(rawString3) 
+		} 
+	//P2_GAS 	0-1:24.2.1(191222151005W)(02728.449*m3)
+	rawString3 = transform("REGEX", ".*[0-9]{12}.*([0-9]{5}.[0-9]{3}).m3.*", rawString)
+	if ( rawString3 != NULL && rawString3 !== null && rawString3 != "") { 
+		P1_GAS.postUpdate(rawString3) 
+		} 
+	// P2_P 		1-0:21.7.0(00.523*kW)
+	rawString3 = transform("REGEX", ".*21.7.0.([0-9]{2}.[0-9]{3}).kW.*", rawString)
+	if ( rawString3 != NULL && rawString3 !== null && rawString3 != "") { 
+		P1_P.postUpdate(rawString3) 
+		} 
+		//time: 0-0:1.0.0(200716222227S)
+	rawString3 = transform("REGEX", ".*1.0.0.([0-9]{12})S.*", rawString)
+	if ( rawString3 != NULL && rawString3 !== null && rawString3 != "") { 
+		P1_time.postUpdate(rawString3) 
+		} 
+end
+
+rule "P1 last update"
+when
+    Item P1_time received update
+then
+	if (P1_time.state == NULL || P1_time == "") return;
+    var rawString = P1_time.state.toString
+	val res = String::format("%s-%s-%s %s:%s:%s", rawString.substring(4, 6), rawString.substring(2, 4), rawString.substring(0, 2),rawString.substring(6, 8), rawString.substring(8, 10),rawString.substring(10, 12))
+	if ( res != NULL && res !== null && res != "") { 
+		P1_tijd.postUpdate(res) 
+		} 
+end

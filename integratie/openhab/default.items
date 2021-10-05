@@ -1,0 +1,12 @@
+Number P1_P "Actueel vermogen [%s]"	 {channel="mqtt:topic:mosquitto:slimmemeter:P" } 
+Number P1_GAS "Gasmeter: [%.1f]"	 {channel="mqtt:topic:mosquitto:slimmemeter:G" }
+Number P1_T1 "kWh Teller 1: [%s]"	 {channel="mqtt:topic:mosquitto:slimmemeter:T1" } 
+Number P1_T2 "kWh Teller 1: [%s]"	 {channel="mqtt:topic:mosquitto:slimmemeter:T2" } 
+Number P1_I "Stroom: [%s]"			 {channel="mqtt:topic:mosquitto:slimmemeter:I" }
+Number P1_U "Spanning: [%s]"		 			{channel="mqtt:topic:mosquitto:slimmemeter:U" } 
+String P1_time "tijd: [%s]" 					{channel="mqtt:topic:mosquitto:slimmemeter:time" }
+String P1_tijd "tijd: [%s]"
+
+// extra voor Tasmota integratie
+String P2 "temp [%s]"					(GRP_energy)		{channel="mqtt:topic:mosquitto:slimmemeter_tas:p1" } 
+
