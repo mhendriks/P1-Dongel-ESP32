@@ -8,18 +8,44 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-#define ACTUALELEMENTS  20
-#define INFOELEMENTS     6
+#define ACTUALELEMENTS  19
+#define INFOELEMENTS     4
 #define FIELDELEMENTS    1
 
 byte fieldsElements = 0;
 char Onefield[25];
 bool onlyIfPresent = false;
 
-const static PROGMEM char infoArray[][25]   = { "identification","p1_version","equipment_id","electricity_tariff","mbus1_device_type","mbus1_equipment" };
-const static PROGMEM char actualArray[][25] = { "timestamp","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3","mbus1_delivered"};
+const static PROGMEM char infoArray[][25]   = { "identification","p1_version","equipment_id","electricity_tariff" };
+const static PROGMEM char actualArray[][25] = { "timestamp","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
 
-DynamicJsonDocument jsonDoc(4000);  // generic doc to return, clear() before use!
+DynamicJsonDocument jsonDoc(4100);  // generic doc to return, clear() before use!
+
+void JsonGas(){
+  if (gasDelivered){
+    jsonDoc["gas_delivered"]["value"] =  gasDelivered;
+    jsonDoc["gas_delivered"]["unit"]  = "m3";
+  }
+}
+//--------------------------
+void JsonGasID(){
+  switch (mbusGas) {
+    case 1: if ( DSMRdata.mbus1_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus1_equipment_id_tc;
+            else if (DSMRdata.mbus1_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus1_equipment_id_ntc;
+            break;
+    case 2: if ( DSMRdata.mbus2_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus2_equipment_id_tc;
+            else if (DSMRdata.mbus2_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus2_equipment_id_ntc;
+            break;
+    case 3: if ( DSMRdata.mbus3_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus3_equipment_id_tc;
+            else if (DSMRdata.mbus3_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus3_equipment_id_ntc;
+            break;
+    case 4: if ( DSMRdata.mbus4_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus4_equipment_id_tc;
+            else if (DSMRdata.mbus4_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus4_equipment_id_ntc;
+            break;
+    default: break; //do nothing 
+  }
+}
+//--------------------------
 
 struct buildJson {
     
@@ -27,20 +53,11 @@ struct buildJson {
     void apply(Item &i) {
       String Name = String(Item::name);
       if (isInFieldsArray(Name.c_str())) {
-        if (i.present()) 
-        {          
+        if (i.present()) {          
           String Unit = Item::unit();
           jsonDoc[Name]["value"] = value_to_json(i.val());
-          if (Name == "mbus1_delivered") {
-            jsonDoc["gas_delivered"]["value"] =  value_to_json(i.val());
-            jsonDoc["gas_delivered"]["unit"]  = "m3";
-          }
           if (Unit.length() > 0) jsonDoc[Name]["unit"]  = Unit;
-        }  else if (!onlyIfPresent) {
-        
-        jsonDoc[Name]["value"] = "-";
-        if (Name == "mbus1_delivered") jsonDoc["gas_delivered"]["value"]  = "-";
-        }
+        }  else if (!onlyIfPresent) jsonDoc[Name]["value"] = "-";   
     } //infielsarrayname
   }
   
@@ -78,10 +95,7 @@ void processAPI() {
 if (bailout())
   {
       DebugTf("==> Bailout due to low heap (%d bytes))\r\n", ESP.getFreeHeap() );
-      writeToSysLog("from[%s][%s] Bailout low heap (%d bytes)"
-                                    , httpServer.client().remoteIP().toString().c_str()
-                                    , URI
-                                    , ESP.getFreeHeap() );
+      
     httpServer.send(500, "text/plain", "500: internal server error (low heap)\r\n"); 
     return;
   }
@@ -123,23 +137,25 @@ if (bailout())
 template <typename TSource>
 void sendJson(const TSource &doc) 
 {  
-  const size_t strsize = measureJson(doc)+1;
+  //const size_t strsize = measureJson(doc)+1;
   if (doc.isNull()) {
 //    DebugT(F("sendjson isNull"));
     sendJsonBuffer("{}");
     return;
   }
-  char buffer[strsize];
+//  char buffer[strsize];
+  String buffer;
   
-  if (Verbose1) serializeJsonPretty(doc,buffer,strsize); 
-  else serializeJson(doc,buffer,strsize);
+  if (Verbose1) serializeJsonPretty(doc,buffer); 
+  else serializeJson(doc,buffer);
 //  DebugT(F("Sending json: ")); Debugln(buffer);
 //  DebugT("strsize:"); Debugln(strsize);
-  sendJsonBuffer(buffer);
+  sendJsonBuffer(buffer.c_str());
   DebugTln(F("sendJson: json sent .."));
     
 }
-void sendJsonBuffer(char* buffer){
+
+void sendJsonBuffer(const char* buffer){
   httpServer.sendHeader("Access-Control-Allow-Origin", "*");
   httpServer.setContentLength(strlen(buffer));
   httpServer.send(200, "application/json", buffer);
@@ -185,7 +201,7 @@ void sendDeviceInfo()
   doc["freesketchspace"]["unit"] = "kB";
   doc["flashchipsize"] ["value"] = formatFloat((ESP.getFlashChipSize() / 1024.0 / 1024.0), 3);
   doc["flashchipsize"]["unit"] = "MB";
-  doc["FSsize"] ["value"] = formatFloat( (LITTLEFS.totalBytes() / (1024.0 * 1024.0)), 0);
+  doc["FSsize"] ["value"] = formatFloat( (LittleFS.totalBytes() / (1024.0 * 1024.0)), 0);
   doc["FSsize"]["unit"] = "MB";
   doc["flashchipspeed"] ["value"] = formatFloat((ESP.getFlashChipSpeed() / 1000.0 / 1000.0), 0);
   doc["flashchipspeed"]["unit"] = "MHz";
@@ -214,7 +230,7 @@ void sendDeviceInfo()
   else  doc["mqttbroker_connected"] = "no";
 #endif
 
-  doc["reboots"] = (int)nrReboots;
+  doc["reboots"] = (int)P1Status.reboots;
   doc["lastreset"] = lastReset;  
 
   sendJson(doc);
@@ -338,6 +354,7 @@ void handleSmApi(const char *URI, const char *word4, const char *word5, const ch
     fieldsElements = INFOELEMENTS;
     jsonDoc.clear();
     DSMRdata.applyEach(buildJson());
+    JsonGasID();
     sendJson(jsonDoc);
   break;
   
@@ -345,7 +362,12 @@ void handleSmApi(const char *URI, const char *word4, const char *word5, const ch
     fieldsElements = ACTUALELEMENTS;
     onlyIfPresent = true;
     jsonDoc.clear();
+    JsonGas();
     DSMRdata.applyEach(buildJson());
+#ifdef USE_WATER_SENSOR    
+    jsonDoc["water"]["value"] = P1Status.wtr_m3;
+    jsonDoc["water"]["unit"]  = "m3";
+#endif
     sendJson(jsonDoc);
   break;
   
@@ -359,6 +381,7 @@ void handleSmApi(const char *URI, const char *word4, const char *word5, const ch
     }
     jsonDoc.clear();
     DSMRdata.applyEach(buildJson());
+    if (strlen(word5) == 0) JsonGas();
     sendJson(jsonDoc);
     break;  
   case 't': //telegramm 
@@ -417,7 +440,6 @@ void handleDevApi(const char *URI, const char *word4, const char *word5, const c
       //DebugTf("--> field[%s] => newValue[%s]\r\n", field, newValue);
       updateSetting(field, newValue);
       httpServer.send(200, "application/json", httpServer.arg(0));
-      writeToSysLog("DSMReditor: Field[%s] changed to [%s]", field, newValue);
     }
     else
     {
@@ -480,31 +502,7 @@ void handleHistApi(const char *URI, const char *word4, const char *word5, const 
 //=======================================================================
 void sendDeviceDebug(const char *URI, String tail) 
 {
-#ifdef USE_SYSLOGGER
-  String lLine = "";
-  int lineNr = 0;
-  int tailLines = tail.toInt();
-
-  DebugTf("list [%d] debug lines\r\n", tailLines);
-  sysLog.status();
-  sysLog.setDebugLvl(0);
-  httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-  httpServer.setContentLength(CONTENT_LENGTH_UNKNOWN);
-  if (tailLines > 0)
-        sysLog.startReading((tailLines * -1));  
-  else  sysLog.startReading(0, 0);  
-  while( (lLine = sysLog.readNextLine()) && !(lLine == "EOF")) 
-  {
-    lineNr++;
-    snprintf(cMsg, sizeof(cMsg), "%s\r\n", lLine.c_str());
-    httpServer.sendContent(cMsg);
-
-  }
-  sysLog.setDebugLvl(1);
-
-#else
   sendApiNotFound(URI);
-#endif
 
 } // sendDeviceDebug()
 

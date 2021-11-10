@@ -19,15 +19,15 @@ const PROGMEM char UpdateServerSuccess[] = {0X3C,0X68,0X74,0X6D,0X6C,0X20,0X63,0
 //          <input type='submit' value='Flash Firmware'>
 //      </form>
 //      <form method='POST' action='?cmd=100' enctype='multipart/form-data'> 
-//          Selecteer een "<b>.LITTLEFS.bin</b>" bestand<br/>
-//          <input type='file' accept='LITTLEFS.bin' name='filesystem'>
-//          <input type='submit' value='Flash LITTLEFS'>
+//          Selecteer een "<b>.LittleFS.bin</b>" bestand<br/>
+//          <input type='file' accept='LittleFS.bin' name='filesystem'>
+//          <input type='submit' value='Flash LittleFS'>
 //      </form>
 //      <hr>
 //      <br/><font color='red'>LET OP!!!</font>
-//      <br/>Bij het flashen van LITTLEFS raakt u de RING-bestanden kwijt. 
+//      <br/>Bij het flashen van LittleFS raakt u de RING-bestanden kwijt. 
 //      <br/>Maak daarom eerst een kopie van deze bestanden (via bestandsbeheer) 
-//      en zet de data-bestanden na het flashen van LITTLEFS weer terug.
+//      en zet de data-bestanden na het flashen van LittleFS weer terug.
 //      <hr>
 //      <br/>
 //      <br/>Wacht nog <span style='font-size: 1.3em;' id="waitSeconds">120</span> seconden ..

@@ -26,6 +26,7 @@ bool        FSmounted = false;
 bool        isConnected = false;
 
 void LogFile(const char*);
+void P1Reboot();
 
 //gets called when WiFiManager enters configuration mode
 //===========================================================================================
@@ -35,7 +36,6 @@ void configModeCallback (ESP_WiFiManager *myWiFiManager)
   DebugTln(WiFi.softAPIP().toString());
   //if you used auto generated SSID, print it
   DebugTln(myWiFiManager->getConfigPortalSSID());
-
 } // configModeCallback()
 
 
@@ -64,19 +64,21 @@ void startWiFi(const char* hostname, int timeOut)
   //--- if it does not connect it starts an access point with the specified name
   //--- here  "DSMR-WS-<MAC>"
   //--- and goes into a blocking loop awaiting configuration
-  if (!ESP_wifiManager.autoConnect("P1 Dongle"))
+  if (!ESP_wifiManager.autoConnect("P1-Dongle"))
   {
     LogFile("Wifi Timeout");
     DebugTln(F("failed to connect and hit timeout"));
     DebugTf(" took [%d] seconds ==> ERROR!\r\n", (millis() - lTime) / 1000);
-    delay(3000);
-    ESP.restart();
-    delay(2000);
+    P1Reboot();
     return;
   }
   LogFile("Wifi Connected");
-  DebugTf("Connected with IP-address [%s]\n", WiFi.localIP().toString().c_str());
+//  DebugTf("Connected with IP-address [%s]\n", WiFi.localIP().toString().c_str());
   DebugTf(" took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
+  Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
+  Debug (F("IP address: " ));  Debugln (WiFi.localIP());
+  Debug (F("IP gateway: " ));  Debugln (WiFi.gatewayIP());
+  Debugln();
   
 } // startWiFi()
 

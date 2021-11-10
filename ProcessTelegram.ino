@@ -9,8 +9,7 @@
 ***************************************************************************      
 */
 //==================================================================================
-void processTelegram()
-{
+void processTelegram(){
   DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());  
                                                     
   strcpy(newTimestamp, DSMRdata.timestamp.c_str()); 
@@ -32,9 +31,7 @@ void processTelegram()
 //       ||   (day(actT) != day(newT)   ) 
 //       || (month(actT) != month(newT) ) )
   {
-//    writeToSysLog("Update RING-files");
     writeRingFiles();
-    writeLastStatus();
   }
 
   if ( DUE(publishMQTTtimer) ) sendMQTTData();

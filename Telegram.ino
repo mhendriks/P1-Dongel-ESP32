@@ -27,7 +27,7 @@ byte cnt = 0;
 void ReadBotSettings(){
   StaticJsonDocument<380> doc;  
   if (!FSmounted) return;
-  File file = LITTLEFS.open("/BotSettings.json", "r");
+  File file = LittleFS.open("/BotSettings.json", "r");
   if (!file) {
     DebugTln("read(): No /BotSettings.json found");
     return;

@@ -8,10 +8,9 @@
 *      
 *      TODO
 *      - lees/schrijffouten ringfiles terugmelden in frontend
-*      - update via site ipv url incl logica voor uitvragen hiervan
 *      - keuze om voor lokale frontend assets of uit het cdn
 *      - frontend options in json (max stroom per fase, uitzetten van spanningsoverzicht in dash, etc)
-*      - Telegram notificaties (waarschijnlijk pas in de ESP32 implementatie ivm memory ssl certificaten)
+*      - mqtt broker benaderen via host name http://www.iotsharing.com/2017/06/how-to-get-ip-address-from-mdns-host-name-in-arduino-esp32.html 
 *      -- message bij drempelwaardes 
 *      -- verbruiksrapport einde dag/week/maand
 *      - monitor proces en fail over indien het niet goed gaat (cpu 1 <-> cpu 0)
@@ -20,18 +19,15 @@
 *      -- smr  -> sync naar mqtt, file write, processing
 *      -- frontend & api server
 *      -- mqtt
-*      √ uptime op basis van esp_log_timestamp()/1000
-*      √ debug mode is niet meer nodig ... geen swap meer ;-)
-*      √ reboot after 4 min AP mode
-*      √ NL en BE SMR in 1 
-*      √ reconnectMQTTtimer
-*      √ reconnectWiFi
 *      √ bugfix: niet aanmaken van nieuwe ring file bij file not found
 *      - update proces loopt niet goed met gz files
 *      - bug telegram RAW serial
 *      √ mdns.queryhostname implementatie
-*      esp_register_shutdown_handler()
-*      
+*      √ water_sensor telnet/statusfile
+*      √ watersensor mqtt
+*      - watersensor json actuals
+*      - watersensor historie / ringfiles
+*      - watersensor only mode
   
   Arduino-IDE settings for P1 Dongle hardware ESP32:
     - Board: "ESP32 Dev Module"
@@ -46,42 +42,15 @@
 /******************** compiler options  ********************************************/
 #define USE_MQTT                      // define if you want to use MQTT (configure through webinterface)
 #define USE_UPDATE_SERVER             // define if there is enough memory and updateServer to be used
+//#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
 //  #define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //  #define HAS_NO_SLIMMEMETER        // define for testing only!
-//  #define USE_SYSLOGGER             // define if you want to use the sysLog library for debugging
 //  #define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
 
 #define ALL_OPTIONS "[MQTT][UPDATE_SERVER][LITTLEFS]"
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
-
-TaskHandle_t CPU0;
-
-#ifdef USE_SYSLOGGER
-//===========================================================================================
-void openSysLog(bool empty)
-{
-  if (sysLog.begin(500, 100, empty))  // 500 lines use existing sysLog file
-  {   
-    DebugTln(F("Succes opening sysLog!"));
-  }
-  else DebugTln(F("Error opening sysLog!"));
- 
-  sysLog.setDebugLvl(1);
-  sysLog.setOutput(&TelnetStream);
-  sysLog.status();
-  sysLog.write("\r\n");
-  for (uint8_t q=0;q<3;q++)
-  {
-    sysLog.write("******************************************************************************************************");
-  }
-  writeToSysLog(F("Last Reset Reason [%s]"), getResetReason());
-  writeToSysLog("actTimestamp[%s], nrReboots[%u], Errors[%u]", actTimestamp , nrReboots , slotErrors);
-  sysLog.write(" ");
-
-} // openSysLog()
-#endif
 
 //===========================================================================================
 void setup() 
@@ -97,7 +66,7 @@ void setup()
   delay(1500);
   
 //================ File System ===========================================
-  if (LITTLEFS.begin()) 
+  if (LittleFS.begin()) 
   {
     DebugTln(F("File System Mount succesfull\r"));
     FSmounted = true;     
@@ -108,50 +77,28 @@ void setup()
   //==========================================================//
   // writeLastStatus();  // only for firsttime initialization //
   //==========================================================//
-  readLastStatus(); // place it in actTimestamp
-  // set the time to actTimestamp!
-  actT = epoch(actTimestamp, strlen(actTimestamp), true);
-  LogFile(); // write reboot status to file
-  nrReboots++;
-  DebugTf("===> actTimestamp[%s]-> nrReboots[%u] - Errors[%u]\n", actTimestamp, nrReboots, slotErrors);                                                                    
+  P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
+  actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
+  LogFile(""); // write reboot status to file
   readSettings(true);
-  writeLastStatus(); //update reboots
   
 //=============start Networkstuff==================================
   delay(1500);
   startWiFi(settingHostname, 240);  // timeout 4 minuten
-
-  Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
-  Debug (F("IP address: " ));  Debugln (WiFi.localIP());
-  Debug (F("IP gateway: " ));  Debugln (WiFi.gatewayIP());
-  Debugln();
-
   delay(500);
   startTelnet();
 
 //-----------------------------------------------------------------
-#ifdef USE_SYSLOGGER
-  openSysLog(false);
-  snprintf(cMsg, sizeof(cMsg), "SSID:[%s],  IP:[%s], Gateway:[%s]", WiFi.SSID().c_str()
-                                                                  , WiFi.localIP().toString().c_str()
-                                                                  , WiFi.gatewayIP().toString().c_str());
-  writeToSysLog("%s", cMsg);
-#endif
   startMDNS(settingHostname);
  
 //=============end Networkstuff======================================
 
-#if defined(USE_NTP_TIME)                                   //USE_NTP
+#ifdef USE_NTP_TIME
 //================ startNTP =========================================
-                                                        //USE_NTP
                                                             //USE_NTP
-  if (!startNTP())                                          //USE_NTP
-  {                                                         //USE_NTP
+  if (!startNTP()) {                                            
     DebugTln(F("ERROR!!! No NTP server reached!\r\n\r"));   //USE_NTP
-                                                     //USE_NTP
-    delay(1500);                                            //USE_NTP
-    ESP.restart();                                          //USE_NTP
-    delay(2000);                                            //USE_NTP
+    P1Reboot();                                           //USE_NTP
   }                                                         //USE_NTP
                                                     //USE_NTP
   prevNtpHour = hour();                                     //USE_NTP
@@ -160,13 +107,7 @@ void setup()
 //================ end NTP =========================================
 
 //test if File System is correct populated!
-  if (!DSMRfileExist(settingIndexPage, false) )    FSNotPopulated = true;   
-#ifdef USE_SYSLOGGER
-  if (FSNotPopulated)
-  {
-    sysLog.write(F("FS is not correct populated (files are missing)"));
-  }
-#endif
+if (!DSMRfileExist(settingIndexPage, false) ) FSNotPopulated = true;   
   
 #if defined(USE_NTP_TIME)                                                           //USE_NTP
   time_t t = now(); // store the current time in time variable t                    //USE_NTP
@@ -177,20 +118,18 @@ void setup()
 
 //================ Start MQTT  ======================================
 
-#ifdef USE_MQTT                                                 //USE_MQTT
-  if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0)) connectMQTT();
-#endif                                                          //USE_MQTT
+if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT();
 
 //================ End of Start MQTT  ===============================
 //================ Start HTTP Server ================================
 
   if (!FSNotPopulated) {
     DebugTln(F("FS correct populated -> normal operation!\r"));
-    httpServer.serveStatic("/",                 LITTLEFS, settingIndexPage);
-    httpServer.serveStatic("/DSMRindex.html",   LITTLEFS, settingIndexPage);
-    httpServer.serveStatic("/DSMRindexEDGE.html",LITTLEFS, settingIndexPage);
-    httpServer.serveStatic("/index",            LITTLEFS, settingIndexPage);
-    httpServer.serveStatic("/index.html",       LITTLEFS, settingIndexPage);
+    httpServer.serveStatic("/",                 LittleFS, settingIndexPage);
+    httpServer.serveStatic("/DSMRindex.html",   LittleFS, settingIndexPage);
+    httpServer.serveStatic("/DSMRindexEDGE.html",LittleFS, settingIndexPage);
+    httpServer.serveStatic("/index",            LittleFS, settingIndexPage);
+    httpServer.serveStatic("/index.html",       LittleFS, settingIndexPage);
   } else {
     DebugTln(F("Oeps! not all files found on FS -> present FSexplorer!\r"));
     FSNotPopulated = true;
@@ -202,11 +141,10 @@ void setup()
 //================ END HTTP Server ================================
 
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
-  writeToSysLog("Startup complete! actTimestamp[%s]", actTimestamp);  
 
 //================ Start Slimme Meter ===============================
 
-#if !defined( HAS_NO_SLIMMEMETER) 
+#ifndef HAS_NO_SLIMMEMETER
   DebugTln(F("Enable slimmeMeter..\n"));
   slimmeMeter.enable(true);
 #endif //test or normal mode
@@ -225,6 +163,10 @@ void setup()
   delay(500); 
 
   esp_register_shutdown_handler(ShutDownHandler);
+
+#ifdef USE_WATER_SENSOR  
+  setupWater();
+#endif
  
 } // setup()
 
@@ -260,9 +202,7 @@ void doSystemTasks()
   #ifndef HAS_NO_SLIMMEMETER
     handleSlimmemeter();
   #endif
-  #ifdef USE_MQTT
-    MQTTclient.loop();
-  #endif
+  MQTTclient.loop();
   httpServer.handleClient();
 //  MDNS.update();
   handleKeyInput();
@@ -270,167 +210,44 @@ void doSystemTasks()
 
 } // doSystemTasks()
 
-uint32_t LoopCount=0;
-unsigned int heap_before;
-ParseResult<void> res;
- char rawbe1[] =
-    "/FLU5\\253770234_A\r\n"
-  "\r\n"
-  "0-0:96.1.4(50213)\r\n"
-  "0-0:96.1.1(3153414731313030303236393436)\r\n"
-  "0-0:1.0.0(190919165430S)\r\n"
-  "1-0:1.8.1(000031.250*kWh)\r\n"
-  "1-0:1.8.2(000040.792*kWh)\r\n"
-  "1-0:2.8.1(000061.957*kWh)\r\n"
-  "1-0:2.8.2(000023.548*kWh)\r\n"
-  "0-0:96.14.0(0001)\r\n"
-  "1-0:1.7.0(00.342*kW)\r\n"
-  "1-0:2.7.0(00.000*kW)\r\n"
-  "1-0:32.7.0(236.7*V)\r\n"
-  "1-0:31.7.0(002*A)\r\n"
-  "0-0:96.3.10(1)\r\n"
-  "0-0:17.0.0(999.9*kW)\r\n"
-  "1-0:31.4.0(999*A)\r\n"
-  "0-0:96.13.0()\r\n"
-  "0-1:24.1.0(003)\r\n"
-  "0-1:96.1.1(37464C4F32313139303035343533)\r\n"
-  "0-1:24.4.0(1)\r\n"
-  "0-1:24.2.3(190919165007S)(00001.315*m3)\r\n"
-  "!BFE7\r\n";
 
- char rawbe2[] =
-    "/FLU5\\253770234_A\r\n"
-  "\r\n"
-  "0-0:96.1.4(50213)\r\n"
-  "0-0:96.1.1(3153414731313030303236393436)\r\n"
-  "0-0:1.0.0(190919165430S)\r\n"
-  "1-0:1.8.1(000031.250*kWh)\r\n"
-  "1-0:1.8.2(000040.792*kWh)\r\n"
-  "1-0:2.8.1(000061.957*kWh)\r\n"
-  "1-0:2.8.2(000023.548*kWh)\r\n"
-  "0-0:96.14.0(0001)\r\n"
-  "1-0:1.7.0(00.342*kW)\r\n"
-  "1-0:2.7.0(00.000*kW)\r\n"
-  "1-0:32.7.0(236.7*V)\r\n"
-  "1-0:31.7.0(002*A)\r\n"
-  "0-0:96.3.10(1)\r\n"
-  "0-0:17.0.0(999.9*kW)\r\n"
-  "1-0:31.4.0(999*A)\r\n"
-  "0-0:96.13.99()\r\n"
-  "0-1:24.1.0(003)\r\n"
-  "0-1:96.1.1(37464C4F32313139303035343533)\r\n"
-  "0-1:24.4.0(1)\r\n"
-  "0-1:24.2.3(190919165007S)(00001.315*m3)\r\n"
-  "!1b46\r\n";
-  
-
-struct buildJsonMQTT2 {
-/* twee types
- *  {energy_delivered_tariff1":[{"value":11741.29,"unit":"kWh"}]}"
- *  {equipment_id":[{"value":"4530303435303033383833343439383137"}]}"
- *  
- *  msg = "{\""+Name+"\":[{\"value\":"+value_to_json(i.val())+",\"unit\":"+Unit+"}]}";
- *  msg = "\"{\""+Name+"\":[{\"value\":"+value_to_json(i.val())+"}]}\""
- *  
- */
-// StaticJsonDocument<400> doc2;  
-  String msg;//--
-//  char   mqttBuff[100]; // todo kan issue geven bij lange berichten
-
-    template<typename Item>
-    void apply(Item &i) {
-      if (i.present()) 
-      {
-        String Name = String(Item::name);
-        String Unit = Item::unit();
-        strcpy(cMsg,settingMQTTtopTopic);
-        strConcat(cMsg, sizeof(cMsg), Name.c_str());
-        if (Verbose2) DebugTf("topicId[%s]\r\n", cMsg);
-//        doc2.clear();
-//        JsonObject nested = doc2[Name].createNestedObject();
-        if (Unit.length() > 0) {
-//          nested["value"] = value_to_json(i.val());
-//          nested["unit"] = Unit;
-          msg = "{\""+Name+"\":[{\"value\":"+value_to_json(i.val())+",\"unit\":\""+Unit+"\"}]}";//--
-        }
-        else {
-//          nested["value"] = value_to_json(i.val());
-          msg = "{\""+Name+"\":[{\"value\":"+value_to_json(i.val())+"}]}";//--
-        }
-//        serializeJson(doc2, mqttBuff);
-        DebugTln("mqtt zelf: " + msg);//--
-        if (!MQTTclient.publish(cMsg, msg.c_str()) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", cMsg, msg.c_str(), (strlen(cMsg) + msg.length()));
-//        DebugT("mqtt lib : ");Debugln(mqttBuff);//--
-      } // if i.present
-  } //apply
-  
-  template<typename Item>
-  String value_to_json(Item& i) {
-    return "\"" + String( i )  + "\"";
-  }
-
-  String value_to_json(TimestampedFixedValue i) {
-    return String( i );
-  }
-  
-  float value_to_json(FixedValue i) {
-    return i;
-  }
-}; // buildJsonMQTT2
-
-void loop() {
-  LoopCount++; 
-  heap_before = ESP.getFreeHeap();
- 
-  //sendMQTTData();
-//  writeRingFiles(); 
-//  writeLastStatus();
-  DSMRdata = {};
-  if (!(LoopCount % 25)) res = P1Parser::parse(&DSMRdata, rawbe2, lengthof(rawbe2), true);
-  else res = P1Parser::parse(&DSMRdata, rawbe1, lengthof(rawbe1), true);
-  if (res.err) {
-    // Parsing error, show it
-    Debugln(res.fullError(rawbe1, rawbe1 + lengthof(rawbe1)));
-  } else 
-  { //TelnetStream.println("PARSE SUCCESFULL");
-  
-  delay(50);// some time for the esp to clean up
-  Debugf("%4d | %d | %d | %d\n",LoopCount,heap_before,ESP.getFreeHeap(),heap_before-ESP.getFreeHeap());
-  DSMRdata.applyEach(buildJsonMQTT2());
-  }
-  delay(30); //other wise it will be to heavy for the mqtt server
-  
-}
-
-void loop2 () 
+void loop () 
 {  
   //--- do the tasks that has to be done as often as possible
   doSystemTasks();
 
-  //--- update files
-  if (DUE(antiWearTimer))
-  {
-    writeRingFiles();
-    writeLastStatus();
+  //--- update statusfile + ringfiles
+  if ( DUE(antiWearRing) || RingCylce ) writeRingFiles(); //eens per 25min + elk uur overgang
+
+  if (DUE(StatusTimer)) { //eens per 15min of indien extra m3
+    P1StatusWrite();
+    MQTTSentStaticP1Info();
+    #ifdef USE_WATER_SENSOR
+      sendMQTTWater();
+    #endif
+    CHANGE_INTERVAL_MIN(StatusTimer, 15);
   }
 
+  if (UpdateRequested) RemoteUpdate(UpdateVersion,true);
+  
+#ifdef USE_WATER_SENSOR
+  if (DUE(WaterTimer)) {
+    P1StatusWrite();
+    CHANGE_INTERVAL_MIN(WaterTimer, 30);
+  }
+#endif
+
   //--- if connection lost, try to reconnect to WiFi
-  if ( DUE(reconnectWiFi) && (WiFi.status() != WL_CONNECTED) )
-  {
-    writeToSysLog("Restart wifi with [%s]...", settingHostname);
+  if ( DUE(reconnectWiFi) && (WiFi.status() != WL_CONNECTED) ) {
     LogFile("Wifi connection lost");  
     startWiFi(settingHostname, 10);
     if (WiFi.status() != WL_CONNECTED){
-          writeToSysLog("%s", "Wifi still not connected!");
           LogFile("Wifi connection still lost");
-    } else {
-          snprintf(cMsg, sizeof(cMsg), "IP:[%s], Gateway:[%s]", WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str());
-          writeToSysLog("%s", cMsg);
-    }
+    } else snprintf(cMsg, sizeof(cMsg), "IP:[%s], Gateway:[%s]", WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str());
   }
 
 //--- if NTP set, see if it needs synchronizing
-#if defined(USE_NTP_TIME)                                           //USE_NTP
+#ifdef USE_NTP_TIME                                                 //USE_NTP
   if DUE(synchrNTP)                                                 //USE_NTP
   {
     if (timeStatus() == timeNeedsSync || prevNtpHour != hour())     //USE_NTP

@@ -26,13 +26,14 @@ const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCac
 //=====================================================================================
 void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebunden werden
 {    
-  LITTLEFS.begin();
+//  LITTLEFS.begin();
 //  httpServer.on("/api", HTTP_GET, processAPI); // all other api calls are catched in FSexplorer onNotFounD!
   httpServer.on("/api/listfiles", APIlistFiles);
   httpServer.on("/FSformat", formatFS);
   httpServer.on("/upload", HTTP_POST, []() {}, handleFileUpload);
   httpServer.on("/ReBoot", reBootESP);
   httpServer.on("/ResetWifi", resetWifi);
+  httpServer.on("/remote-update", [](){RemoteUpdate();});
   httpServer.on("/updates", HTTP_GET, []() {
     httpServer.sendHeader("Connection", "close");
     httpServer.send(200, "text/html", UpdateHTML);
@@ -40,7 +41,7 @@ void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebu
   httpServer.on("/update", HTTP_POST, []() {
     httpServer.sendHeader("Connection", "close");
     httpServer.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
-    ESP.restart();
+    P1Reboot();
   }, []() {
     HTTPUpload& upload = httpServer.upload();
     if (upload.status == UPLOAD_FILE_START) {
@@ -82,7 +83,7 @@ void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebu
     {
       DebugTf("next: handleFile(%s)\r\n"
                       , String(httpServer.urlDecode(httpServer.uri())).c_str());
-      if((httpServer.uri().indexOf("/RING") == 0) && (!LITTLEFS.exists(httpServer.uri().c_str()))) createRingFile(httpServer.uri().c_str());
+      if((httpServer.uri().indexOf("/RING") == 0) && (!LittleFS.exists(httpServer.uri().c_str()))) createRingFile(httpServer.uri().c_str());
       if (!handleFile(httpServer.urlDecode(httpServer.uri())))
       {
         httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
@@ -104,7 +105,7 @@ void APIlistFiles()             // Senden aller Daten an den Client
 
   _fileMeta dirMap[30];
   int fileNr = 0;
-  File root = LITTLEFS.open("/");
+  File root = LittleFS.open("/");
   File file = root.openNextFile();
   while (file)  
   {
@@ -143,9 +144,9 @@ void APIlistFiles()             // Senden aller Daten an den Client
     temp += R"({"name":")" + String(dirMap[f].Name) + R"(","size":")" + formatBytes(dirMap[f].Size) + R"("})";
   }
 
- temp += R"(,{"usedBytes":")" + formatBytes(LITTLEFS.usedBytes() * 1.05) + R"(",)" +       // Berechnet den verwendeten Speicherplatz + 5% Sicherheitsaufschlag
-          R"("totalBytes":")" + formatBytes(LITTLEFS.totalBytes()) + R"(","freeBytes":")" + // Zeigt die Größe des Speichers
-          (LITTLEFS.totalBytes() - (LITTLEFS.usedBytes() * 1.05)) + R"("}])";               // Berechnet den freien Speicherplatz + 5% Sicherheitsaufschlag
+ temp += R"(,{"usedBytes":")" + formatBytes(LittleFS.usedBytes() * 1.05) + R"(",)" +       // Berechnet den verwendeten Speicherplatz + 5% Sicherheitsaufschlag
+          R"("totalBytes":")" + formatBytes(LittleFS.totalBytes()) + R"(","freeBytes":")" + // Zeigt die Größe des Speichers
+          (LittleFS.totalBytes() - (LittleFS.usedBytes() * 1.05)) + R"("}])";               // Berechnet den freien Speicherplatz + 5% Sicherheitsaufschlag
 
   httpServer.send(200, "application/json", temp);
   
@@ -157,12 +158,12 @@ bool handleFile(String&& path)
   if (httpServer.hasArg("delete")) 
   {
     DebugTf("Delete -> [%s]\n\r",  httpServer.arg("delete").c_str());
-    LITTLEFS.remove(httpServer.arg("delete"));    // Datei löschen
+    LittleFS.remove(httpServer.arg("delete"));    // Datei löschen
     httpServer.sendContent(Header);
     return true;
   }
   if (path.endsWith("/")) path += "index.html";
-  return LITTLEFS.exists(path) ? ({File f = LITTLEFS.open(path, "r"); httpServer.streamFile(f, contentType(path)); f.close(); true;}) : false;
+  return LittleFS.exists(path) ? ({File f = LittleFS.open(path, "r"); httpServer.streamFile(f, contentType(path)); f.close(); true;}) : false;
 
 } // handleFile()
 
@@ -178,7 +179,7 @@ void handleFileUpload()
       upload.filename = upload.filename.substring(upload.filename.length() - 30, upload.filename.length());  // Dateinamen auf 30 Zeichen kürzen
     }
     Debugln("FileUpload Name: " + upload.filename);
-    fsUploadFile = LITTLEFS.open("/" + httpServer.urlDecode(upload.filename), "w");
+    fsUploadFile = LittleFS.open("/" + httpServer.urlDecode(upload.filename), "w");
   } 
   else if (upload.status == UPLOAD_FILE_WRITE) 
   {
@@ -186,22 +187,21 @@ void handleFileUpload()
     if (fsUploadFile)
       fsUploadFile.write(upload.buf, upload.currentSize);
   } 
-  else if (upload.status == UPLOAD_FILE_END) 
-  {
+  else if (upload.status == UPLOAD_FILE_END) {
     if (fsUploadFile)
       fsUploadFile.close();
     Debugln("FileUpload Size: " + (String)upload.totalSize);
     httpServer.sendContent(Header);
+    if (upload.filename == "DSMRsettings.json") readSettings(false);
   }
-  
 } // handleFileUpload() 
 
 //=====================================================================================
 void formatFS() 
 {       //Formatiert den Speicher
-  if (!LITTLEFS.exists("/!format")) return;
+  if (!LittleFS.exists("/!format")) return;
   DebugTln(F("Format FS"));
-  LITTLEFS.format();
+  LittleFS.format();
   httpServer.sendContent(Header);
   
 } // formatFS()
@@ -236,8 +236,8 @@ const String &contentType(String& filename)
 //=====================================================================================
 bool freeSpace(uint16_t const& printsize) 
 {    
-  Debugln(formatBytes(LITTLEFS.totalBytes() - (LITTLEFS.usedBytes() * 1.05)) + " in SPIFF free");
-  return (LITTLEFS.totalBytes() - (LITTLEFS.usedBytes() * 1.05) > printsize) ? true : false;
+  Debugln(formatBytes(LittleFS.totalBytes() - (LittleFS.usedBytes() * 1.05)) + " in SPIFF free");
+  return (LittleFS.totalBytes() - (LittleFS.usedBytes() * 1.05) > printsize) ? true : false;
   
 } // freeSpace()
 
@@ -286,8 +286,7 @@ void doRedirect(String msg, int wait, const char* URL, bool reboot, bool resetWi
        ESP_WiFiManager manageWiFi("p1-dongle");
        manageWiFi.resetSettings();
    }
-    ESP.restart();
-    delay(3000);
+    P1Reboot();
   }
   
 } // doRedirect()

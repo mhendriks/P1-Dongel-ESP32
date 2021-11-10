@@ -11,7 +11,7 @@
 
 void createRingFile(E_ringfiletype ringfiletype) 
 {
-  File RingFile = LITTLEFS.open(RingFiles[ringfiletype].filename, "w"); // open for writing  
+  File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "w"); // open for writing  
   if (!RingFile) {
     DebugT(F("open ring file FAILED!!! --> Bailout\r\n"));Debugln(RingFiles[ringfiletype].filename);
     return;
@@ -62,7 +62,7 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, char* Timestamp)
   {
     DebugTf("RINGFile: Some serious error! Slot is [%d]\r\n", slot);
     slot = RingFiles[ringfiletype].slots;
-    slotErrors++;
+    P1Status.sloterrors++;
     return 99;
   }
   return slot;
@@ -74,14 +74,14 @@ void RingFileTo(E_ringfiletype ringfiletype, bool toFile)
 {  
   if (bailout() || !FSmounted) return; //exit when heapsize is too small
 
-  if (!LITTLEFS.exists(RingFiles[ringfiletype].filename))
+  if (!LittleFS.exists(RingFiles[ringfiletype].filename))
   {
     DebugT(F("read(): Ringfile doesn't exist: "));Debugln(RingFiles[ringfiletype].filename);
     createRingFile(ringfiletype);
     return;
     }
 
-  File RingFile = LITTLEFS.open(RingFiles[ringfiletype].filename, "r"); // open for reading
+  File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "r"); // open for reading
 
   if (RingFile.size() != RingFiles[ringfiletype].f_len) {
     DebugT(F("ringfile size incorrect: "));Debugln(RingFile.size());
@@ -132,7 +132,7 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec)
   //json openen
   DebugT(F("read(): Ring file ")); Debugln(RingFiles[ringfiletype].filename);
   
-  File RingFile = LITTLEFS.open(RingFiles[ringfiletype].filename, "r+"); // open for reading  
+  File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "r+"); // open for reading  
   if (!RingFile || (RingFile.size() != RingFiles[ringfiletype].f_len)) {
     DebugT(F("open ring file FAILED!!! --> Bailout\r\n"));
     Debugln(RingFiles[ringfiletype].filename);
@@ -178,11 +178,18 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec)
 } // writeRingFile()
 
 //===========================================================================================
-void writeRingFiles() 
-{
-  writeRingFile(RINGHOURS, "");
-  writeRingFile(RINGDAYS, "");
-  writeRingFile(RINGMONTHS, "");
+void writeRingFiles() {
+  if (!EnableHistory) return; //do nothing
+  switch(RingCylce){
+    case 0: writeRingFile(RINGHOURS, "");
+            break;
+    case 1: writeRingFile(RINGDAYS, "");
+            break;
+    case 2: writeRingFile(RINGMONTHS, "");
+            break;
+  }
+  RingCylce++;
+  if (RingCylce > 2) RingCylce = 0;
 
 } // writeRingFiles()
 

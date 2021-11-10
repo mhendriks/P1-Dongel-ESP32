@@ -26,7 +26,10 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 
 void ShutDownHandler(){
   DebugTln(F("/!\\ SHUTDOWN /!\\"));
-  writeLastStatus();
+  sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
+  MQTTclient.publish(cMsg,"Offline", true); //LWT status update
+  P1StatusWrite();
+  P1StatusEnd();
 }
 
 const char* getResetReason(){
@@ -34,14 +37,22 @@ const char* getResetReason(){
 }
 
 //===========================================================================================
+
+void P1Reboot(){
+    delay(3000);
+    ESP.restart();
+    delay(2000);  
+}
+
+//===========================================================================================
 bool bailout () // to prevent firmware from crashing!
 {
-  if (ESP.getFreeHeap() < 8500) // to prevent firmware from crashing!
-  {
-    DebugT(F("Bailout due to low heap: ")); Debugln(ESP.getFreeHeap());
-    return true;
-  }
-  return false;
+  if (ESP.getFreeHeap() > 5500) return false; //do nothing
+  
+  DebugT(F("Bailout due to low heap --> reboot in 3 seconds")); Debugln(ESP.getFreeHeap());
+  P1Reboot();
+  return true; // komt hier als het goed is niet
+  
 }
 
 //===========================================================================================

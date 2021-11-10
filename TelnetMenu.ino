@@ -8,29 +8,35 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-//===========================================================================================
-void displayHoursHist(bool Telnet=true) 
-{
-    //readAllSlots(HOURS, HOURS_FILE, actTimestamp, false, "");
-    RingFileTo(RINGHOURS, false);
-} // displayHoursHist()
 
+void DisplayLogFile(const char *fname) {   
+  if (bailout() || !FSmounted) return; //exit when heapsize is too small
+  if (!LittleFS.exists(fname))
+  {
+    DebugT(F("LogFile doesn't exist: "));
+    return;
+    }
+  File RingFile = LittleFS.open(fname, "r"); // open for reading
+  DebugTln(F("Ringfile output: "));
+  //read the content and output to serial interface
+  while (RingFile.available()) TelnetStream.write(RingFile.read());
+  Debugln();    
+  RingFile.close();
+} //displaylogfile
 
-//===========================================================================================
-void displayDaysHist(bool Telnet=true) 
-{
-    //readAllSlots(DAYS, DAYS_FILE, actTimestamp, false, "");
-    RingFileTo(RINGDAYS, false);
-} // displayDaysHist()
+//--------------------------------
 
-
-//===========================================================================================
-void displayMonthsHist(bool Telnet=true) 
-{
-    //readAllSlots(MONTHS, MONTHS_FILE, actTimestamp, false, "");
-    RingFileTo(RINGMONTHS, false);
-} // displayMonthsHist()
-
+void ResetDataFiles() {
+  LittleFS.remove("/RINGdays.json");
+  LittleFS.remove("/RINGweeks.json");
+  LittleFS.remove("/RINGmonths.json");
+  LittleFS.remove("/P1.old");
+  LittleFS.remove("/P1.log");
+  LittleFS.remove("/Reboot.log");      //pre 3.1.1 
+  LittleFS.remove("/Reboot.old");      //pre 3.1.1  
+  LittleFS.remove("/DSMRstatus.json"); //pre 3.1.1 
+  DebugTln(F("Datafiles are reset"));
+}
 
 //===========================================================================================
 void displayBoardInfo() 
@@ -54,7 +60,7 @@ void displayBoardInfo()
   Debug(F("]\r\n      Sketch Size (kB) ["));  Debug( ESP.getSketchSize() / 1024.0 );
   Debug(F("]\r\nFree Sketch Space (kB) ["));  Debug( ESP.getFreeSketchSpace() / 1024.0 );
   Debug(F("]\r\n  Flash Chip Size (kB) ["));  Debug( ESP.getFlashChipSize() / 1024 );
-  Debug(F("]\r\n          FS Size (kB) ["));  Debug( LITTLEFS.totalBytes() / 1024 );
+  Debug(F("]\r\n          FS Size (kB) ["));  Debug( LittleFS.totalBytes() / 1024 );
   Debug(F("]\r\n      Flash Chip Speed ["));  Debug( ESP.getFlashChipSpeed() / 1000 / 1000 );
   
   FlashMode_t ideMode = ESP.getFlashChipMode();
@@ -110,8 +116,21 @@ void handleKeyInput()
     inChar = (char)TelnetStream.read();
     
     switch(inChar) {
-      case 'a':      ;
-                    break;
+      case 'a':     
+      case 'A':     { char c;
+                      while (TelnetStream.available() > 0) { 
+                        c = (char)TelnetStream.read();
+                        switch(c){
+                        case 'r': P1StatusRead(); break;
+                        case 'w': P1StatusWrite(); break;
+                        case 'p': P1StatusPrint(); break;
+                        case 'x': ReadEepromBlock();break;
+                        case 'z': P1StatusReset(); break;
+                        default : Debugln(F("P1 Status info:\nr = read\nw = write\np = print\nz = erase"));
+                        } //switch
+                        while (TelnetStream.available() > 0) {(char)TelnetStream.read();} //verwijder extra input
+                      } //while
+                      break; }
       case 'b':
       case 'B':     displayBoardInfo();
                     break;
@@ -119,8 +138,20 @@ void handleKeyInput()
       case 'L':     readSettings(true);
                     break;
       case 'd':
-      case 'D':     displayDaysHist(true);
-                    break;
+      case 'D':     { char c;
+                      while (TelnetStream.available() > 0) { 
+                        c = (char)TelnetStream.read();
+                        switch(c){
+                        case 'b': displayBoardInfo();break;
+                        case 'd': RingFileTo(RINGDAYS, false); break;
+                        case 'h': RingFileTo(RINGHOURS, false); break;
+                        case 'm': RingFileTo(RINGMONTHS, false); break;
+                        case 'n': DisplayLogFile("P1.log");break;
+                        default : Debugln(F("Display:\nb = board info\nd = Day table from FS\nh = Hour table from FS\nm = Month table from FS\nn = Logfile from FS"));
+                        } //switch
+                        while (TelnetStream.available() > 0) {(char)TelnetStream.read();} //verwijder extra input
+                      } //while
+                      break; }
       case 'E':     eraseFile();
                     break;
 #if defined(HAS_NO_SLIMMEMETER)
@@ -129,34 +160,44 @@ void handleKeyInput()
                     break;
 #endif
       case 'h':
-      case 'H':     displayHoursHist(true);
+      case 'H':     RingFileTo(RINGHOURS, false);
                     break;
+      case 'n':
+      case 'N':     DisplayLogFile("/P1.log");
+                    break;                    
       case 'm':
-      case 'M':     displayMonthsHist(true);
+      case 'M':     RingFileTo(RINGMONTHS, false);
                     break;
                     
       case 'W':     Debugf("\r\nConnect to AP [%s] and go to ip address shown in the AP-name\r\n", settingHostname);
                     delay(1000);
                     WiFi.disconnect(true);  // deletes credentials !
                     //setupWiFi(true);
-                    delay(2000);
-                    ESP.restart();
-                    delay(2000);
+                    P1Reboot();
                     break;
       case 'p':
       case 'P':     showRaw = !showRaw;
-                    showRawCount = 0;
                     break;
-      case 'R':     DebugT(F("Reboot in 3 seconds ... \r\n"));
-                    DebugFlush();
-                    delay(3000);
-                    DebugTln(F("now Rebooting. \r"));
-                    DebugFlush();
-                    ESP.restart();
+      case 'Q':     ResetDataFiles();
+                    break;                      
+      case 'R':     DebugFlush();
+                    P1Reboot();
                     break;
       case 's':
       case 'S':     listFS();
                     break;
+     case 'U':     {
+                    String versie;
+                    char c;
+                    while (TelnetStream.available() > 0) { 
+                      c = TelnetStream.read();
+                      if (!(c==32 || c==10 || c==13) ) versie+=c; //remove spaces
+                    }
+                    Debug("Update version: "); Debugln(versie);
+                    if (versie.length()>4) RemoteUpdate(versie.c_str(),true); 
+                    else Debugln(F("Fout in versie opgave"));
+                    break; }
+                    
       case 'v':
       case 'V':     if (Verbose2) 
                     {
@@ -175,54 +216,45 @@ void handleKeyInput()
                       Verbose1 = true;
                       Verbose2 = false;
                     }
-                    break;
-#ifdef USE_SYSLOGGER
-      case 'q':
-      case 'Q':     sysLog.setDebugLvl(0);
-                    sysLog.dumpLogFile();
-                    sysLog.setDebugLvl(1);
+                    break;                    
+#ifdef USE_WATER_SENSOR
+      case 'x':
+      case 'X':     DebugTf("Watermeter readings: %i m3 and %i liters\n",P1Status.wtr_m3,P1Status.wtr_l);
                     break;
 #endif
-      case 'Z':     slotErrors      = 0;
-                    nrReboots       = 0;
-                    telegramCount   = 0;
-                    telegramErrors  = 0;
-                    writeLastStatus();
-                    #ifdef USE_SYSLOGGER
-                      sysLog = {};
-                      openSysLog(true);
-                    #endif
+      case 'Z':     P1Status.sloterrors = 0;
+                    P1Status.reboots    = 0;
+                    P1Status.wtr_m3     = 0;
+                    P1Status.wtr_l      = 0;
+                    telegramCount       = 0;
+                    telegramErrors      = 0;
+                    P1StatusWrite();
                     break;
+                    
       default:      Debugln(F("\r\nCommands are:\r\n"));
-                    Debugln(F("   B - Board Info\r"));
-                    Debugln(F("  *E - erase file from FS\r"));
-                    Debugln(F("   L - list Settings\r"));
-                    Debugln(F("   D - Display Day table from FS\r"));
-                    Debugln(F("   H - Display Hour table from FS\r"));
-                    Debugln(F("   M - Display Month table from FS\r"));
-                  #if defined(HAS_NO_SLIMMEMETER)
-                    Debugln(F("  *F - Force build RING files\r"));
-                  #endif
-                    if (showRaw) 
-                    {
-                      Debugln(F("   P - Start Parsing again\r"));
-                    } 
-                    else 
-                    {
-                      Debugln(F("   P - No Parsing (show RAW data from Smart Meter)\r"));
-                      showRawCount = 0;
-                    }
-                    Debugln(F("  *W - Force Re-Config WiFi\r"));
-#ifdef USE_SYSLOGGER
-                    Debugln(F("   Q - dump sysLog file\r"));
-#endif
-                    Debugln(F("  *R - Reboot\r"));
-                    Debugln(F("   S - File info on FS\r"));
-                    Debugln(F("  *U - Update FS (save Data-files)\r"));
-                    Debugln(F("  *Z - Zero counters\r\n"));
-                    if (Verbose1 & Verbose2)  Debugln(F("   V - Toggle Verbose Off\r"));
-                    else if (Verbose1)        Debugln(F("   V - Toggle Verbose 2\r"));
-                    else                      Debugln(F("   V - Toggle Verbose 1\r"));
+                    Debugln(F("   A  - P1 Status info a=available|r=read|w=write|p=print|z=erase\r"));
+                    Debugln(F("   B  - Board Info\r"));
+                    Debugln(F("  *E  - erase file from FS\r"));
+                    Debugln(F("   L  - list Settings\r"));
+                    Debugln(F("   D+ - Display b=board info | d=Day table | h=Hour table | m=Month table | n=Logfile\r"));
+                    Debugln(F("   H  - Display Hour table from FS\r"));
+                    Debugln(F("   N  - Display LogFile P1.log\r"));
+                    Debugln(F("   M  - Display Month table from FS\r"));
+                    #ifdef HAS_NO_SLIMMEMETER
+                      Debugln(F("  *F  - Force build RING files\r"));
+                    #endif
+                    Debugln(F("   P  - No Parsing (show RAW data from Smart Meter)\r"));
+                    Debugln(F("  *W  - Force Re-Config WiFi\r"));
+                    Debugln(F("  *R  - Reboot\r"));
+                    Debugln(F("   S  - File info on FS\r"));
+                    Debugln(F("  *U+ - Update Remote; Enter Firmware version -> U 3.0.4 \r"));
+#ifdef USE_WATER_SENSOR
+                    Debugln(F("   X  - Watermeter reading\r"));
+#endif                    
+                    Debugln(F("  *Z  - Zero counters\r\n"));
+                    if (Verbose1 & Verbose2)  Debugln(F("   V  - Toggle Verbose Off\r"));
+                    else if (Verbose1)        Debugln(F("   V  - Toggle Verbose 2\r"));
+                    else                      Debugln(F("   V  - Toggle Verbose 1\r"));
 
 
     } // switch()

@@ -13,7 +13,7 @@
 int32_t freeSpace() 
 {
   int32_t space;
-  space = (int32_t)(LITTLEFS.totalBytes() - LITTLEFS.usedBytes());
+  space = (int32_t)(LittleFS.totalBytes() - LittleFS.usedBytes());
   return space;
   
 } // freeSpace()
@@ -29,7 +29,7 @@ void listFS()
   _fileMeta dirMap[30];
   int fileNr = 0;
   
-  File root = LITTLEFS.open("/");
+  File root = LittleFS.open("/");
   File file = root.openNextFile();
   while (file)  
   {
@@ -66,7 +66,7 @@ void listFS()
   if (freeSpace() < 10.240) Debugf("Available File System space [%6d]kB (LOW ON SPACE!!!)\r\n", (freeSpace() / 1024));
   else  {
     Debugf("Available File System space [%6d]kB\r\n", (freeSpace() / 1024));
-    Debugf("           File System Size [%6d]kB\r\n", (LITTLEFS.totalBytes() / 1024));
+    Debugf("           File System Size [%6d]kB\r\n", (LittleFS.totalBytes() / 1024));
 //    Debugf("     File System block Size [%6d]bytes\r\n", fs_info.blockSize); 
 //    Debugf("      File System page Size [%6d]bytes\r\n", fs_info.pageSize); 
 //    Debugf(" File System max.Open Files [%6d]\r\n\r\n", fs_info.maxOpenFiles); 
@@ -102,10 +102,10 @@ void eraseFile()
   //--- add leading slash on position 0
   eName[0] = '/';
 
-  if (LITTLEFS.exists(eName))
+  if (LittleFS.exists(eName))
   {
     Debugf("\r\nErasing [%s] from FS\r\n\n", eName);
-    LITTLEFS.remove(eName);
+    LittleFS.remove(eName);
   }
   else
   {
@@ -134,20 +134,16 @@ bool DSMRfileExist(const char* fileName, bool doDisplay)
   DebugTf("check if [%s] exists .. ", fName);
  
 
-  if (!LITTLEFS.exists(fName) )
+  if (!LittleFS.exists(fName) )
   {
     if (doDisplay)
     {
-      Debugln(F("NO! Error!!"));
-      
-      writeToSysLog("Error! File [%s] not found!", fName);
+      Debugln(F("NO! Error!!")); 
       return false;
     }
     else
     {
       Debugln(F("NO! "));
-      
-      writeToSysLog("File [%s] not found!", fName);
       return false;
     }
   } 

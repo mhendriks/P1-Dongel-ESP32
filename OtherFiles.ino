@@ -32,64 +32,73 @@ void writeToJsonFile(const TSource &doc, File &_file)
 }
 
 //====================================================================
-void readLastStatus()
-{  
-  StaticJsonDocument<110> doc;  
-  if (!FSmounted) return;
-  File statusFile = LITTLEFS.open("/DSMRstatus.json", "r");
-  if (!statusFile) {
-    DebugTln("read(): No /DSMRstatus.json found");
-    return;
-  }
-  
-  DeserializationError error = deserializeJson(doc, statusFile);
-  if (error) {
-    DebugTln(F("read():Failed to read json file"));
-    return;
-  }
-  statusFile.close();
-  
-  nrReboots = doc["Reboots"];
-  slotErrors = doc["slotErrors"];
-  if (strlen( doc["Timestamp"]) != 13)  snprintf(actTimestamp, sizeof(actTimestamp), "%s", "010101010101X");
-  else  strcpy(actTimestamp, doc["Timestamp"]);
-  
-}  // readLastStatus()
+//void readLastStatus()
+//{  
+//  StaticJsonDocument<200> doc;  
+//  if (!FSmounted) return;
+//  File statusFile = LittleFS.open("/DSMRstatus.json", "r");
+//  if (!statusFile) {
+//    DebugTln("read(): No /DSMRstatus.json found");
+//    return;
+//  }
+//  
+//  DeserializationError error = deserializeJson(doc, statusFile);
+//  if (error) {
+//    DebugTln(F("read():Failed to read json file"));
+//    return;
+//  }
+//  statusFile.close();
+//  
+//  P1Status.reboots = doc["Reboots"];
+//  P1Status.sloterrors = doc["slotErrors"];
+//#ifdef USE_WATER_SENSOR
+//  if (doc.containsKey("water_m3")) P1Status.wtr_m3 = doc["water_m3"];
+//  if (doc.containsKey("water_liter")) P1Status.wtr_l = doc["water_liter"];
+//#endif
+//  if (strlen( doc["Timestamp"]) != 13)  snprintf(actTimestamp, sizeof(actTimestamp), "%s", "010101010101X");
+//  else  strcpy(actTimestamp, doc["Timestamp"]);
+//  DebugTln(F("DSMRstatus.json"));
+//
+//  
+//}  // readLastStatus()
 
 //====================================================================
-void writeLastStatus()
-{ 
-  if (!FSmounted || bailout()) return;
-
-  DebugTf("writeLastStatus() => %s; %u; %u;\r\n", actTimestamp, nrReboots, slotErrors);
-  
-  File statusFile = LITTLEFS.open("/DSMRstatus.json", "w");
-  if (!statusFile) {
-    DebugTln(F("write(): No /DSMRstatus.json found"));
-    return;
-  }
-  
-  char buffer[74];
-  sprintf_P(buffer,PSTR("{\"Timestamp\":\"%s\",\"Reboots\":%d,\"slotErrors\":%d}"), actTimestamp, nrReboots, slotErrors);
-  
-  int bytesWritten = statusFile.print(buffer);
-  if (bytesWritten > 0) {
-    DebugT(F("File was written:"));Debugln(bytesWritten);
-  } else DebugTln(F("File write failed"));
- 
-  statusFile.flush();
-  statusFile.close();
-} // writeLastStatus()
+//void writeLastStatus()
+//{ 
+//  if (!FSmounted || bailout()) return;
+//
+//  DebugTf("writeLastStatus() => %s; %u; %u;\r\n", actTimestamp, P1Status.reboots, P1Status.sloterrors);
+//  
+//  File statusFile = LittleFS.open("/DSMRstatus.json", "w");
+//  if (!statusFile) {
+//    DebugTln(F("write(): No /DSMRstatus.json found"));
+//    return;
+//  }
+//  
+//  char buffer[120];
+//#ifdef USE_WATER_SENSOR
+//  sprintf_P(buffer,PSTR("{\"Timestamp\":\"%s\",\"Reboots\":%d,\"slotErrors\":%d,\"water_m3\":%d,\"water_liter\":%d}"), actTimestamp, P1Status.reboots, P1Status.sloterrors,P1Status.wtr_m3,P1Status.wtr_l);
+//#else
+//  sprintf_P(buffer,PSTR("{\"Timestamp\":\"%s\",\"Reboots\":%d,\"slotErrors\":%d}"), actTimestamp, P1Status.reboots, P1Status.sloterrors);
+//#endif  
+//  int bytesWritten = statusFile.print(buffer);
+//  if (bytesWritten > 0) {
+//    DebugT(F("File was written:"));Debugln(bytesWritten);
+//  } else DebugTln(F("File write failed"));
+// 
+//  statusFile.flush();
+//  statusFile.close();
+//} // writeLastStatus()
 
 //=======================================================================
 void writeSettings() 
 {
-  StaticJsonDocument<600> doc; 
+  StaticJsonDocument<800> doc; 
   if (!FSmounted) return;
 
   DebugT(F("Writing to [")); Debug(SETTINGS_FILE); Debugln(F("] ..."));
   
-  File SettingsFile = LITTLEFS.open(SETTINGS_FILE, "w"); // open for reading and writing
+  File SettingsFile = LittleFS.open(SETTINGS_FILE, "w"); // open for reading and writing
   
   if (!SettingsFile) 
   {
@@ -115,15 +124,14 @@ void writeSettings()
   doc["TelegramInterval"] = settingTelegramInterval;
   doc["IndexPage"] = settingIndexPage;
  
-#ifdef USE_MQTT
   doc["MQTTbroker"] = settingMQTTbroker;
   doc["MQTTbrokerPort"] = settingMQTTbrokerPort;
   doc["MQTTUser"] = settingMQTTuser;
   doc["MQTTpasswd"] = settingMQTTpasswd;
   doc["MQTTinterval"] = settingMQTTinterval;
   doc["MQTTtopTopic"] = settingMQTTtopTopic;
-  
-#endif
+  doc["ota"] = BaseOTAurl;
+  doc["enableHistory"] = EnableHistory;
 
   writeToJsonFile(doc, SettingsFile);
   
@@ -133,21 +141,22 @@ void writeSettings()
 //=======================================================================
 void readSettings(bool show) 
 {
-  StaticJsonDocument<600> doc; 
+  StaticJsonDocument<800> doc; 
   File SettingsFile;
   if (!FSmounted) return;
 
   DebugTf(" %s ..\r\n", SETTINGS_FILE);
  
-   if (!LITTLEFS.exists(SETTINGS_FILE)) 
+   if (!LittleFS.exists(SETTINGS_FILE)) 
   {
     DebugTln(F(" .. DSMRsettings.json file not found! --> created file!"));
     writeSettings();
+    return;
   }
 
   for (int T = 0; T < 2; T++) 
   {
-    SettingsFile = LITTLEFS.open(SETTINGS_FILE, "r");
+    SettingsFile = LittleFS.open(SETTINGS_FILE, "r");
     if (!SettingsFile) 
     {
       if (T == 0) DebugTf(" .. something went wrong opening [%s]\r\n", SETTINGS_FILE);
@@ -162,11 +171,15 @@ void readSettings(bool show)
   if (error) {
     Debugln();
     DebugTln(F("read():Failed to read DSMRsettings.json file"));
+    LogFile("read():Failed to read DSMRsettings.json file");
+    SettingsFile.close();
+    writeSettings();
     return;
   }
   
-  //strcpy(LITTLEFSTimestamp, doc["Timestamp"]);
+  //strcpy(LittleFSTimestamp, doc["Timestamp"]);
   strcpy(settingHostname, doc["Hostname"] | _DEFAULT_HOSTNAME );
+  strcpy(settingIndexPage, doc["IndexPage"] | _DEFAULT_HOMEPAGE);
   settingEDT1 = doc["EnergyDeliveredT1"];
   settingEDT2 = doc["EnergyDeliveredT2"];
   settingERT1 = doc["EnergyReturnedT1"];
@@ -175,12 +188,10 @@ void readSettings(bool show)
   settingENBK = doc["EnergyVasteKosten"];
   settingGNBK = doc["GasVasteKosten"];
   settingSmHasFaseInfo = doc["SmHasFaseInfo"];
-  settingTelegramInterval = doc["TelegramInterval"];
-  strcpy(settingIndexPage, doc["IndexPage"] | _DEFAULT_HOMEPAGE);
   
+  settingTelegramInterval = doc["TelegramInterval"];
   CHANGE_INTERVAL_SEC(nextTelegram, settingTelegramInterval);
  
-#ifdef USE_MQTT
   //sprintf(settingMQTTbroker, "%s:%d", MQTTbroker, MQTTbrokerPort);
   strcpy(settingMQTTbroker, doc["MQTTbroker"]);
   settingMQTTbrokerPort = doc["MQTTbrokerPort"];
@@ -188,12 +199,12 @@ void readSettings(bool show)
   strcpy(settingMQTTpasswd, doc["MQTTpasswd"]);
   settingMQTTinterval = doc["MQTTinterval"];
   strcpy(settingMQTTtopTopic, doc["MQTTtopTopic"]);
+  if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
   
   CHANGE_INTERVAL_SEC(publishMQTTtimer, settingMQTTinterval);
-  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
-  
-#endif
- 
+  CHANGE_INTERVAL_MIN(reconnectMQTTtimer, 1);
+  if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
+  if (doc.containsKey("enableHistory")) EnableHistory = doc["enableHistory"];
   SettingsFile.close();
   //end json
 
@@ -228,7 +239,6 @@ void readSettings(bool show)
   
   Debugf("                  Index Page : %s\r\n",     settingIndexPage);
 
-#ifdef USE_MQTT
   Debugln(F("\r\n==== MQTT settings ==============================================\r"));
   Debugf("          MQTT broker URL/IP : %s:%d", settingMQTTbroker, settingMQTTbrokerPort);
   if (MQTTclient.connected()) Debugln(F(" (is Connected!)\r"));
@@ -241,8 +251,8 @@ void readSettings(bool show)
 #endif
   Debugf("          MQTT send Interval : %d\r\n", settingMQTTinterval);
   Debugf("              MQTT top Topic : %s\r\n", settingMQTTtopTopic);
-#endif  // USE_MQTT 
-  
+  Debug(F("                Base OTA url : ")); Debugln(BaseOTAurl);
+  Debug(F("              History Enabled: ")); Debugln(EnableHistory);
   Debugln(F("-\r"));
 
 } // readSettings()
@@ -290,7 +300,6 @@ void updateSetting(const char *field, const char *newValue)
 
   if (!stricmp(field, "IndexPage"))        strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), newValue);  
 
-#ifdef USE_MQTT
   if (!stricmp(field, "mqtt_broker"))  {
     DebugT("settingMQTTbroker! to : ");
     memset(settingMQTTbroker, '\0', sizeof(settingMQTTbroker));
@@ -320,61 +329,39 @@ void updateSetting(const char *field, const char *newValue)
     CHANGE_INTERVAL_SEC(publishMQTTtimer, settingMQTTinterval);
   }
   if (!stricmp(field, "mqtt_toptopic"))     strCopy(settingMQTTtopTopic, 20, newValue);  
-#endif
 
   writeSettings();
   
 } // updateSetting()
 
 //=======================================================================
-void LogFile(){
-  File RebootFile = LITTLEFS.open("/P1.log", "a"); // open for appending  
-  if (!RebootFile || !FSmounted) {
-    DebugTln(F("open LogFile file FAILED!!!--> Bailout\r\n"));
-    return;
-  }
-  
-  //log rotate
-  if (RebootFile.size() > 2500){ 
-//    DebugT(F("LogFile filesize: "));Debugln(RebootFile.size());
-    LITTLEFS.remove("/log.old");     //remove .old if existing 
-    //rename file
-    DebugTln(F("LogFile: rename file"));
-    RebootFile.close(); 
-    LITTLEFS.rename("/P1.log", "/log.old");
-    RebootFile = LITTLEFS.open("/P1.log", "a"); // open for appending  
-    }
-
-    //make one record : {"time":"2020-09-23 17:03:25","reason":"Software/System restart","reboots":42}
-    RebootFile.println("{\"time\":\"" + buildDateTimeString(actTimestamp, sizeof(actTimestamp)) + "\",\"reason\":\"" + lastReset + "\",\"reboots\":" +  (int)nrReboots + "}");
-  
-    //closing the file
-    RebootFile.close(); 
-}
-
-//=======================================================================
 void LogFile(const char* payload) {
   if (!FSmounted) return;
-  File LogFile = LITTLEFS.open("/P1.log", "a"); // open for appending  
+  File LogFile = LittleFS.open("/P1.log", "a"); // open for appending  
   if (!LogFile) {
     DebugTln(F("open P1.log FAILED!!!--> Bailout\r\n"));
     return;
   }
   
   //log rotate
-  if (LogFile.size() > 2500){ 
+  if (LogFile.size() > 8000){ 
 //    DebugT(F("LogFile filesize: "));Debugln(RebootFile.size());
-    LITTLEFS.remove("/P1_log.old");     //remove .old if existing 
+    LittleFS.remove("/P1_log.old");     //remove .old if existing 
     //rename file
     DebugTln(F("RebootLog: rename file"));
     LogFile.close(); 
-    LITTLEFS.rename("/P1.log", "/P1_log.old");
-    LogFile = LITTLEFS.open("/P1.log", "a"); // open for appending  
+    LittleFS.rename("/P1.log", "/P1_log.old");
+    LogFile = LittleFS.open("/P1.log", "a"); // open for appending  
     }
-  
-    //make one record : {"time":"2020-09-23 17:03:25","log":"Software/System restart"}
-    LogFile.println("{\"time\":\"" + buildDateTimeString(actTimestamp, sizeof(actTimestamp)) + "\",\"log\":\"" + payload + "\"}");
-  
+    
+    if (strlen(payload)==0) {
+      //reboot
+      //make one record : {"time":"2020-09-23 17:03:25","reason":"Software/System restart","reboots":42}
+      LogFile.println("{\"time\":\"" + buildDateTimeString(actTimestamp, sizeof(actTimestamp)) + "\",\"reboot_reason\":\"" + lastReset + "\",\"reboots\":" +  (int)P1Status.reboots + "}");
+    } else { 
+      //make one record : {"time":"2020-09-23 17:03:25","log":"Software/System restart"}
+      LogFile.println("{\"time\":\"" + buildDateTimeString(actTimestamp, sizeof(actTimestamp)) + "\",\"log\":\"" + payload + "\"}");
+    }
     //closing the file
     LogFile.close(); 
 }
