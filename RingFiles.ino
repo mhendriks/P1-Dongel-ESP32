@@ -1,7 +1,7 @@
 /* 
 ***************************************************************************  
 **  Program  : JsonCalls, part of DSMRloggerAPI
-**  Version  : v3.0.0
+**  Version  : v4.0.0
 **
 **  Copyright (c) 2021 Martijn Hendriks
 **
@@ -90,7 +90,7 @@ void RingFileTo(E_ringfiletype ringfiletype, bool toFile)
         DebugTln(F("http: json sent .."));
         httpServer.send(503, "application/json", "{\"error\":\"Ringfile error: incorrect file length\"}");
       } else{
-        TelnetStream.write("Ringfile error: incorrect file length"  );
+        TelnetStream.write("Ringfile error: incorrect file length");
       }
   } else if (toFile) {
       DebugTln(F("http: json sent .."));
@@ -101,7 +101,7 @@ void RingFileTo(E_ringfiletype ringfiletype, bool toFile)
           while (RingFile.available()) //read the content and output to serial interface
           { 
             //Serial.write(RingFile.read());
-            TelnetStream.write(RingFile.read());
+            TelnetStream.println(RingFile.readStringUntil('\n'));
           }
           Debugln();
       }

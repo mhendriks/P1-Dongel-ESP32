@@ -1,7 +1,7 @@
 /* 
 ***************************************************************************  
 **  Program  : File System, part of DSMRloggerAPI
-**  Version  : v3.0.0
+**  Version  : v4.0.0
 **
 **  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
@@ -34,7 +34,8 @@ void listFS()
   while (file)  
   {
     dirMap[fileNr].Name[0] = '\0';
-    strncat(dirMap[fileNr].Name, file.name()+1, 19); // remove leading '/'
+//    strncat(dirMap[fileNr].Name, file.name()+1, 19); // remove leading '/'
+      strcpy( dirMap[fileNr].Name, file.name() ); //littlefs
     dirMap[fileNr].Size = file.size();
     fileNr++;
     file = root.openNextFile();

@@ -1,7 +1,7 @@
  /* 
 ***************************************************************************  
 **  Program  : FSexplorer, part of DSMRloggerAPI
-**  Version  : v3.0.0
+**  Version  : v4.0.0
 **
 **  Mostly stolen from https://www.arduinoforum.de/User-Fips
 **  For more information visit: https://fipsok.de
@@ -110,7 +110,8 @@ void APIlistFiles()             // Senden aller Daten an den Client
   while (file)  
   {
     dirMap[fileNr].Name[0] = '\0';
-    strncat(dirMap[fileNr].Name, file.name()+1, 29); // remove leading '/'
+//    strncat(dirMap[fileNr].Name, file.name()+1, 29); // remove leading '/'
+    strcpy( dirMap[fileNr].Name, file.name() ); //littlefs
     dirMap[fileNr].Size = file.size();
     fileNr++;
     file = root.openNextFile();
@@ -283,7 +284,7 @@ void doRedirect(String msg, int wait, const char* URL, bool reboot, bool resetWi
     }
     if (resetWifi) 
    {   
-       ESP_WiFiManager manageWiFi("p1-dongle");
+       WiFiManager manageWiFi;
        manageWiFi.resetSettings();
    }
     P1Reboot();

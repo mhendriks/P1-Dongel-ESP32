@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : settings_status_files, part of DSMRloggerAPI
-**  Version  : v3.0.0
+**  Version  : v4.0.0
 **
 **  Copyright (c) 2021 Martijn Hendriks
 **
@@ -170,8 +170,8 @@ void readSettings(bool show)
   DeserializationError error = deserializeJson(doc, SettingsFile);
   if (error) {
     Debugln();
-    DebugTln(F("read():Failed to read DSMRsettings.json file"));
-    LogFile("read():Failed to read DSMRsettings.json file");
+//    DebugTln(F("read():Failed to read DSMRsettings.json file"));
+    LogFile("read():Failed to read DSMRsettings.json file",true);
     SettingsFile.close();
     writeSettings();
     return;
@@ -335,14 +335,14 @@ void updateSetting(const char *field, const char *newValue)
 } // updateSetting()
 
 //=======================================================================
-void LogFile(const char* payload) {
+void LogFile(const char* payload, bool toDebug = false) {
   if (!FSmounted) return;
   File LogFile = LittleFS.open("/P1.log", "a"); // open for appending  
   if (!LogFile) {
     DebugTln(F("open P1.log FAILED!!!--> Bailout\r\n"));
     return;
   }
-  
+  if (toDebug) DebugTln(payload);
   //log rotate
   if (LogFile.size() > 8000){ 
 //    DebugT(F("LogFile filesize: "));Debugln(RebootFile.size());

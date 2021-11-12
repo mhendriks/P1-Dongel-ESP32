@@ -1,7 +1,7 @@
 /* 
 ***************************************************************************  
 **  Program  : DSMRloggerAPI
-**  Version  : v3.0.0
+**  Version  : v4.0.0
 **
 **  Copyright (c) 2021 Martijn Hendriks 
 **

@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : networkStuff.h, part of DSMRloggerAPI
-**  Version  : v3.0.0
+**  Version  : v4.0.0
 **
 **  Copyright (c) 2021 Willem Aandewiel / Martijn Hendriks
 **
@@ -18,19 +18,20 @@
   #include <Update.h>
   #include "UpdateServerHtml.h"
 #endif
-#include <ESP_WiFiManager.h>              //https://github.com/khoih-prog/ESP_WiFiManager
+//#include <ESP_WiFiManager.h>              //https://github.com/khoih-prog/ESP_WiFiManager
+#include <WiFiManager.h>        // version 0.16.0 - https://github.com/tzapu/WiFiManager
 
 WebServer        httpServer (80);
 
 bool        FSmounted = false; 
 bool        isConnected = false;
 
-void LogFile(const char*);
+void LogFile(const char*, bool);
 void P1Reboot();
 
 //gets called when WiFiManager enters configuration mode
 //===========================================================================================
-void configModeCallback (ESP_WiFiManager *myWiFiManager) 
+void configModeCallback (WiFiManager *myWiFiManager) 
 {
   DebugTln(F("Entered config mode\r"));
   DebugTln(WiFi.softAPIP().toString());
@@ -42,43 +43,43 @@ void configModeCallback (ESP_WiFiManager *myWiFiManager)
 //===========================================================================================
 void startWiFi(const char* hostname, int timeOut) 
 {
-//  WiFiManager manageWiFi;
-  ESP_WiFiManager ESP_wifiManager("p1-dongle");
+  WiFiManager manageWiFi;
+//  ESP_WiFiManager manageWiFi("p1-dongle");
   uint32_t lTime = millis();
   String thisAP = String(hostname) + "-" + WiFi.macAddress();
 
-  DebugTln("start ...");
-  LogFile("Wifi Starting");
+//  DebugTln("start ...");
+  LogFile("Wifi Starting",true);
 
-//  manageWiFi.setDebugOutput(false);
+  manageWiFi.setDebugOutput(false);
   
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
-  ESP_wifiManager.setAPCallback(configModeCallback);
+  manageWiFi.setAPCallback(configModeCallback);
 
   //--- sets timeout until configuration portal gets turned off
   //--- useful to make it all retry or go to sleep in seconds
   //manageWiFi.setTimeout(240);  // 4 minuten
-  ESP_wifiManager.setTimeout(timeOut);  // in seconden ...
+  manageWiFi.setTimeout(timeOut);  // in seconden ...
 
   //--- fetches ssid and pass and tries to connect
   //--- if it does not connect it starts an access point with the specified name
   //--- here  "DSMR-WS-<MAC>"
   //--- and goes into a blocking loop awaiting configuration
-  if (!ESP_wifiManager.autoConnect("P1-Dongle"))
+  if (!manageWiFi.autoConnect("P1-Dongle"))
   {
-    LogFile("Wifi Timeout");
-    DebugTln(F("failed to connect and hit timeout"));
+    LogFile("Wifi failed to connect and hit timeout",true);
+//    DebugTln(F("Wifi failed to connect and hit timeout"));
     DebugTf(" took [%d] seconds ==> ERROR!\r\n", (millis() - lTime) / 1000);
     P1Reboot();
     return;
   }
-  LogFile("Wifi Connected");
+  LogFile("Wifi Connected",true);
 //  DebugTf("Connected with IP-address [%s]\n", WiFi.localIP().toString().c_str());
   DebugTf(" took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
-  Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
-  Debug (F("IP address: " ));  Debugln (WiFi.localIP());
-  Debug (F("IP gateway: " ));  Debugln (WiFi.gatewayIP());
-  Debugln();
+//  Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
+//  Debug (F("IP address: " ));  Debugln (WiFi.localIP());
+//  Debug (F("IP gateway: " ));  Debugln (WiFi.gatewayIP());
+//  Debugln();
   
 } // startWiFi()
 

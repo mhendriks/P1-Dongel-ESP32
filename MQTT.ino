@@ -1,7 +1,7 @@
 /* 
 ***************************************************************************  
 **  Program  : MQTTstuff, part of DSMRloggerAPI
-**  Version  : v3.0.0
+**  Version  : v4.0.0
 **
 **  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
@@ -53,6 +53,10 @@ void connectMQTT() {
 
 void MQTTcallback(char* topic, byte* payload, unsigned int length) {
   if (length > 24) return;
+  sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
+  if (strcmp(topic, cMsg) == 0) bUpdateSketch = false; 
+  else bUpdateSketch = true;
+  
   for (int i=0;i<length;i++) UpdateVersion[i] = (char)payload[i];
   DebugT("Message arrived [");Debug(topic);Debug("] ");Debugln(UpdateVersion);
   UpdateRequested = true;
@@ -65,8 +69,8 @@ bool connectMQTT_FSM()
   {
     case MQTT_STATE_INIT:  
           {
-        LogFile("MQTT Starting");
-        DebugTln(F("MQTT State: MQTT Initializing"));
+        LogFile("MQTT Starting",true);
+//        DebugTln(F("MQTT State: MQTT Initializing"));
         MQTTbrokerIP = MDNS.queryHost(settingMQTTbroker);
         if (isValidIP(MQTTbrokerIP)) {
           DebugT("queryHost: IP address of server: ");Debugln(MQTTbrokerIP.toString());
@@ -82,7 +86,7 @@ bool connectMQTT_FSM()
             DebugTf("ERROR: [%s] => is not a valid URL\r\n", settingMQTTbroker);
             settingMQTTinterval = 0;
             stateMQTT = MQTT_STATE_ERROR;
-            LogFile("MQTT Error : not connected");
+            LogFile("MQTT Error : not connected",false);
             return false;
           }
           
@@ -92,14 +96,13 @@ bool connectMQTT_FSM()
           MQTTclient.setServer(MQTTbrokerIPchar, settingMQTTbrokerPort);
           DebugTf("setServer  -> MQTT status, rc=%d \r\n", MQTTclient.state());
           MQTTclientId  = String(settingHostname) + "-" + WiFi.macAddress();
-          MQTTclient.setCallback(MQTTcallback); //set listner update callback
           stateMQTT = MQTT_STATE_TRY_TO_CONNECT;
           reconnectAttempts = 0;
           }
     case MQTT_STATE_TRY_TO_CONNECT:
           DebugTln(F("MQTT State: MQTT try to connect"));
           DebugTf("MQTT server is [%s], IP[%s]\r\n", settingMQTTbroker, MQTTbrokerIPchar);
-          LogFile("MQTT State: MQTT try to connect");
+          LogFile("MQTT State: MQTT try to connect",false);
           DebugTf("Attempting MQTT connection as [%s] .. \r\n", MQTTclientId.c_str());
           reconnectAttempts++;
 
@@ -119,14 +122,18 @@ bool connectMQTT_FSM()
           if (MQTTclient.connected())
           {
             reconnectAttempts = 0;  
-            LogFile("MQTT connected");
             Debugf(" .. connected -> MQTT status, rc=%d\r\n", MQTTclient.state());
+            stateMQTT = MQTT_STATE_IS_CONNECTED;
+            
+            //subscribe mqtt update topics
             MQTTclient.publish(cMsg,"Online", true);
+            MQTTclient.setCallback(MQTTcallback); //set listner update callback
             sprintf(cMsg,"%supdate",settingMQTTtopTopic);
             MQTTclient.subscribe(cMsg); //subscribe mqtt update
-            LogFile("MQTT connected");
+            sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
+            MQTTclient.subscribe(cMsg); //subscribe mqtt update
+            
             MQTTclient.loop();
-            stateMQTT = MQTT_STATE_IS_CONNECTED;
             return true;
           }
           Debugf(" -> MQTT status, rc=%d \r\n", MQTTclient.state());
@@ -136,18 +143,17 @@ bool connectMQTT_FSM()
           {
             DebugTln(F("3 attempts have failed. Retry wait for next reconnect in 10 minutes\r"));
             stateMQTT = MQTT_STATE_ERROR;  // if the re-connect did not work, then return to wait for reconnect
-            DebugTln(F("Next State: MQTT_STATE_ERROR"));
           }   
           break;
           
     case MQTT_STATE_IS_CONNECTED:
-          LogFile("MQTT connected");
+          LogFile("MQTT connected",true);
           MQTTclient.loop();
           return true;
 
     case MQTT_STATE_ERROR:
-          DebugTln(F("MQTT State: MQTT ERROR, wait for 5 sec, before trying again"));
-          LogFile("MQTT Error: retry in 5 seconds");
+//          DebugTln(F("MQTT State: MQTT ERROR, wait for 5 sec, before trying again"));
+          LogFile("MQTT Error: retry after 5 seconds",true);
           //--- next retry in 10 minutes.
           CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
           break;
@@ -222,23 +228,17 @@ void MQTTSend(const char* item, int32_t value){
   }
 }
 //===========================================================================================
-void MQTTSentStaticP1Info(){
-  
+void MQTTSentStaticInfo(){
+  if ((settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   StaticInfoSend = true;
   MQTTSend("identification",DSMRdata.identification);
   MQTTSend("p1_version",DSMRdata.p1_version);
   MQTTSend("equipment_id",DSMRdata.equipment_id);
   MQTTSend("firmware",_VERSION_ONLY);
   MQTTSend("ip_address",WiFi.localIP().toString());
+  MQTTSend( "wifi_rssi",WiFi.RSSI() );
   if (DSMRdata.mbus1_device_type_present){ MQTTSend("gas_device_type", (uint32_t)DSMRdata.mbus1_device_type ); }
   if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc); }
-  
-}
-
-//---------------------------------------------------------------
-void MQTTSentStaticDevInfo(){
-  
-  MQTTSend( "wifi_rssi",WiFi.RSSI() );
   
 }
 
@@ -290,11 +290,8 @@ void sendMQTTData()
   }
 
   DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
-  if ((telegramCount - telegramErrors) > 2 && !StaticInfoSend){
-    MQTTSentStaticP1Info();
-    MQTTSentStaticDevInfo();
-  }
-  fieldsElements = INFOELEMENTS;  
+  if ((telegramCount - telegramErrors) > 2 && !StaticInfoSend)  MQTTSentStaticInfo();
+  fieldsElements = INFOELEMENTS;
   DSMRdata.applyEach(buildJsonMQTT());
   MQTTsendGas();
 

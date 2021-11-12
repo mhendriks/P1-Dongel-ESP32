@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : DSMRloggerAPI.h - definitions for DSMRloggerAPI
-**  Version  : v3.0.0
+**  Version  : v4.0.0
 **
 **  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
@@ -23,6 +23,7 @@
 #include "version.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git  
 
 #define _DEFAULT_HOSTNAME  "P1-DONGLE/" 
@@ -32,9 +33,10 @@
 #define JSON_BUFF_MAX     255
 #define MQTT_BUFF_MAX     200
 
+HardwareSerial P1Serial(2);
 TaskHandle_t CPU0; //handler voor CPU task 0
 
-P1Reader    slimmeMeter(&Serial1, DTR_IO); 
+P1Reader    slimmeMeter(&P1Serial, DTR_IO); 
 
 enum    { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS};
@@ -167,11 +169,8 @@ MyData      DSMRdata;
 time_t      actT, newT;
 char        actTimestamp[20] = "";
 char        newTimestamp[20] = "";
-//uint32_t    slotErrors = 0;
-//uint32_t    nrReboots  = 0;
 uint32_t    telegramCount = 0, telegramErrors = 0;
 bool        showRaw = false;
-//int8_t      showRawCount = 0;
 bool        DSMR_NL      = true;
 
 char      cMsg[150];
@@ -195,6 +194,7 @@ byte      RingCylce = 0;
 bool      EnableHistory = true;
 char      BaseOTAurl[75] = "http://smart-stuff.nl/ota/";
 char      UpdateVersion[25] = "";
+bool      bUpdateSketch = true;
 
 //MQTT
 char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[21] = _DEFAULT_HOSTNAME;

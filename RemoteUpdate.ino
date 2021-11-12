@@ -1,7 +1,7 @@
 /* 
 ***************************************************************************  
 **  Program  : processTelegram, part of DSMRloggerAPI
-**  Version  : v3.0.0
+**  Version  : v4.0.0
 **
 **  Copyright (c) 2021 Willem Aandewiel / Martijn Hendriks
 **
@@ -12,11 +12,13 @@
 bool bWebUpdate = false;
 
 void update_finished() {
-  LogFile("Firmware update geslaagd");
+  LogFile("OTA UPDATE geslaagd", true);
+//  Debugln(F("OTA UPDATE geslaagd"));
 }
 
 void update_started() {
-  LogFile("Firmware update gestart");
+  LogFile("OTA UPDATE gestart",true);
+//  Debugln(F("OTA UPDATE gestart"));
   if (bWebUpdate) httpServer.send(200, "text/html", "OTA update gestart...");
 }
 
@@ -26,7 +28,7 @@ void update_progress(int cur, int total) {
 
 void update_error(int err) {
   Debugf("HTTP update fatal error code %d | %s\n", err, httpUpdate.getLastErrorString());
-  LogFile("OTA ERROR: no update");
+  LogFile("OTA ERROR: no update",false);
   if (bWebUpdate) httpServer.send(200, "text/html", "OTA ERROR: " + err);
 }
 
@@ -48,12 +50,16 @@ void RemoteUpdate(const char* versie, bool sketch){
  */
   WiFiClient client;
   int flashSize = (ESP.getFlashChipSize() / 1024.0 / 1024.0);
-  String path , otaFile, _versie;
+  String path, otaFile, _versie;
+  t_httpUpdate_return ret;
+  
+  Debugln(F("\n!!! OTA UPDATE !!!"));
+  Debugln(sketch ? "Update type: Sketch" : "Update type: File"); 
   
   if (bWebUpdate) {
     if (httpServer.argName(0) != "version") {
         httpServer.send(200, "text/html", "OTA ERROR: No version argument");
-        LogFile("OTA ERROR: No version argument" );
+        LogFile("OTA ERROR: versienr ontbreekt",true );
         bWebUpdate = false;
         return;
     }
@@ -61,25 +67,42 @@ void RemoteUpdate(const char* versie, bool sketch){
   }
   else if ( strlen(versie) ) _versie = versie; 
        else {   
-              DebugTln(F("OTA ERROR: versienr ontbreekt"));
+              LogFile("OTA ERROR: versienr ontbreekt", true);
               bWebUpdate = false; 
               return; 
             }
-  
-  otaFile = "DSMR-API-V" + _versie + "_" + flashSize + "Mb.bin";
-  path = BaseOTAurl + otaFile;
-  DebugTf("OTA versie %s | flashsize %i Mb\nOTA path: %s", _versie, flashSize,path);
-  
+
   // Add optional callback notifiers
   httpUpdate.onStart(update_started);
   httpUpdate.onEnd(update_finished);
   httpUpdate.onProgress(update_progress);
   httpUpdate.onError(update_error);
-    
+  
+  otaFile = "DSMR-API-V" + _versie + "_" + flashSize; 
+  otaFile+= sketch ? "Mb.bin" : "Mb.sketch.bin";
+  path = String(BaseOTAurl) + otaFile;
+  Debugf("OTA versie %s | flashsize %i Mb\n", _versie, flashSize);
+  Debugln("OTA path: " + path);
+  
+  httpUpdate.rebootOnUpdate(false); 
+  
   //start update proces
-  DebugTln(F("OTA: --> start update proces <--"));
-  if (sketch ) httpUpdate.update(client, path.c_str());
-  else httpUpdate.updateSpiffs(client,path);
+  if ( sketch ) ret = httpUpdate.update(client, path.c_str());
+  else ret = httpUpdate.updateSpiffs(client,path.c_str());
+  switch (ret) {
+      case HTTP_UPDATE_FAILED:
+        Debugf("OTA ERROR: (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+        break;
+
+      case HTTP_UPDATE_NO_UPDATES:
+        Debugf("OTA ERROR: HTTP_UPDATE_NO_UPDATES");
+        break;
+
+      case HTTP_UPDATE_OK:
+        P1Reboot();
+        break;
+    }
+  Debugln();
   UpdateRequested = false;
   bWebUpdate = false;
 } //RemoteUpdate

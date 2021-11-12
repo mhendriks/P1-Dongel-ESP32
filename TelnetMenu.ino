@@ -1,7 +1,7 @@
 /* 
 ***************************************************************************  
 **  Program  : menuStuff, part of DSMRloggerAPI
-**  Version  : v3.0.0
+**  Version  : v4.0.0
 **
 **  Copyright (c) 2021 Willem Aandewiel / Martijn Hendriks
 **
@@ -9,26 +9,35 @@
 ***************************************************************************      
 */
 
-void DisplayLogFile(const char *fname) {   
+void DisplayFile(const char *fname) { 
   if (bailout() || !FSmounted) return; //exit when heapsize is too small
-  if (!LittleFS.exists(fname))
-  {
-    DebugT(F("LogFile doesn't exist: "));
-    return;
-    }
   File RingFile = LittleFS.open(fname, "r"); // open for reading
-  DebugTln(F("Ringfile output: "));
-  //read the content and output to serial interface
-  while (RingFile.available()) TelnetStream.write(RingFile.read());
-  Debugln();    
+  if (RingFile)  {
+    DebugTln(F("Ringfile output (telnet only): "));
+    //read the content and output to serial interface
+    while (RingFile.available()) TelnetStream.println(RingFile.readStringUntil('\n'));
+    Debugln();    
+  } else DebugT(F("LogFile doesn't exist: "));
   RingFile.close();
 } //displaylogfile
 
 //--------------------------------
+void P1Update(bool sketch){
+  String versie;
+  char c;
+  while (TelnetStream.available() > 0) { 
+    c = TelnetStream.read();
+    if (!(c==32 || c==10 || c==13) ) versie+=c; //remove spaces
+  }
+  // Debug("Update version: "); Debugln(versie);
+  if (versie.length()>4) RemoteUpdate(versie.c_str(),sketch); 
+  else Debugln(F("Fout in versie opgave: formaat = x.x.x")); 
+}
+//--------------------------------
 
 void ResetDataFiles() {
   LittleFS.remove("/RINGdays.json");
-  LittleFS.remove("/RINGweeks.json");
+  LittleFS.remove("/RINGhours.json");
   LittleFS.remove("/RINGmonths.json");
   LittleFS.remove("/P1.old");
   LittleFS.remove("/P1.log");
@@ -143,31 +152,23 @@ void handleKeyInput()
                         c = (char)TelnetStream.read();
                         switch(c){
                         case 'b': displayBoardInfo();break;
-                        case 'd': RingFileTo(RINGDAYS, false); break;
-                        case 'h': RingFileTo(RINGHOURS, false); break;
-                        case 'm': RingFileTo(RINGMONTHS, false); break;
-                        case 'n': DisplayLogFile("P1.log");break;
-                        default : Debugln(F("Display:\nb = board info\nd = Day table from FS\nh = Hour table from FS\nm = Month table from FS\nn = Logfile from FS"));
+                        case 'd': DisplayFile("/RINGdays.json"); break;; break;
+                        case 'h': DisplayFile("/RINGhours.json"); break;
+                        case 'm': DisplayFile("/RINGmonths.json"); break;
+                        case 'l': DisplayFile("/P1.log");break;
+                        case 's': listFS();break;
+                        default : Debugln(F("Display:\nb = board info\nd = Day table from FS\nh = Hour table from FS\nm = Month table from FS\nl = Logfile from FS\ns = File info"));
                         } //switch
                         while (TelnetStream.available() > 0) {(char)TelnetStream.read();} //verwijder extra input
                       } //while
                       break; }
       case 'E':     eraseFile();
                     break;
-#if defined(HAS_NO_SLIMMEMETER)
+      #if defined(HAS_NO_SLIMMEMETER)
       case 'F':     forceBuildRingFiles = true;
                     runMode = SInit;
                     break;
-#endif
-      case 'h':
-      case 'H':     RingFileTo(RINGHOURS, false);
-                    break;
-      case 'n':
-      case 'N':     DisplayLogFile("/P1.log");
-                    break;                    
-      case 'm':
-      case 'M':     RingFileTo(RINGMONTHS, false);
-                    break;
+      #endif
                     
       case 'W':     Debugf("\r\nConnect to AP [%s] and go to ip address shown in the AP-name\r\n", settingHostname);
                     delay(1000);
@@ -178,25 +179,19 @@ void handleKeyInput()
       case 'p':
       case 'P':     showRaw = !showRaw;
                     break;
+                    
       case 'Q':     ResetDataFiles();
                     break;                      
+                    
       case 'R':     DebugFlush();
                     P1Reboot();
                     break;
-      case 's':
-      case 'S':     listFS();
+                    
+      case 'S':     P1Update(false);
                     break;
-     case 'U':     {
-                    String versie;
-                    char c;
-                    while (TelnetStream.available() > 0) { 
-                      c = TelnetStream.read();
-                      if (!(c==32 || c==10 || c==13) ) versie+=c; //remove spaces
-                    }
-                    Debug("Update version: "); Debugln(versie);
-                    if (versie.length()>4) RemoteUpdate(versie.c_str(),true); 
-                    else Debugln(F("Fout in versie opgave"));
-                    break; }
+                    
+      case 'U':     P1Update(true);
+                    break;
                     
       case 'v':
       case 'V':     if (Verbose2) 
@@ -233,21 +228,21 @@ void handleKeyInput()
                     
       default:      Debugln(F("\r\nCommands are:\r\n"));
                     Debugln(F("   A  - P1 Status info a=available|r=read|w=write|p=print|z=erase\r"));
-                    Debugln(F("   B  - Board Info\r"));
+//                    Debugln(F("   B  - Board Info\r"));
                     Debugln(F("  *E  - erase file from FS\r"));
                     Debugln(F("   L  - list Settings\r"));
-                    Debugln(F("   D+ - Display b=board info | d=Day table | h=Hour table | m=Month table | n=Logfile\r"));
-                    Debugln(F("   H  - Display Hour table from FS\r"));
-                    Debugln(F("   N  - Display LogFile P1.log\r"));
-                    Debugln(F("   M  - Display Month table from FS\r"));
+                    Debugln(F("   D+ - Display b=board info | d=Day table | h=Hour table | m=Month table | l=Logfile | s = File info\r"));
+//                    Debugln(F("   H  - Display Hour table from FS\r"));
+//                    Debugln(F("   N  - Display LogFile P1.log\r"));
+//                    Debugln(F("   M  - Display Month table from FS\r"));
                     #ifdef HAS_NO_SLIMMEMETER
                       Debugln(F("  *F  - Force build RING files\r"));
                     #endif
                     Debugln(F("   P  - No Parsing (show RAW data from Smart Meter)\r"));
                     Debugln(F("  *W  - Force Re-Config WiFi\r"));
                     Debugln(F("  *R  - Reboot\r"));
-                    Debugln(F("   S  - File info on FS\r"));
-                    Debugln(F("  *U+ - Update Remote; Enter Firmware version -> U 3.0.4 \r"));
+                    Debugln(F("  *S+ - Update File System: Enter version -> S4.0.1\r"));
+                    Debugln(F("  *U+ - Update Remote; Enter Firmware version -> U 4.0.1 \r"));
 #ifdef USE_WATER_SENSOR
                     Debugln(F("   X  - Watermeter reading\r"));
 #endif                    

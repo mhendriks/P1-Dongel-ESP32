@@ -56,7 +56,7 @@
 void setup() 
 {
   Serial.begin(115200, SERIAL_8N1); //debug stream
-  Serial1.begin(115200, SERIAL_8N1, 16,0,true); //p1 serial input
+  P1Serial.begin(115200, SERIAL_8N1, 16,0,true); //p1 serial input
 
   Debug("\n\n ----> BOOTING....[" _VERSION "] <-----\n\n");
   DebugTln("The board name is: " ARDUINO_BOARD);
@@ -79,12 +79,19 @@ void setup()
   //==========================================================//
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
-  LogFile(""); // write reboot status to file
+  LogFile("",false); // write reboot status to file
   readSettings(true);
   
 //=============start Networkstuff==================================
   delay(1500);
   startWiFi(settingHostname, 240);  // timeout 4 minuten
+  
+  Debugln();
+  Debug (F("Connected to " )); Debugln (WiFi.SSID());
+  Debug (F("IP address: " ));  Debugln (WiFi.localIP());
+  Debug (F("IP gateway: " ));  Debugln (WiFi.gatewayIP());
+  Debugln();
+  
   delay(500);
   startTelnet();
 
@@ -221,14 +228,14 @@ void loop ()
 
   if (DUE(StatusTimer)) { //eens per 15min of indien extra m3
     P1StatusWrite();
-    MQTTSentStaticP1Info();
+    MQTTSentStaticInfo();
     #ifdef USE_WATER_SENSOR
       sendMQTTWater();
     #endif
     CHANGE_INTERVAL_MIN(StatusTimer, 15);
   }
 
-  if (UpdateRequested) RemoteUpdate(UpdateVersion,true);
+  if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
   
 #ifdef USE_WATER_SENSOR
   if (DUE(WaterTimer)) {
@@ -239,10 +246,11 @@ void loop ()
 
   //--- if connection lost, try to reconnect to WiFi
   if ( DUE(reconnectWiFi) && (WiFi.status() != WL_CONNECTED) ) {
-    LogFile("Wifi connection lost");  
+    sprintf(cMsg,"Wifi connection lost | rssi: %d",WiFi.RSSI());
+    LogFile(cMsg,false);  
     startWiFi(settingHostname, 10);
     if (WiFi.status() != WL_CONNECTED){
-          LogFile("Wifi connection still lost");
+          LogFile("Wifi connection still lost",false);
     } else snprintf(cMsg, sizeof(cMsg), "IP:[%s], Gateway:[%s]", WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str());
   }
 

@@ -1,7 +1,7 @@
 /* 
 ***************************************************************************  
 **  Program  : helperStuff, part of DSMRloggerAPI
-**  Version  : v3.0.0
+**  Version  : v4.0.0
 **
 **  Copyright (c) 2021 Willem Aandewiel / Martijn Hendriks
 **
@@ -9,13 +9,7 @@
 ***************************************************************************      
 */
 
-#if CONFIG_IDF_TARGET_ESP32
 #include "rom/rtc.h"
-#elif CONFIG_IDF_TARGET_ESP32S2
-#include "esp32s2/rom/rtc.h"
-#elif CONFIG_IDF_TARGET_ESP32S3
-#include "esp32s3/rom/rtc.h"
-#endif
 
 #define WIFI_getChipId() (uint32_t)ESP.getEfuseMac()
 
@@ -24,16 +18,20 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 "RTC Watch dog Reset digital core","Instrusion tested to reset CPU","Time Group reset CPU","Software reset CPU","RTC Watch dog Reset CPU","for APP CPU, reseted by PRO CPU",
 "Reset when the vdd voltage is not stable","RTC Watch dog reset digital core and rtc module"};
 
+//===========================================================================================
+
+const char* getResetReason(){
+    return resetReasons[rtc_get_reset_reason(0)];
+}
+
+//===========================================================================================
+
 void ShutDownHandler(){
-  DebugTln(F("/!\\ SHUTDOWN /!\\"));
   sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
   MQTTclient.publish(cMsg,"Offline", true); //LWT status update
   P1StatusWrite();
   P1StatusEnd();
-}
-
-const char* getResetReason(){
-    return resetReasons[rtc_get_reset_reason(0)];
+  DebugTln(F("/!\\ SHUTDOWN /!\\"));
 }
 
 //===========================================================================================
