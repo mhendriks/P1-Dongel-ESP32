@@ -91,13 +91,12 @@ void handleSlimmemeter()
 void processSlimmemeter()
 {
   slimmeMeter.loop();
-//  if (slimmeMeter.available()) 
-//  {
     telegramCount++;
     
     // Voorbeeld: [21:00:11][   9880/  8960] loop        ( 997): read telegram [28] => [140307210001S]
     Debugln(F("\r\n[Time----][FreeHeap/mBlck][Function----(line):"));
-    DebugTf("telegramCount=[%d] telegramErrors=[%d]\r\n", telegramCount, telegramErrors);
+    DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
+
         
     DSMRdata = {};
     String    DSMRerror;
@@ -145,19 +144,8 @@ void processSlimmemeter()
     {
       telegramErrors++;
       DebugTf("Parse error\r\n%s\r\n\r\n", DSMRerror.c_str());
-      //--- set DTR to get a new telegram as soon as possible
-//      slimmeMeter.enable(true);
-//      slimmeMeter.loop();
       slimmeMeter.clear(); //on errors clear buffer
-
     }
-
-//    if ( (telegramCount > 25) && (telegramCount % (2100 / (settingTelegramInterval + 1)) == 0) )
-//    {
-//      DebugTf("Processed [%d] telegrams ([%d] errors)\r\n", telegramCount, telegramErrors);
-//    }
-//        
-//  } // if (slimmeMeter.available()) 
   
 } // handleSlimmeMeter()
 

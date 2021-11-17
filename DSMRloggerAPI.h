@@ -53,10 +53,15 @@ typedef struct {
 
 const S_ringfile RingFiles[3] = {{"/RINGhours.json", 48+1,SECS_PER_HOUR, 4287}, {"/RINGdays.json",14+1,SECS_PER_DAY, 1329},{"/RINGmonths.json",24+1,0,2199}}; 
 
-#define DATA_FORMAT       "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}"
-#define DATA_RECLEN       87  //total length incl comma and new line
+//#define DATA_FORMAT       "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}"
+//#define DATA_RECLEN       87  //total length incl comma and new line
 #define JSON_HEADER_LEN   23  //total length incl new line
 #define DATA_CLOSE        2   //length last row of datafile
+
+//water
+#define DATA_FORMAT      "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}"
+#define DATA_RECLEN      98  //total length incl comma and new line
+
 
 #include "Debug.h"
 #include "Network.h"

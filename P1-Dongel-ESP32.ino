@@ -28,6 +28,8 @@
 *      - watersensor json actuals
 *      - watersensor historie / ringfiles
 *      - watersensor only mode
+*      x ringfiles met watermtr gegevens
+*      x ringfiles niet in default dataset
   
   Arduino-IDE settings for P1 Dongle hardware ESP32:
     - Board: "ESP32 Dev Module"
@@ -197,6 +199,7 @@ void CPU0Loop( void * pvParameters ){
 DECLARE_TIMER_MS(timer_delay_ms, 1);
 void delayms(unsigned long delay_ms)
 {
+  DebugTln(F("Delayms"));
   CHANGE_INTERVAL_MS(timer_delay_ms, delay_ms);
   RESTART_TIMER(timer_delay_ms);
   while (!DUE(timer_delay_ms)) doSystemTasks();
@@ -229,10 +232,7 @@ void loop ()
   if (DUE(StatusTimer)) { //eens per 15min of indien extra m3
     P1StatusWrite();
     MQTTSentStaticInfo();
-    #ifdef USE_WATER_SENSOR
-      sendMQTTWater();
-    #endif
-    CHANGE_INTERVAL_MIN(StatusTimer, 15);
+//    CHANGE_INTERVAL_MIN(StatusTimer, 15);
   }
 
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
@@ -240,6 +240,9 @@ void loop ()
 #ifdef USE_WATER_SENSOR
   if (DUE(WaterTimer)) {
     P1StatusWrite();
+    #ifdef USE_WATER_SENSOR
+      sendMQTTWater();
+    #endif
     CHANGE_INTERVAL_MIN(WaterTimer, 30);
   }
 #endif

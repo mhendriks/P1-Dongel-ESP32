@@ -13,12 +13,10 @@ bool bWebUpdate = false;
 
 void update_finished() {
   LogFile("OTA UPDATE geslaagd", true);
-//  Debugln(F("OTA UPDATE geslaagd"));
 }
 
 void update_started() {
   LogFile("OTA UPDATE gestart",true);
-//  Debugln(F("OTA UPDATE gestart"));
   if (bWebUpdate) httpServer.send(200, "text/html", "OTA update gestart...");
 }
 
@@ -64,7 +62,7 @@ void RemoteUpdate(const char* versie, bool sketch){
         return;
     }
     _versie = httpServer.arg(0);
-  }
+  } //bWebUpdate
   else if ( strlen(versie) ) _versie = versie; 
        else {   
               LogFile("OTA ERROR: versienr ontbreekt", true);
@@ -79,9 +77,9 @@ void RemoteUpdate(const char* versie, bool sketch){
   httpUpdate.onError(update_error);
   
   otaFile = "DSMR-API-V" + _versie + "_" + flashSize; 
-  otaFile+= sketch ? "Mb.bin" : "Mb.sketch.bin";
+  otaFile+= sketch ? "Mb.bin" : "Mb.spiffs.bin";
   path = String(BaseOTAurl) + otaFile;
-  Debugf("OTA versie %s | flashsize %i Mb\n", _versie, flashSize);
+  Debugf("OTA versie %s | flashsize %i Mb\n", _versie.c_str(), flashSize);
   Debugln("OTA path: " + path);
   
   httpUpdate.rebootOnUpdate(false); 
@@ -95,7 +93,7 @@ void RemoteUpdate(const char* versie, bool sketch){
         break;
 
       case HTTP_UPDATE_NO_UPDATES:
-        Debugf("OTA ERROR: HTTP_UPDATE_NO_UPDATES");
+        Debugln("OTA ERROR: HTTP_UPDATE_NO_UPDATES");
         break;
 
       case HTTP_UPDATE_OK:

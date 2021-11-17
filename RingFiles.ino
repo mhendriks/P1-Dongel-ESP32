@@ -23,7 +23,9 @@ void createRingFile(E_ringfiletype ringfiletype)
   RingFile.print("{\"actSlot\": 0,\"data\":[\n"); //start the json file 
   for (uint8_t slot=0; slot < RingFiles[ringfiletype].slots; slot++ ) 
   { 
-    RingFile.print("{\"date\":\"20000000\",\"values\":[     0.000,     0.000,     0.000,     0.000,     0.000]}"); // one empty record
+    //{"date":"20000000","values":[     0.000,     0.000,     0.000,     0.000,     0.000]}
+//    RingFile.print("{\"date\":\"20000000\",\"values\":[     0.000,     0.000,     0.000,     0.000,     0.000]}"); // one empty record
+    RingFile.print("{\"date\":\"20000000\",\"values\":[     0.000,     0.000,     0.000,     0.000,     0.000,     0.000]}"); // one empty record
    if (slot < (RingFiles[ringfiletype].slots - 1) ) RingFile.print(",\n");
 
   }
@@ -152,7 +154,7 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec)
 //    DebugT(F("update date: "));Debugln(key);
 
     //create record
-    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)rec["edt1"], (float)rec["edt2"], (float)rec["ert1"], (float)rec["ert2"], (float)rec["gdt"]);
+    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)rec["edt1"], (float)rec["edt2"], (float)rec["ert1"], (float)rec["ert2"], (float)rec["gdt"], (float)rec["wtr"]);
     httpServer.send(200, "application/json", httpServer.arg(0));
   } else {
     //write actual data
@@ -161,7 +163,7 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec)
 //    DebugTln("actslot: "+actSlot);
 //    DebugT(F("update date: "));Debugln(key);
     //create record
-    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_tariff1, (float)DSMRdata.energy_delivered_tariff2, (float)DSMRdata.energy_returned_tariff1, (float)DSMRdata.energy_returned_tariff2, (float)gasDelivered);
+    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_tariff1, (float)DSMRdata.energy_delivered_tariff2, (float)DSMRdata.energy_returned_tariff1, (float)DSMRdata.energy_returned_tariff2, (float)gasDelivered, (float)P1Status.wtr_m3+(float)P1Status.wtr_l/1000);
   }
   //DebugT("update timeslot: ");Debugln(slot);
   //goto writing starting point  
