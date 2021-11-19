@@ -8,6 +8,15 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
+
+void CheckRingExists(){
+  for (byte i = 0; i< 3; i++){
+    if ( !LittleFS.exists(RingFiles[i].filename) ) createRingFile((E_ringfiletype)i);
+  }
+}
+
+//===========================================================================================
+
 void ConvRing3_2_0(){
   if (!LittleFS.exists("/RNGhours.json")) ConvRing("/RNGhours.json","/RINGhours.json");
   else DebugTln(F("RNGhours.json bestaat al"));
@@ -18,6 +27,7 @@ void ConvRing3_2_0(){
   if (!LittleFS.exists("/RNGmonths.json")) ConvRing("/RNGmonths.json","/RINGmonths.json");
   else DebugTln(F("RNGmonths.json bestaat al"));
 }
+//===========================================================================================
 
 void ConvRing(const char *newfile, const char *oldfile){
   String rbuf; char wbuf[100];  
@@ -57,6 +67,7 @@ void ConvRing(const char *newfile, const char *oldfile){
   FileOld.close();
   Debug(oldfile);Debugln(F(" geconverteerd"));
 }
+//===========================================================================================
 
 void createRingFile(E_ringfiletype ringfiletype) 
 {

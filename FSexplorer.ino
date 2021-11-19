@@ -45,7 +45,6 @@ void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebu
   }, []() {
     HTTPUpload& upload = httpServer.upload();
     if (upload.status == UPLOAD_FILE_START) {
-//      Serial.printf("Update: %s\n", upload.filename.c_str());
       DebugTf("Update: %s\n", upload.filename.c_str());
       int cmd = (upload.filename.indexOf("littlefs") > -1) ? U_SPIFFS : U_FLASH;
       if (cmd == U_SPIFFS) DebugTln(F("Update: DATA detected")); else DebugTln(F("Update: FIRMWARE detected"));
@@ -61,7 +60,6 @@ void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebu
       }
     } else if (upload.status == UPLOAD_FILE_END) {
       if (Update.end(true)) { //true to set the size to the current progress
-//        Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
         DebugTf("Update Success: %u\nRebooting...\n", upload.totalSize);
         delay(1000);
       } else {
@@ -83,7 +81,6 @@ void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebu
     {
       DebugTf("next: handleFile(%s)\r\n"
                       , String(httpServer.urlDecode(httpServer.uri())).c_str());
-      if((httpServer.uri().indexOf("/RING") == 0) && (!LittleFS.exists(httpServer.uri().c_str()))) createRingFile(httpServer.uri().c_str());
       if (!handleFile(httpServer.urlDecode(httpServer.uri())))
       {
         httpServer.send(404, "text/plain", F("FileNotFound\r\n"));

@@ -51,7 +51,8 @@ typedef struct {
 //+1 voor de vergelijking, laatste record wordt niet getoond 
 //onderstaande struct kan niet in PROGMEM opgenomen worden. gaat stuk bij SPIFF.open functie
 
-const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4287}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1329},{"/RNGmonths.json",24+1,0,2199}}; 
+//const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4287}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1329},{"/RNGmonths.json",24+1,0,2199}}; 
+const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1494},{"/RNGmonths.json",24+1,0,2474}}; 
 
 //#define DATA_FORMAT       "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}"
 //#define DATA_RECLEN       87  //total length incl comma and new line
