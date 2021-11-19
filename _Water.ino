@@ -1,6 +1,7 @@
 #ifdef USE_WATER_SENSOR
 
 void sendMQTTWater(){
+  if (!WtrMtr) return;
   String msg = "{\"water\":[{\"value\":" + String(P1Status.wtr_m3) + ",\"unit\":\"m3\"}]}";
   sprintf(cMsg,"%swater",settingMQTTtopTopic);
   if ( !MQTTclient.publish(cMsg, msg.c_str(),true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", cMsg, msg.c_str(), (strlen(cMsg) + msg.length()));

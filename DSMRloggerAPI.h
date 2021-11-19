@@ -13,9 +13,9 @@
   #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.
 #endif
 
-#ifdef USE_WATER_SENSOR
-  #define PIN_WATER_SENSOR 16
-#endif
+#ifdef USE_WATER_SENSOR  
+  #define PIN_WATER_SENSOR 14
+#endif //USE_WATER_SENSOR
 
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
@@ -51,7 +51,7 @@ typedef struct {
 //+1 voor de vergelijking, laatste record wordt niet getoond 
 //onderstaande struct kan niet in PROGMEM opgenomen worden. gaat stuk bij SPIFF.open functie
 
-const S_ringfile RingFiles[3] = {{"/RINGhours.json", 48+1,SECS_PER_HOUR, 4287}, {"/RINGdays.json",14+1,SECS_PER_DAY, 1329},{"/RINGmonths.json",24+1,0,2199}}; 
+const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4287}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1329},{"/RNGmonths.json",24+1,0,2199}}; 
 
 //#define DATA_FORMAT       "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}"
 //#define DATA_RECLEN       87  //total length incl comma and new line
@@ -156,10 +156,6 @@ WiFiClient  wifiClient;
 #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
 static PubSubClient MQTTclient(wifiClient);
 
-#ifdef USE_WATER_SENSOR  
-  #define PIN_WATER_SENSOR 14
-#endif //USE_WATER_SENSOR
-
 struct Status {
    uint32_t           reboots;
    uint32_t           sloterrors;
@@ -176,6 +172,7 @@ char        actTimestamp[20] = "";
 char        newTimestamp[20] = "";
 uint32_t    telegramCount = 0, telegramErrors = 0;
 bool        showRaw = false;
+bool        WtrMtr        = false;
 bool        DSMR_NL      = true;
 
 char      cMsg[150];

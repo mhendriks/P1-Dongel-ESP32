@@ -22,10 +22,17 @@ const static PROGMEM char actualArray[][25] = { "timestamp","energy_delivered_ta
 DynamicJsonDocument jsonDoc(4100);  // generic doc to return, clear() before use!
 
 void JsonGas(){
-  if (gasDelivered){
-    jsonDoc["gas_delivered"]["value"] =  gasDelivered;
-    jsonDoc["gas_delivered"]["unit"]  = "m3";
-  }
+  if (!gasDelivered) return;
+  
+  jsonDoc["gas_delivered"]["value"] =  gasDelivered;
+  jsonDoc["gas_delivered"]["unit"]  = "m3";
+}
+
+void JsonWater(){
+  if (!WtrMtr) return;
+  
+  jsonDoc["water"]["value"] =  (float)P1Status.wtr_m3 + P1Status.wtr_l/1000.0;
+  jsonDoc["water"]["unit"]  = "m3";
 }
 //--------------------------
 void JsonGasID(){

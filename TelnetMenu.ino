@@ -39,6 +39,9 @@ void ResetDataFiles() {
   LittleFS.remove("/RINGdays.json");
   LittleFS.remove("/RINGhours.json");
   LittleFS.remove("/RINGmonths.json");
+  LittleFS.remove("/RNGdays.json");
+  LittleFS.remove("/RNGhours.json");
+  LittleFS.remove("/RNGmonths.json");
   LittleFS.remove("/P1.old");
   LittleFS.remove("/P1.log");
   LittleFS.remove("/Reboot.log");      //pre 3.1.1 

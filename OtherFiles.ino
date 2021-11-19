@@ -31,65 +31,6 @@ void writeToJsonFile(const TSource &doc, File &_file)
   _file.close(); 
 }
 
-//====================================================================
-//void readLastStatus()
-//{  
-//  StaticJsonDocument<200> doc;  
-//  if (!FSmounted) return;
-//  File statusFile = LittleFS.open("/DSMRstatus.json", "r");
-//  if (!statusFile) {
-//    DebugTln("read(): No /DSMRstatus.json found");
-//    return;
-//  }
-//  
-//  DeserializationError error = deserializeJson(doc, statusFile);
-//  if (error) {
-//    DebugTln(F("read():Failed to read json file"));
-//    return;
-//  }
-//  statusFile.close();
-//  
-//  P1Status.reboots = doc["Reboots"];
-//  P1Status.sloterrors = doc["slotErrors"];
-//#ifdef USE_WATER_SENSOR
-//  if (doc.containsKey("water_m3")) P1Status.wtr_m3 = doc["water_m3"];
-//  if (doc.containsKey("water_liter")) P1Status.wtr_l = doc["water_liter"];
-//#endif
-//  if (strlen( doc["Timestamp"]) != 13)  snprintf(actTimestamp, sizeof(actTimestamp), "%s", "010101010101X");
-//  else  strcpy(actTimestamp, doc["Timestamp"]);
-//  DebugTln(F("DSMRstatus.json"));
-//
-//  
-//}  // readLastStatus()
-
-//====================================================================
-//void writeLastStatus()
-//{ 
-//  if (!FSmounted || bailout()) return;
-//
-//  DebugTf("writeLastStatus() => %s; %u; %u;\r\n", actTimestamp, P1Status.reboots, P1Status.sloterrors);
-//  
-//  File statusFile = LittleFS.open("/DSMRstatus.json", "w");
-//  if (!statusFile) {
-//    DebugTln(F("write(): No /DSMRstatus.json found"));
-//    return;
-//  }
-//  
-//  char buffer[120];
-//#ifdef USE_WATER_SENSOR
-//  sprintf_P(buffer,PSTR("{\"Timestamp\":\"%s\",\"Reboots\":%d,\"slotErrors\":%d,\"water_m3\":%d,\"water_liter\":%d}"), actTimestamp, P1Status.reboots, P1Status.sloterrors,P1Status.wtr_m3,P1Status.wtr_l);
-//#else
-//  sprintf_P(buffer,PSTR("{\"Timestamp\":\"%s\",\"Reboots\":%d,\"slotErrors\":%d}"), actTimestamp, P1Status.reboots, P1Status.sloterrors);
-//#endif  
-//  int bytesWritten = statusFile.print(buffer);
-//  if (bytesWritten > 0) {
-//    DebugT(F("File was written:"));Debugln(bytesWritten);
-//  } else DebugTln(F("File write failed"));
-// 
-//  statusFile.flush();
-//  statusFile.close();
-//} // writeLastStatus()
-
 //=======================================================================
 void writeSettings() 
 {
@@ -132,6 +73,7 @@ void writeSettings()
   doc["MQTTtopTopic"] = settingMQTTtopTopic;
   doc["ota"] = BaseOTAurl;
   doc["enableHistory"] = EnableHistory;
+  doc["watermeter"] = WtrMtr;
 
   writeToJsonFile(doc, SettingsFile);
   
@@ -205,6 +147,8 @@ void readSettings(bool show)
   CHANGE_INTERVAL_MIN(reconnectMQTTtimer, 1);
   if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
   if (doc.containsKey("enableHistory")) EnableHistory = doc["enableHistory"];
+  if (doc.containsKey("watermeter")) WtrMtr = doc["watermeter"];
+
   SettingsFile.close();
   //end json
 
@@ -251,8 +195,10 @@ void readSettings(bool show)
 #endif
   Debugf("          MQTT send Interval : %d\r\n", settingMQTTinterval);
   Debugf("              MQTT top Topic : %s\r\n", settingMQTTtopTopic);
+  Debugln(F("\r\n==== Other settings =============================================\r"));
   Debug(F("                Base OTA url : ")); Debugln(BaseOTAurl);
   Debug(F("              History Enabled: ")); Debugln(EnableHistory);
+  Debug(F("          Water Meter Enabled: ")); Debugln(WtrMtr);
   Debugln(F("-\r"));
 
 } // readSettings()

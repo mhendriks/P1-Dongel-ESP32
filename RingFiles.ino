@@ -8,6 +8,55 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
+void ConvRing3_2_0(){
+  if (!LittleFS.exists("/RNGhours.json")) ConvRing("/RNGhours.json","/RINGhours.json");
+  else DebugTln(F("RNGhours.json bestaat al"));
+  
+  if (!LittleFS.exists("/RNGdays.json")) ConvRing("/RNGdays.json","/RINGdays.json");
+  else DebugTln(F("RNGdays.json bestaat al"));
+  
+  if (!LittleFS.exists("/RNGmonths.json")) ConvRing("/RNGmonths.json","/RINGmonths.json");
+  else DebugTln(F("RNGmonths.json bestaat al"));
+}
+
+void ConvRing(const char *newfile, const char *oldfile){
+  String rbuf; char wbuf[100];  
+
+  File FileNew = LittleFS.open(newfile, "w");
+  if (!FileNew) {
+    DebugT(F("open ring file FAILED!!! --> Bailout: "));Debugln(newfile);DebugTln(FileNew);
+    return;
+  }
+
+  File FileOld = LittleFS.open(oldfile, "r+"); // open for reading  
+  if (!FileOld) {
+    DebugT(F("open ring file FAILED!!! --> Bailout: "));Debugln(oldfile);
+    return;
+  }
+  byte row = 0;
+  while (FileOld.available()){
+    rbuf = FileOld.readStringUntil('\n');
+    if (row == 0) FileNew.println(rbuf);
+    else {
+      if (strcmp(rbuf.c_str(), "]}") != 0) {
+        if (rbuf[rbuf.length()-1] == ',') {
+          rbuf[rbuf.length()-3] = '\0';
+          sprintf(wbuf,"%s,     0.000]},",rbuf.c_str());
+        } else {
+          rbuf[rbuf.length()-2] = '\0';
+          sprintf(wbuf,"%s,     0.000]}",rbuf.c_str());
+        }
+        FileNew.println(wbuf);
+      }
+      else FileNew.println(rbuf);
+      
+    }
+    row++;
+  }
+  FileNew.close();
+  FileOld.close();
+  Debug(oldfile);Debugln(F(" geconverteerd"));
+}
 
 void createRingFile(E_ringfiletype ringfiletype) 
 {
@@ -23,8 +72,7 @@ void createRingFile(E_ringfiletype ringfiletype)
   RingFile.print("{\"actSlot\": 0,\"data\":[\n"); //start the json file 
   for (uint8_t slot=0; slot < RingFiles[ringfiletype].slots; slot++ ) 
   { 
-    //{"date":"20000000","values":[     0.000,     0.000,     0.000,     0.000,     0.000]}
-//    RingFile.print("{\"date\":\"20000000\",\"values\":[     0.000,     0.000,     0.000,     0.000,     0.000]}"); // one empty record
+    //{"date":"20000000","values":[     0.000,     0.000,     0.000,     0.000,     0.000,     0.000]}
     RingFile.print("{\"date\":\"20000000\",\"values\":[     0.000,     0.000,     0.000,     0.000,     0.000,     0.000]}"); // one empty record
    if (slot < (RingFiles[ringfiletype].slots - 1) ) RingFile.print(",\n");
 
@@ -41,10 +89,10 @@ void createRingFile(E_ringfiletype ringfiletype)
 
 void createRingFile(String filename) 
 {
-  if (filename=="/RINGhours.json") createRingFile(RINGHOURS);
-  else if (filename=="/RINGdays.json") createRingFile(RINGDAYS);
-  else if (filename=="/RINGmonths.json") createRingFile(RINGMONTHS);
-  }
+  if (filename==RingFiles[0].filename) createRingFile(RINGHOURS);
+  else if (filename==RingFiles[1].filename) createRingFile(RINGDAYS);
+  else if (filename==RingFiles[2].filename) createRingFile(RINGMONTHS);
+}
 
 //===========================================================================================
 

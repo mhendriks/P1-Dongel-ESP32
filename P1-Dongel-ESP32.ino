@@ -176,6 +176,9 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
 #ifdef USE_WATER_SENSOR  
   setupWater();
 #endif
+
+  ConvRing3_2_0();
+
  
 } // setup()
 
@@ -238,11 +241,9 @@ void loop ()
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
   
 #ifdef USE_WATER_SENSOR
-  if (DUE(WaterTimer)) {
+  if ( WtrMtr && DUE(WaterTimer) ) {
     P1StatusWrite();
-    #ifdef USE_WATER_SENSOR
-      sendMQTTWater();
-    #endif
+    sendMQTTWater();
     CHANGE_INTERVAL_MIN(WaterTimer, 30);
   }
 #endif
