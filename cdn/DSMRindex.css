@@ -17,9 +17,10 @@ a {
 }
 
 body {
-margin: 0;
-padding: 0;
+	margin: 0;
+	padding: 0;
 }
+
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -27,6 +28,7 @@ html {
   line-height: 1.6;
   color: black;
   background: #fff;
+  min-width:375px
 }
 
 #settings_btns{
@@ -62,12 +64,9 @@ table {
   color: black;
   border-collapse: collapse;
   width:100%;
-  /* background: rgba(0,0,0,0.3); */
 }
 
-table tr {
-	background: rgba(0,0,0,0.3);
-}
+table tr {background: rgba(0,0,0,0.3)}
 
 th {
   padding-left: 15px;
@@ -162,13 +161,10 @@ section#APIdocTab div, #rawTelegram {
 	text-decoration: underline;
 }
 
-#lastHoursTable th:first-child, #actualTable th, #lastDaysTable th:first-child {
+#lastMonthsTable td:nth-child(even), #actualTable td:last-child, #lastHoursTable th:first-child, #actualTable th, #lastDaysTable th:first-child {
 	text-align: center;	
 }
 
-#actualTable td:last-child {
-	text-align: center;	
-}
 #actualTable td:nth-child(even) {
 	text-align: right;	
 }
@@ -187,15 +183,10 @@ section#APIdocTab div, #rawTelegram {
 	text-align: right;	
 }
 
-#lastMonthsTable td:nth-child(even){
-	text-align: center;	
-}
-
 #lastMonthsTable td:nth-child(odd){
 	text-align: right;	
 }
-.outer-div {
-}
+
 .inner-div {
   display: inline-block; 
 }
@@ -209,23 +200,16 @@ section#APIdocTab div, #rawTelegram {
 }
 
 /*--------------------- N A V - B A R -----------------*/
-.header{
-	position: fixed;
-    top: 0;
-    right: 0;
-    left: 0;
-    display: block;
-    margin: 0;
-    width: 100%;
-    height: auto;
-    font-size: 14px;
-	overflow: hidden;
+
+ul:before,
+ul:after {
+  content: " "; /* 1 */
+  display: table; /* 2 */
 }
 
 .topcorner{
-   position:absolute;
-   top:0;
-   right:0;
+   position:relative;
+   float:right;
    z-index:3;
   }
   
@@ -249,23 +233,10 @@ section#APIdocTab div, #rawTelegram {
   justify-content: center;
 }
 
-.nav-item {
-	padding: 0 20px;
-	margin: 0 5px;
-    -webkit-box-sizing: border-box;
-    display: inline-block;
-    height: 44px;
-    cursor: pointer;
-}
-
 #nav-settings {
 	opacity: 1;
 	transition-delay: 0.1s;
 	width:50%;
-}
-
-#SysInfoTab h2, #Settings h2, #FieldsTab h2, #TelegramTab h2, #APIdocTab h2 {
-	padding-top: 35px;
 }
 
 #Redirect a {
@@ -274,57 +245,113 @@ section#APIdocTab div, #rawTelegram {
 }
 
 .act_btn {
-	display: inline-block;
+	display: block;
 	cursor: pointer;
+	margin-top:20px;
 }
 
 .act_btn input {
 	margin-right: 15px;
 }
 
-.subnav{
-  	margin: 0 auto;
-    line-height:35px;
-	display: flex;
-}
-.subnav-container {
-	display: flex;
-	margin: 0 auto;
-    background: rgba(0,0,0,0.67);
-    border-bottom-right-radius: 10px;
-    border-bottom-left-radius: 10px;
-    padding: 0 22px;
-    position: relative;
-    justify-content: center;
-}
-
-.subnav-item{
-	padding: 0 20px;
-	margin: 0 5px;
-    -webkit-box-sizing: border-box;
-    display: inline-block;
-    cursor: pointer;
-    height: 35px;
-    font-size: 14px;
-}
-
-#Home  {
-	margin-right:50px;
-}
-
 .nav-img span { 
 	font-size: 20px;
 }
 
-a:active, a:hover, .active {
-	opacity:0.8;
-	border-bottom: 2px solid #fff;
-}
-
 .nav-img {
   display: inline-block;
-  padding: 0 10px;
+  padding: 0 14px;
   color:#fff;
+}
+
+.nav-clock{text-align: right;
+    padding: 0 10px;
+    color: #fff;
+    line-height: 44px;
+	font-size: 80%;
+	text-align: right;
+} 
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+ul li {
+  display: block;
+  position: relative;
+  float: left;
+}
+
+li ul { display: none; }
+
+ul li a {
+  display: block;
+  padding: 0 21px;
+  margin: 0 0px;
+  text-decoration: none;
+  white-space: nowrap;
+  color: #fff;
+  font-size: 14px;
+}
+
+li:hover > ul {
+  display: block;
+  position: absolute;
+}
+
+li:hover li { float: none; }
+
+li:hover ul li, li .active{ background:rgba(0,0,0,0.8); }
+ul li:hover, li:hover li:hover{ background:#666; } 
+
+ul ul ul {
+  left: 100%;
+  top: 0;
+}
+#Home {margin-right:50px}
+
+ul:after { clear: both; }
+nav ul li .mdi{font-size:138%;}
+nav {
+	position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+}
+ul.main-navigation {
+	background-color:rgba(0,0,0,0.8);
+    line-height:44px;
+}
+
+/* Hide the link that should open and close the topnav on small screens */
+ul.main-navigation .icon {  display: none;}
+
+@media screen and (max-width: 767px) {
+  .topcorner {position:absolute}
+  ul > li:not(:first-child, :last-child) {display: none}
+  ul.main-navigation li a.icon,ul.main-navigation li:last-child {display: block;float:right}
+  ul.main-navigation > li:first-child{margin-left:50%}
+  ul.main-navigation > li:first-child > a  {margin:0;padding:0}
+  li:hover ul li, ul.main-navigation > li:first-child:hover {background:none }
+  ul.main-navigation li:nth-child(7):hover,ul.main-navigation li:nth-child(9):hover {background:none }
+  .nav-img{padding:0 21px}
+}
+
+@media screen and (max-width: 767px) {
+  ul.main-navigation.responsive , ul.main-navigation li ul {position: relative}
+  ul.main-navigation.responsive > li:last-child {
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
+  ul.main-navigation.responsive  li, ul.main-navigation.responsive  li  ul {
+    float: none;
+    display: block;
+    text-align: left;
+  }
+    ul.main-navigation.responsive li ul li { margin: 0 30px}
 }
 
 h2 {
@@ -349,18 +376,12 @@ h2 {
 }
 
 section {
-	padding-top: 50px;
+	padding-top: 60px;
     margin: auto;
     width: fit-content;
     border: none;
 }
 
-.nav-clock {
-  text-align: right;
-  padding-right: 10px;
-  color:#fff;
-  line-height: 44px;
-}
 body > div.bottom.right-0 { 
 	display: none;
 }
@@ -413,7 +434,6 @@ body > div.bottom.right-0 {
 }
 
 #DashTab *{
-	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	font-family: 'Dosis', sans-serif;
 	line-height: 1.6;
@@ -434,11 +454,12 @@ body > div.bottom.right-0 {
 }
 
 #legenda{
-	margin-top: -61px;
+	margin-top: -8px;
     position: relative;
-    margin-left: 2px;
-	margin-bottom: 39px;
+    margin-left: 12px;
     background: transparent;
+    position:block;
+    margin-bottom:-5px;
     }
 
 /* Show the tooltip text when you mouse over the tooltip container */
@@ -462,6 +483,14 @@ body > div.bottom.right-0 {
   color: white;
 }
 
+#messages {
+	background : orange;
+	text-align: center;
+	display: none;
+}
+
+#messages::before {padding-right:5px}
+
 .card {
 	margin: 1rem;
 	background: white;
@@ -470,7 +499,7 @@ body > div.bottom.right-0 {
 	overflow: hidden;
 	transition: all .2s linear;
 	max-width: 200px;  
-	min-width: 180px;
+	min-width: 200px;
 }
 
 .card:hover {
@@ -479,20 +508,16 @@ body > div.bottom.right-0 {
 }
 
 .chart-container {
-	width: 200px;
-	float: none;
-	height: 180px;
+	display: block;
+    height: 90px!important;
+    width: 180px!important;
+    position: relative;
+    margin: auto;
+    margin-top: 22px;
+    position:inherit;
 }
 
-#container-3 {
-	margin-top:25px;
-	width:220px;
-}
-
-#container-4 {
-	margin-top:25px;
-	width:220px;
-}
+#container-3, #container-4, #container-5, #container-6 {margin-top:10px}
 
 #DashTab .lblVerbuik {
 	text-align: center;
@@ -500,21 +525,13 @@ body > div.bottom.right-0 {
     height: 14px;
     font-size: 12px;
     line-height: 0.8;
-    width: 14px;
+    width: 12px;
     display: inline-block;
 }
 
-#DashTab .vandaag{
-    background: #314b77;
-}
-
-#DashTab .gisteren{
-    background: #316b77;
-}
-
-#DashTab .eergisteren{
-    background: #318b77;
-}
+#DashTab .vandaag{background: #314b77}
+#DashTab .gisteren{background: #316b77}
+#DashTab .eergisteren{background: #318b77}
 
 #DashTab .card h1 {
 	text-align: center;
@@ -539,21 +556,10 @@ body > div.bottom.right-0 {
 	padding: 0.2rem 0.2rem;	
 	margin: 0;
 }
-#DashTab .label {
-	text-align: center;
-    margin-top: -21px;
-    /* z-index: 100; */
-    position: relative;
-    background: rgba(0,0,0,0);
-    font-weight: bold;
-    color: black;
-    margin-bottom: 56px;
-}
 
-#DashTab hr {
-	width: 80%;
-	opacity: 0.5;
-}
+#DashTab hr {width: 80%;}
+
+svg{position:inherit!important}
 /*
 ***************************************************************************
 *

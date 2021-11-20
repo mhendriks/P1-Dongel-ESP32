@@ -10,7 +10,37 @@
 -->
 <!-- <div class="dev-header"> -->
 <div class="header">
-  <div class="nav-container">
+  <nav>
+  	<div id=messages class="mdi mdi-alert"></div>
+   	<div class="nav-clock topcorner"><span id="theTime">2021-07-08 22:31:49</span></div>
+    <ul class="main-navigation" id="myTopnav">
+      <li><a id='Home'   		class='nav-img' href="#DashTab" onclick="activeTab='bDashTab';openTab()"><span class="mdi mdi-chart-box-outline"></span></a></li>
+	  <li><a id='bDashTab'    	class='tabButton nav-item active' href="#DashTab">Dash</a></li>
+	  <li><a id='bActualTab'    class='tabButton nav-item' href="#ActualTab" >Actueel</a></li>
+      <li><a id='bHoursTab'     class='tabButton nav-item' href="#HoursTab" >Uur</a></li>
+      <li><a id='bDaysTab'      class='tabButton nav-item' href="#DaysTab" >Dag</a></li>
+      <li><a id='bMonthsTab'    class='tabButton nav-item' href="#MonthsTab" >Maand</a></li>
+	  <li>
+	  	<a id='bSysInfoTab' class='nav-img nav-item' href="#SysInfoTab" ><span class="mdi mdi-information-outline"></span></a>
+		<ul>
+			<li><a id='bInfo_SysInfo'   class='tabButton nav-item' href="#SysInfoTab" >Systeeminformatie</a></li>
+			<li><a id='bInfo_frontend'  class='tabButton nav-item' href="#FrontendTab" >Webpagina</a></li>
+			<li><a id='bInfo_Telegram'  class='tabButton nav-item' href="#TelegramTab" >Telegram</a></li>
+			<li><a id='bInfo_Fields'    class='tabButton nav-item' href="#FieldsTab" >Alle Velden</a></li>
+			<li><a id='bInfo_APIdoc'    class='tabButton nav-item' href="#APIdocTab" >API Docs</a></li>
+		</ul></li>
+      <li><a id='bFSexplorer'    class='nav-img nav-item' href="#FileExplorer" ><span class="mdi mdi-folder-outline"></span></a></li>
+      <li><a id='bSettings'      class='nav-img nav-item' href="#Settings" ><span class="mdi mdi-cog"></span></a>
+		<ul>
+			<li><a id='bEditSettings' class='tabButton nav-item' href="#Settings" >Settings</a></li>
+			<li><a id='bEditMonths'   class='tabButton nav-item' href="#Settings" >Meterstanden</a></li>
+			<li><a id='bReset'   	  class='tabButton nav-item' href="#Reset" >Reset & Update</a></li>
+		</ul></li>
+	  <li><a href="javascript:void(0);" class="icon" onclick="menu()"><i id="menuid" class="mdi mdi-menu"></i></a></li>
+   </ul>
+   </nav> <!-- end nav-main -->  
+ <!-- 
+ <div class="nav-container">
   	<div class="inner-nav">
     <nav id='nav-main'>
       <a id='Home'   		class='nav-item nav-img' href="#DashTab"><span class="mdi mdi-chart-box-outline"></span></a>
@@ -22,26 +52,28 @@
 	  <a id='bSysInfoTab'   class='nav-item nav-img' href="#SysInfoTab"><span class="mdi mdi-information-outline"></span></a>
       <a id='bFSexplorer'    class='nav-item nav-img' href="#FileExplorer"><span class="mdi mdi-folder-outline"></span></a>
       <a id='bSettings'      class='nav-item nav-img' href="#Settings"><span class="mdi mdi-cog"></span></a>
-   </nav> <!-- end nav-main -->  
-   </div> <!-- innner nav -->
-  </div> <!-- end main-nav container-->
+   </nav> <!~~ end nav-main ~~>  
+   <div class="nav-clock topcorner">
+     <span id="theTime">n/a</span>
+   </div> <!~~ end date/time ~~>
+   </div> <!~~ innner nav ~~>
+  </div> <!~~ end main-nav container~~>
   <div id="nav-settings" class="subnav">
 	<div class="subnav-container">
       <a id='bEditSettings' class='subnav-item tabButton' href="#Settings">Settings</a>
       <a id='bEditMonths'   class='subnav-item tabButton' href="#Settings">Meterstanden</a>
     </div>
-  </div>  <!-- END subnav-container -->
+  </div>  <!~~ END subnav-container ~~>
   <div id="nav-info"  class="subnav">
 	<div class="subnav-container">
       <a id='bInfo_SysInfo'   class='subnav-item tabButton' href="#SysInfoTab">Systeeminformatie</a>
+	  <a id='bInfo_frontend'  class='subnav-item tabButton' href="#FrontendTab">Webpagina</a>
       <a id='bInfo_Telegram'  class='subnav-item tabButton' href="#TelegramTab">Telegram</a>
       <a id='bInfo_Fields'    class='subnav-item tabButton' href="#FieldsTab">Alle Velden</a>
       <a id='bInfo_APIdoc'    class='subnav-item tabButton' href="#APIdocTab">API Docs</a>
     </div>
-  </div>  <!-- END subnav-container -->
-   <div class="nav-clock topcorner">
-	  <span id="theTime">n/a</span>
-	</div> <!-- end date/time -->
+  </div>  <!~~ END subnav-container ~~>
+ -->
 </div> <!-- end header -->    
 
 <div id="mainPage" style="display:block">
@@ -173,7 +205,7 @@
   </section> <!-- END MonthsTab -->
 
   <!-- START SysInfo Tab -->
-  <section id="SysInfoTab" class="tabName">
+  <section id="SysInfoTab" class="tabName subTab">
     <h2>Systeeminformatie</h2>
     <div id='devInfo'>
       <table id="devInfoTable">
@@ -190,14 +222,14 @@
         <tr>
             <td colspan=3>Data uit de DSMR-logger</td>
         </tr>
-      <tfoot>
+      </tfoot>
       </table>
     </div>
   
   </section>  <!-- END SysInfo Tab -->
 
   <!-- START TelegramTab -->
-  <section id="TelegramTab" class="tabName">
+  <section id="TelegramTab" class="tabName subTab">
     <h2>Ruwe Telegram data</h2>
     <div id="rawTelegram">
     </div>
@@ -205,7 +237,7 @@
   </section> <!-- END TelegramTab -->
 
   <!-- START Fields Tab -->
-  <section id="FieldsTab" class="tabName">
+  <section id="FieldsTab" class="tabName subTab">
     <!-- START fieldsTab Dummy -->
     <h2>Alle Velden</h2>
     <div id='fields'>
@@ -229,9 +261,32 @@
     </div>
   
   </section>  <!-- END fields Tab -->
-
+  <!-- START Frontend Tab -->
+  <section id="FrontendTab" class="tabName subTab">
+    <!-- START Frontend Dummy -->
+    <h2>Instellingen Webpagina</h2>
+    <div id='frontend'>
+      <table id="frontendTable">
+      <thead>
+        <tr>
+            <th>Onderdeel</th>
+			<th>Human Name</th>
+            <th>Instelling</th>
+        </tr>
+      </thead>
+      <tbody>
+      </tbody>
+      <tfoot>
+        <tr>
+            <td colspan=4>Instellingen zijn aanpasbaar in Frontend.json file op de dongel</td>
+        </tr>
+      <tfoot>
+       </table>
+    </div>
+  
+  </section>  <!-- END Frontend Tab -->
   <!-- START Api Docs Tab -->
-  <section id="APIdocTab" class="tabName">
+  <section id="APIdocTab" class="tabName subTab">
     <!-- START APIdocTab Dummy -->
     <h2>API documentatie</h2>
     <table id=ApiDocTable>
@@ -290,7 +345,11 @@
     <td><a href="api/v2/hist/months" target="_blank">api/v2/hist/months</a></td>
     <td>History data per month in JSON format</td>
   </tr>  
-   <tr>
+  <tr>
+    <td><a href="/Frontend.json" target="_blank">/Frontend.json</a></td>
+    <td>Downloaden van een bestand. In dit geval Frontend.json</td>
+  </tr>
+  <tr>
     <td>History data file structure (month, day, hour)</td>
 	<td>{"actSlot":&lt;actual slot#&gt;,"data":[{"date":&lt;YYMMDDHH&gt;,"values":[&lt;EDT1&gt;,&lt;EDT2&gt;,&lt;ERT1&gt;,&lt;ERT2&gt;,&lt;GDT&gt;]}, ...]}</td>
   </tr>  
@@ -336,27 +395,39 @@
 
       <span></span>
       <fileSize></fileSize>
+  </section>
+  
+<section id="Reset" class="tabName">
+      <!-- START Tabbladen -->
+  <h2>Reset en Update</h2>
       <hr>
-      <div id="btnReboot" class="act_btn">
+            <div id="btnReboot" class="act_btn">
+      	<p>Na het indrukken van de REBOOT knop zal de Dongel opnieuw opstarten.</p>
         <span>
         <form  action='/ReBoot'>
-          <input type='submit' class='button' name='SUBMIT' value='ReBoot'>
+          <input type='submit' class='button' name='SUBMIT' value='Reboot'>
         </form>
       </div> 
+      <hr>
       <div id="btnFirmware" class="act_btn">
+		<p>Na het indrukken van de UPDATE FIRMWARE knop zal het updatescherm worden getoond. Hiermee kan een firmware of data update worden uitgevoerd.</p>
         <span>
         <form  action='/update' method='GET'>
-          <input id="update" type='submit' class='button' name='SUBMIT' value='Update Firmware' hidden/>
+          <input id="update" type='submit' class='button' name='SUBMIT' value='Update Firmware...' hidden/>
         </form>
         </span>
       </div>
+            <hr>
       <div id="btnResetWifi" class="act_btn">
+		<p>Na het indrukken van de RESET WIFI knop zal de module herstarten en vragen om het wifi-netwerk opnieuw in te stellen. Zie initiële setup van de module.</p>
         <span>
         <form action='/ResetWifi' >
           <input id="resetWifi" type='submit' class='button' name='SUBMIT' value='Reset Wifi' hidden/>
         </form>
-      </div>  
-  </section>
+      </div> 
+  </section> <!-- end Settings Page -->
+  
+  
 	<section id="Redirect" class="tabName">
 	<h2>Opnieuw opstarten</h2>
 	<h3><div id="RedirectMessage"></div></h3>
@@ -401,29 +472,21 @@
   <!-- START Dash Tab -->
   <section id="DashTab" class="tabName default">
         <h2>Dashboard</h2>
+    <h3 id=w8api style="margin-top:50%">Wacht op gegevens van Slimme Meter</h3>
     <div class=outer>
-        <div class=card id=l1>
+        <div class=card id=l1 style="display:none">
             <h1 id=power_delivered_l1h>Actueel</h1>
 	        <div class="chart-container" id="gauge"></div>
             <hr/>
-            <div style="text-align:center">Vandaag [kW]</div>
+            <div style="text-align:center">Actueel [kW]</div>
             <h2 id="power_delivered">0.0</h2>
             <h3>max: <span id="power_delivered_1max">0.0</span> kW</h3>
             <h3>min: <span id="power_delivered_1min">0.0</span> kW</h3>
         </div>
-        <div class=card id=l2>
-            <h1 id=power_delivered_l2h>Spanning</h1>
-            <div class="chart-container" id="gauge-v"></div>
-            <hr/>
-            <div style="text-align:center">Aantal fases</div>
-            <h2 id="fases">1</h2>
-            <h3>max: <span id="power_delivered_2max">0.0</span> Volt</h3>
-            <h3>min: <span id="power_delivered_2min">0.0</span> Volt</h3>
-        </div>
-        <div class=card id=l3>
-            <h1 id=Ph>Stroomverbruik</h1>
+        <div class=card id=l3 style="display:none">
+            <h1 id=Ph>Verbruik</h1>
             <canvas class="chart-container" id="container-3"></canvas>
-            <div class="label">STROOM</div>        
+<!--             <div class="label">ELECTRA</div>         -->
 			<div id=legenda>
 				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
 				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
@@ -432,13 +495,43 @@
     		<hr/>
             <div style="text-align:center">Vandaag [kWh]</div>
             <h2 id=P>0.0</h2>
-            <h3>max: <span id="Pmax">0.0</span></h3>
-            <h3>min: <span id="Pmin">0.0</span></h3>
+            <!--h3>max: <span id="Pmax">0.0</span></h3>
+            <h3>min: <span id="Pmin">0.0</span></h3-->
         </div>
-        <div class=card id=l4>
+        <div class=card id=l5 style="display:none">
+            <h1 id=Ph>Teruglevering</h1>
+            <canvas class="chart-container" id="container-5"></canvas>
+<!--             <div class="label">ELECTRA</div>         -->
+			<div id=legenda>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+			</div>
+    		<hr/>
+            <div style="text-align:center">Vandaag [kWh]</div>
+            <h2 id=Pi>0.0</h2>
+            <!--h3>max: <span id="Pimax">0.0</span></h3>
+            <h3>min: <span id="Pimin">0.0</span></h3-->
+        </div>
+        <div class=card id=l6 style="display:none">
+            <h1 id=Ph>Afname</h1>
+            <canvas class="chart-container" id="container-6"></canvas>
+<!--             <div class="label">ELECTRA</div>         -->
+			<div id=legenda>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+			</div>
+    		<hr/>
+            <div style="text-align:center">Vandaag [kWh]</div>
+            <h2 id=Pa>0.0</h2>
+            <!--h3>max: <span id="Pamax">0.0</span></h3>
+            <h3>min: <span id="Pamin">0.0</span></h3-->
+        </div>
+        <div class=card id=l4 style="display:none">
             <h1 id=Gh>Gasverbruik</h1>
             <canvas class="chart-container" id="container-4"></canvas>
-			<div class="label stroom">GAS</div>
+<!-- 			<div class="label stroom">GAS</div> -->
 			<div id=legenda>
 				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
 				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
@@ -447,8 +540,17 @@
             <hr/>
             <div style="text-align:center">Vandaag [㎥]</div>
             <h2 id="G">0.0</h2>
-            <h3>max: <span id="Gmax">0.0</span></h3>
-            <h3>min: <span id="Gmin">0.0</span></h3>
+            <!--h3>max: <span id="Gmax">0.0</span></h3>
+            <h3>min: <span id="Gmin">0.0</span></h3-->
+        </div>
+        <div class=card id=l2 style="display:none">
+            <h1 id=power_delivered_l2h>Spanning</h1>
+            <div class="chart-container" id="gauge-v"></div>
+            <hr/>
+            <div style="text-align:center">Aantal fases</div>
+            <h2 id="fases">1</h2>
+            <h3>max: <span id="power_delivered_2max">0.0</span> Volt</h3>
+            <h3>min: <span id="power_delivered_2min">0.0</span> Volt</h3>
         </div>
 
     </div> <!-- outer -->  
