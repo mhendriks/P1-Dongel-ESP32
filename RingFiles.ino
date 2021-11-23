@@ -11,7 +11,7 @@
 
 void CheckRingExists(){
   for (byte i = 0; i< 3; i++){
-    if ( !LittleFS.exists(RingFiles[i].filename) ) createRingFile((E_ringfiletype)i);
+    if ( !LittleFS.exists(RingFiles[i].filename) ) createRingFile( (E_ringfiletype)i );
   }
 }
 
@@ -46,20 +46,21 @@ void ConvRing(const char *newfile, const char *oldfile){
   byte row = 0;
   while (FileOld.available()){
     rbuf = FileOld.readStringUntil('\n');
-    if (row == 0) FileNew.println(rbuf);
+    if (row == 0) {
+      FileNew.print(rbuf+'\n');
+    }
     else {
       if (strcmp(rbuf.c_str(), "]}") != 0) {
         if (rbuf[rbuf.length()-1] == ',') {
           rbuf[rbuf.length()-3] = '\0';
-          sprintf(wbuf,"%s,     0.000]},",rbuf.c_str());
+          sprintf(wbuf,"%s,     0.000]},\n",rbuf.c_str());
         } else {
           rbuf[rbuf.length()-2] = '\0';
-          sprintf(wbuf,"%s,     0.000]}",rbuf.c_str());
+          sprintf(wbuf,"%s,     0.000]}\n",rbuf.c_str());
         }
-        FileNew.println(wbuf);
+        FileNew.print(wbuf);
       }
-      else FileNew.println(rbuf);
-      
+      else FileNew.print(rbuf);
     }
     row++;
   }
@@ -222,7 +223,7 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec)
 //    DebugTln("actslot: "+actSlot);
 //    DebugT(F("update date: "));Debugln(key);
     //create record
-    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_tariff1, (float)DSMRdata.energy_delivered_tariff2, (float)DSMRdata.energy_returned_tariff1, (float)DSMRdata.energy_returned_tariff2, (float)gasDelivered, (float)P1Status.wtr_m3+(float)P1Status.wtr_l/1000);
+    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_tariff1, (float)DSMRdata.energy_delivered_tariff2, (float)DSMRdata.energy_returned_tariff1, (float)DSMRdata.energy_returned_tariff2, (float)gasDelivered, (float)P1Status.wtr_m3+(float)P1Status.wtr_l/1000.0);
   }
   //DebugT("update timeslot: ");Debugln(slot);
   //goto writing starting point  

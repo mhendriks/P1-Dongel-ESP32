@@ -30,7 +30,7 @@
 *      - watersensor only mode
 *      √ ringfiles met watermtr gegevens
 *      √ ringfiles verwijderd uit de default fileupload 
-*      - check of ringfiles bestaan bij startup ... anders aanmaken.
+*      √ check of ringfiles bestaan bij startup ... anders aanmaken.
   
   Arduino-IDE settings for P1 Dongle hardware ESP32:
     - Board: "ESP32 Dev Module"
@@ -178,7 +178,7 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
   setupWater();
 #endif
 
-  ConvRing3_2_0();
+//  ConvRing3_2_0();
   CheckRingExists();
  
 } // setup()

@@ -9,47 +9,6 @@
 ***************************************************************************      
 */
 
-const char raw1[] =
-"/ISK5\2M550T-1012\r\n"
-"\r\n"
-"1-3:0.2.8(50)\r\n"
-"0-0:1.0.0(200923170321S)\r\n"
-"0-0:96.1.1(4530303434303037323531373036363138)\r\n"
-"1-0:1.8.1(002331.028*kWh)\r\n"
-"1-0:1.8.2(002603.951*kWh)\r\n"
-"1-0:2.8.1(000000.000*kWh)\r\n"
-"1-0:2.8.2(000000.000*kWh)\r\n"
-"0-0:96.14.0(0002)\r\n"
-"1-0:1.7.0(00.232*kW)\r\n"
-"1-0:2.7.0(00.000*kW)\r\n"
-"0-0:96.7.21(00005)\r\n"
-"0-0:96.7.9(00002)\r\n"
-"1-0:99.97.0()\r\n"
-"1-0:32.32.0(00004)\r\n"
-"1-0:52.32.0(00006)\r\n"
-"1-0:72.32.0(00003)\r\n"
-"1-0:32.36.0(00001)\r\n"
-"1-0:52.36.0(00001)\r\n"
-"1-0:72.36.0(00001)\r\n"
-"0-0:96.13.0()\r\n"
-"1-0:32.7.0(228.0*V)\r\n"
-"1-0:52.7.0(227.9*V)\r\n"
-"1-0:72.7.0(232.7*V)\r\n"
-"1-0:31.7.0(000*A)\r\n"
-"1-0:51.7.0(000*A)\r\n"
-"1-0:71.7.0(000*A)\r\n"
-"1-0:21.7.0(00.041*kW)\r\n"
-"1-0:41.7.0(00.149*kW)\r\n"
-"1-0:61.7.0(00.040*kW)\r\n"
-"1-0:22.7.0(00.000*kW)\r\n"
-"1-0:42.7.0(00.000*kW)\r\n"
-"1-0:62.7.0(00.000*kW)\r\n"
-"0-1:24.1.0(003)\r\n"
-"0-1:96.1.0(4730303339303031383330303339323138)\r\n"
-"0-1:24.2.1(200923170001S)(02681.397*m3)\r\n"
-"!8d36";
-
-
 void DisplayFile(const char *fname) { 
   if (bailout() || !FSmounted) return; //exit when heapsize is too small
   File RingFile = LittleFS.open(fname, "r"); // open for reading
@@ -64,22 +23,25 @@ void DisplayFile(const char *fname) {
 
 //--------------------------------
 void P1Update(bool sketch){
-  String versie;
-  char c;
-  while (TelnetStream.available() > 0) { 
-    c = TelnetStream.read();
-    if (!(c==32 || c==10 || c==13) ) versie+=c; //remove spaces
-  }
-  // Debug("Update version: "); Debugln(versie);
-  if (versie.length()>4) RemoteUpdate(versie.c_str(),sketch); 
+  char versie[30] = "";
+
+  //clear buffer
+  while (TelnetStream.available() > 0) { (char)TelnetStream.read(); yield(); }
+  
+  Debugln(F("\n/!\\ UPDATE MODULE /!\\"));
+  Debugf("Geef update %s versie op (bv. 3.1.1): ",sketch?"SKETCH":"FILE");
+  TelnetStream.setTimeout(10000);
+  TelnetStream.readBytesUntil('\n', versie, sizeof(versie)); 
+  TelnetStream.setTimeout(1000);
+  
+  versie[strlen(versie)-1] = '\0'; //remove enter
+
+  if (strlen(versie)>4) RemoteUpdate(versie,sketch); 
   else Debugln(F("Fout in versie opgave: formaat = x.x.x")); 
 }
 //--------------------------------
 
 void ResetDataFiles() {
-  LittleFS.remove("/RINGdays.json");
-  LittleFS.remove("/RINGhours.json");
-  LittleFS.remove("/RINGmonths.json");
   LittleFS.remove("/RNGdays.json");
   LittleFS.remove("/RNGhours.json");
   LittleFS.remove("/RNGmonths.json");
