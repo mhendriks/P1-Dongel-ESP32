@@ -3,7 +3,7 @@
 **  Program  : DSMRloggerAPI.h - definitions for DSMRloggerAPI
 **  Version  : v4.0.0
 **
-**  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2022 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -23,15 +23,19 @@
 #include "version.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
-
+#include <Ticker.h>
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git  
 
 #define _DEFAULT_HOSTNAME  "P1-DONGLE/" 
 #define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
 #define SETTINGS_FILE      "/DSMRsettings.json"
-#define DTR_IO             12 // 0 = always on; nr = IO pulse
+#define DTR_IO             18 // 0 = always on; nr = IO pulse
 #define JSON_BUFF_MAX     255
 #define MQTT_BUFF_MAX     200
+#define LED                14
+#define LED_BLINK_MS       80
+
+Ticker LEDBlinker;
 
 HardwareSerial P1Serial(2);
 TaskHandle_t CPU0; //handler voor CPU task 0
@@ -173,8 +177,9 @@ char        actTimestamp[20] = "";
 char        newTimestamp[20] = "";
 uint32_t    telegramCount = 0, telegramErrors = 0;
 bool        showRaw = false;
+bool        LEDenabled    = true;
 bool        WtrMtr        = false;
-bool        DSMR_NL      = true;
+bool        DSMR_NL       = true;
 
 char      cMsg[150];
 String    lastReset           = "";
@@ -209,7 +214,7 @@ bool      StaticInfoSend = false;
 
 //===========================================================================================
 // setup timers 
-DECLARE_TIMER_SEC(reconnectWiFi,      10);
+//DECLARE_TIMER_SEC(reconnectWiFi,      10);
 DECLARE_TIMER_SEC(synchrNTP,          30);
 DECLARE_TIMER_SEC(nextTelegram,       10);
 DECLARE_TIMER_SEC(reconnectMQTTtimer,  5); // try reconnecting cyclus timer

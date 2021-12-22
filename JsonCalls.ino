@@ -3,7 +3,7 @@
 **  Program  : JsonCalls, part of DSMRloggerAPI
 **  Version  : v4.0.0
 **
-**  Copyright (c) 2021 Martijn Hendriks
+**  Copyright (c) 2022 Martijn Hendriks
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -229,13 +229,11 @@ void sendDeviceInfo()
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
 
-#ifdef USE_MQTT
   snprintf(cMsg, sizeof(cMsg), "%s:%04d", settingMQTTbroker, settingMQTTbrokerPort);
   doc["mqttbroker"] = cMsg;
   doc["mqttinterval"] = settingMQTTinterval;
   if (mqttIsConnected) doc["mqttbroker_connected"] = "yes";
   else  doc["mqttbroker_connected"] = "no";
-#endif
 
   doc["reboots"] = (int)P1Status.reboots;
   doc["lastreset"] = lastReset;  

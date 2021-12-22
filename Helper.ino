@@ -18,6 +18,15 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 "RTC Watch dog Reset digital core","Instrusion tested to reset CPU","Time Group reset CPU","Software reset CPU","RTC Watch dog Reset CPU","for APP CPU, reseted by PRO CPU",
 "Reset when the vdd voltage is not stable","RTC Watch dog reset digital core and rtc module"};
 
+
+void ToggleLED() {
+  digitalWrite(LED, !digitalRead(LED));
+}
+
+void BlinkLED() {
+  ToggleLED(); //zet uit
+  LEDBlinker.once_ms(LED_BLINK_MS, ToggleLED); // zet aan na x MS
+}
 //===========================================================================================
 
 const char* getResetReason(){

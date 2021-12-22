@@ -3,7 +3,7 @@
 **  Program  : settings_status_files, part of DSMRloggerAPI
 **  Version  : v4.0.0
 **
-**  Copyright (c) 2021 Martijn Hendriks
+**  Copyright (c) 2022 Martijn Hendriks
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -71,6 +71,7 @@ void writeSettings()
   doc["MQTTpasswd"] = settingMQTTpasswd;
   doc["MQTTinterval"] = settingMQTTinterval;
   doc["MQTTtopTopic"] = settingMQTTtopTopic;
+  doc["LED"] = LEDenabled;
   doc["ota"] = BaseOTAurl;
   doc["enableHistory"] = EnableHistory;
   doc["watermeter"] = WtrMtr;
@@ -145,6 +146,7 @@ void readSettings(bool show)
   
   CHANGE_INTERVAL_SEC(publishMQTTtimer, settingMQTTinterval);
   CHANGE_INTERVAL_MIN(reconnectMQTTtimer, 1);
+  LEDenabled = doc["LED"];
   if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
   if (doc.containsKey("enableHistory")) EnableHistory = doc["enableHistory"];
   if (doc.containsKey("watermeter")) WtrMtr = doc["watermeter"];
@@ -196,6 +198,7 @@ void readSettings(bool show)
   Debugf("          MQTT send Interval : %d\r\n", settingMQTTinterval);
   Debugf("              MQTT top Topic : %s\r\n", settingMQTTtopTopic);
   Debugln(F("\r\n==== Other settings =============================================\r"));
+  Debug(F("                 LED enabled : ")); Debugln(LEDenabled);
   Debug(F("                Base OTA url : ")); Debugln(BaseOTAurl);
   Debug(F("              History Enabled: ")); Debugln(EnableHistory);
   Debug(F("          Water Meter Enabled: ")); Debugln(WtrMtr);

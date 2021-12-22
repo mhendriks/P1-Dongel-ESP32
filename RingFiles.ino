@@ -3,7 +3,7 @@
 **  Program  : JsonCalls, part of DSMRloggerAPI
 **  Version  : v4.0.0
 **
-**  Copyright (c) 2021 Martijn Hendriks
+**  Copyright (c) 2022 Martijn Hendriks
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      

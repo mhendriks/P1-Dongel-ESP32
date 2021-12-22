@@ -8,26 +8,49 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-
 #include <WiFi.h>        // Core WiFi Library         
 #include <ESPmDNS.h>        // part of Core https://github.com/esp8266/Arduino
-
 #include <WiFiUdp.h>            // part of ESP8266 Core https://github.com/esp8266/Arduino
-#ifdef USE_UPDATE_SERVER
-//  #include "ModUpdateServer.h"  // https://github.com/mrWheel/ModUpdateServer
-  #include <Update.h>
-  #include "UpdateServerHtml.h"
-#endif
-//#include <ESP_WiFiManager.h>              //https://github.com/khoih-prog/ESP_WiFiManager
+#include <Update.h>
+#include "UpdateServerHtml.h"
 #include <WiFiManager.h>        // version 0.16.0 - https://github.com/tzapu/WiFiManager
 
 WebServer        httpServer (80);
 
-bool        FSmounted = false; 
-bool        isConnected = false;
+bool FSmounted           = false; 
+bool isConnected         = false;
+byte WiFiReconnectCount  = 0;
+
+#define   MaxWifiReconnect  10
 
 void LogFile(const char*, bool);
 void P1Reboot();
+
+// naar idee van https://github.com/gmag11/ESPNtpClient/blob/main/examples/advancedExample/advancedExample.ino
+static void onWifiEvent (WiFiEvent_t event) {
+    switch (event) {
+    case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+        DebugTf ("Connected to %s. Asking for IP address.\r\n", WiFi.BSSIDstr().c_str());
+        break;
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+        LogFile("Wifi Connected",true);
+        digitalWrite(LED, LOW); //ON
+        Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
+        Debug (F("IP address: " ));  Debug (WiFi.localIP());
+        Debug (F(" ( gateway: " ));  Debug (WiFi.gatewayIP());Debug(" )\n\n");
+        WiFiReconnectCount = 0;
+        break;
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+        LogFile("Wifi connection lost",true);          
+        delay(1000); //wait longer before retrying
+        WiFi.reconnect();
+        if (WiFiReconnectCount++ > MaxWifiReconnect) P1Reboot();
+        break;
+    default:
+        DebugTf ("[WiFi-event] event: %d\n", event);
+        break;
+    }
+}
 
 //gets called when WiFiManager enters configuration mode
 //===========================================================================================
@@ -39,7 +62,6 @@ void configModeCallback (WiFiManager *myWiFiManager)
   DebugTln(myWiFiManager->getConfigPortalSSID());
 } // configModeCallback()
 
-
 //===========================================================================================
 void startWiFi(const char* hostname, int timeOut) 
 {
@@ -50,7 +72,7 @@ void startWiFi(const char* hostname, int timeOut)
 
 //  DebugTln("start ...");
   LogFile("Wifi Starting",true);
-
+  digitalWrite(LED, HIGH); //OFF
   manageWiFi.setDebugOutput(false);
   
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
@@ -72,15 +94,8 @@ void startWiFi(const char* hostname, int timeOut)
     DebugTf(" took [%d] seconds ==> ERROR!\r\n", (millis() - lTime) / 1000);
     P1Reboot();
     return;
-  }
-  LogFile("Wifi Connected",true);
-//  DebugTf("Connected with IP-address [%s]\n", WiFi.localIP().toString().c_str());
-  DebugTf(" took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
-//  Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
-//  Debug (F("IP address: " ));  Debugln (WiFi.localIP());
-//  Debug (F("IP gateway: " ));  Debugln (WiFi.gatewayIP());
-//  Debugln();
-  
+  } else DebugTf("Took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
+
 } // startWiFi()
 
 //===========================================================================================

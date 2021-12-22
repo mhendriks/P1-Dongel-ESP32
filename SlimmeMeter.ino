@@ -32,60 +32,17 @@ void handleSlimmemeter()
 {
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
     if (slimmeMeter.available()) {
+//      if (LEDenabled) digitalWrite(LED, !digitalRead(LED)); //toggle LED when telegram available
       if (showRaw) {
         //-- process telegrams in raw mode
         Debugf("Telegram Raw (%d)\n%s\n" , slimmeMeter.raw().length(),slimmeMeter.raw().c_str()); 
         showRaw = false; //only 1 reading
       } 
       else processSlimmemeter();
+//      if (LEDenabled) digitalWrite(LED, !digitalRead(LED)); //toggle LED when telegram available
+      BlinkLED(); //laat succesvolle leesactie zien
     } //available
 } // handleSlimmemeter()
-
-
-//==================================================================================
-//void processSlimmemeterRaw()
-//{
-//  char    tlgrm[1200] = "";
-//   
-//  DebugTf("handleSlimmerMeter RawCount=[%4d]\r\n", showRawCount);
-//  showRawCount++;
-//  showRaw = (showRawCount <= 20);
-//  if (!showRaw)
-//  {
-//    showRawCount  = 0;
-//    return;
-//  }
-//
-//  slimmeMeter.enable(true);
-//  Serial.setTimeout(5000);  // 5 seconds must be enough ..
-//  memset(tlgrm, 0, sizeof(tlgrm));
-//  int l = 0;
-//  // The terminator character is discarded from the serial buffer.
-//  l = Serial.readBytesUntil('/', tlgrm, sizeof(tlgrm));
-//  // now read from '/' to '!'
-//  // The terminator character is discarded from the serial buffer.
-//  l = Serial.readBytesUntil('!', tlgrm, sizeof(tlgrm));
-//  Serial.setTimeout(1000);  // seems to be the default ..
-////  DebugTf("read [%d] bytes\r\n", l);
-//  if (l == 0) 
-//  {
-//    DebugTln(F("RawMode: Timerout - no telegram received within 5 seconds"));
-//    return;
-//  }
-//
-//  tlgrm[l++] = '!';
-//  tlgrm[l++]    = '\r';
-//  tlgrm[l++]    = '\n';
-//  tlgrm[(l +1)] = '\0';
-//  // shift telegram 1 char to the right (make room at pos [0] for '/')
-//  for (int i=strlen(tlgrm); i>=0; i--) { tlgrm[i+1] = tlgrm[i]; yield(); }
-//  tlgrm[0] = '/'; 
-//  //Post result to Debug 
-//  Debugf("Telegram (%d chars):\r\n/%s\r\n", strlen(tlgrm), tlgrm); 
-//  return;
-//  
-//} // processSlimmemeterRaw()
-
 
 //==================================================================================
 void processSlimmemeter()
@@ -138,7 +95,7 @@ void processSlimmemeter()
       
       processTelegram();
       if (Verbose2) DSMRdata.applyEach(showValues());
-          
+
     } 
     else                  // Parser error, print error
     {

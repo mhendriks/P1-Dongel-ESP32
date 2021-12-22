@@ -79,9 +79,11 @@ void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebu
     }
     else
     {
-      DebugTf("next: handleFile(%s)\r\n"
-                      , String(httpServer.urlDecode(httpServer.uri())).c_str());
-      if (!handleFile(httpServer.urlDecode(httpServer.uri())))
+      DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
+      String filename = httpServer.uri();
+      if( httpServer.uri().indexOf("/RING") == 0 ) filename.replace("RING","RNG");
+      DebugT("Filename: ");Debugln(filename);
+      if ( !handleFile(filename.c_str()) )
       {
         httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
       }
@@ -242,13 +244,8 @@ bool freeSpace(uint16_t const& printsize)
 //=====================================================================================
 void updateFirmware()
 {
-#ifdef USE_UPDATE_SERVER
   DebugTln(F("Redirect to updateIndex .."));
-  doRedirect("Update", 1, "/updateIndex", false,false);
-#else
-  doRedirect("NoUpdateServer", 10, "/", false,false);
-#endif
-      
+  doRedirect("Update", 1, "/updateIndex", false,false);      
 } // updateFirmware()
 
 //=====================================================================================

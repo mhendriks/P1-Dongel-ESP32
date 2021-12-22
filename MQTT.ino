@@ -3,7 +3,7 @@
 **  Program  : MQTTstuff, part of DSMRloggerAPI
 **  Version  : v4.0.0
 **
-**  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2022 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -51,7 +51,7 @@ void connectMQTT() {
 
 //===========================================================================================
 
-void MQTTcallback(char* topic, byte* payload, unsigned int length) {
+static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
   if (length > 24) return;
   sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
   if (strcmp(topic, cMsg) == 0) bUpdateSketch = false; 

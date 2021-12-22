@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
-**  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2022 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -31,6 +31,7 @@
 *      √ ringfiles met watermtr gegevens
 *      √ ringfiles verwijderd uit de default fileupload 
 *      √ check of ringfiles bestaan bij startup ... anders aanmaken.
+*      √ ticker blynk
   
   Arduino-IDE settings for P1 Dongle hardware ESP32:
     - Board: "ESP32 Dev Module"
@@ -43,14 +44,17 @@
     - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-#define USE_MQTT                      // define if you want to use MQTT (configure through webinterface)
-#define USE_UPDATE_SERVER             // define if there is enough memory and updateServer to be used
-//#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
-//  #define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
-//  #define HAS_NO_SLIMMEMETER        // define for testing only!
-//  #define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
 
-#define ALL_OPTIONS "[MQTT][UPDATE_SERVER][LITTLEFS]"
+//#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
+//#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
+//#define HAS_NO_SLIMMEMETER        // define for testing only!
+//#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
+
+#ifdef USE_WATER_SENSOR
+  #define ALL_OPTIONS "[MQTT][LITTLEFS][WATER]"
+#else
+  #define ALL_OPTIONS "[MQTT][LITTLEFS]"
+#endif
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
@@ -60,13 +64,18 @@ void setup()
 {
   Serial.begin(115200, SERIAL_8N1); //debug stream
   P1Serial.begin(115200, SERIAL_8N1, 16,0,true); //p1 serial input
+  pinMode(DTR_IO, OUTPUT);
+  pinMode(LED, OUTPUT);
+  // sign of life
+  digitalWrite(LED, LOW); //ON
+  delay(1500);
+  ToggleLED();
 
   Debug("\n\n ----> BOOTING....[" _VERSION "] <-----\n\n");
   DebugTln("The board name is: " ARDUINO_BOARD);
 
   lastReset = getResetReason();
   DebugT(F("Last reset reason: ")); Debugln(lastReset);
-  delay(1500);
   
 //================ File System ===========================================
   if (LittleFS.begin()) 
@@ -74,6 +83,9 @@ void setup()
     DebugTln(F("File System Mount succesfull\r"));
     FSmounted = true;     
   } else DebugTln(F("!!!! File System Mount failed\r"));   // Serious problem with File System 
+  
+  //test if index page is available
+  if (!DSMRfileExist(settingIndexPage, false) ) FSNotPopulated = true;   
     
 //------ read status file for last Timestamp --------------------
   
@@ -86,19 +98,11 @@ void setup()
   readSettings(true);
   
 //=============start Networkstuff==================================
-  delay(1500);
+  delay(500);
+  WiFi.onEvent(onWifiEvent);
   startWiFi(settingHostname, 240);  // timeout 4 minuten
-  
-  Debugln();
-  Debug (F("Connected to " )); Debugln (WiFi.SSID());
-  Debug (F("IP address: " ));  Debugln (WiFi.localIP());
-  Debug (F("IP gateway: " ));  Debugln (WiFi.gatewayIP());
-  Debugln();
-  
   delay(500);
   startTelnet();
-
-//-----------------------------------------------------------------
   startMDNS(settingHostname);
  
 //=============end Networkstuff======================================
@@ -108,29 +112,21 @@ void setup()
                                                             //USE_NTP
   if (!startNTP()) {                                            
     DebugTln(F("ERROR!!! No NTP server reached!\r\n\r"));   //USE_NTP
-    P1Reboot();                                           //USE_NTP
+    P1Reboot();                                             //USE_NTP
   }                                                         //USE_NTP
-                                                    //USE_NTP
   prevNtpHour = hour();                                     //USE_NTP
                                                             //USE_NTP
-#endif  //USE_NTP_TIME                                      //USE_NTP
-//================ end NTP =========================================
-
-//test if File System is correct populated!
-if (!DSMRfileExist(settingIndexPage, false) ) FSNotPopulated = true;   
-  
-#if defined(USE_NTP_TIME)                                                           //USE_NTP
+                                                            
   time_t t = now(); // store the current time in time variable t                    //USE_NTP
   snprintf(cMsg, sizeof(cMsg), "%02d%02d%02d%02d%02d%02dW\0\0", (year(t) - 2000), month(t), day(t), hour(t), minute(t), second(t)); 
   DebugTf("Time is set to [%s] from NTP\r\n", cMsg);                                //USE_NTP
-#endif  // use_dsmr_30
+#endif
 
 
 //================ Start MQTT  ======================================
 
 if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT();
 
-//================ End of Start MQTT  ===============================
 //================ Start HTTP Server ================================
 
   if (!FSNotPopulated) {
@@ -147,9 +143,7 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
     
   setupFSexplorer();
   delay(500);
-  
-//================ END HTTP Server ================================
-
+ 
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
 
 //================ Start Slimme Meter ===============================
@@ -248,16 +242,6 @@ void loop ()
     CHANGE_INTERVAL_MIN(WaterTimer, 30);
   }
 #endif
-
-  //--- if connection lost, try to reconnect to WiFi
-  if ( DUE(reconnectWiFi) && (WiFi.status() != WL_CONNECTED) ) {
-    sprintf(cMsg,"Wifi connection lost | rssi: %d",WiFi.RSSI());
-    LogFile(cMsg,false);  
-    startWiFi(settingHostname, 10);
-    if (WiFi.status() != WL_CONNECTED){
-          LogFile("Wifi connection still lost",false);
-    } else snprintf(cMsg, sizeof(cMsg), "IP:[%s], Gateway:[%s]", WiFi.localIP().toString().c_str(), WiFi.gatewayIP().toString().c_str());
-  }
 
 //--- if NTP set, see if it needs synchronizing
 #ifdef USE_NTP_TIME                                                 //USE_NTP

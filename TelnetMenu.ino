@@ -103,7 +103,6 @@ void displayBoardInfo()
   Debug(F("]\r\n                upTime ["));  Debug( upTime() );
   Debugln(F("]\r"));
 
-#ifdef USE_MQTT
   Debugln(F("==================================================================\r"));
   Debug(F(" \r\n           MQTT broker ["));  Debug( settingMQTTbroker );
   Debug(F("]\r\n             MQTT User ["));  Debug( settingMQTTuser );
@@ -116,7 +115,6 @@ void displayBoardInfo()
   Debug(F("]\r\n       Update Interval ["));  Debug(settingMQTTinterval);
   Debugln(F("]\r"));
   Debugln(F("==================================================================\r\n\r"));
-#endif
 
 } // displayBoardInfo()
 
@@ -171,11 +169,13 @@ void handleKeyInput()
       case 'E':     eraseFile();
                     break;
       #if defined(HAS_NO_SLIMMEMETER)
-      case 'F':     forceBuildRingFiles = true;
+      case 'O':     forceBuildRingFiles = true;
                     runMode = SInit;
                     break;
       #endif
-                    
+      case 'f':
+      case 'F':     listSPIFFS();
+                    break;                        
       case 'W':     Debugf("\r\nConnect to AP [%s] and go to ip address shown in the AP-name\r\n", settingHostname);
                     delay(1000);
                     WiFi.disconnect(true);  // deletes credentials !
@@ -236,13 +236,14 @@ void handleKeyInput()
                     Debugln(F("   A  - P1 Status info a=available|r=read|w=write|p=print|z=erase\r"));
 //                    Debugln(F("   B  - Board Info\r"));
                     Debugln(F("  *E  - erase file from FS\r"));
+                    Debugln(F("   F - File info on SPIFFS\r"));                    
                     Debugln(F("   L  - list Settings\r"));
                     Debugln(F("   D+ - Display b=board info | d=Day table | h=Hour table | m=Month table | l=Logfile | s = File info\r"));
 //                    Debugln(F("   H  - Display Hour table from FS\r"));
 //                    Debugln(F("   N  - Display LogFile P1.log\r"));
 //                    Debugln(F("   M  - Display Month table from FS\r"));
                     #ifdef HAS_NO_SLIMMEMETER
-                      Debugln(F("  *F  - Force build RING files\r"));
+                      Debugln(F("  *O  - Force build RING files\r"));
                     #endif
                     Debugln(F("   P  - No Parsing (show RAW data from Smart Meter)\r"));
                     Debugln(F("  *W  - Force Re-Config WiFi\r"));
