@@ -14,8 +14,15 @@
 #endif
 
 #ifdef USE_WATER_SENSOR  
-  #define PIN_WATER_SENSOR 14
+  #define PIN_WATER_SENSOR 14  
+  byte        WtrFactor     = 1;
+  time_t      debounce_t;
+  byte        debounces     = 0;
+  time_t      WtrPrevReading= 0;
 #endif //USE_WATER_SENSOR
+#define       DEBOUNCETIMER 2000
+  bool        WtrMtr        = false;
+
 
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
@@ -177,8 +184,8 @@ char        actTimestamp[20] = "";
 char        newTimestamp[20] = "";
 uint32_t    telegramCount = 0, telegramErrors = 0;
 bool        showRaw = false;
+bool        JsonRaw       = false;
 bool        LEDenabled    = true;
-bool        WtrMtr        = false;
 bool        DSMR_NL       = true;
 
 char      cMsg[150];
@@ -219,7 +226,7 @@ DECLARE_TIMER_SEC(synchrNTP,          30);
 DECLARE_TIMER_SEC(nextTelegram,       10);
 DECLARE_TIMER_SEC(reconnectMQTTtimer,  5); // try reconnecting cyclus timer
 DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time between MQTT messages  
-DECLARE_TIMER_MIN(WaterTimer,         30);
+DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);
 DECLARE_TIMER_MIN(antiWearRing,       25); 
 DECLARE_TIMER_MIN(StatusTimer,        15);
 

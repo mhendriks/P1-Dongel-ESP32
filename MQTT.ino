@@ -40,35 +40,35 @@ void AutoDiscoverHA(){
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/power_delivered/config" -m '{"dev_cla": "gas", "name": "Power Delivered", "stat_t": "DSMR-API/power_delivered", "unit_of_meas": "Wh", "val_tpl": "{{ value_json.power_delivered[0].value | round(3) }}" }'
   MQTTclient.setBufferSize(350);
 
-  SendAutoDiscoverHA("timestamp", "", "DSMR Last Update", "", "{{ strptime(value_json.timestamp[0].value[0:12], \'%y%m%d%H%M%S\') ) }}","", ",\"icon\": \"mdi:clock\"");
+  SendAutoDiscoverHA("timestamp", "", "DSMR Last Update", "", "{{ strptime(value[0:12], \'%y%m%d%H%M%S\') }}","", ",\"icon\": \"mdi:clock\"");
   
-  SendAutoDiscoverHA("power_delivered", "power", "Power Delivered", "Wh", "{{ value_json.power_delivered[0].value | round(3) * 1000}}","measurement","");
-  SendAutoDiscoverHA("power_returned", "power", "Power Returned", "Wh", "{{ value_json.power_returned[0].value | round(3) * 1000}}","measurement","");  
+  SendAutoDiscoverHA("power_delivered", "power", "Power Delivered", "Wh", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_returned" , "power", "Power Returned" , "Wh", "{{ value | round(3) * 1000 }}","measurement","");  
   
-  SendAutoDiscoverHA("energy_delivered_tariff1", "energy", "Energy Delivered T1", "kWh", "{{ value_json.energy_delivered_tariff1[0].value | round(3) }}","total_increasing","");
-  SendAutoDiscoverHA("energy_delivered_tariff2", "energy", "Energy Delivered T2", "kWh", "{{ value_json.energy_delivered_tariff2[0].value | round(3) }}","total_increasing","");
-  SendAutoDiscoverHA("energy_returned_tariff1", "energy", "Energy Returned T1", "kWh", "{{ value_json.energy_returned_tariff1[0].value | round(3) }}","total_increasing","");
-  SendAutoDiscoverHA("energy_returned_tariff2", "energy", "Energy Returned T2", "kWh", "{{ value_json.energy_returned_tariff2[0].value | round(3) }}","total_increasing","");
+  SendAutoDiscoverHA("energy_delivered_tariff1", "energy", "Energy Delivered T1", "kWh", "{{ value | round(3) }}","total_increasing","");
+  SendAutoDiscoverHA("energy_delivered_tariff2", "energy", "Energy Delivered T2", "kWh", "{{ value | round(3) }}","total_increasing","");
+  SendAutoDiscoverHA("energy_returned_tariff1", "energy", "Energy Returned T1", "kWh", "{{ value | round(3) }}","total_increasing","");
+  SendAutoDiscoverHA("energy_returned_tariff2", "energy", "Energy Returned T2", "kWh", "{{ value | round(3) }}","total_increasing","");
   
-  SendAutoDiscoverHA("power_delivered_l1", "power", "Power Delivered l1", "Watt", "{{ value_json.power_delivered_l1[0].value | round(3) * 1000 }}","measurement","");
-  SendAutoDiscoverHA("power_delivered_l2", "power", "Power Delivered l2", "Watt", "{{ value_json.power_delivered_l2[0].value | round(3) * 1000 }}","measurement","");
-  SendAutoDiscoverHA("power_delivered_l3", "power", "Power Delivered l3", "Watt", "{{ value_json.power_delivered_l3[0].value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_delivered_l1", "power", "Power Delivered l1", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_delivered_l2", "power", "Power Delivered l2", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_delivered_l3", "power", "Power Delivered l3", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
 
-  SendAutoDiscoverHA("power_returned_l1", "power", "Power Returned l1", "Watt", "{{ value_json.power_returned_l1[0].value | round(3) * 1000 }}","measurement","");
-  SendAutoDiscoverHA("power_returned_l2", "power", "Power Returned l2", "Watt", "{{ value_json.power_returned_l2[0].value | round(3) * 1000 }}","measurement","");
-  SendAutoDiscoverHA("power_returned_l3", "power", "Power Returned l3", "Watt", "{{ value_json.power_returned_l3[0].value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_returned_l1", "power", "Power Returned l1", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_returned_l2", "power", "Power Returned l2", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_returned_l3", "power", "Power Returned l3", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
 
-  SendAutoDiscoverHA("voltage_l1", "voltage", "Voltage l1", "V", "{{ value_json.voltage_l1[0].value | round(0) }}","measurement","");
-  SendAutoDiscoverHA("voltage_l2", "voltage", "Voltage l2", "V", "{{ value_json.voltage_l2[0].value | round(0) }}","measurement","");
-  SendAutoDiscoverHA("voltage_l3", "voltage", "Voltage l3", "V", "{{ value_json.voltage_l3[0].value | round(0) }}","measurement","");
+  SendAutoDiscoverHA("voltage_l1", "voltage", "Voltage l1", "V", "{{ value | round(0) }}","measurement","");
+  SendAutoDiscoverHA("voltage_l2", "voltage", "Voltage l2", "V", "{{ value | round(0) }}","measurement","");
+  SendAutoDiscoverHA("voltage_l3", "voltage", "Voltage l3", "V", "{{ value | round(0) }}","measurement","");
   
-  SendAutoDiscoverHA("current_l1", "current", "Current l1", "A", "{{ value_json.current_l1[0].value | round(0) }}","measurement","");
-  SendAutoDiscoverHA("current_l2", "current", "Current l2", "A", "{{ value_json.current_l2[0].value | round(0) }}","measurement","");
-  SendAutoDiscoverHA("current_l3", "current", "Current l3", "A", "{{ value_json.current_l3[0].value | round(0) }}","measurement","");
+  SendAutoDiscoverHA("current_l1", "current", "Current l1", "A", "{{ value | round(0) }}","measurement","");
+  SendAutoDiscoverHA("current_l2", "current", "Current l2", "A", "{{ value | round(0) }}","measurement","");
+  SendAutoDiscoverHA("current_l3", "current", "Current l3", "A", "{{ value | round(0) }}","measurement","");
 
-  SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value_json.gas_delivered[0].value | round(2) }}","total_increasing","");
+  SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(2) }}","total_increasing","");
   
-  SendAutoDiscoverHA("water", "", "Waterverbruik", "m³", "{{ value_json.water[0].value | round(0) }}","total_increasing",",\"icon\": \"mdi:water\"");
+  SendAutoDiscoverHA("water", "", "Waterverbruik", "m³", "{{ value | round(0) }}","total_increasing",",\"icon\": \"mdi:water\"");
 
 }
 #endif
@@ -240,47 +240,24 @@ struct buildJsonMQTT {
     if (!isInFieldsArray(Name.c_str()) ) {
       if (i.present()) {
         sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name.c_str());
-        //if (strlen(Item::unit()) > 0) msg = "{\""+Name+"\":[{\"value\":"+value_to_json(i.val())+",\"unit\":\""+Item::unit()+"\"}]}";
-//        else msg = "{\""+Name+"\":[{\"value\":"+value_to_json(i.val())+"}]}";
-        msg = value_to_json(i.val());
+        msg = String( i.val() );
         if (Verbose2) DebugTln("mqtt bericht: "+msg);
         if ( !MQTTclient.publish(cMsg, msg.c_str()) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", cMsg, msg.c_str(), (strlen(cMsg) + msg.length()));
       } // if i.present
     } // if isInFieldsArray
   } //apply
-  
-  template<typename Item>
-  Item& value_to_json(Item& i) {
-    return i;
-  }
-
-  String value_to_json( String i){
-    return "\"" + i+ "\"";
-  }
-  
 }; // buildJsonMQTT
 
 //===========================================================================================
 
 void MQTTSend(const char* item, String value){
-//  String msg = "{\"" + String(item) + "\":[{\"value\":\""+ value + "\"}]}";
-  String msg = "\""+ value + "\"";
   sprintf(cMsg,"%s%s", settingMQTTtopTopic,item);
-  if (!MQTTclient.publish(cMsg, (byte*)msg.c_str(),msg.length(),true )) {
-    DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, msg.c_str(), (strlen(cMsg) + msg.length()));
+  if (!MQTTclient.publish(cMsg, value.c_str(),true )) {
+    DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, value.c_str(), (strlen(cMsg) + value.length()));
     StaticInfoSend = false; //probeer het later nog een keer
   }
 }
 
-void MQTTSend(const char* item, int32_t value){
-//  String msg = "{\"" + String(item) + "\":[{\"value\":"+ value + "}]}";
-  String msg = value;
-  sprintf(cMsg,"%s%s", settingMQTTtopTopic,item);
-  if (!MQTTclient.publish(cMsg, (byte*)msg.c_str(),msg.length(),true )) {
-    DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, msg.c_str(), (strlen(cMsg) + msg.length()));
-    StaticInfoSend = false; //probeer het later nog een keer
-  }
-}
 //===========================================================================================
 void MQTTSentStaticInfo(){
   if ((settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
@@ -290,23 +267,19 @@ void MQTTSentStaticInfo(){
   MQTTSend("equipment_id",DSMRdata.equipment_id);
   MQTTSend("firmware",_VERSION_ONLY);
   MQTTSend("ip_address",WiFi.localIP().toString());
-  MQTTSend( "wifi_rssi",WiFi.RSSI() );
-  if (DSMRdata.mbus1_device_type_present){ MQTTSend("gas_device_type", (uint32_t)DSMRdata.mbus1_device_type ); }
-  if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc); }
-  
+  MQTTSend( "wifi_rssi",String( WiFi.RSSI() ) );
+  if (DSMRdata.mbus1_device_type_present){ MQTTSend("gas_device_type", String(DSMRdata.mbus1_device_type) ); }
+  if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc); }  
 }
 
 //---------------------------------------------------------------
 void MQTTsendGas(){
-
-  if (gasDelivered){
-    sprintf(cMsg,"%s%s",settingMQTTtopTopic,"gas_delivered");
-    char msg[20];
-//    sprintf(msg,"{\"gas_delivered\":[{\"value\":%.3f,\"unit\":\"m3\"}]}",gasDelivered);
-    sprintf(msg,"%.3f",gasDelivered);
-    if (!MQTTclient.publish(cMsg, msg) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", cMsg, msg, (strlen(cMsg) + strlen(msg)));
-  }
+  if (!gasDelivered) return;
+//  char msg[20];
+//  sprintf(msg,"%.3f",gasDelivered);
+  MQTTSend( "gas_delivered", String( gasDelivered ) );
 }
+
 //---------------------------------------------------------------
 void sendMQTTData() 
 {

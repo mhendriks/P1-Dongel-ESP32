@@ -31,7 +31,7 @@ void JsonGas(){
 void JsonWater(){
   if (!WtrMtr) return;
   
-  jsonDoc["water"]["value"] =  (float)P1Status.wtr_m3 + P1Status.wtr_l/1000.0;
+  jsonDoc["water"]["value"] =  (float)P1Status.wtr_m3 + P1Status.wtr_l?P1Status.wtr_l/1000.0:0;
   jsonDoc["water"]["unit"]  = "m3";
 }
 //--------------------------
@@ -327,6 +327,18 @@ void sendDeviceSettings()
   doc["mqtt_interval"]["min"] = 0;
   doc["mqtt_interval"]["max"] = 600;
 
+#ifdef USE_WATER_SENSOR
+  doc["water_m3"]["value"] = P1Status.wtr_m3;
+  doc["water_m3"]["type"] = "i";
+  doc["water_m3"]["min"] = 0;
+  doc["water_m3"]["max"] = 99999;  
+  
+  doc["water_l"]["value"] = P1Status.wtr_l;
+  doc["water_l"]["type"] = "i";
+  doc["water_l"]["min"] = 0;
+  doc["water_l"]["max"] = 999;  
+#endif
+
   sendJson(doc);
 
 } // sendDeviceSettings()
@@ -360,6 +372,7 @@ void handleSmApi(const char *URI, const char *word4, const char *word5, const ch
     jsonDoc.clear();
     DSMRdata.applyEach(buildJson());
     JsonGasID();
+    JsonWater();
     sendJson(jsonDoc);
   break;
   
@@ -369,10 +382,7 @@ void handleSmApi(const char *URI, const char *word4, const char *word5, const ch
     jsonDoc.clear();
     JsonGas();
     DSMRdata.applyEach(buildJson());
-#ifdef USE_WATER_SENSOR    
-    jsonDoc["water"]["value"] = P1Status.wtr_m3;
-    jsonDoc["water"]["unit"]  = "m3";
-#endif
+    JsonWater();
     sendJson(jsonDoc);
   break;
   
@@ -387,15 +397,12 @@ void handleSmApi(const char *URI, const char *word4, const char *word5, const ch
     jsonDoc.clear();
     DSMRdata.applyEach(buildJson());
     if (strlen(word5) == 0) JsonGas();
+    JsonWater();
     sendJson(jsonDoc);
     break;  
   case 't': //telegramm 
-    { byte c = 0;
-    while ((c < 19) && !slimmeMeter.available()){delay(100); c++;}
-    String buff = slimmeMeter.raw();
-    if (buff.length() > 50) sendJsonBuffer(&buff[0]);
-    else httpServer.send(200, "application/plain", F("Empty telegram buffer, try again"));
-    break; } 
+    JsonRaw = true;
+    break;
   default:
     sendApiNotFound(URI);
   }

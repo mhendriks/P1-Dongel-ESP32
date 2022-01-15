@@ -28,9 +28,10 @@ TODO
 √ check of ringfiles bestaan bij startup ... anders aanmaken.
 X ticker blynk
 x webupdate is defect
-x HA auto discovery
-- div tussen css/js/html 3.2 en 4.0 met name migratie 
-x vereenvoudigen mqtt berichten (allen value wordt nog verzonden)
+√ HA auto discovery
+√ div tussen css/js/html 3.2 en 4.0 met name migratie 
+√ vereenvoudigen mqtt berichten (allen value wordt nog verzonden)
+√ Alle velden ... ook water
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -45,7 +46,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-//#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
+#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //#define HAS_NO_SLIMMEMETER        // define for testing only!
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
@@ -231,18 +232,21 @@ void loop ()
   if (DUE(StatusTimer)) { //eens per 15min of indien extra m3
     P1StatusWrite();
     MQTTSentStaticInfo();
-//    CHANGE_INTERVAL_MIN(StatusTimer, 15);
+    #ifdef USE_WATER_SENSOR  
+      sendMQTTWater();
+    #endif
+    CHANGE_INTERVAL_MIN(StatusTimer, 10);
   }
 
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
   
-#ifdef USE_WATER_SENSOR
-  if ( WtrMtr && DUE(WaterTimer) ) {
-    P1StatusWrite();
-    sendMQTTWater();
-    CHANGE_INTERVAL_MIN(WaterTimer, 30);
-  }
-#endif
+//#ifdef USE_WATER_SENSOR
+//  if ( WtrMtr && DUE(WaterTimer) ) {
+//    P1StatusWrite();
+//    sendMQTTWater();
+//    CHANGE_INTERVAL_MIN(WaterTimer, 30);
+//  }
+//#endif
 
 //--- if NTP set, see if it needs synchronizing
 #ifdef USE_NTP_TIME                                                 //USE_NTP

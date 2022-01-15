@@ -32,14 +32,14 @@ void handleSlimmemeter()
 {
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
     if (slimmeMeter.available()) {
-//      if (LEDenabled) digitalWrite(LED, !digitalRead(LED)); //toggle LED when telegram available
-      if (showRaw) {
+      if ( showRaw || JsonRaw ) {
         //-- process telegrams in raw mode
         Debugf("Telegram Raw (%d)\n%s\n" , slimmeMeter.raw().length(),slimmeMeter.raw().c_str()); 
+        if (JsonRaw) sendJsonBuffer(slimmeMeter.raw().c_str());
         showRaw = false; //only 1 reading
+        JsonRaw = false;
       } 
       else processSlimmemeter();
-//      if (LEDenabled) digitalWrite(LED, !digitalRead(LED)); //toggle LED when telegram available
       BlinkLED(); //laat succesvolle leesactie zien
     } //available
 } // handleSlimmemeter()

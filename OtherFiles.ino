@@ -74,7 +74,10 @@ void writeSettings()
   doc["LED"] = LEDenabled;
   doc["ota"] = BaseOTAurl;
   doc["enableHistory"] = EnableHistory;
+#ifdef USE_WATER_SENSOR
   doc["watermeter"] = WtrMtr;
+  doc["waterfactor"] = WtrFactor;
+#endif
 
   writeToJsonFile(doc, SettingsFile);
   
@@ -149,7 +152,10 @@ void readSettings(bool show)
   LEDenabled = doc["LED"];
   if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
   if (doc.containsKey("enableHistory")) EnableHistory = doc["enableHistory"];
+#ifdef USE_WATER_SENSOR
   if (doc.containsKey("watermeter")) WtrMtr = doc["watermeter"];
+  if (doc.containsKey("waterfactor")) WtrFactor = doc["waterfactor"];
+#endif
 
   SettingsFile.close();
   //end json
@@ -201,7 +207,9 @@ void readSettings(bool show)
   Debug(F("                 LED enabled : ")); Debugln(LEDenabled);
   Debug(F("                Base OTA url : ")); Debugln(BaseOTAurl);
   Debug(F("              History Enabled: ")); Debugln(EnableHistory);
+#ifdef USE_WATER_SENSOR
   Debug(F("          Water Meter Enabled: ")); Debugln(WtrMtr);
+#endif
   Debugln(F("-\r"));
 
 } // readSettings()
@@ -233,6 +241,14 @@ void updateSetting(const char *field, const char *newValue)
 
   if (!stricmp(field, "gd_tariff"))         settingGDT          = String(newValue).toFloat();  
   if (!stricmp(field, "gas_netw_costs"))    settingGNBK         = String(newValue).toFloat();
+  if (!stricmp(field, "water_m3")){
+    P1Status.wtr_m3         = String(newValue).toInt();
+    CHANGE_INTERVAL_MS(StatusTimer, 100);
+  }
+  if (!stricmp(field, "water_l")) {
+    P1Status.wtr_l         = String(newValue).toInt();
+    CHANGE_INTERVAL_MS(StatusTimer, 100);
+  }
 
   if (!stricmp(field, "sm_has_fase_info")) 
   {
@@ -306,7 +322,7 @@ void LogFile(const char* payload, bool toDebug = false) {
     if (strlen(payload)==0) {
       //reboot
       //make one record : {"time":"2020-09-23 17:03:25","reason":"Software/System restart","reboots":42}
-      LogFile.println("{\"time\":\"" + buildDateTimeString(actTimestamp, sizeof(actTimestamp)) + "\",\"reboot_reason\":\"" + lastReset + "\",\"reboots\":" +  (int)P1Status.reboots + "}");
+      LogFile.println("{\"time\":\"" + buildDateTimeString(actTimestamp, sizeof(actTimestamp)) + "\",\"reboot\":\"" + lastReset + "\",\"reboots\":" +  (int)P1Status.reboots + "}");
     } else { 
       //make one record : {"time":"2020-09-23 17:03:25","log":"Software/System restart"}
       LogFile.println("{\"time\":\"" + buildDateTimeString(actTimestamp, sizeof(actTimestamp)) + "\",\"log\":\"" + payload + "\"}");
