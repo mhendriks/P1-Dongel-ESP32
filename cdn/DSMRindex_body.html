@@ -39,41 +39,6 @@
 	  <li><a href="javascript:void(0);" class="icon" onclick="menu()"><i id="menuid" class="mdi mdi-menu"></i></a></li>
    </ul>
    </nav> <!-- end nav-main -->  
- <!-- 
- <div class="nav-container">
-  	<div class="inner-nav">
-    <nav id='nav-main'>
-      <a id='Home'   		class='nav-item nav-img' href="#DashTab"><span class="mdi mdi-chart-box-outline"></span></a>
-	  <a id='bDashTab'    	class='nav-item tabButton active' href="#DashTab">Dash</a>
-	  <a id='bActualTab'    class='nav-item tabButton' href="#ActualTab">Actueel</a>
-      <a id='bHoursTab'     class='nav-item tabButton' href="#HoursTab">Uur</a>
-      <a id='bDaysTab'      class='nav-item tabButton' href="#DaysTab">Dag</a>
-      <a id='bMonthsTab'    class='nav-item tabButton' href="#MonthsTab">Maand</a>
-	  <a id='bSysInfoTab'   class='nav-item nav-img' href="#SysInfoTab"><span class="mdi mdi-information-outline"></span></a>
-      <a id='bFSexplorer'    class='nav-item nav-img' href="#FileExplorer"><span class="mdi mdi-folder-outline"></span></a>
-      <a id='bSettings'      class='nav-item nav-img' href="#Settings"><span class="mdi mdi-cog"></span></a>
-   </nav> <!~~ end nav-main ~~>  
-   <div class="nav-clock topcorner">
-     <span id="theTime">n/a</span>
-   </div> <!~~ end date/time ~~>
-   </div> <!~~ innner nav ~~>
-  </div> <!~~ end main-nav container~~>
-  <div id="nav-settings" class="subnav">
-	<div class="subnav-container">
-      <a id='bEditSettings' class='subnav-item tabButton' href="#Settings">Settings</a>
-      <a id='bEditMonths'   class='subnav-item tabButton' href="#Settings">Meterstanden</a>
-    </div>
-  </div>  <!~~ END subnav-container ~~>
-  <div id="nav-info"  class="subnav">
-	<div class="subnav-container">
-      <a id='bInfo_SysInfo'   class='subnav-item tabButton' href="#SysInfoTab">Systeeminformatie</a>
-	  <a id='bInfo_frontend'  class='subnav-item tabButton' href="#FrontendTab">Webpagina</a>
-      <a id='bInfo_Telegram'  class='subnav-item tabButton' href="#TelegramTab">Telegram</a>
-      <a id='bInfo_Fields'    class='subnav-item tabButton' href="#FieldsTab">Alle Velden</a>
-      <a id='bInfo_APIdoc'    class='subnav-item tabButton' href="#APIdocTab">API Docs</a>
-    </div>
-  </div>  <!~~ END subnav-container ~~>
- -->
 </div> <!-- end header -->    
 
 <div id="mainPage" style="display:block">
@@ -91,17 +56,21 @@
     </div>
     <div id="lastHours">
       <table id="lastHoursTable">
-        <thead>
+		<colgroup>
+		<col class="col1"/>
+		<col class="col2"/>
+		<col class="col3"/>
+		<col class="col4"/>
+		<col class="col5"/>
+		</colgroup>
           <tr>
             <th>Date/Time</th>
             <th>Energie<br>Verbruik<br>(Watt)</th>
             <th>Energie<br>Teruglevering<br>(Watt)</th>
             <th>Gas-<br>verbruik<br>(m3)</th>
+			<th>Water-<br>verbruik<br>(m3)</th>
         <!--<th style="text-align: right;  border-bottom: 2px solid #ddd;">Kosten</th>-->
           </tr>
-        </thead>
-        <tbody>
-        </tbody>
       </table>
     </div>
   </section> <!-- END HoursTab -->
@@ -120,15 +89,21 @@
     </div>
     <div id='lastDays'>
       <table id="lastDaysTable">
-      <thead>
+		<colgroup>
+		<col class="col1"/>
+		<col class="col2"/>
+		<col class="col3"/>
+		<col class="col4"/>
+		<col class="col5"/>
+		</colgroup>
         <tr>
             <th>Date/Time</th>
             <th>Energie<br>Verbruik<br>(Watt)</th>
             <th>Energie<br>Teruglevering<br>(Watt)</th>
             <th>Gas-<br>verbruik<br>(m3)</th>
+			<th>Water-<br>verbruik<br>(m3)</th>
             <th>Kosten</th>
         </tr>
-      </thead>
       <tbody>
       </tbody>
       </table>
@@ -152,12 +127,32 @@
     </div>
     <div id='lastMonths'>
       <table id="lastMonthsTable" style="display:block">
+		<colgroup>
+		<col class="col1"/>
+		<col class="col2"/>
+		<col class="col3"/>
+		<col class="col4"/>
+		<col class="col5"/>
+		<col class="col6"/>
+		<col class="col7"/>
+		<col class="col8"/>
+		<col class="col9"/>
+		<col class="col10"/>
+		<col class="col11"/>
+		<col class="col12"/>
+		<col class="col13"/>
+		<col class="col14"/>
+		<col class="col15"/>
+		<col class="col16"/>
+		<col class="col17"/>
+		</colgroup>
       <thead>
         <tr>
             <th></th>
             <th colspan=4>Verbruik</th>
             <th style="text-align:center" colspan=4>Opgewekt</th>
             <th colspan=4>Gasverbruik</th>
+			<th style="text-align:center" colspan=4>Waterverbruik</th>
         </tr>
         <tr>
             <th>Maand</th>
@@ -172,6 +167,11 @@
             <th>(kWh)</th>
             
             <th>Jaar</th>
+            <th>(m3)</th>
+            <th>Jaar</th>
+            <th>(m3)</th>
+            
+			<th>Jaar</th>
             <th>(m3)</th>
             <th>Jaar</th>
             <th>(m3)</th>
@@ -412,7 +412,7 @@
       <div id="btnFirmware" class="act_btn">
 		<p>Na het indrukken van de UPDATE FIRMWARE knop zal het updatescherm worden getoond. Hiermee kan een firmware of data update worden uitgevoerd.</p>
         <span>
-        <form  action='/update' method='GET'>
+        <form  action='/updates' method='GET'>
           <input id="update" type='submit' class='button' name='SUBMIT' value='Update Firmware...' hidden/>
         </form>
         </span>
@@ -475,7 +475,7 @@
     <h3 id=w8api style="margin-top:50%">Wacht op gegevens van Slimme Meter</h3>
     <div class=outer>
         <div class=card id=l1 style="display:none">
-            <h1 id=power_delivered_l1h>Actueel</h1>
+            <h1 id=power_delivered_l1h >Actueel</h1>
 	        <div class="chart-container" id="gauge"></div>
             <hr/>
             <div style="text-align:center">Actueel [kW]</div>
@@ -484,7 +484,7 @@
             <h3>min: <span id="power_delivered_1min">0.0</span> kW</h3>
         </div>
         <div class=card id=l3 style="display:none">
-            <h1 id=Ph>Verbruik</h1>
+            <h1 id=Ph class="mdi mdi-lightning-bolt">Electra</h1>
             <canvas class="chart-container" id="container-3"></canvas>
 <!--             <div class="label">ELECTRA</div>         -->
 			<div id=legenda>
@@ -499,7 +499,7 @@
             <h3>min: <span id="Pmin">0.0</span></h3-->
         </div>
         <div class=card id=l5 style="display:none">
-            <h1 id=Ph>Teruglevering</h1>
+            <h1 id=Ph class="mdi mdi-home-export-outline">Teruglevering</h1>
             <canvas class="chart-container" id="container-5"></canvas>
 <!--             <div class="label">ELECTRA</div>         -->
 			<div id=legenda>
@@ -514,7 +514,7 @@
             <h3>min: <span id="Pimin">0.0</span></h3-->
         </div>
         <div class=card id=l6 style="display:none">
-            <h1 id=Ph>Afname</h1>
+            <h1 id=Ph class="mdi mdi-home-import-outline">Afname</h1>
             <canvas class="chart-container" id="container-6"></canvas>
 <!--             <div class="label">ELECTRA</div>         -->
 			<div id=legenda>
@@ -529,7 +529,7 @@
             <h3>min: <span id="Pamin">0.0</span></h3-->
         </div>
         <div class=card id=l4 style="display:none">
-            <h1 id=Gh>Gasverbruik</h1>
+            <h1 id=Gh class="mdi mdi-fire">Gas</h1>
             <canvas class="chart-container" id="container-4"></canvas>
 <!-- 			<div class="label stroom">GAS</div> -->
 			<div id=legenda>
@@ -540,8 +540,18 @@
             <hr/>
             <div style="text-align:center">Vandaag [㎥]</div>
             <h2 id="G">0.0</h2>
-            <!--h3>max: <span id="Gmax">0.0</span></h3>
-            <h3>min: <span id="Gmin">0.0</span></h3-->
+        </div>
+        <div class=card id=l7 style="display:none">
+            <h1 id=Gh class="mdi mdi-water">Water</h1>
+            <canvas class="chart-container" id="container-7"></canvas>
+			<div id=legenda>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+			</div>
+            <hr/>
+            <div style="text-align:center">Vandaag [liter]</div>
+            <h2 id="W">0.0</h2>
         </div>
         <div class=card id=l2 style="display:none">
             <h1 id=power_delivered_l2h>Spanning</h1>
@@ -561,9 +571,10 @@
   <div style="margin: 30px;">
     <canvas id="dataChart" style="display: none;" width="900" height="300"></canvas>
     <canvas id="gasChart"  style="display: none;" width="900" height="125"></canvas>
+	<canvas id="waterChart"  style="display: none;" width="900" height="125"></canvas>
   </div>
 <!-- Pin to bottom right corner -->
-    <div class="bottom right-0"><span id="devVersion">[version]</span>  |  2021 &copy; Martijn Hendriks</div>
+    <div class="bottom right-0"><span id="devVersion">[version]</span>  |  &copy; <a style="color:gray" target="_blank" href='http://smart-stuff.nl'>smart-stuff.nl</a></div>
     <!-- Pin to bottom left corner -->
     <div id="message" class="bottom left-0">-</div>    
 </div> <!-- main page-->

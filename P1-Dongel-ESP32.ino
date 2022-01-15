@@ -6,42 +6,42 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 *      
-*      TODO
-*      - lees/schrijffouten ringfiles terugmelden in frontend
-*      - keuze om voor lokale frontend assets of uit het cdn
-*      - frontend options in json (max stroom per fase, uitzetten van spanningsoverzicht in dash, etc)
-*      - mqtt broker benaderen via host name http://www.iotsharing.com/2017/06/how-to-get-ip-address-from-mdns-host-name-in-arduino-esp32.html 
-*      -- message bij drempelwaardes 
-*      -- verbruiksrapport einde dag/week/maand
-*      - monitor proces en fail over indien het niet goed gaat (cpu 1 <-> cpu 0)
-*      - AsynWebserver implementatie
-*      - Multi core tasks (xSemaphore)
-*      -- smr  -> sync naar mqtt, file write, processing
-*      -- frontend & api server
-*      -- mqtt
-*      √ bugfix: niet aanmaken van nieuwe ring file bij file not found
-*      - update proces loopt niet goed met gz files
-*      - bug telegram RAW serial
-*      √ mdns.queryhostname implementatie
-*      √ water_sensor telnet/statusfile
-*      √ watersensor mqtt
-*      - watersensor json actuals
-*      - watersensor historie / ringfiles
-*      - watersensor only mode
-*      √ ringfiles met watermtr gegevens
-*      √ ringfiles verwijderd uit de default fileupload 
-*      √ check of ringfiles bestaan bij startup ... anders aanmaken.
-*      √ ticker blynk
-  
-  Arduino-IDE settings for P1 Dongle hardware ESP32:
-    - Board: "ESP32 Dev Module"
-    - Flash mode: "QIO"
-    - Flash size: "4MB (32Mb)"
-    - CorenDebug Level: "None"
-    - Flash Frequency: "80MHz"
-    - CPU Frequency: "240MHz"
-    - Upload Speed: "961600"                                                                                                                                                                                                                                                 
-    - Port: <select correct port>
+TODO
+- lees/schrijffouten ringfiles terugmelden in frontend
+- keuze om voor lokale frontend assets of uit het cdn
+- frontend options in json (max stroom per fase, uitzetten van spanningsoverzicht in dash, etc)
+- mqtt broker benaderen via host name http://www.iotsharing.com/2017/06/how-to-get-ip-address-from-mdns-host-name-in-arduino-esp32.html 
+-- message bij drempelwaardes 
+-- verbruiksrapport einde dag/week/maand
+- monitor proces en fail over indien het niet goed gaat (cpu 1 <-> cpu 0)
+- AsynWebserver implementatie
+√ bugfix: niet aanmaken van nieuwe ring file bij file not found
+- bug telegram RAW serial
+√ mdns.queryhostname implementatie
+√ water_sensor telnet/statusfile
+√ watersensor mqtt
+- watersensor json actuals
+- watersensor historie / ringfiles
+- watersensor only mode
+√ ringfiles met watermtr gegevens
+√ ringfiles verwijderd uit de default fileupload 
+√ check of ringfiles bestaan bij startup ... anders aanmaken.
+X ticker blynk
+x webupdate is defect
+x HA auto discovery
+- div tussen css/js/html 3.2 en 4.0 met name migratie 
+x vereenvoudigen mqtt berichten (allen value wordt nog verzonden)
+
+************************************************************************************
+Arduino-IDE settings for P1 Dongle hardware ESP32:
+  - Board: "ESP32 Dev Module"
+  - Flash mode: "QIO"
+  - Flash size: "4MB (32Mb)"
+  - CorenDebug Level: "None"
+  - Flash Frequency: "80MHz"
+  - CPU Frequency: "240MHz"
+  - Upload Speed: "961600"                                                                                                                                                                                                                                                 
+  - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
 
@@ -49,11 +49,12 @@
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //#define HAS_NO_SLIMMEMETER        // define for testing only!
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
+#define HA_DISCOVER
 
 #ifdef USE_WATER_SENSOR
-  #define ALL_OPTIONS "[MQTT][LITTLEFS][WATER]"
+  #define ALL_OPTIONS "[MQTT][LITTLEFS][WATER][HA_DISCOVER]"
 #else
-  #define ALL_OPTIONS "[MQTT][LITTLEFS]"
+  #define ALL_OPTIONS "[MQTT][LITTLEFS][HA_DISCOVER]"
 #endif
 
 /******************** don't change anything below this comment **********************/

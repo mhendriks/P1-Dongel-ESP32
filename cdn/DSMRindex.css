@@ -56,7 +56,7 @@ input[type=submit]:disabled {
  	cursor: auto;
 }
 
-#settings_btns a:hover {
+#settings_btns a:hover, .button:hover {
 	background-color: #999;
 }
 
@@ -458,7 +458,7 @@ body > div.bottom.right-0 {
     position: relative;
     margin-left: 12px;
     background: transparent;
-    position:block;
+    position:inherit;
     margin-bottom:-5px;
     }
 
@@ -468,9 +468,7 @@ body > div.bottom.right-0 {
   opacity: 1;
   position: absolute;
   z-index: 1;
-  bottom: 1%;
-  left: 63%;
-  margin-left: -60px;
+  left: 33%;
 }
 
 /* Tooltip text */
@@ -513,11 +511,11 @@ body > div.bottom.right-0 {
     width: 180px!important;
     position: relative;
     margin: auto;
-    margin-top: 22px;
+    margin-top: 10px;
     position:inherit;
 }
 
-#container-3, #container-4, #container-5, #container-6 {margin-top:10px}
+#gauge,#gauge-v {margin-top:22px}
 
 #DashTab .lblVerbuik {
 	text-align: center;
@@ -533,9 +531,12 @@ body > div.bottom.right-0 {
 #DashTab .gisteren{background: #316b77}
 #DashTab .eergisteren{background: #318b77}
 
+#Ph::before{ padding-right:0px; }
+h1::before{ padding-right:3px; }
+
 #DashTab .card h1 {
 	text-align: center;
-	padding: 0.5rem 1.5rem;
+	padding: 0.5rem 1.1rem;
 	background: #314b77;
 	margin: 0 0 0rem 0;
 	font-size: 1.5rem;

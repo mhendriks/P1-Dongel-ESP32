@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : DSMRgraphics.js, part of DSMRloggerAPI
-**  Version  : v1.2.1
+**  Version  : v2.3.5
 **
 **  Copyright (c) 2020 Willem Aandewiel
 **
@@ -27,8 +27,13 @@ var actGasData          = {};     // declare an object
 actGasData.labels       = [];     //  add 'labels' element to object (X axis)
 actGasData.datasets     = [];     //  add 'datasets' array element to object
 
+var actWaterData          = {};     // declare an object
+actWaterData.labels       = [];     //  add 'labels' element to object (X axis)
+actWaterData.datasets     = [];     //  add 'datasets' array element to object
+
 
 var actElectrOptions = {
+		plugins: {labels: false},
         responsive: true,
         maintainAspectRatio: true,
         scales: {
@@ -45,6 +50,7 @@ var actElectrOptions = {
       }; // options
 
 var hourOptions = {
+		plugins: {labels: false},
         responsive: true,
         maintainAspectRatio: true,
         scales: {
@@ -61,6 +67,7 @@ var hourOptions = {
       }; // options
 
 var dayOptions = {
+		plugins: {labels: false},
         responsive: true,
         maintainAspectRatio: true,
         scales: {
@@ -77,7 +84,8 @@ var dayOptions = {
       }; // options
 
 var monthOptions = {
-        responsive: true,
+		plugins: {labels: false},
+		responsive: true,
         maintainAspectRatio: true,
         scales: {
           yAxes: [{
@@ -95,6 +103,7 @@ var monthOptions = {
 //----------------Chart's-------------------------------------------------------
 var myElectrChart;
 var myGasChart;
+var myWaterChart;
 
   //============================================================================  
   function renderElectrChart(dataSet, options) {
@@ -113,6 +122,37 @@ var myGasChart;
     
   } // renderElectrChart()
 
+  //============================================================================  
+  function renderWaterChart(dataSet, labelString) {
+    //console.log("Now in renderGasChart() ..");
+    
+    if (myWaterChart) {
+      myWaterChart.destroy();
+    }
+
+    var ctxWater = document.getElementById("waterChart").getContext("2d");
+    myWaterChart = new Chart(ctxWater, {
+      type: 'line',
+      data: dataSet,
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+          yAxes: [{
+            ticks : {
+              beginAtZero : true,
+            },
+            scaleLabel: {
+              display: true,
+              labelString: labelString,
+            },
+          }]
+        } // scales
+      } // options
+
+    });
+    
+  } // renderWaterChart()
   //============================================================================  
   function renderGasChart(dataSet, labelString) {
     //console.log("Now in renderGasChart() ..");
@@ -159,7 +199,11 @@ var myGasChart;
     //renderGasChart(gasData, actGasOptions);
     renderGasChart(gasData, "dm3");
     myGasChart.update();
-  
+
+    //renderWaterChart(gasData, actGasOptions);
+    renderWaterChart(waterData, "dm3");
+    myWaterChart.update();
+      
     //--- hide table
     document.getElementById("lastHours").style.display  = "none";
     document.getElementById("lastDays").style.display   = "none";
@@ -167,7 +211,7 @@ var myGasChart;
     //--- show canvas
     document.getElementById("dataChart").style.display  = "block";
     document.getElementById("gasChart").style.display   = "block";
-
+    document.getElementById("waterChart").style.display   = "block";
   } // showHistGraph()
   
   
@@ -182,6 +226,9 @@ var myGasChart;
     renderGasChart(gasData, "m3");
     myGasChart.update();
   
+    renderWaterChart(gasData, "m3");
+    myWaterChart.update();
+  
     //--- hide table
     document.getElementById("lastHours").style.display  = "none";
     document.getElementById("lastDays").style.display   = "none";
@@ -189,7 +236,8 @@ var myGasChart;
     //--- show canvas
     document.getElementById("dataChart").style.display  = "block";
     document.getElementById("gasChart").style.display   = "block";
-    
+    document.getElementById("WaterChart").style.display   = "block";
+
     document.getElementById('mCOST').checked   = false;
 
   } // showMonthsGraph()
@@ -210,6 +258,11 @@ var myGasChart;
     gasData.labels      = [];     // empty .labels
     gasData.stack       = [];     // empty .stack
     gasData.datasets    = [];     // empty .datasets
+
+	waterData       = {};     // empty gasData[]
+    waterData.labels      = [];     // empty .labels
+    waterData.stack       = [];     // empty .stack
+    waterData.datasets    = [];     // empty .datasets
     
     // idx 0 => ED
     electrData.datasets.push({}); //create a new dataset
@@ -235,6 +288,14 @@ var myGasChart;
     gasData.datasets[0].backgroundColor    = "blue";
     gasData.datasets[0].data               = []; //contains the 'Y; axis data
     gasData.datasets[0].label              = "Gas Gebruikt"; //"S"+s; //contains the 'Y; axis label
+ 
+ // idx 0 => WATER
+    waterData.datasets.push({}); //create a new dataset
+    waterData.datasets[0].fill               = 'false';
+    waterData.datasets[0].borderColor        = "blue";
+    waterData.datasets[0].backgroundColor    = "blue";
+    waterData.datasets[0].data               = []; //contains the 'Y; axis data
+    waterData.datasets[0].label              = "Water Gebruikt"; //"S"+s; //contains the 'Y; axis label
     
   //      console.log("data.actSlot "+data.actSlot);
   //      console.log("data.data.length "+data.data.length);
@@ -252,6 +313,7 @@ var myGasChart;
       //console.log("["+i+"] label["+data.data[i].date+"] => slotbefore["+slotbefore+"]");
       electrData.labels.push(formatGraphDate(type, data.data[i].date)); // adds x axis labels (timestamp)
       gasData.labels.push(formatGraphDate(type, data.data[i].date)); // adds x axis labels (timestamp)
+	  waterData.labels.push(formatGraphDate(type, data.data[i].date)); // adds x axis labels (timestamp)
       if (type == "Hours")
       {
         if (data.data[i].p_edw >= 0) electrData.datasets[0].data[p]  = (data.data[i].p_edw *  1.0);
@@ -263,6 +325,7 @@ var myGasChart;
         if (data.data[i].p_er >= 0) electrData.datasets[1].data[p]  = (data.data[i].p_er * -1.0).toFixed(3);
       }
       if (data.data[i].p_gd  >= 0) gasData.datasets[0].data[p]     = (data.data[i].p_gd * 1000.0).toFixed(0);
+      if (data.data[i].water  >= 0) waterData.datasets[0].data[p]     = (data.data[i].water * 1000.0).toFixed(0);
 	p++;
     } // for i ..
 
@@ -330,7 +393,13 @@ var myGasChart;
     gasData.datasets[1].backgroundColor = "lightblue";
     gasData.datasets[1].data            = []; //contains the 'Y; axis data
     gasData.datasets[1].label           = "Gas vorige Periode"; //"S"+s; //contains the 'Y; axis label
-    
+    // idx 0 => WATER
+    waterData.datasets.push({}); //create a new dataset
+    waterData.datasets[0].fill            = 'false';
+    waterData.datasets[0].borderColor     = "blue";
+    waterData.datasets[0].backgroundColor = "blue";
+    waterData.datasets[0].data            = []; //contains the 'Y; axis data
+    waterData.datasets[0].label           = "water deze Periode"; //"S"+s; //contains the 'Y; axis label
     //console.log("there are ["+data.data.length+"] rows");
   
 	var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
@@ -351,6 +420,7 @@ var myGasChart;
       if (data.data[y].p_er >= 0) electrData.datasets[3].data[p]  = (data.data[slotyearbefore].p_er * -1.0).toFixed(3);
       if (data.data[i].p_gd >= 0) gasData.datasets[0].data[p]     = data.data[i].p_gd;
       if (data.data[y].p_gd >= 0) gasData.datasets[1].data[p]     = data.data[slotyearbefore].p_gd;
+	  if (data.data[i].water >= 0) gasData.datasets[0].data[p]     = data.data[i].water;
       p++;
     }
     //--- hide months Table
@@ -358,6 +428,8 @@ var myGasChart;
     //--- show canvas
     document.getElementById("dataChart").style.display  = "block";
     document.getElementById("gasChart").style.display   = "block";
+	document.getElementById("waterChart").style.display   = "block";
+
 
   } // copyMonthsToChart()
     
@@ -418,6 +490,8 @@ var myGasChart;
         actElectrData.datasets[5].data.shift();
         actGasData.labels.shift();
         actGasData.datasets[0].data.shift();
+        actWaterData.labels.shift();
+        actWaterData.datasets[0].data.shift();
         actPoint--;
       } // for s ..
     } 

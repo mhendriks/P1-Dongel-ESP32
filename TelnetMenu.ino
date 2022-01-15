@@ -174,7 +174,7 @@ void handleKeyInput()
                     break;
       #endif
       case 'f':
-      case 'F':     listSPIFFS();
+      case 'F':     listFS();
                     break;                        
       case 'W':     Debugf("\r\nConnect to AP [%s] and go to ip address shown in the AP-name\r\n", settingHostname);
                     delay(1000);
