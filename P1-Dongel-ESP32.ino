@@ -20,18 +20,19 @@ TODO
 √ mdns.queryhostname implementatie
 √ water_sensor telnet/statusfile
 √ watersensor mqtt
-- watersensor json actuals
+√ watersensor json actuals
 - watersensor historie / ringfiles
 - watersensor only mode
 √ ringfiles met watermtr gegevens
 √ ringfiles verwijderd uit de default fileupload 
 √ check of ringfiles bestaan bij startup ... anders aanmaken.
 X ticker blynk
-x webupdate is defect
+√ webupdate is defect
 √ HA auto discovery
 √ div tussen css/js/html 3.2 en 4.0 met name migratie 
 √ vereenvoudigen mqtt berichten (allen value wordt nog verzonden)
 √ Alle velden ... ook water
+x update snelheid naar 1 seconde ipv 2 seconde
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -70,13 +71,12 @@ void setup()
   pinMode(LED, OUTPUT);
   // sign of life
   digitalWrite(LED, LOW); //ON
-  delay(1500);
+  delay(1200);
   ToggleLED();
 
+  lastReset = getResetReason();
   Debug("\n\n ----> BOOTING....[" _VERSION "] <-----\n\n");
   DebugTln("The board name is: " ARDUINO_BOARD);
-
-  lastReset = getResetReason();
   DebugT(F("Last reset reason: ")); Debugln(lastReset);
   
 //================ File System ===========================================
@@ -86,44 +86,33 @@ void setup()
     FSmounted = true;     
   } else DebugTln(F("!!!! File System Mount failed\r"));   // Serious problem with File System 
   
-  //test if index page is available
-  if (!DSMRfileExist(settingIndexPage, false) ) FSNotPopulated = true;   
-    
-//------ read status file for last Timestamp --------------------
-  
-  //==========================================================//
-  // writeLastStatus();  // only for firsttime initialization //
-  //==========================================================//
+//==========================================================//
+// writeLastStatus();  // only for firsttime initialization //
+//==========================================================//
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
   LogFile("",false); // write reboot status to file
   readSettings(true);
   
 //=============start Networkstuff==================================
-  delay(500);
+  //delay(500);
   WiFi.onEvent(onWifiEvent);
   startWiFi(settingHostname, 240);  // timeout 4 minuten
-  delay(500);
+  //delay(500);
   startTelnet();
   startMDNS(settingHostname);
  
-//=============end Networkstuff======================================
-
-#ifdef USE_NTP_TIME
 //================ startNTP =========================================
-                                                            //USE_NTP
+#ifdef USE_NTP_TIME 
   if (!startNTP()) {                                            
     DebugTln(F("ERROR!!! No NTP server reached!\r\n\r"));   //USE_NTP
     P1Reboot();                                             //USE_NTP
   }                                                         //USE_NTP
   prevNtpHour = hour();                                     //USE_NTP
-                                                            //USE_NTP
-                                                            
   time_t t = now(); // store the current time in time variable t                    //USE_NTP
   snprintf(cMsg, sizeof(cMsg), "%02d%02d%02d%02d%02d%02dW\0\0", (year(t) - 2000), month(t), day(t), hour(t), minute(t), second(t)); 
   DebugTf("Time is set to [%s] from NTP\r\n", cMsg);                                //USE_NTP
 #endif
-
 
 //================ Start MQTT  ======================================
 
@@ -131,20 +120,20 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
 
 //================ Start HTTP Server ================================
 
-  if (!FSNotPopulated) {
-    DebugTln(F("FS correct populated -> normal operation!\r"));
-    httpServer.serveStatic("/",                 LittleFS, settingIndexPage);
-    httpServer.serveStatic("/DSMRindex.html",   LittleFS, settingIndexPage);
-    httpServer.serveStatic("/DSMRindexEDGE.html",LittleFS, settingIndexPage);
-    httpServer.serveStatic("/index",            LittleFS, settingIndexPage);
-    httpServer.serveStatic("/index.html",       LittleFS, settingIndexPage);
-  } else {
+  //test if index page is available
+  if (!DSMRfileExist(settingIndexPage, false) ) {
     DebugTln(F("Oeps! not all files found on FS -> present FSexplorer!\r"));
     FSNotPopulated = true;
-  }
-    
+  } else {
+    DebugTln(F("FS correct populated -> normal operation!\r"));
+    httpServer.serveStatic("/",                 LittleFS, settingIndexPage);
+//    httpServer.serveStatic("/DSMRindex.html",   LittleFS, settingIndexPage);
+//    httpServer.serveStatic("/DSMRindexEDGE.html",LittleFS, settingIndexPage);
+//    httpServer.serveStatic("/index",            LittleFS, settingIndexPage);
+//    httpServer.serveStatic("/index.html",       LittleFS, settingIndexPage);
+  } 
+
   setupFSexplorer();
-  delay(500);
  
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
 
@@ -174,7 +163,6 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
   setupWater();
 #endif
 
-//  ConvRing3_2_0();
   CheckRingExists();
  
 } // setup()
@@ -191,7 +179,7 @@ void CPU0Loop( void * pvParameters ){
        if (Verbose1) DebugTln(F("Next Telegram"));
        slimmeMeter.enable(true); 
     }
-    delay(50); // max 20x per seconde 
+    delay(20);
   } 
 }
 
@@ -214,12 +202,10 @@ void doSystemTasks()
   #endif
   MQTTclient.loop();
   httpServer.handleClient();
-//  MDNS.update();
   handleKeyInput();
   yield();
 
 } // doSystemTasks()
-
 
 void loop () 
 {  
@@ -240,14 +226,6 @@ void loop ()
 
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
   
-//#ifdef USE_WATER_SENSOR
-//  if ( WtrMtr && DUE(WaterTimer) ) {
-//    P1StatusWrite();
-//    sendMQTTWater();
-//    CHANGE_INTERVAL_MIN(WaterTimer, 30);
-//  }
-//#endif
-
 //--- if NTP set, see if it needs synchronizing
 #ifdef USE_NTP_TIME                                                 //USE_NTP
   if DUE(synchrNTP)                                                 //USE_NTP

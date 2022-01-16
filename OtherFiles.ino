@@ -49,7 +49,7 @@ void writeSettings()
   yield();
 
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), _DEFAULT_HOMEPAGE);
-  if (settingTelegramInterval < 2)  settingTelegramInterval = 10;
+  if (settingTelegramInterval < MIN_TELEGR_INTV)  settingTelegramInterval = 10;
   if (settingMQTTbrokerPort < 1)    settingMQTTbrokerPort = 1883;
     
   DebugTln(F("Start writing setting data to json settings file"));
@@ -172,7 +172,7 @@ void readSettings(bool show)
 
 
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), "DSMRindexEDGE.html");
-  if (settingTelegramInterval  < 2) settingTelegramInterval = 10;
+  if (settingTelegramInterval  < MIN_TELEGR_INTV) settingTelegramInterval = 10;
   if (settingMQTTbrokerPort    < 1) settingMQTTbrokerPort   = 1883;
 
   if (!show) return;

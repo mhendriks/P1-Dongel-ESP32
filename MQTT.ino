@@ -318,7 +318,7 @@ void sendMQTTData()
   }
 
   DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
-  if ((telegramCount - telegramErrors) > 2 && !StaticInfoSend)  MQTTSentStaticInfo();
+  if (!StaticInfoSend)  MQTTSentStaticInfo();
   fieldsElements = INFOELEMENTS;
   DSMRdata.applyEach(buildJsonMQTT());
   MQTTsendGas();

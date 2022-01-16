@@ -41,6 +41,7 @@
 #define MQTT_BUFF_MAX     200
 #define LED                14
 #define LED_BLINK_MS       80
+#define MIN_TELEGR_INTV     1
 
 Ticker LEDBlinker;
 

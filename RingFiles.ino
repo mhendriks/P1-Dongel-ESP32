@@ -14,60 +14,6 @@ void CheckRingExists(){
     if ( !LittleFS.exists(RingFiles[i].filename) ) createRingFile( (E_ringfiletype)i );
   }
 }
-
-//===========================================================================================
-
-void ConvRing3_2_0(){
-  if (!LittleFS.exists("/RNGhours.json")) ConvRing("/RNGhours.json","/RINGhours.json");
-  else DebugTln(F("RNGhours.json bestaat al"));
-  
-  if (!LittleFS.exists("/RNGdays.json")) ConvRing("/RNGdays.json","/RINGdays.json");
-  else DebugTln(F("RNGdays.json bestaat al"));
-  
-  if (!LittleFS.exists("/RNGmonths.json")) ConvRing("/RNGmonths.json","/RINGmonths.json");
-  else DebugTln(F("RNGmonths.json bestaat al"));
-}
-//===========================================================================================
-
-void ConvRing(const char *newfile, const char *oldfile){
-  String rbuf; char wbuf[100];  
-
-  File FileNew = LittleFS.open(newfile, "w");
-  if (!FileNew) {
-    DebugT(F("open ring file FAILED!!! --> Bailout: "));Debugln(newfile);DebugTln(FileNew);
-    return;
-  }
-
-  File FileOld = LittleFS.open(oldfile, "r+"); // open for reading  
-  if (!FileOld) {
-    DebugT(F("open ring file FAILED!!! --> Bailout: "));Debugln(oldfile);
-    return;
-  }
-  byte row = 0;
-  while (FileOld.available()){
-    rbuf = FileOld.readStringUntil('\n');
-    if (row == 0) {
-      FileNew.print(rbuf+'\n');
-    }
-    else {
-      if (strcmp(rbuf.c_str(), "]}") != 0) {
-        if (rbuf[rbuf.length()-1] == ',') {
-          rbuf[rbuf.length()-3] = '\0';
-          sprintf(wbuf,"%s,     0.000]},\n",rbuf.c_str());
-        } else {
-          rbuf[rbuf.length()-2] = '\0';
-          sprintf(wbuf,"%s,     0.000]}\n",rbuf.c_str());
-        }
-        FileNew.print(wbuf);
-      }
-      else FileNew.print(rbuf);
-    }
-    row++;
-  }
-  FileNew.close();
-  FileOld.close();
-  Debug(oldfile);Debugln(F(" geconverteerd"));
-}
 //===========================================================================================
 
 void createRingFile(E_ringfiletype ringfiletype) 

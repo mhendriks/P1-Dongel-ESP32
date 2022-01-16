@@ -26,7 +26,6 @@ const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCac
 //=====================================================================================
 void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebunden werden
 {    
-//  LITTLEFS.begin();
 //  httpServer.on("/api", HTTP_GET, processAPI); // all other api calls are catched in FSexplorer onNotFounD!
   httpServer.on("/api/listfiles", APIlistFiles);
   httpServer.on("/FSformat", formatFS);
@@ -81,7 +80,7 @@ void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebu
     {
       DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
       String filename = httpServer.uri();
-      if( httpServer.uri().indexOf("/RING") == 0 ) filename.replace("RING","RNG");
+//      if( httpServer.uri().indexOf("/RING") == 0 ) filename.replace("RING","RNG");
       DebugT("Filename: ");Debugln(filename);
       if ( !handleFile(filename.c_str()) )
       {

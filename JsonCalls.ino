@@ -294,7 +294,7 @@ void sendDeviceSettings()
   
   doc["tlgrm_interval"]["value"] = settingTelegramInterval;
   doc["tlgrm_interval"]["type"] = "i";
-  doc["tlgrm_interval"]["min"] = 2;
+  doc["tlgrm_interval"]["min"] = MIN_TELEGR_INTV;
   doc["tlgrm_interval"]["max"] = 60;
   
   doc["IndexPage"]["value"] = settingIndexPage;
@@ -380,8 +380,8 @@ void handleSmApi(const char *URI, const char *word4, const char *word5, const ch
     fieldsElements = ACTUALELEMENTS;
     onlyIfPresent = true;
     jsonDoc.clear();
-    JsonGas();
     DSMRdata.applyEach(buildJson());
+    JsonGas();
     JsonWater();
     sendJson(jsonDoc);
   break;
@@ -406,7 +406,6 @@ void handleSmApi(const char *URI, const char *word4, const char *word5, const ch
   default:
     sendApiNotFound(URI);
   }
-  
 } // handleSmApi()
 //====================================================
 
