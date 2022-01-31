@@ -148,9 +148,10 @@ bool connectMQTT_FSM()
           reconnectAttempts = 0;
           }
     case MQTT_STATE_TRY_TO_CONNECT:
-          DebugTln(F("MQTT State: MQTT try to connect"));
-          DebugTf("MQTT server is [%s], IP[%s]\r\n", settingMQTTbroker, MQTTbrokerIPchar);
+//          DebugTln(F("MQTT State: MQTT try to connect"));
           LogFile("MQTT State: MQTT try to connect",false);
+          DebugTf("MQTT server is [%s], IP[%s]\r\n", settingMQTTbroker, MQTTbrokerIPchar);
+          
           DebugTf("Attempting MQTT connection as [%s] .. \r\n", MQTTclientId.c_str());
           reconnectAttempts++;
 
@@ -171,7 +172,6 @@ bool connectMQTT_FSM()
           {
             reconnectAttempts = 0;  
             Debugf(" .. connected -> MQTT status, rc=%d\r\n", MQTTclient.state());
-            stateMQTT = MQTT_STATE_IS_CONNECTED;
 
 #ifdef HA_DISCOVER
             AutoDiscoverHA();
@@ -183,8 +183,10 @@ bool connectMQTT_FSM()
             MQTTclient.subscribe(cMsg); //subscribe mqtt update
             sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
             MQTTclient.subscribe(cMsg); //subscribe mqtt update
-            
+
+            LogFile("MQTT connected",false);
             MQTTclient.loop();
+            stateMQTT = MQTT_STATE_IS_CONNECTED;
             return true;
           }
           Debugf(" -> MQTT status, rc=%d \r\n", MQTTclient.state());
@@ -198,7 +200,7 @@ bool connectMQTT_FSM()
           break;
           
     case MQTT_STATE_IS_CONNECTED:
-          LogFile("MQTT connected",true);
+          LogFile("MQTT connected",false);
           MQTTclient.loop();
           return true;
 

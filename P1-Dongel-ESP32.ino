@@ -15,25 +15,11 @@ TODO
 -- verbruiksrapport einde dag/week/maand
 - monitor proces en fail over indien het niet goed gaat (cpu 1 <-> cpu 0)
 - AsynWebserver implementatie
-√ bugfix: niet aanmaken van nieuwe ring file bij file not found
 - bug telegram RAW serial
-√ mdns.queryhostname implementatie
-√ water_sensor telnet/statusfile
-√ watersensor mqtt
-√ watersensor json actuals
 - watersensor historie / ringfiles
 - watersensor only mode
-√ ringfiles met watermtr gegevens
-√ ringfiles verwijderd uit de default fileupload 
-√ check of ringfiles bestaan bij startup ... anders aanmaken.
 X ticker blynk
-√ webupdate is defect
-√ HA auto discovery
-√ div tussen css/js/html 3.2 en 4.0 met name migratie 
-√ vereenvoudigen mqtt berichten (allen value wordt nog verzonden)
-√ Alle velden ... ook water
-x update snelheid naar 1 seconde ipv 2 seconde
-
+- Telegram komt niet altijd door
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Board: "ESP32 Dev Module"
@@ -47,7 +33,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
+//#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //#define HAS_NO_SLIMMEMETER        // define for testing only!
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
@@ -91,14 +77,13 @@ void setup()
 //==========================================================//
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
+  P1StatusWrite();
   LogFile("",false); // write reboot status to file
   readSettings(true);
   
 //=============start Networkstuff==================================
-  //delay(500);
   WiFi.onEvent(onWifiEvent);
   startWiFi(settingHostname, 240);  // timeout 4 minuten
-  //delay(500);
   startTelnet();
   startMDNS(settingHostname);
  
@@ -126,11 +111,7 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
     FSNotPopulated = true;
   } else {
     DebugTln(F("FS correct populated -> normal operation!\r"));
-    httpServer.serveStatic("/",                 LittleFS, settingIndexPage);
-//    httpServer.serveStatic("/DSMRindex.html",   LittleFS, settingIndexPage);
-//    httpServer.serveStatic("/DSMRindexEDGE.html",LittleFS, settingIndexPage);
-//    httpServer.serveStatic("/index",            LittleFS, settingIndexPage);
-//    httpServer.serveStatic("/index.html",       LittleFS, settingIndexPage);
+    httpServer.serveStatic("/", LittleFS, settingIndexPage);
   } 
 
   setupFSexplorer();

@@ -26,7 +26,8 @@ const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCac
 //=====================================================================================
 void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebunden werden
 {    
-//  httpServer.on("/api", HTTP_GET, processAPI); // all other api calls are catched in FSexplorer onNotFounD!
+//  httpServer.on("/api", HTTP_GET, processAPI); // all other api calls are catched in FSexplorer onNotFounD!  
+  httpServer.on("/api/sm/telegram", [](){sendJsonBuffer(TelegramRaw.c_str());});
   httpServer.on("/api/listfiles", APIlistFiles);
   httpServer.on("/FSformat", formatFS);
   httpServer.on("/upload", HTTP_POST, []() {}, handleFileUpload);

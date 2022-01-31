@@ -156,9 +156,9 @@ void handleKeyInput()
                         c = (char)TelnetStream.read();
                         switch(c){
                         case 'b': displayBoardInfo();break;
-                        case 'd': DisplayFile("/RINGdays.json"); break;; break;
-                        case 'h': DisplayFile("/RINGhours.json"); break;
-                        case 'm': DisplayFile("/RINGmonths.json"); break;
+                        case 'd': DisplayFile(RingFiles[RINGDAYS].filename); break;
+                        case 'h': DisplayFile(RingFiles[RINGHOURS].filename); break;
+                        case 'm': DisplayFile(RingFiles[RINGMONTHS].filename); break;
                         case 'l': DisplayFile("/P1.log");break;
                         case 's': listFS();break;
                         default : Debugln(F("Display:\nb = board info\nd = Day table from FS\nh = Hour table from FS\nm = Month table from FS\nl = Logfile from FS\ns = File info"));

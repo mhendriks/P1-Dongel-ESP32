@@ -23,7 +23,8 @@
 #define       DEBOUNCETIMER 2000
   bool        WtrMtr        = false;
 
-
+String TelegramRaw;
+ 
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"

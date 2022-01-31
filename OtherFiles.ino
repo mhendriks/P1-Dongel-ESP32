@@ -301,13 +301,13 @@ void updateSetting(const char *field, const char *newValue)
 
 //=======================================================================
 void LogFile(const char* payload, bool toDebug = false) {
+  if (toDebug) DebugTln(payload);
   if (!FSmounted) return;
   File LogFile = LittleFS.open("/P1.log", "a"); // open for appending  
   if (!LogFile) {
     DebugTln(F("open P1.log FAILED!!!--> Bailout\r\n"));
     return;
   }
-  if (toDebug) DebugTln(payload);
   //log rotate
   if (LogFile.size() > 8000){ 
 //    DebugT(F("LogFile filesize: "));Debugln(RebootFile.size());
