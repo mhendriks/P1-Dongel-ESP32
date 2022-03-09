@@ -14,13 +14,13 @@
 #endif
 
 #ifdef USE_WATER_SENSOR  
-  #define PIN_WATER_SENSOR 14  
-  byte        WtrFactor     = 1;
-  time_t      debounce_t;
-  byte        debounces     = 0;
-  time_t      WtrPrevReading= 0;
+  #define PIN_WATER_SENSOR 26  
+  volatile byte        WtrFactor      = 1;
+  volatile time_t      WtrTimeBetween = 0;
+  volatile byte        debounces      = 0;
+  volatile time_t      WtrPrevReading = 0;
 #endif //USE_WATER_SENSOR
-#define       DEBOUNCETIMER 2000
+#define       DEBOUNCETIMER 1700
   bool        WtrMtr        = false;
 
 String TelegramRaw;
@@ -64,15 +64,12 @@ typedef struct {
 //+1 voor de vergelijking, laatste record wordt niet getoond 
 //onderstaande struct kan niet in PROGMEM opgenomen worden. gaat stuk bij SPIFF.open functie
 
-//const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4287}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1329},{"/RNGmonths.json",24+1,0,2199}}; 
 const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1494},{"/RNGmonths.json",24+1,0,2474}}; 
 
-//#define DATA_FORMAT       "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}"
-//#define DATA_RECLEN       87  //total length incl comma and new line
 #define JSON_HEADER_LEN   23  //total length incl new line
 #define DATA_CLOSE        2   //length last row of datafile
 
-//water
+//incl water
 #define DATA_FORMAT      "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}"
 #define DATA_RECLEN      98  //total length incl comma and new line
 
@@ -209,7 +206,7 @@ byte      RingCylce = 0;
 
 //update
 bool      EnableHistory = true;
-char      BaseOTAurl[75] = "http://smart-stuff.nl/ota/";
+char      BaseOTAurl[75] = "http://ota.smart-stuff.nl/";
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
 
@@ -230,7 +227,7 @@ DECLARE_TIMER_SEC(reconnectMQTTtimer,  5); // try reconnecting cyclus timer
 DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time between MQTT messages  
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);
 DECLARE_TIMER_MIN(antiWearRing,       25); 
-DECLARE_TIMER_MIN(StatusTimer,        15);
+DECLARE_TIMER_SEC(StatusTimer,        10); //first time = 10 sec usual 10min (see loop)
 
 
 /***************************************************************************

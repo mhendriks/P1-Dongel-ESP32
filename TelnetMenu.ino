@@ -137,7 +137,6 @@ void handleKeyInput()
                         case 'r': P1StatusRead(); break;
                         case 'w': P1StatusWrite(); break;
                         case 'p': P1StatusPrint(); break;
-                        case 'x': ReadEepromBlock();break;
                         case 'z': P1StatusReset(); break;
                         default : Debugln(F("P1 Status info:\nr = read\nw = write\np = print\nz = erase"));
                         } //switch

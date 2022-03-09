@@ -32,7 +32,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-
 //#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //#define HAS_NO_SLIMMEMETER        // define for testing only!
@@ -196,7 +195,7 @@ void loop ()
   //--- update statusfile + ringfiles
   if ( DUE(antiWearRing) || RingCylce ) writeRingFiles(); //eens per 25min + elk uur overgang
 
-  if (DUE(StatusTimer)) { //eens per 15min of indien extra m3
+  if (DUE(StatusTimer)) { //eens per 10min of indien extra m3
     P1StatusWrite();
     MQTTSentStaticInfo();
     #ifdef USE_WATER_SENSOR  
@@ -206,7 +205,14 @@ void loop ()
   }
 
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
-  
+
+#ifdef USE_WATER_SENSOR    
+  if ( WtrTimeBetween )  {
+    DebugTf("Wtr delta readings: %d | debounces: %d | waterstand: %i.%i\n",WtrTimeBetween,debounces, P1Status.wtr_m3, P1Status.wtr_l);
+    WtrTimeBetween = 0;
+  }
+#endif
+
 //--- if NTP set, see if it needs synchronizing
 #ifdef USE_NTP_TIME                                                 //USE_NTP
   if DUE(synchrNTP)                                                 //USE_NTP

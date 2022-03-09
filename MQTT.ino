@@ -277,8 +277,6 @@ void MQTTSentStaticInfo(){
 //---------------------------------------------------------------
 void MQTTsendGas(){
   if (!gasDelivered) return;
-//  char msg[20];
-//  sprintf(msg,"%.3f",gasDelivered);
   MQTTSend( "gas_delivered", String( gasDelivered ) );
 }
 
