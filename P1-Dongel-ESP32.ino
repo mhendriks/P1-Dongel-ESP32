@@ -20,6 +20,12 @@ TODO
 - watersensor only mode
 X ticker blynk
 - Telegram komt niet altijd door
+
+FIXES
+√ HA Auto discover juiste eenheden
+√ verbetering wifi reconnect en 
+√ wifi log refactored
+
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Board: "ESP32 Dev Module"
@@ -32,7 +38,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-//#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
+#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //#define HAS_NO_SLIMMEMETER        // define for testing only!
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
@@ -81,7 +87,6 @@ void setup()
   readSettings(true);
   
 //=============start Networkstuff==================================
-  WiFi.onEvent(onWifiEvent);
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   startTelnet();
   startMDNS(settingHostname);

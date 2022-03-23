@@ -18,10 +18,13 @@
 WebServer        httpServer (80);
 
 bool FSmounted           = false; 
-bool isConnected         = false;
+//bool isConnected         = false;
 byte WiFiReconnectCount  = 0;
+bool WifiConnected       = false;
+bool WifiBoot            = true;
 
 #define   MaxWifiReconnect  10
+DECLARE_TIMER_SEC(WifiReconnect, 5); //try after x sec
 
 void LogFile(const char*, bool);
 void P1Reboot();
@@ -39,12 +42,16 @@ static void onWifiEvent (WiFiEvent_t event) {
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
         Debug (F(" ( gateway: " ));  Debug (WiFi.gatewayIP());Debug(" )\n\n");
         WiFiReconnectCount = 0;
+        WifiBoot = false;
+        WifiConnected = true;
         break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-        LogFile("Wifi connection lost",true);          
-        delay(1000); //wait longer before retrying
-        WiFi.reconnect();
-        if (WiFiReconnectCount++ > MaxWifiReconnect) P1Reboot();
+        if (DUE(WifiReconnect)) {
+          if ( WifiConnected ) LogFile("Wifi connection lost",true); //log only once 
+          WifiConnected = false;                 
+          WiFi.reconnect();
+          if ( (WiFiReconnectCount++ > MaxWifiReconnect)  && !WifiBoot ) P1Reboot();
+        }
         break;
     default:
         DebugTf ("[WiFi-event] event: %d\n", event);
@@ -73,6 +80,8 @@ void startWiFi(const char* hostname, int timeOut)
 //  DebugTln("start ...");
   LogFile("Wifi Starting",true);
   digitalWrite(LED, HIGH); //OFF
+  WifiBoot = true;
+  WiFi.onEvent(onWifiEvent);
   manageWiFi.setDebugOutput(false);
   
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode

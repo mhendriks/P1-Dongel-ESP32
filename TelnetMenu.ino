@@ -29,7 +29,7 @@ void P1Update(bool sketch){
   while (TelnetStream.available() > 0) { (char)TelnetStream.read(); yield(); }
   
   Debugln(F("\n/!\\ UPDATE MODULE /!\\"));
-  Debugf("Geef update %s versie op (bv. 3.1.1): ",sketch?"SKETCH":"FILE");
+  Debugf("Geef update %s versie op (bv. 4.0.1): ",sketch?"SKETCH":"FILE");
   TelnetStream.setTimeout(10000);
   TelnetStream.readBytesUntil('\n', versie, sizeof(versie)); 
   TelnetStream.setTimeout(1000);

@@ -31,7 +31,8 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
   char msg_payload[350];
     sprintf(msg_topic,"homeassistant/sensor/%s/config",dev_name);
 //    Debugln(msg_topic);
-    sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"dev_cla\": \"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"state_class\":\"%s\"%s }", dev_name,dev_class, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl);
+if (strlen(dev_class)) sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"dev_cla\": \"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"state_class\":\"%s\"%s }", dev_name,dev_class, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl);
+else sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"state_class\":\"%s\"%s }", dev_name, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl);
 //    Debugln(msg_payload);
     if (!MQTTclient.publish(msg_topic, msg_payload, true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", msg_topic, msg_payload, (strlen(msg_topic) + strlen(msg_payload)));
 }
@@ -40,23 +41,23 @@ void AutoDiscoverHA(){
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/power_delivered/config" -m '{"dev_cla": "gas", "name": "Power Delivered", "stat_t": "DSMR-API/power_delivered", "unit_of_meas": "Wh", "val_tpl": "{{ value_json.power_delivered[0].value | round(3) }}" }'
   MQTTclient.setBufferSize(350);
 
-  SendAutoDiscoverHA("timestamp", "", "DSMR Last Update", "", "{{ strptime(value[0:12], \'%y%m%d%H%M%S\') }}","", ",\"icon\": \"mdi:clock\"");
+  SendAutoDiscoverHA("timestamp", "", "DSMR Last Update", "", "{{ strptime(value[0:12], \'%y%m%d%H%M%S\') }}","measurement", ",\"icon\": \"mdi:clock\"");
   
-  SendAutoDiscoverHA("power_delivered", "power", "Power Delivered", "Wh", "{{ value | round(3) * 1000 }}","measurement","");
-  SendAutoDiscoverHA("power_returned" , "power", "Power Returned" , "Wh", "{{ value | round(3) * 1000 }}","measurement","");  
+  SendAutoDiscoverHA("power_delivered", "power", "Power Delivered", "W", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_returned" , "power", "Power Returned" , "W", "{{ value | round(3) * 1000 }}","measurement","");  
   
   SendAutoDiscoverHA("energy_delivered_tariff1", "energy", "Energy Delivered T1", "kWh", "{{ value | round(3) }}","total_increasing","");
   SendAutoDiscoverHA("energy_delivered_tariff2", "energy", "Energy Delivered T2", "kWh", "{{ value | round(3) }}","total_increasing","");
   SendAutoDiscoverHA("energy_returned_tariff1", "energy", "Energy Returned T1", "kWh", "{{ value | round(3) }}","total_increasing","");
   SendAutoDiscoverHA("energy_returned_tariff2", "energy", "Energy Returned T2", "kWh", "{{ value | round(3) }}","total_increasing","");
   
-  SendAutoDiscoverHA("power_delivered_l1", "power", "Power Delivered l1", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
-  SendAutoDiscoverHA("power_delivered_l2", "power", "Power Delivered l2", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
-  SendAutoDiscoverHA("power_delivered_l3", "power", "Power Delivered l3", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_delivered_l1", "power", "Power Delivered l1", "W", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_delivered_l2", "power", "Power Delivered l2", "W", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_delivered_l3", "power", "Power Delivered l3", "W", "{{ value | round(3) * 1000 }}","measurement","");
 
-  SendAutoDiscoverHA("power_returned_l1", "power", "Power Returned l1", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
-  SendAutoDiscoverHA("power_returned_l2", "power", "Power Returned l2", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
-  SendAutoDiscoverHA("power_returned_l3", "power", "Power Returned l3", "Watt", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_returned_l1", "power", "Power Returned l1", "W", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_returned_l2", "power", "Power Returned l2", "W", "{{ value | round(3) * 1000 }}","measurement","");
+  SendAutoDiscoverHA("power_returned_l3", "power", "Power Returned l3", "W", "{{ value | round(3) * 1000 }}","measurement","");
 
   SendAutoDiscoverHA("voltage_l1", "voltage", "Voltage l1", "V", "{{ value | round(0) }}","measurement","");
   SendAutoDiscoverHA("voltage_l2", "voltage", "Voltage l2", "V", "{{ value | round(0) }}","measurement","");
@@ -242,12 +243,29 @@ struct buildJsonMQTT {
     if (!isInFieldsArray(Name.c_str()) ) {
       if (i.present()) {
         sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name.c_str());
-        msg = String( i.val() );
+        msg = String( value_to_json(i.val()) );
         if (Verbose2) DebugTln("mqtt bericht: "+msg);
         if ( !MQTTclient.publish(cMsg, msg.c_str()) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", cMsg, msg.c_str(), (strlen(cMsg) + msg.length()));
       } // if i.present
     } // if isInFieldsArray
   } //apply
+
+  template<typename Item>
+  Item& value_to_json(Item& i) {
+    return i;
+  }
+
+String value_to_json(TimestampedFixedValue i) {
+    char temp[10];
+    sprintf(temp,"%.3f",i.val());
+    return temp;
+  }
+  
+  String value_to_json(FixedValue i) {
+    char temp[10];
+    sprintf(temp,"%.3f",i.val());
+    return temp;
+  }
 }; // buildJsonMQTT
 
 //===========================================================================================
@@ -258,6 +276,13 @@ void MQTTSend(const char* item, String value){
     DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, value.c_str(), (strlen(cMsg) + value.length()));
     StaticInfoSend = false; //probeer het later nog een keer
   }
+}
+//===========================================================================================
+
+void MQTTSend(const char* item, float value){
+  char temp[10];
+  sprintf(temp,"%.3f",value);
+  MQTTSend( item, temp );
 }
 
 //===========================================================================================
@@ -277,7 +302,7 @@ void MQTTSentStaticInfo(){
 //---------------------------------------------------------------
 void MQTTsendGas(){
   if (!gasDelivered) return;
-  MQTTSend( "gas_delivered", String( gasDelivered ) );
+  MQTTSend( "gas_delivered", gasDelivered );
 }
 
 //---------------------------------------------------------------
