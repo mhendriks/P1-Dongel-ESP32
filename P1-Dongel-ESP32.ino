@@ -22,9 +22,6 @@ X ticker blynk
 - Telegram komt niet altijd door
 
 FIXES
-√ HA Auto discover juiste eenheden
-√ verbetering wifi reconnect en 
-√ wifi log refactored
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
