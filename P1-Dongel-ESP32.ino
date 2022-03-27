@@ -18,7 +18,6 @@ TODO
 - bug telegram RAW serial
 - watersensor historie / ringfiles
 - watersensor only mode
-X ticker blynk
 - Telegram komt niet altijd door
 
 FIXES
@@ -35,7 +34,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
+//#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //#define HAS_NO_SLIMMEMETER        // define for testing only!
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
@@ -60,7 +59,7 @@ void setup()
   // sign of life
   digitalWrite(LED, LOW); //ON
   delay(1200);
-  ToggleLED();
+  digitalWrite(LED, HIGH); //OFF
 
   lastReset = getResetReason();
   Debug("\n\n ----> BOOTING....[" _VERSION "] <-----\n\n");

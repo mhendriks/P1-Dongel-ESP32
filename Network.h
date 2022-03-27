@@ -46,7 +46,8 @@ static void onWifiEvent (WiFiEvent_t event) {
         WifiConnected = true;
         break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-        if (DUE(WifiReconnect)) {
+          digitalWrite(LED, HIGH); //OFF
+          if (DUE(WifiReconnect)) {
           if ( WifiConnected ) LogFile("Wifi connection lost",true); //log only once 
           WifiConnected = false;                 
           WiFi.reconnect();
@@ -113,6 +114,7 @@ void startTelnet()
   TelnetStream.begin();
   DebugTln(F("Telnet server started .."));
   TelnetStream.flush();
+  TelnetStream.print(F("Firmware Version: "));  TelnetStream.println( _VERSION );
 } // startTelnet()
 
 
