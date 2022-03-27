@@ -76,12 +76,12 @@ struct buildJson {
     return i;
   }
 
-  String value_to_json(TimestampedFixedValue i) {
-    return String(i);
+  double value_to_json(TimestampedFixedValue i) {
+    return i.int_val()/1000.0;
   }
   
-  float value_to_json(FixedValue i) {
-    return i;
+  double value_to_json(FixedValue i) {
+    return i.int_val()/1000.0;
   }
 
 }; // buildjson{} 
