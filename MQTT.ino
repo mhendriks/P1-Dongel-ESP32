@@ -243,7 +243,7 @@ struct buildJsonMQTT {
     if (!isInFieldsArray(Name.c_str()) ) {
       if (i.present()) {
         sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name.c_str());
-        msg = String( value_to_json(i.val()) );
+        msg = value_to_json(i.val());
         if (Verbose2) DebugTln("mqtt bericht: "+msg);
         if ( !MQTTclient.publish(cMsg, msg.c_str()) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", cMsg, msg.c_str(), (strlen(cMsg) + msg.length()));
       } // if i.present
@@ -255,16 +255,12 @@ struct buildJsonMQTT {
     return i;
   }
 
-String value_to_json(TimestampedFixedValue i) {
-    char temp[10];
-    sprintf(temp,"%.3f",i.val());
-    return temp;
+  String value_to_json(TimestampedFixedValue i) {
+    return String(i.val(),3);
   }
   
   String value_to_json(FixedValue i) {
-    char temp[10];
-    sprintf(temp,"%.3f",i.val());
-    return temp;
+    return String(i.val(),3);
   }
 }; // buildJsonMQTT
 
