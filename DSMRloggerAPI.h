@@ -1,4 +1,4 @@
-/*
+  /*
 ***************************************************************************  
 **  Program  : DSMRloggerAPI.h - definitions for DSMRloggerAPI
 **  Version  : v4.0.0
@@ -9,12 +9,38 @@
 ***************************************************************************      
 */  
 
-#ifndef ESP32
+#ifdef ESP32
+/***
+ * 
+ * https://www.esp32.com/viewtopic.php?t=24280#
+ * https://www.upesy.com/blogs/tutorials/esp32-pinout-reference-gpio-pins-ultimate-guide
+ */
+  #ifdef ARDUINO_ESP32C3_DEV
+    #warning Using ESP32C3
+    #define LED                5 
+    #define DTR_IO             4 // nr = IO pulse
+    #define RXP1              10
+    #define LED_ON            HIGH
+    #define LED_OFF           LOW
+    #define SerialOut         Serial //normal use USB_CDC_ON_BOOT = Disabled
+//  #define SerialOut         USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
+    #define PIN_WATER_SENSOR 8  
+  #else//v4.2
+    #warning Using ESP32
+    #define LED                14 
+    #define DTR_IO             18 
+    #define RXP1               16
+    #define LED_ON             LOW
+    #define LED_OFF            HIGH
+    #define SerialOut          Serial
+    #define PIN_WATER_SENSOR 26  
+  #endif
+#else
   #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.
 #endif
 
 #ifdef USE_WATER_SENSOR  
-  #define PIN_WATER_SENSOR 26  
+//  #define PIN_WATER_SENSOR 26  
   volatile byte        WtrFactor      = 1;
   volatile time_t      WtrTimeBetween = 0;
   volatile byte        debounces      = 0;
@@ -37,26 +63,26 @@ String TelegramRaw;
 #define _DEFAULT_HOSTNAME  "P1-DONGLE/" 
 #define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
 #define SETTINGS_FILE      "/DSMRsettings.json"
-#define DTR_IO             18 // 0 = always on; nr = IO pulse
+
 #define JSON_BUFF_MAX     255
 #define MQTT_BUFF_MAX     200
-#define LED                14
 #define LED_BLINK_MS       80
 #define MIN_TELEGR_INTV     1
 
 Ticker LEDBlinker;
 
-HardwareSerial P1Serial(2);
+//HardwareSerial P1Serial(2);
+//P1Reader    slimmeMeter(&P1Serial, DTR_IO); 
 TaskHandle_t CPU0; //handler voor CPU task 0
 
-P1Reader    slimmeMeter(&P1Serial, DTR_IO); 
+P1Reader    slimmeMeter(&Serial1, DTR_IO); 
 
 enum    { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
-enum E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS};
+enum E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS,RINGPROFILE};
 
 typedef struct {
     char filename[17];
-    int8_t slots;
+    uint8_t slots;
     unsigned int seconds;
     int f_len;
   } S_ringfile;
@@ -65,6 +91,7 @@ typedef struct {
 //onderstaande struct kan niet in PROGMEM opgenomen worden. gaat stuk bij SPIFF.open functie
 
 const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1494},{"/RNGmonths.json",24+1,0,2474}}; 
+//const S_ringfile RingFiles[4] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1494},{"/RNGmonths.json",24+1,0,2474},{"/RNGprofile.json",1440+1,SECS_PER_HOUR, 141242}}; 
 
 #define JSON_HEADER_LEN   23  //total length incl new line
 #define DATA_CLOSE        2   //length last row of datafile
@@ -75,7 +102,6 @@ const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {
 
 
 #include "Debug.h"
-#include "Network.h"
 
   /**
   * Define the DSMRdata we're interested in, as well as the DSMRdatastructure to
@@ -156,6 +182,24 @@ using MyData = ParsedData<
   /* TimestampedFixedValue */ ,mbus4_delivered_dbl
 >;
 
+//TODO
+//in mem houden van de ringfile gegevens voor een snelle oplevering naar de client. Vooral de Day gegevens die worden door het dashboard gebruikt.
+struct P1DataRec {
+  uint32_t  date;
+  uint32_t  T1;
+  uint32_t  T2;
+  uint32_t  T1r;
+  uint32_t  T2r;
+  uint32_t  G;
+  uint16_t  Water;
+};
+//
+//P1DataRec P1_Day[15]; //390 bytes 
+//P1DataRec P1_Hour[25]; //650 bytes 
+//P1DataRec P1_Month[49]; //1.274 bytes 
+P1DataRec P1_Profile[288]; //7.488
+
+
 const PROGMEM char *flashMode[]    { "QIO", "QOUT", "DIO", "DOUT", "Unknown" };
 
 //===========================prototype's=======================================
@@ -167,6 +211,8 @@ WiFiClient  wifiClient;
 #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
 static PubSubClient MQTTclient(wifiClient);
 
+#include "Network.h"
+
 struct Status {
    uint32_t           reboots;
    uint32_t           sloterrors;
@@ -174,8 +220,6 @@ struct Status {
    volatile uint32_t  wtr_m3;
    volatile uint16_t  wtr_l;
 } P1Status;
-
-//Status P1Status;// = {0,0,"010101010101X",0,0,'Y'};
   
 MyData      DSMRdata;
 time_t      actT, newT;
@@ -206,12 +250,12 @@ byte      RingCylce = 0;
 
 //update
 bool      EnableHistory = true;
-char      BaseOTAurl[75] = "http://ota.smart-stuff.nl/";
+char      BaseOTAurl[30] = "http://ota.smart-stuff.nl/";
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
 
 //MQTT
-char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[21] = _DEFAULT_HOSTNAME;
+char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[26] = _DEFAULT_HOSTNAME;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 bool      UpdateRequested = false;
@@ -228,7 +272,7 @@ DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time b
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);
 DECLARE_TIMER_MIN(antiWearRing,       25); 
 DECLARE_TIMER_SEC(StatusTimer,        10); //first time = 10 sec usual 10min (see loop)
-
+//DECLARE_TIMER_MIN(ProfileTimer,        1); 
 
 /***************************************************************************
 *

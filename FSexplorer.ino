@@ -49,13 +49,13 @@ void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebu
       int cmd = (upload.filename.indexOf("littlefs") > -1) ? U_SPIFFS : U_FLASH;
       if (cmd == U_SPIFFS) DebugTln(F("Update: DATA detected")); else DebugTln(F("Update: FIRMWARE detected"));
       if (!Update.begin(UPDATE_SIZE_UNKNOWN,cmd)) { //start with max available size
-        Update.printError(Serial);
+        Update.printError(SerialOut);
         Update.printError(TelnetStream);
       }
     } else if (upload.status == UPLOAD_FILE_WRITE) {
       /* flashing firmware to ESP*/
       if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
-        Update.printError(Serial);
+        Update.printError(SerialOut);
         Update.printError(TelnetStream);
       }
     } else if (upload.status == UPLOAD_FILE_END) {
@@ -63,7 +63,7 @@ void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebu
         DebugTf("Update Success: %u\nRebooting...\n", upload.totalSize);
         delay(1000);
       } else {
-        Update.printError(Serial);
+        Update.printError(SerialOut);
         Update.printError(TelnetStream);
       }
     }

@@ -1,3 +1,4 @@
+
 /*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
@@ -16,9 +17,15 @@ TODO
 - monitor proces en fail over indien het niet goed gaat (cpu 1 <-> cpu 0)
 - AsynWebserver implementatie
 - bug telegram RAW serial
-- watersensor historie / ringfiles
-- watersensor only mode
 - Telegram komt niet altijd door
+√ ESP32 C3 ondersteuning toegevoegd
+√ ESP32 C3 USBserial ondersteuning direct uit de esp ;-)
+√ op basis van mac adres opzoeken van je ip adres (binnen 1 uur na installatie) zodat indien het niet met url lukt dit via ip kan doen
+√ opzoeken van ipadres via api.smart-stuff.nl/checkip (MAC adres is te vinden op het verzendetiket)
+
+- 24uur eens per minuut bijhouden van gegevens (ESP32 only)
+√ remove reboot na 10x proberen wifi reconnect (ESP32 only)
+√ WifiReset Telnet fix
 
 FIXES
 
@@ -35,10 +42,12 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 //#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
+//#define WATER_NPN
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //#define HAS_NO_SLIMMEMETER        // define for testing only!
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
 #define HA_DISCOVER
+//#define USE_PROFILE_MIN            
 
 #ifdef USE_WATER_SENSOR
   #define ALL_OPTIONS "[MQTT][LITTLEFS][WATER][HA_DISCOVER]"
@@ -52,14 +61,15 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //===========================================================================================
 void setup() 
 {
-  Serial.begin(115200, SERIAL_8N1); //debug stream
-  P1Serial.begin(115200, SERIAL_8N1, 16,0,true); //p1 serial input
+  SerialOut.begin(115200); //debug stream
+  Serial1.begin(115200, SERIAL_8N1, RXP1,0,true); //p1 serial input
+  
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
   // sign of life
-  digitalWrite(LED, LOW); //ON
+  digitalWrite(LED, LED_ON);
   delay(1200);
-  digitalWrite(LED, HIGH); //OFF
+  digitalWrite(LED, LED_OFF);
 
   lastReset = getResetReason();
   Debug("\n\n ----> BOOTING....[" _VERSION "] <-----\n\n");
@@ -145,7 +155,10 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
 #endif
 
   CheckRingExists();
- 
+
+#ifdef USE_PROFILE_MIN
+    if ( !LittleFS.exists(RingFiles[RINGPROFILE].filename) ) createRingFile( RINGPROFILE );
+#endif 
 } // setup()
 
 
@@ -189,7 +202,16 @@ void doSystemTasks()
 } // doSystemTasks()
 
 void loop () 
-{  
+{ 
+
+//      slimmeMeter.loop();
+//
+//    //--- start volgend telegram
+//    if DUE(nextTelegram) {
+//       if (Verbose1) DebugTln(F("Next Telegram"));
+//       slimmeMeter.enable(true); 
+//    }
+//    
   //--- do the tasks that has to be done as often as possible
   doSystemTasks();
 
@@ -212,6 +234,10 @@ void loop ()
     DebugTf("Wtr delta readings: %d | debounces: %d | waterstand: %i.%i\n",WtrTimeBetween,debounces, P1Status.wtr_m3, P1Status.wtr_l);
     WtrTimeBetween = 0;
   }
+#endif
+
+#ifdef USE_PROFILE_MIN
+  if (DUE(ProfileTimer)) writeRingFile( RINGPROFILE, "" );
 #endif
 
 //--- if NTP set, see if it needs synchronizing

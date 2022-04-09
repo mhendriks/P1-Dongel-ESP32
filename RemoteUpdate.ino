@@ -25,7 +25,7 @@ void update_progress(int cur, int total) {
 }
 
 void update_error(int err) {
-  Debugf("HTTP update fatal error code %d | %s\n", err, httpUpdate.getLastErrorString());
+  Debugf("HTTP update fatal error code %d | %s\n", err, httpUpdate.getLastErrorString().c_str());
   LogFile("OTA ERROR: no update",false);
   if (bWebUpdate) httpServer.send(200, "text/html", "OTA ERROR: " + err);
 }

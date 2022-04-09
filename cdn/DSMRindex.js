@@ -446,7 +446,7 @@ function UpdateDash()
 		gauge.refresh(TotalAmps, AMPS * fases);
 
 		//update actuele vermogen			
-		document.getElementById("power_delivered").innerHTML = TotalKW.toLocaleString();
+		document.getElementById("power_delivered").innerHTML = TotalKW.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
 
 		//vermogen min - max bepalen
 		let nvKW= json.power_delivered.value; 
@@ -478,7 +478,8 @@ function UpdateDash()
 		trend_p.update();
 
 		//vermogen vandaag, min - max bepalen
-		document.getElementById("P").innerHTML = Number(Parr[0]).toLocaleString();
+		document.getElementById("P").innerHTML = Number(Parr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
+
 // 		document.getElementById(`Pmax`).innerHTML = Number(Pmax).toLocaleString();
 // 		document.getElementById(`Pmin`).innerHTML = Math.min.apply(Math, Parr).toLocaleString();
 		
@@ -492,7 +493,7 @@ function UpdateDash()
 			};
 			trend_pi.update();
 			//vermogen vandaag, min - max bepalen
-			document.getElementById("Pi").innerHTML = Number(Parri[0]).toLocaleString();
+			document.getElementById("Pi").innerHTML = Number(Parri[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );			
 // 			document.getElementById(`Pimax`).innerHTML = Number(Pmaxi).toLocaleString();
 // 			document.getElementById(`Pimin`).innerHTML = Math.min.apply(Math, Parri).toLocaleString();
 
@@ -504,7 +505,7 @@ function UpdateDash()
 			};
 			trend_pa.update();
 			//vermogen vandaag, min - max bepalen
-			document.getElementById("Pa").innerHTML = Number(Parra[0]).toLocaleString();
+			document.getElementById("Pa").innerHTML = Number(Parra[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
 // 			document.getElementById(`Pamax`).innerHTML = Number(Pmaxa).toLocaleString();
 // 			document.getElementById(`Pamin`).innerHTML = Math.min.apply(Math, Parra).toLocaleString();
 		}

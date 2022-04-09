@@ -12,17 +12,17 @@
 
 /*---- start macro's ------------------------------------------------------------------*/
 
-#define Debug(...)      ({ Serial.print(__VA_ARGS__);         \
+#define Debug(...)      ({ SerialOut.print(__VA_ARGS__);         \
                            TelnetStream.print(__VA_ARGS__);   \
                         })
-#define Debugln(...)    ({ Serial.println(__VA_ARGS__);       \
+#define Debugln(...)    ({ SerialOut.println(__VA_ARGS__);       \
                            TelnetStream.println(__VA_ARGS__); \
                         })
-#define Debugf(...)     ({ Serial.printf(__VA_ARGS__);        \
+#define Debugf(...)     ({ SerialOut.printf(__VA_ARGS__);        \
                            TelnetStream.printf(__VA_ARGS__);  \
                         })
 
-#define DebugFlush()    ({ Serial.flush(); \
+#define DebugFlush()    ({ SerialOut.flush(); \
                            TelnetStream.flush(); \
                         })
 
@@ -51,6 +51,6 @@ void _debugBOL(const char *fn, int line)
                 ESP.getFreeHeap(), ESP.getMaxAllocHeap(),\
                 fn, line);
                  
-  Serial.print (_bol);
+  SerialOut.print (_bol);
   TelnetStream.print (_bol);
 }

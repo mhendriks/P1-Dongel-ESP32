@@ -45,7 +45,7 @@ void ResetDataFiles() {
   LittleFS.remove("/RNGdays.json");
   LittleFS.remove("/RNGhours.json");
   LittleFS.remove("/RNGmonths.json");
-  LittleFS.remove("/P1.old");
+  LittleFS.remove("/P1_log.old");
   LittleFS.remove("/P1.log");
   LittleFS.remove("/Reboot.log");      //pre 3.1.1 
   LittleFS.remove("/Reboot.old");      //pre 3.1.1  
@@ -177,9 +177,7 @@ void handleKeyInput()
                     break;                        
       case 'W':     Debugf("\r\nConnect to AP [%s] and go to ip address shown in the AP-name\r\n", settingHostname);
                     delay(1000);
-                    WiFi.disconnect(true);  // deletes credentials !
-                    //setupWiFi(true);
-                    P1Reboot();
+                    resetWifi();                    
                     break;
       case 'p':
       case 'P':     showRaw = !showRaw;
@@ -231,16 +229,13 @@ void handleKeyInput()
                     P1StatusWrite();
                     break;
                     
-      default:      Debugln(F("\r\nCommands are:\r\n"));
+      default:      Debugf("Dongle version %s | mac address %s\n\r",_VERSION, WiFi.macAddress().c_str());
+                    Debugln(F("\r\nCommands are:"));
                     Debugln(F("   A  - P1 Status info a=available|r=read|w=write|p=print|z=erase\r"));
-//                    Debugln(F("   B  - Board Info\r"));
                     Debugln(F("  *E  - erase file from FS\r"));
-                    Debugln(F("   F - File info on SPIFFS\r"));                    
+                    Debugln(F("   F  - File info on SPIFFS\r"));                    
                     Debugln(F("   L  - list Settings\r"));
                     Debugln(F("   D+ - Display b=board info | d=Day table | h=Hour table | m=Month table | l=Logfile | s = File info\r"));
-//                    Debugln(F("   H  - Display Hour table from FS\r"));
-//                    Debugln(F("   N  - Display LogFile P1.log\r"));
-//                    Debugln(F("   M  - Display Month table from FS\r"));
                     #ifdef HAS_NO_SLIMMEMETER
                       Debugln(F("  *O  - Force build RING files\r"));
                     #endif

@@ -20,7 +20,11 @@ void IRAM_ATTR iWater() {
 }
 
 void setupWater() {
-  pinMode(PIN_WATER_SENSOR, INPUT);
+#ifdef WATER_NPN
+    pinMode(PIN_WATER_SENSOR, INPUT_PULLUP);
+#else
+    pinMode(PIN_WATER_SENSOR, INPUT);
+#endif
   attachInterrupt(PIN_WATER_SENSOR, iWater, RISING);
   DebugTln(F("WaterSensor setup completed"));
 }

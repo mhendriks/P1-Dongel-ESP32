@@ -14,16 +14,18 @@
 #include <Update.h>
 #include "UpdateServerHtml.h"
 #include <WiFiManager.h>        // version 0.16.0 - https://github.com/tzapu/WiFiManager
+#include <HTTPClient.h>
 
 WebServer        httpServer (80);
 
 bool FSmounted           = false; 
-//bool isConnected         = false;
-byte WiFiReconnectCount  = 0;
+//byte WiFiReconnectCount  = 0;
 bool WifiConnected       = false;
 bool WifiBoot            = true;
+char APIurl[42]          = "http://api.smart-stuff.nl/v1/register.php";
 
 #define   MaxWifiReconnect  10
+
 DECLARE_TIMER_SEC(WifiReconnect, 5); //try after x sec
 
 void LogFile(const char*, bool);
@@ -37,21 +39,21 @@ static void onWifiEvent (WiFiEvent_t event) {
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
         LogFile("Wifi Connected",true);
-        digitalWrite(LED, LOW); //ON
+        digitalWrite(LED, LED_ON);
         Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
         Debug (F(" ( gateway: " ));  Debug (WiFi.gatewayIP());Debug(" )\n\n");
-        WiFiReconnectCount = 0;
+//        WiFiReconnectCount = 0;
         WifiBoot = false;
         WifiConnected = true;
         break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-          digitalWrite(LED, HIGH); //OFF
+          digitalWrite(LED, LED_OFF);
           if (DUE(WifiReconnect)) {
           if ( WifiConnected ) LogFile("Wifi connection lost",true); //log only once 
           WifiConnected = false;                 
           WiFi.reconnect();
-          if ( (WiFiReconnectCount++ > MaxWifiReconnect)  && !WifiBoot ) P1Reboot();
+//          if ( (WiFiReconnectCount++ > MaxWifiReconnect)  && !WifiBoot ) P1Reboot();
         }
         break;
     default:
@@ -70,6 +72,21 @@ void configModeCallback (WiFiManager *myWiFiManager)
   DebugTln(myWiFiManager->getConfigPortalSSID());
 } // configModeCallback()
 
+/***===========================================================================================
+    POST MAC + IP
+    https://www.allphptricks.com/create-and-consume-simple-rest-api-in-php/
+    http://g2pc1.bu.edu/~qzpeng/manual/MySQL%20Commands.htm
+**/
+void PostMacIP() {
+  HTTPClient http;
+  http.begin(wifiClient, APIurl);
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  String httpRequestData = "mac=" + WiFi.macAddress() + "&ip=" + WiFi.localIP().toString();           
+  int httpResponseCode = http.POST(httpRequestData);
+  DebugT(F("HTTP Response code: "));Debugln(httpResponseCode);
+  http.end();  
+}
+
 //===========================================================================================
 void startWiFi(const char* hostname, int timeOut) 
 {
@@ -80,7 +97,7 @@ void startWiFi(const char* hostname, int timeOut)
 
 //  DebugTln("start ...");
   LogFile("Wifi Starting",true);
-  digitalWrite(LED, HIGH); //OFF
+  digitalWrite(LED, LED_OFF);
   WifiBoot = true;
   WiFi.onEvent(onWifiEvent);
   manageWiFi.setDebugOutput(false);
@@ -104,7 +121,10 @@ void startWiFi(const char* hostname, int timeOut)
     DebugTf(" took [%d] seconds ==> ERROR!\r\n", (millis() - lTime) / 1000);
     P1Reboot();
     return;
-  } else DebugTf("Took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
+  } 
+  //  phy_bbpll_en_usb(true); 
+  DebugTf("Took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
+  PostMacIP(); //post mac en ip 
 
 } // startWiFi()
 
