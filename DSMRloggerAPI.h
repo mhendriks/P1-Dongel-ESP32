@@ -33,7 +33,7 @@
     #define LED_ON             LOW
     #define LED_OFF            HIGH
     #define SerialOut          Serial
-    #define PIN_WATER_SENSOR 26  
+    #define PIN_WATER_SENSOR   26  
   #endif
 #else
   #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.

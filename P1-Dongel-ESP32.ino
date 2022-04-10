@@ -18,14 +18,7 @@ TODO
 - AsynWebserver implementatie
 - bug telegram RAW serial
 - Telegram komt niet altijd door
-√ ESP32 C3 ondersteuning toegevoegd
-√ ESP32 C3 USBserial ondersteuning direct uit de esp ;-)
-√ op basis van mac adres opzoeken van je ip adres (binnen 1 uur na installatie) zodat indien het niet met url lukt dit via ip kan doen
-√ opzoeken van ipadres via api.smart-stuff.nl/checkip (MAC adres is te vinden op het verzendetiket)
-
 - 24uur eens per minuut bijhouden van gegevens (ESP32 only)
-√ remove reboot na 10x proberen wifi reconnect (ESP32 only)
-√ WifiReset Telnet fix
 
 FIXES
 
