@@ -494,7 +494,6 @@ function UpdateDash()
 			trend_pi.update();
 			//vermogen vandaag, min - max bepalen
 			document.getElementById("Pi").innerHTML = Number(Parri[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );			
-// 			document.getElementById(`Pimax`).innerHTML = Number(Pmaxi).toLocaleString();
 // 			document.getElementById(`Pimin`).innerHTML = Math.min.apply(Math, Parri).toLocaleString();
 
 			//-------AFNAME METER	
@@ -506,7 +505,6 @@ function UpdateDash()
 			trend_pa.update();
 			//vermogen vandaag, min - max bepalen
 			document.getElementById("Pa").innerHTML = Number(Parra[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
-// 			document.getElementById(`Pamax`).innerHTML = Number(Pmaxa).toLocaleString();
 // 			document.getElementById(`Pamin`).innerHTML = Math.min.apply(Math, Parra).toLocaleString();
 		}
 		
@@ -525,7 +523,7 @@ function UpdateDash()
 				trend_g.data.datasets[i].data=[Number(Garr[i]).toFixed(1),Number(Gmax-Garr[i]).toFixed(1)];
 			};
 			trend_g.update();
-			document.getElementById("G").innerHTML = Number(Garr[0]).toLocaleString();
+			document.getElementById("G").innerHTML = Number(Garr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
 		}
 		
 		//-------WATER METER	
@@ -543,7 +541,7 @@ function UpdateDash()
 				trend_w.data.datasets[i].data=[Number(Warr[i]).toFixed(),Number(Wmax-Warr[i]).toFixed()];
 			};
 			trend_w.update();
-			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString();
+			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
 		}
 		
 								
