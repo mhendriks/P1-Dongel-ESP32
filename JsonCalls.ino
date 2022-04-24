@@ -8,16 +8,16 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-#define ACTUALELEMENTS  19
-#define INFOELEMENTS     4
+#define ACTUALELEMENTS  20
+#define INFOELEMENTS     3
 #define FIELDELEMENTS    1
 
 byte fieldsElements = 0;
 char Onefield[25];
 bool onlyIfPresent = false;
 
-const static PROGMEM char infoArray[][25]   = { "identification","p1_version","equipment_id","electricity_tariff" };
-const static PROGMEM char actualArray[][25] = { "timestamp","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
+const static PROGMEM char infoArray[][25]   = { "identification","p1_version","equipment_id" };
+const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
 
 DynamicJsonDocument jsonDoc(4100);  // generic doc to return, clear() before use!
 
@@ -26,6 +26,7 @@ void JsonGas(){
   
   jsonDoc["gas_delivered"]["value"] =  (int)(gasDelivered*1000)/1000.0;
   jsonDoc["gas_delivered"]["unit"]  = "m3";
+  jsonDoc["gas_delivered_timestamp"]["value"] = gasDeliveredTimestamp;
 }
 
 void JsonWater(){

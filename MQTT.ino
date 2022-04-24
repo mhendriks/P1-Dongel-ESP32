@@ -299,6 +299,7 @@ void MQTTSentStaticInfo(){
 void MQTTsendGas(){
   if (!gasDelivered) return;
   MQTTSend( "gas_delivered", gasDelivered );
+  MQTTSend( "gas_delivered_timestamp", gasDeliveredTimestamp );
 }
 
 //---------------------------------------------------------------
@@ -343,6 +344,9 @@ void sendMQTTData()
   fieldsElements = INFOELEMENTS;
   DSMRdata.applyEach(buildJsonMQTT());
   MQTTsendGas();
+#ifdef USE_WATER_SENSOR  
+  sendMQTTWater();
+#endif
 
 } // sendMQTTData()
 

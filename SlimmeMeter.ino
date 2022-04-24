@@ -11,18 +11,17 @@
 struct showValues {
   template<typename Item>
   void apply(Item &i) {
-    TelnetStream.print(F("showValues: "));
     if (i.present()) 
     {
+      TelnetStream.print(F("showValues: "));
       TelnetStream.print(Item::name);
       TelnetStream.print(F(": "));
       TelnetStream.print(i.val());
-      TelnetStream.print(Item::unit());
+      TelnetStream.println(Item::unit());
     //} else 
     //{
     //  TelnetStream.print(F("<no value>"));
     }
-    TelnetStream.println();
   }
 };
 
@@ -148,6 +147,7 @@ float modifyMbusDelivered()
 //  if ( (settingMbus1Type == 3) && (DSMRdata.mbus1_device_type == 3) )
   
     tmpGasDelivered = (float)(DSMRdata.mbus1_delivered * 1.0);
+    gasDeliveredTimestamp = DSMRdata.mbus1_delivered.timestamp;
 //    DebugTf("gasDelivered .. [%.3f]\r\n", tmpGasDelivered);
     mbusGas = 1;
   }
@@ -161,6 +161,7 @@ float modifyMbusDelivered()
   //  if (settingMbus2Type > 0) DebugTf("mbus2_delivered [%.3f]\r\n", (float)DSMRdata.mbus2_delivered);
   //  if ( (settingMbus2Type == 3) && (DSMRdata.mbus2_device_type == 3) )
       tmpGasDelivered = (float)(DSMRdata.mbus2_delivered * 1.0);
+      gasDeliveredTimestamp = DSMRdata.mbus2_delivered.timestamp;
   //    DebugTf("gasDelivered .. [%.3f]\r\n", tmpGasDelivered);
     mbusGas = 2;
   }
@@ -174,6 +175,7 @@ float modifyMbusDelivered()
   //  if (settingMbus3Type > 0) DebugTf("mbus3_delivered [%.3f]\r\n", (float)DSMRdata.mbus3_delivered);
   //  if ( (settingMbus3Type == 3) && (DSMRdata.mbus3_device_type == 3) )
       tmpGasDelivered = (float)(DSMRdata.mbus3_delivered * 1.0);
+      gasDeliveredTimestamp = DSMRdata.mbus3_delivered.timestamp;
   //    DebugTf("gasDelivered .. [%.3f]\r\n", tmpGasDelivered);
     mbusGas = 3;
   }
@@ -187,6 +189,7 @@ float modifyMbusDelivered()
   //  if (settingMbus4Type > 0) DebugTf("mbus4_delivered [%.3f]\r\n", (float)DSMRdata.mbus4_delivered);
   //  if ( (settingMbus4Type == 3) && (DSMRdata.mbus4_device_type == 3) )
       tmpGasDelivered = (float)(DSMRdata.mbus4_delivered * 1.0);
+      gasDeliveredTimestamp = DSMRdata.mbus4_delivered.timestamp;
   //    DebugTf("gasDelivered .. [%.3f]\r\n", tmpGasDelivered);
     mbusGas = 4;
   }

@@ -197,7 +197,8 @@ struct P1DataRec {
 //P1DataRec P1_Day[15]; //390 bytes 
 //P1DataRec P1_Hour[25]; //650 bytes 
 //P1DataRec P1_Month[49]; //1.274 bytes 
-P1DataRec P1_Profile[288]; //7.488
+
+//P1DataRec P1_Profile[288]; //7.488
 
 
 const PROGMEM char *flashMode[]    { "QIO", "QOUT", "DIO", "DOUT", "Unknown" };
@@ -258,6 +259,7 @@ bool      bUpdateSketch = true;
 char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[26] = _DEFAULT_HOSTNAME;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
+String    gasDeliveredTimestamp;
 bool      UpdateRequested = false;
 byte      mbusGas = 0;
 bool      StaticInfoSend = false;
