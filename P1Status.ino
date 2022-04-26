@@ -50,6 +50,6 @@ void P1StatusWrite(){
 }
 
 void P1StatusReset(){
-    if (preferences.clear()) DebugTln(F("P1Status successfully writen to preferences"));
+    if (preferences.clear()) DebugTln(F("P1Status successfully written to preferences"));
     else DebugTln(F("ERROR! EEPROM commit failed"));   
 }

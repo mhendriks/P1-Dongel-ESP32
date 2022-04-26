@@ -73,12 +73,13 @@ Ticker LEDBlinker;
 
 //HardwareSerial P1Serial(2);
 //P1Reader    slimmeMeter(&P1Serial, DTR_IO); 
-TaskHandle_t CPU0; //handler voor CPU task 0
 
 P1Reader    slimmeMeter(&Serial1, DTR_IO); 
 
-enum    { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
-enum E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS,RINGPROFILE};
+TaskHandle_t CPU0; //handler voor CPU task 0
+
+enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
+enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS,RINGPROFILE};
 
 typedef struct {
     char filename[17];
@@ -91,7 +92,6 @@ typedef struct {
 //onderstaande struct kan niet in PROGMEM opgenomen worden. gaat stuk bij SPIFF.open functie
 
 const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1494},{"/RNGmonths.json",24+1,0,2474}}; 
-//const S_ringfile RingFiles[4] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1494},{"/RNGmonths.json",24+1,0,2474},{"/RNGprofile.json",1440+1,SECS_PER_HOUR, 141242}}; 
 
 #define JSON_HEADER_LEN   23  //total length incl new line
 #define DATA_CLOSE        2   //length last row of datafile
@@ -199,7 +199,6 @@ struct P1DataRec {
 //P1DataRec P1_Month[49]; //1.274 bytes 
 
 //P1DataRec P1_Profile[288]; //7.488
-
 
 const PROGMEM char *flashMode[]    { "QIO", "QOUT", "DIO", "DOUT", "Unknown" };
 

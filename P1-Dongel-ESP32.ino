@@ -16,9 +16,15 @@ TODO
 -- verbruiksrapport einde dag/week/maand
 - monitor proces en fail over indien het niet goed gaat (cpu 1 <-> cpu 0)
 - AsynWebserver implementatie
-- bug telegram RAW serial
-- Telegram komt niet altijd door
-- 24uur eens per minuut bijhouden van gegevens (ESP32 only)
+- bug telegram RAW serial / Telegram komt niet altijd door
+- 24uur eens per minuut weergeven van gegevens (ESP32 only)
+
+- initiele waarde onderdrukken
+√ Henk Schultinge: 0-1:24.2.1(220414124004S)(01340.584*m3) -> sample tijd ook meesturen
+√ timestamp gas_devlivered_timestamp ook voor Json toegevoegd
+√ electricity_tariff in MQTT opnemen, verplaatst in naar actuals in json
+√ Henk S: lijst met MQTT topics op blog zetten
+- verwijderen ticker lib : led gaat na een tijdje uit.
 
 FIXES
 
@@ -214,9 +220,6 @@ void loop ()
   if (DUE(StatusTimer)) { //eens per 10min of indien extra m3
     P1StatusWrite();
     MQTTSentStaticInfo();
-    #ifdef USE_WATER_SENSOR  
-      sendMQTTWater();
-    #endif
     CHANGE_INTERVAL_MIN(StatusTimer, 10);
   }
 
