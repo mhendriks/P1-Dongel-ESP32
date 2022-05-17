@@ -17,30 +17,37 @@
  */
   #ifdef ARDUINO_ESP32C3_DEV
     #warning Using ESP32C3
-    #define LED                5 
-    #define DTR_IO             4 // nr = IO pulse
-    #define RXP1              10
-    #define LED_ON            HIGH
-    #define LED_OFF           LOW
-    #define SerialOut         Serial //normal use USB_CDC_ON_BOOT = Disabled
-//  #define SerialOut         USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
-    #define PIN_WATER_SENSOR 8  
+    #define LED                 7 
+    #define DTR_IO              4 // nr = IO pulse = N/A
+    #define RXP1               10
+    #define TXP1               -1
+    #define LED_ON              LOW
+    #define LED_OFF             HIGH
+    #define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
+//  #define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
+    #define IO_WATER_SENSOR     5
+    #define OTAURL              "http://ota.smart-stuff.nl/v5/"
+    #define AUX_BUTTON          9 //download knop bij startup - AUX tijdens runtime
+    
+    volatile unsigned long      Tpressed = 0;
+    volatile byte               pressed = 0;
   #else//v4.2
     #warning Using ESP32
     #define LED                14 
     #define DTR_IO             18 
     #define RXP1               16
-    #define LED_ON             LOW
-    #define LED_OFF            HIGH
-    #define SerialOut          Serial
-    #define PIN_WATER_SENSOR   26  
+    #define TXP1                0
+    #define LED_ON              LOW
+    #define LED_OFF             HIGH
+    #define SerialOut           Serial
+    #define IO_WATER_SENSOR    26  
+    #define OTAURL              "http://ota.smart-stuff.nl/"
   #endif
 #else
   #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.
 #endif
 
 #ifdef USE_WATER_SENSOR  
-//  #define PIN_WATER_SENSOR 26  
   volatile byte        WtrFactor      = 1;
   volatile time_t      WtrTimeBetween = 0;
   volatile byte        debounces      = 0;
@@ -57,7 +64,7 @@ String TelegramRaw;
 #include "version.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
-#include <Ticker.h>
+//#include <Ticker.h>
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git  
 
 #define _DEFAULT_HOSTNAME  "P1-DONGLE/" 
@@ -69,12 +76,9 @@ String TelegramRaw;
 #define LED_BLINK_MS       80
 #define MIN_TELEGR_INTV     1
 
-Ticker LEDBlinker;
+//Ticker LEDBlinker;
 
-//HardwareSerial P1Serial(2);
-//P1Reader    slimmeMeter(&P1Serial, DTR_IO); 
-
-P1Reader    slimmeMeter(&Serial1, DTR_IO); 
+P1Reader    slimmeMeter(&Serial1, DTR_IO);
 
 TaskHandle_t CPU0; //handler voor CPU task 0
 
@@ -88,18 +92,11 @@ typedef struct {
     int f_len;
   } S_ringfile;
 
-//+1 voor de vergelijking, laatste record wordt niet getoond 
-//onderstaande struct kan niet in PROGMEM opgenomen worden. gaat stuk bij SPIFF.open functie
-
-const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1494},{"/RNGmonths.json",24+1,0,2474}}; 
-
+const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1494},{"/RNGmonths.json",24+1,0,2474}}; //+1 voor de vergelijking, laatste record wordt niet getoond 
 #define JSON_HEADER_LEN   23  //total length incl new line
 #define DATA_CLOSE        2   //length last row of datafile
-
-//incl water
 #define DATA_FORMAT      "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}"
 #define DATA_RECLEN      98  //total length incl comma and new line
-
 
 #include "Debug.h"
 
@@ -184,15 +181,15 @@ using MyData = ParsedData<
 
 //TODO
 //in mem houden van de ringfile gegevens voor een snelle oplevering naar de client. Vooral de Day gegevens die worden door het dashboard gebruikt.
-struct P1DataRec {
-  uint32_t  date;
-  uint32_t  T1;
-  uint32_t  T2;
-  uint32_t  T1r;
-  uint32_t  T2r;
-  uint32_t  G;
-  uint16_t  Water;
-};
+//struct P1DataRec {
+//  uint32_t  date;
+//  uint32_t  T1;
+//  uint32_t  T2;
+//  uint32_t  T1r;
+//  uint32_t  T2r;
+//  uint32_t  G;
+//  uint16_t  Water;
+//};
 //
 //P1DataRec P1_Day[15]; //390 bytes 
 //P1DataRec P1_Hour[25]; //650 bytes 
@@ -230,6 +227,7 @@ bool        showRaw = false;
 bool        JsonRaw       = false;
 bool        LEDenabled    = true;
 bool        DSMR_NL       = true;
+char        bAuthUser[25], bAuthPW[25];
 
 char      cMsg[150];
 String    lastReset           = "";
@@ -250,7 +248,7 @@ byte      RingCylce = 0;
 
 //update
 bool      EnableHistory = true;
-char      BaseOTAurl[30] = "http://ota.smart-stuff.nl/";
+char      BaseOTAurl[30] = OTAURL;
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
 
@@ -265,9 +263,8 @@ bool      StaticInfoSend = false;
 
 //===========================================================================================
 // setup timers 
-//DECLARE_TIMER_SEC(reconnectWiFi,      10);
 DECLARE_TIMER_SEC(synchrNTP,          30);
-DECLARE_TIMER_SEC(nextTelegram,       10);
+DECLARE_TIMER_SEC(nextTelegram,        2);
 DECLARE_TIMER_SEC(reconnectMQTTtimer,  5); // try reconnecting cyclus timer
 DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time between MQTT messages  
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);
