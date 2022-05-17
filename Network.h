@@ -16,7 +16,7 @@
 #include <WiFiManager.h>        // version 0.16.0 - https://github.com/tzapu/WiFiManager
 #include <HTTPClient.h>
 
-WebServer        httpServer (80);
+WebServer httpServer(80);
 
 bool FSmounted           = false; 
 //byte WiFiReconnectCount  = 0;
