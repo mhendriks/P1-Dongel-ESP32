@@ -23,26 +23,33 @@
 
 const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCache-Control: no-cache\r\n";
 
+void checkauth(){
+  //if( !httpServer.authenticate("martijn", "hendriks") ) return httpServer.requestAuthentication();
+}
+
 //=====================================================================================
-void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebunden werden
+void setupFSexplorer()
 {    
-//  httpServer.on("/api", HTTP_GET, processAPI); // all other api calls are catched in FSexplorer onNotFounD!  
-  httpServer.on("/api/sm/telegram", [](){sendJsonBuffer(TelegramRaw.c_str());});
-  httpServer.on("/api/listfiles", APIlistFiles);
-  httpServer.on("/FSformat", formatFS);
-  httpServer.on("/upload", HTTP_POST, []() {}, handleFileUpload);
-  httpServer.on("/ReBoot", reBootESP);
-  httpServer.on("/ResetWifi", resetWifi);
-  httpServer.on("/remote-update", [](){RemoteUpdate();});
+  httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
+  httpServer.on("/api/sm/telegram", [](){checkauth(); sendJsonBuffer(TelegramRaw.c_str());});
+  httpServer.on("/api/listfiles", [](){checkauth(); APIlistFiles();} );
+  httpServer.on("/FSformat", [](){checkauth();formatFS;} );
+  httpServer.on("/upload", HTTP_POST, []() {checkauth();}, handleFileUpload);
+  httpServer.on("/ReBoot", [](){checkauth();reBootESP();} );
+  httpServer.on("/ResetWifi", [](){checkauth(); resetWifi() ;} );
+  httpServer.on("/remote-update", [](){checkauth();RemoteUpdate();} );
   httpServer.on("/updates", HTTP_GET, []() {
+    checkauth();
     httpServer.sendHeader("Connection", "close");
     httpServer.send(200, "text/html", UpdateHTML);
   });
   httpServer.on("/update", HTTP_POST, []() {
+    checkauth();
     httpServer.sendHeader("Connection", "close");
     httpServer.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
     P1Reboot();
   }, []() {
+    checkauth();
     HTTPUpload& upload = httpServer.upload();
     if (upload.status == UPLOAD_FILE_START) {
       DebugTf("Update: %s\n", upload.filename.c_str());
@@ -71,6 +78,8 @@ void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebu
   
   httpServer.onNotFound([]() 
   {
+    checkauth();
+    
     if (Verbose2) DebugTf("in 'onNotFound()'!! [%s] => \r\n", String(httpServer.uri()).c_str());
     if (httpServer.uri().indexOf("/api/") == 0) 
     {
@@ -81,16 +90,12 @@ void setupFSexplorer()    // Funktionsaufruf "LITTLEFS();" muss im Setup eingebu
     {
       DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
       String filename = httpServer.uri();
-//      if( httpServer.uri().indexOf("/RING") == 0 ) filename.replace("RING","RNG");
       DebugT("Filename: ");Debugln(filename);
-      if ( !handleFile(filename.c_str()) )
-      {
-        httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
-      }
+      if ( !handleFile(filename.c_str()) ) httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
     }
   });
   httpServer.begin();
-  DebugTln( F("HTTP server gestart\r") );
+  DebugTln( F("HTTP server started\r") );
   
 } // setupFSexplorer()
 
@@ -251,14 +256,15 @@ void updateFirmware()
 //=====================================================================================
 void resetWifi()
 {
-  DebugTln(F("ResetWifi .."));
-  doRedirect("RebootResetWifi", 45, "/", true, true);
+//  DebugTln(F("ResetWifi ..."));
+  Debugf("\r\nConnect to AP [%s] and go to ip address shown in the AP-name\r\n", settingHostname);
+  doRedirect("RebootResetWifi", 500, "/", true, true);
 }
 //=====================================================================================
 void reBootESP()
 {
   DebugTln(F("Redirect and ReBoot .."));
-  doRedirect("RebootOnly", 45, "/", true,false);
+  doRedirect("RebootOnly", 500, "/", true,false);
 
 } // reBootESP()
 
@@ -266,6 +272,7 @@ void reBootESP()
 void doRedirect(String msg, int wait, const char* URL, bool reboot, bool resetWifi)
 { 
   DebugTln(msg);
+  delay(wait);
   httpServer.sendHeader("Location", "/#Redirect?msg="+msg, true);
   httpServer.send ( 303, "text/plain", "");
 
