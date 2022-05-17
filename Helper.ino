@@ -19,14 +19,18 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 "Reset when the vdd voltage is not stable","RTC Watch dog reset digital core and rtc module"};
 
 
+void FacReset() {
+  DebugTln(F("/!\\ Factory reset"));
+//  bFacReset = false;
+  P1StatusClear();
+  LittleFS.remove("/DSMRsettings.json");
+  resetWifi();
+}
+
 void ToggleLED() {
   digitalWrite(LED, !digitalRead(LED));
 }
 
-void BlinkLED() {
-  ToggleLED(); //zet uit
-  LEDBlinker.once_ms(LED_BLINK_MS, ToggleLED); // zet aan na x MS
-}
 //===========================================================================================
 
 const char* getResetReason(){
