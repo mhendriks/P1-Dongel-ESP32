@@ -359,7 +359,7 @@ function UpdateDash()
 	fetch(APIGW+"v2/sm/fields", {"setTimeout": 5000})
 	  .then(response => response.json())
 	  .then(json => {
-//  	  json = JSON.parse('{"timestamp":{"value":"210417094333S"},"energy_delivered_tariff1":{"value":40,"unit":"kWh"},"energy_delivered_tariff2":{"value":40,"unit":"kWh"},"energy_returned_tariff1":{"value":48,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"power_delivered":{"value":2.015,"unit":"kW"},"power_returned":{"value":1223,"unit":"kW"},"voltage_l1":{"value":227.7,"unit":"V"},"voltage_l2":{"value":224.2,"unit":"V"},"voltage_l3":{"value":226.8,"unit":"V"},"current_l1":{"value":2,"unit":"A"},"current_l2":{"value":6,"unit":"A"},"current_l3":{"value":1,"unit":"A"},"power_delivered_l1":{"value":0.388,"unit":"kW"},"power_delivered_l2":{"value":1.363,"unit":"kW"},"power_delivered_l3":{"value":0.258,"unit":"kW"},"power_returned_l1":{"value":1,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":"5","unit":"m3"},"water":{"value":"125.123","unit":"m3"}}');
+//   	  json = JSON.parse('{"timestamp":{"value":"210417094333S"},"energy_delivered_tariff1":{"value":40,"unit":"kWh"},"energy_delivered_tariff2":{"value":40,"unit":"kWh"},"energy_returned_tariff1":{"value":48,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"power_delivered":{"value":2.015,"unit":"kW"},"power_returned":{"value":1223,"unit":"kW"},"voltage_l1":{"value":227.7,"unit":"V"},"voltage_l2":{"value":224.2,"unit":"V"},"voltage_l3":{"value":226.8,"unit":"V"},"current_l1":{"value":2,"unit":"A"},"current_l2":{"value":6,"unit":"A"},"current_l3":{"value":1,"unit":"A"},"power_delivered_l1":{"value":0.388,"unit":"kW"},"power_delivered_l2":{"value":1.363,"unit":"kW"},"power_delivered_l3":{"value":0.258,"unit":"kW"},"power_returned_l1":{"value":1,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":"5","unit":"m3"},"water":{"value":"125.123","unit":"m3"}}');
 
 		//-------CHECKS
 		//check of gasmeter beschikbaar is	(indien HeeftGas = true uit Frontend,json of eerdere meeting dan niet meer checken uit meterdata, bij false wel checken in meterdata)
@@ -479,7 +479,6 @@ function UpdateDash()
 
 		//vermogen vandaag, min - max bepalen
 		document.getElementById("P").innerHTML = Number(Parr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
-
 // 		document.getElementById(`Pmax`).innerHTML = Number(Pmax).toLocaleString();
 // 		document.getElementById(`Pmin`).innerHTML = Math.min.apply(Math, Parr).toLocaleString();
 		
@@ -493,7 +492,8 @@ function UpdateDash()
 			};
 			trend_pi.update();
 			//vermogen vandaag, min - max bepalen
-			document.getElementById("Pi").innerHTML = Number(Parri[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );			
+			document.getElementById("Pi").innerHTML = Number(Parri[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
+// 			document.getElementById(`Pimax`).innerHTML = Number(Pmaxi).toLocaleString();
 // 			document.getElementById(`Pimin`).innerHTML = Math.min.apply(Math, Parri).toLocaleString();
 
 			//-------AFNAME METER	
@@ -505,6 +505,7 @@ function UpdateDash()
 			trend_pa.update();
 			//vermogen vandaag, min - max bepalen
 			document.getElementById("Pa").innerHTML = Number(Parra[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
+// 			document.getElementById(`Pamax`).innerHTML = Number(Pmaxa).toLocaleString();
 // 			document.getElementById(`Pamin`).innerHTML = Math.min.apply(Math, Parra).toLocaleString();
 		}
 		
@@ -541,7 +542,7 @@ function UpdateDash()
 				trend_w.data.datasets[i].data=[Number(Warr[i]).toFixed(),Number(Wmax-Warr[i]).toFixed()];
 			};
 			trend_w.update();
-			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
+			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString();
 		}
 		
 								
@@ -1283,6 +1284,7 @@ function handle_menu_click()
       });     
   } // refreshSmTelegram()
 
+
   //============================================================================  
   function showActualTable(data)
   { 
@@ -1312,7 +1314,7 @@ function handle_menu_click()
         newCell.appendChild(newText);
       }
       tableCells = document.getElementById("actualTable_"+item).cells;
-      tableCells[0].innerHTML = data[item].humanName;
+      tableCells[0].innerHTML = data[item].humanName;	
       tableCells[1].innerHTML = data[item].value;
       if (data[item].hasOwnProperty('unit')) tableCells[2].innerHTML = data[item].unit;
       
@@ -2489,14 +2491,15 @@ function handle_menu_click()
   var translateFields = [
            [ "author",                    "Auteur" ]
           ,[ "identification",            "Slimme Meter ID" ]
+		  ,[ "timestamp",            	  "Tijdcode" ]
           ,[ "p1_version",                "P1 Versie" ]
-          ,[ "energy_delivered_tariff1",  "Energie Gebruikt tarief 1" ]
-          ,[ "energy_delivered_tariff2",  "Energie Gebruikt tarief 2" ]
-          ,[ "energy_returned_tariff1",   "Energie Opgewekt tarief 1" ]
-          ,[ "energy_returned_tariff2",   "Energie Opgewekt tarief 2" ]
+          ,[ "energy_delivered_tariff1",  "Energie Afgenomen teller 1 - Nacht" ]
+          ,[ "energy_delivered_tariff2",  "Energie Afgenomen teller 2 - Dag" ]
+          ,[ "energy_returned_tariff1",   "Energie Tereggeleverd teller 1 - Nacht" ]
+          ,[ "energy_returned_tariff2",   "Energie Tereggeleverd teller 2 - Dag" ]
           ,[ "electricity_tariff",        "Electriciteit tarief" ]
-          ,[ "power_delivered",           "Vermogen Gebruikt" ]
-          ,[ "power_returned",            "Vermogen Opgewekt" ]
+          ,[ "power_delivered",           "Vermogen Afgenomen" ]
+          ,[ "power_returned",            "Vermogen Tereggeleverd" ]
           ,[ "electricity_threshold",     "Electricity Threshold" ]
           ,[ "electricity_switch_position","Electricity Switch Position" ]
           ,[ "electricity_failures",      "Electricity Failures" ]
@@ -2510,22 +2513,22 @@ function handle_menu_click()
           ,[ "electricity_swells_l3",     "Electricity Swells l3" ]
           ,[ "message_short",             "Korte Boodschap" ]
           ,[ "message_long",              "Lange Boodschap" ]
-          ,[ "voltage_l1",                "Voltage l1" ]
-          ,[ "voltage_l2",                "Voltage l2" ]
-          ,[ "voltage_l3",                "Voltage l3" ]
-          ,[ "current_l1",                "Current l1" ]
-          ,[ "current_l2",                "Current l2" ]
-          ,[ "current_l3",                "Current l3" ]
-          ,[ "power_delivered_l1",        "Vermogen Gebruikt l1" ]
-          ,[ "power_delivered_l2",        "Vermogen Gebruikt l2" ]
-          ,[ "power_delivered_l3",        "Vermogen Gebruikt l3" ]
-          ,[ "power_returned_l1",         "Vermogen Opgewekt l1" ]
-          ,[ "power_returned_l2",         "Vermogen Opgewekt l2" ]
-          ,[ "power_returned_l3",         "Vermogen Opgewekt l3" ]
-          ,[ "gas_device_type",           "Gas Device Type" ]
-          ,[ "gas_equipment_id",          "Gas Equipment ID" ]
+          ,[ "voltage_l1",                "Spanning l1" ]
+          ,[ "voltage_l2",                "Spanning l2" ]
+          ,[ "voltage_l3",                "Spanning l3" ]
+          ,[ "current_l1",                "Stroom l1" ]
+          ,[ "current_l2",                "Stroom l2" ]
+          ,[ "current_l3",                "Stroom l3" ]
+          ,[ "power_delivered_l1",        "Vermogen Afgenomen l1" ]
+          ,[ "power_delivered_l2",        "Vermogen Afgenomen l2" ]
+          ,[ "power_delivered_l3",        "Vermogen Afgenomen l3" ]
+          ,[ "power_returned_l1",         "Vermogen Tereggeleverd l1" ]
+          ,[ "power_returned_l2",         "Vermogen Tereggeleverd l2" ]
+          ,[ "power_returned_l3",         "Vermogen Tereggeleverd l3" ]
+          ,[ "gas_device_type",           "Gas Toestel Type" ]
+          ,[ "gas_equipment_id",          "Gas Toestel ID" ]
           ,[ "gas_valve_position",        "Gas Klep Positie" ]
-          ,[ "gas_delivered",             "Gas Gebruikt" ]
+          ,[ "gas_delivered",             "Gasmeterstand" ]
           ,[ "thermal_device_type",       "Thermal Device Type" ]
           ,[ "thermal_equipment_id",      "Thermal Equipment ID" ]
           ,[ "thermal_valve_position",    "Thermal Klep Positie" ]
@@ -2538,22 +2541,19 @@ function handle_menu_click()
           ,[ "slave_equipment_id",        "Slave Equipment ID" ]
           ,[ "slave_valve_position",      "Slave Klep Positie" ]
           ,[ "slave_delivered",           "Slave Gebruikt" ]
-          ,[ "ed_tariff1",                "Energy Verbruik Tarief-1/kWh" ]
-          ,[ "ed_tariff2",                "Energy Verbruik Tarief-2/kWh" ]
-          ,[ "er_tariff1",                "Energy Opgewekt Tarief-1/kWh" ]
-          ,[ "er_tariff2",                "Energy Opgewekt Tarief-2/kWh" ]
-          ,[ "gd_tariff" ,                "Gas Verbruik Tarief/m3" ]
+          ,[ "ed_tariff1",                "Energy Afgenomen Tarief-1/kWh" ]
+          ,[ "ed_tariff2",                "Energy Afgenomen Tarief-2/kWh" ]
+          ,[ "er_tariff1",                "Energy Tereggeleverd Tarief-1/kWh" ]
+          ,[ "er_tariff2",                "Energy Tereggeleverd Tarief-2/kWh" ]
+          ,[ "gd_tariff" ,                "Gas Tarief/m3" ]
           ,[ "electr_netw_costs",         "Netwerkkosten Energie/maand" ]
           ,[ "gas_netw_costs",            "Netwerkkosten Gas/maand" ]
           
           ,[ "smhasfaseinfo",             "SM Has Fase Info (0=No, 1=Yes)" ]
           ,[ "sm_has_fase_info",          "SM Has Fase Info (0=No, 1=Yes)" ]
-          ,[ "oled_type",                 "OLED type (0=None, 1=SDD1306, 2=SH1106)" ]
-          ,[ "oled_flip_screen",          "Flip OLED scherm (0=No, 1=Yes)" ]
           ,[ "tlgrm_interval",            "Telegram Lees Interval (Sec.)" ]
           ,[ "telegraminterval",          "Telegram Lees Interval (Sec.)" ]
           ,[ "index_page",                "Te Gebruiken index.html Pagina" ]
-          ,[ "oled_screen_time",          "Oled Screen Time (Min., 0=infinite)" ]
           ,[ "mqttbroker",                "MQTT Broker IP/URL" ]
           ,[ "mqtt_broker",               "MQTT Broker IP/URL" ]
           ,[ "mqttbrokerport",            "MQTT Broker Poort" ]
@@ -2566,10 +2566,7 @@ function handle_menu_click()
           ,[ "mqtt_toptopic",             "MQTT Top Topic" ]
           ,[ "mqttinterval",              "Verzend MQTT Berichten (Sec.)" ]
           ,[ "mqtt_interval",             "Verzend MQTT Berichten (Sec.)" ]
-          ,[ "mqttbroker_connected",      "MQTT broker connected" ]
-          ,[ "mindergas_token",           "Mindergas Token" ]
-          ,[ "mindergas_response",        "Mindergas Terugkoppeling" ]
-          ,[ "mindergas_status",          "Mindergas Status (@dag | tijd)" ]
+          ,[ "mqttbroker_connected",      "MQTT broker verbonden" ]
 
           ,[ "telegramcount",             "Telegrammen verwerkt" ]
           ,[ "telegramerrors",            "Telegrammen met fouten" ]          
@@ -2590,11 +2587,11 @@ function handle_menu_click()
           ,[ "flashchipid",               "Flash Chip ID" ]
           ,[ "flashchipsize",             "Flash Chip Size" ]
           ,[ "flashchiprealsize",         "Flash Chip Real Size" ]
-          ,[ "spiffssize",                "Spiffs Size" ]
+          ,[ "spiffssize",                "Geheugen omvang" ]
           ,[ "FSsize", 					  "File System Size" ]
           ,[ "flashchipspeed",            "Flash Chip Speed" ]
           ,[ "flashchipmode",             "Flash Chip Mode" ]
-          ,[ "boardtype",                 "Board Type" ]
+          ,[ "boardtype",                 "Bord Type" ]
           ,[ "compileoptions",            "Compiler Opties" ]
           ,[ "ssid",                      "WiFi SSID" ]
           ,[ "wifirssi",                  "WiFi RSSI" ]
@@ -2607,8 +2604,8 @@ function handle_menu_click()
           ,[ "Phases",                    "Hoeveel Fases heeft de meter [0-3]<br>[0=check op basis van meterdata]" ]
           ,[ "Fuse",                      "Wat is de waarde van de hoofdzekering(en)" ]
           ,[ "cdn",               		  "Frontend html/css uit de cloud" ]
-          ,["GasAvailable",				  "Gasmeter beschikbaar? <br>[True = geen check op basis van meterdata]<br>[False = wel checken]"]
-          ,["water",				  	  "Watermeter"]
+          ,[ "GasAvailable",			  "Gasmeter beschikbaar? <br>[True = geen check op basis van meterdata]<br>[False = wel checken]"]
+          ,[ "water",				  	  "Watermeter"]
 ];
 
 /*
