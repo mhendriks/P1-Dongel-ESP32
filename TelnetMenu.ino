@@ -47,9 +47,6 @@ void ResetDataFiles() {
   LittleFS.remove("/RNGmonths.json");
   LittleFS.remove("/P1_log.old");
   LittleFS.remove("/P1.log");
-  LittleFS.remove("/Reboot.log");      //pre 3.1.1 
-  LittleFS.remove("/Reboot.old");      //pre 3.1.1  
-  LittleFS.remove("/DSMRstatus.json"); //pre 3.1.1 
   DebugTln(F("Datafiles are reset"));
 }
 
@@ -175,15 +172,15 @@ void handleKeyInput()
       case 'f':
       case 'F':     listFS();
                     break;                        
-      case 'W':     Debugf("\r\nConnect to AP [%s] and go to ip address shown in the AP-name\r\n", settingHostname);
-                    delay(1000);
-                    resetWifi();                    
+      case 'W':     resetWifi();                    
                     break;
       case 'p':
       case 'P':     showRaw = !showRaw;
                     break;
                     
       case 'Q':     ResetDataFiles();
+                    P1StatusClear();
+                    resetWifi();  
                     break;                      
                     
       case 'R':     DebugFlush();
@@ -220,13 +217,7 @@ void handleKeyInput()
       case 'X':     DebugTf("Watermeter readings: %i m3 and %i liters\n",P1Status.wtr_m3,P1Status.wtr_l);
                     break;
 #endif
-      case 'Z':     P1Status.sloterrors = 0;
-                    P1Status.reboots    = 0;
-                    P1Status.wtr_m3     = 0;
-                    P1Status.wtr_l      = 0;
-                    telegramCount       = 0;
-                    telegramErrors      = 0;
-                    P1StatusWrite();
+      case 'Z':     P1StatusClear();
                     break;
                     
       default:      Debugf("Dongle version %s | mac address %s\n\r",_VERSION, WiFi.macAddress().c_str());

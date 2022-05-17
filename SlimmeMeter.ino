@@ -31,6 +31,7 @@ void handleSlimmemeter()
 {
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
     if (slimmeMeter.available()) {
+      if (LEDenabled) digitalWrite(LED, !digitalRead(LED)); //toggle LED when telegram available
       TelegramRaw = slimmeMeter.raw(); //gelijk opslaan want async update
       if ( showRaw || JsonRaw ) {
         //-- process telegrams in raw mode
@@ -40,7 +41,8 @@ void handleSlimmemeter()
         JsonRaw = false;
       } 
       else processSlimmemeter();
-      BlinkLED(); //laat succesvolle leesactie zien
+//      BlinkLED(); //laat succesvolle leesactie zien
+      if (LEDenabled) digitalWrite(LED, !digitalRead(LED)); //toggle LED when telegram available
     } //available
 } // handleSlimmemeter()
 

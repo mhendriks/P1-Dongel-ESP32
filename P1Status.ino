@@ -53,3 +53,13 @@ void P1StatusReset(){
     if (preferences.clear()) DebugTln(F("P1Status successfully written to preferences"));
     else DebugTln(F("ERROR! EEPROM commit failed"));   
 }
+
+void P1StatusClear(){
+  P1Status.sloterrors = 0;
+  P1Status.reboots    = 0;
+  P1Status.wtr_m3     = 0;
+  P1Status.wtr_l      = 0;
+  telegramCount       = 0;
+  telegramErrors      = 0;
+  P1StatusWrite();
+}

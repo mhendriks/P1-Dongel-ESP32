@@ -10,23 +10,21 @@
 TODO
 - lees/schrijffouten ringfiles terugmelden in frontend
 - keuze om voor lokale frontend assets of uit het cdn
-- frontend options in json (max stroom per fase, uitzetten van spanningsoverzicht in dash, etc)
 - mqtt broker benaderen via host name http://www.iotsharing.com/2017/06/how-to-get-ip-address-from-mdns-host-name-in-arduino-esp32.html 
 -- message bij drempelwaardes 
 -- verbruiksrapport einde dag/week/maand
-- monitor proces en fail over indien het niet goed gaat (cpu 1 <-> cpu 0)
 - AsynWebserver implementatie
-- bug telegram RAW serial / Telegram komt niet altijd door
+- bug datagram RAW serial / Telegram komt niet altijd door
 - 24uur eens per minuut weergeven van gegevens (ESP32 only)
-
-- initiele waarde onderdrukken
-√ Henk Schultinge: 0-1:24.2.1(220414124004S)(01340.584*m3) -> sample tijd ook meesturen
-√ timestamp gas_devlivered_timestamp ook voor Json toegevoegd
-√ electricity_tariff in MQTT opnemen, verplaatst in naar actuals in json
-√ Henk S: lijst met MQTT topics op blog zetten
-- verwijderen ticker lib : led gaat na een tijdje uit.
+- C3: logging via usb poort mogelijk maken
+- water interface altijd aanwezig via settingsfile te configureren (default = uit)
+- HA discover via settings aan en uit te zetten (default = aan)
+- hardcode / download DSMRindexEDGE.html en Frontend.json indien deze niet bestaat
+- C3: 8x push button : update firmware met laatste versie
 
 FIXES
+- handleiding frontend.json "HideInitial" key toevoegen
+- handleiding voor de esp32c3 updaten
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -41,7 +39,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 //#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
-//#define WATER_NPN
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //#define HAS_NO_SLIMMEMETER        // define for testing only!
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
@@ -61,8 +58,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 void setup() 
 {
   SerialOut.begin(115200); //debug stream
-  Serial1.begin(115200, SERIAL_8N1, RXP1,0,true); //p1 serial input
-  
+  Serial1.begin(115200, SERIAL_8N1, RXP1, TXP1, true); //p1 serial input
+
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
   // sign of life
@@ -76,7 +73,7 @@ void setup()
   DebugT(F("Last reset reason: ")); Debugln(lastReset);
   
 //================ File System ===========================================
-  if (LittleFS.begin()) 
+  if (LittleFS.begin(true)) 
   {
     DebugTln(F("File System Mount succesfull\r"));
     FSmounted = true;     
@@ -149,15 +146,14 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
 
   esp_register_shutdown_handler(ShutDownHandler);
 
-#ifdef USE_WATER_SENSOR  
   setupWater();
-#endif
-
+  setupAuxButton(); //esp32c3 only
   CheckRingExists();
 
 #ifdef USE_PROFILE_MIN
     if ( !LittleFS.exists(RingFiles[RINGPROFILE].filename) ) createRingFile( RINGPROFILE );
-#endif 
+#endif
+ 
 } // setup()
 
 
@@ -202,16 +198,6 @@ void doSystemTasks()
 
 void loop () 
 { 
-
-//      slimmeMeter.loop();
-//
-//    //--- start volgend telegram
-//    if DUE(nextTelegram) {
-//       if (Verbose1) DebugTln(F("Next Telegram"));
-//       slimmeMeter.enable(true); 
-//    }
-//    
-  //--- do the tasks that has to be done as often as possible
   doSystemTasks();
 
   //--- update statusfile + ringfiles
@@ -224,7 +210,11 @@ void loop ()
   }
 
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
-
+  
+#ifdef AUX_BUTTON
+  if ( Tpressed && ((millis() - Tpressed) > 1500 ) ) handleButtonPressed();
+#endif
+  
 #ifdef USE_WATER_SENSOR    
   if ( WtrTimeBetween )  {
     DebugTf("Wtr delta readings: %d | debounces: %d | waterstand: %i.%i\n",WtrTimeBetween,debounces, P1Status.wtr_m3, P1Status.wtr_l);
