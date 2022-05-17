@@ -19,14 +19,16 @@ void IRAM_ATTR iWater() {
     } else debounces++;
 }
 
-void setupWater() {
-#ifdef WATER_NPN
-    pinMode(PIN_WATER_SENSOR, INPUT_PULLUP);
-#else
-    pinMode(PIN_WATER_SENSOR, INPUT);
 #endif
-  attachInterrupt(PIN_WATER_SENSOR, iWater, RISING);
-  DebugTln(F("WaterSensor setup completed"));
-}
 
+void setupWater() {
+#ifdef USE_WATER_SENSOR
+#ifdef ARDUINO_ESP32C3_DEV
+    pinMode(IO_WATER_SENSOR, INPUT_PULLUP);
+#else
+    pinMode(IO_WATER_SENSOR, INPUT);
 #endif
+  attachInterrupt(IO_WATER_SENSOR, iWater, RISING);
+  DebugTln(F("WaterSensor setup completed"));
+#endif
+}
