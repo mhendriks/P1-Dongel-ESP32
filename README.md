@@ -37,7 +37,7 @@ Totale schema:
 Omgezet naar een board ziet dit er zo uit:
 Bovenkant             |  Onderkant |  Eindresultaat <br>
 :-------------------------:|:-------------------------:|:-------------------------:
-<img src="images/print-boven.png" width="20%">  |  <img src="images/print-onder.png" width="20%"> | <img src="images/eindresultaat.png" width="20%">
+<img src="images/print-boven.png" width="40%">  |  <img src="images/print-onder.png" width="40%"> | <img src="images/eindresultaat.png" width="40%">
 
 Afmeting van de print is: 20 x 28mm
 
