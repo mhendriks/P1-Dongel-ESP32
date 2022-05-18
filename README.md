@@ -32,7 +32,7 @@ Op de pcb zitten de volgende modules:
 - knopje om de module in download modus te brengen tijdens boot of multifunctioneel in runtime
 
 Totale schema:
-![Kicad schema](".images/kicad-schema.png") 
+<img src=".images/kicad-schema.png" width="100%">
 
 Omgezet naar een board ziet dit er zo uit:
 Bovenkant             |  Onderkant |  Eindresultaat <br>
