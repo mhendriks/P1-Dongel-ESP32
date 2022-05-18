@@ -1,4 +1,4 @@
-</a>&nbsp;<a href="https://smart-stuff.nl/" target="_blank">![Buy P1 Dongle](.github/images/button_buy-p-dongle.png)</a>
+</a>&nbsp;<a href="https://smart-stuff.nl/" target="_blank">![Buy P1 Dongle](.images/button_buy-p-dongle.png)</a>
 
 # Slimmemeter P1 Dongel Pro (ESP32)
 Doorontwikkeling van de P1 dongel naar een Pro / ESP32C3 versie.
@@ -32,12 +32,12 @@ Op de pcb zitten de volgende modules:
 - knopje om de module in download modus te brengen tijdens boot of multifunctioneel in runtime
 
 Totale schema:
-![Kicad schema](images/kicad-schema.png) 
+![Kicad schema](".images/kicad-schema.png") 
 
 Omgezet naar een board ziet dit er zo uit:
 Bovenkant             |  Onderkant |  Eindresultaat <br>
 :-------------------------:|:-------------------------:|:-------------------------:
-<img src="images/print-boven.png" width="40%">  |  <img src="images/print-onder.png" width="40%"> | <img src="images/eindresultaat.png" width="40%">
+<img src=".images/print-boven.png" width="50%">  |  <img src=".images/print-onder.png" width="50%"> | <img src=".images/eindresultaat.png" width="50%">
 
 Afmeting van de print is: 20 x 28mm
 
