@@ -9,9 +9,11 @@ Doorontwikkeling van de P1 dongel naar een Pro / ESP32C3 versie.
 - State of the art architectuur die vooral veiliger is
 - download / reset / reboot knop aanwezig
 - ESD beveiliging op de ingangspoorten
+- iets compacter dan de ESP8266 Dongle
 
 ## Kenmerken
 - ESP32C3 Mini 1 SOC
+- 4MB flash
 - 6P6C aansluiting
 - USB micro aansluiting voor usb voeding
 - signaal inversie door de ESP zelf
@@ -22,14 +24,15 @@ Doorontwikkeling van de P1 dongel naar een Pro / ESP32C3 versie.
 
 ## SCHEMA
 Gekozen voor de ESP32C3 MINI 1
-Op de pcb zitten de volgende modules:
-- spanningsregulator de 3.3Volt en buffering ivm vermogenspiek bij initialiseren van de Wifi
+Op de pcb zitten de onderstaande onderdelen.
+- spanningsregulator (LDO) de 3.3Volt en buffering ivm vermogenspiek bij initialiseren van de Wifi
 - de ESP32 C3 natuurlijk
 - Aansluiting voor de P1 + logica
 - usb micro aansluiting met ESD protectie
-- aansluiting en logica watersensor
+- aansluiting watersensor
 - status led omdat deze niet standaard op de SOC zit
 - knopje om de module in download modus te brengen tijdens boot of multifunctioneel in runtime
+- rj12 connector om makkelijk met de slimme meter te verbinden
 
 Totale schema:
 <img src=".images/kicad-schema.png" width="100%">
@@ -45,7 +48,7 @@ Afmeting van de print is: 20 x 28mm
 De DSMR-API software is een doorontwikkeling van de ESP32 WROOM 32E software.
 Instructie is te vinden in de [setup/dsmr-api](setup/dsmr-api/README.md) folder.
 
-De ESPHome firmware werkt ook fantastisch op deze Pro Dongle.
+De ESPHome firmware werkt ook fantastisch op deze Dongle Pro.
 
 ## Hardware maken of aanschaffen
-Je kan je eigenhardware maken of deze los / compleet aanschaffen. Wil je deze aanschaffen dan kan je mij altijd een DM sturen. De oplossing is ook Plug-and-play te koop.
+Je kan je eigen hardware maken of deze aanschaffen. Wil je deze aanschaffen neem dan een kijkje op <a href="https://smart-stuff.nl/shop/" target="_blank">smart-stuff.nl</a>
