@@ -1,4 +1,4 @@
-</a>&nbsp;<a href="https://smart-stuff.nl/" target="_blank">![Buy P1 Dongle](.images/button_buy-p-dongle.png)</a>
+</a>&nbsp;<a href="https://smart-stuff.nl/shop/" target="_blank">![Buy P1 Dongle](.images/button_buy-p-dongle.png)</a>
 
 # Slimmemeter P1 Dongel Pro (ESP32)
 Doorontwikkeling van de P1 dongel naar een Pro / ESP32C3 versie.
