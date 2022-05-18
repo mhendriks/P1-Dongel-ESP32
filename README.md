@@ -9,7 +9,7 @@ Doorontwikkeling van de P1 dongel naar een Pro / ESP32C3 versie.
 - State of the art architectuur die vooral veiliger is
 - download / reset / reboot knop aanwezig
 - ESD beveiliging op de ingangspoorten
-- iets compacter dan de ESP8266 Dongle
+- iets compacter (15%) dan de ESP8266 Dongle
 
 ## Kenmerken
 - ESP32C3 Mini 1 SOC
