@@ -20,7 +20,7 @@
     #define LED                 7 
     #define DTR_IO              4 // nr = IO pulse = N/A
     #define RXP1               10
-    #define TXP1               -1
+    #define TXP1               -1 //disable
     #define LED_ON              LOW
     #define LED_OFF             HIGH
     #define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled

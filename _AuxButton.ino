@@ -3,23 +3,26 @@
 void IRAM_ATTR iButton_pressed() {
   pressed++;
   Tpressed = millis();
-  DebugTln(F("AUX_BUTTON pressed"));
+  //Serial.println("AUX_BUTTON pressed"); // zo min mogelijk tijd tijdens een interupt gebruiken
 }
 
 void handleButtonPressed(){
   DebugTf("Button %d times pressed\n", pressed );
   switch(pressed){
-  case 1: DebugTln("write ringfiles");
+  case 1: DebugTln(F("Update ringfiles"));
           writeRingFiles();
           break;
-  case 2: DebugTln("reboot");
+  case 2: DebugTln(F("Reboot"));
           P1Reboot();
           break;
-  case 3: DebugTln("reset wifi");
+  case 3: DebugTln(F("Reset wifi"));
           resetWifi();
           break;
-  case 5: DebugTln("/!\\ factory reset");
+  case 5: DebugTln(F("/!\\ Factory reset"));
           FacReset();
+          break;
+  case 8: DebugTln(F("Firmware update naar laaste versie"));
+          //todo
           break;
   }
   Tpressed = 0;

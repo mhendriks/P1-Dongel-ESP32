@@ -18,7 +18,8 @@ TODO
 - 24uur eens per minuut weergeven van gegevens (ESP32 only)
 - C3: logging via usb poort mogelijk maken
 - water interface altijd aanwezig via settingsfile te configureren (default = uit)
-- HA discover via settings aan en uit te zetten (default = aan)
+- HA discover via settings aan en uit te zetten (default = aan) + default in de code
+- Watersensor via settings aan en uit te zetten (default = aan) + default in de code
 - hardcode / download DSMRindexEDGE.html en Frontend.json indien deze niet bestaat
 - C3: 8x push button : update firmware met laatste versie
 
