@@ -10,11 +10,9 @@
 */  
 
 #ifdef ESP32
-/***
- * 
- * https://www.esp32.com/viewtopic.php?t=24280#
- * https://www.upesy.com/blogs/tutorials/esp32-pinout-reference-gpio-pins-ultimate-guide
- */
+//https://www.esp32.com/viewtopic.php?t=24280#
+//https://www.upesy.com/blogs/tutorials/esp32-pinout-reference-gpio-pins-ultimate-guide
+
   #ifdef ARDUINO_ESP32C3_DEV
     #warning Using ESP32C3
     #define LED                 7 
@@ -47,15 +45,14 @@
   #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.
 #endif
 
-#ifdef USE_WATER_SENSOR  
+// water sensor
   volatile byte        WtrFactor      = 1;
   volatile time_t      WtrTimeBetween = 0;
   volatile byte        debounces      = 0;
   volatile time_t      WtrPrevReading = 0;
-#endif //USE_WATER_SENSOR
-#define       DEBOUNCETIMER 1700
-  bool        WtrMtr        = false;
-
+  bool                 WtrMtr         = false;
+  #define              DEBOUNCETIMER 1700
+  
 String TelegramRaw;
  
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
@@ -70,6 +67,8 @@ String TelegramRaw;
 #define _DEFAULT_HOSTNAME  "P1-DONGLE/" 
 #define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
 #define SETTINGS_FILE      "/DSMRsettings.json"
+#define HOST_DATA_FILES    "cdn.jsdelivr.net"
+#define PATH_DATA_FILES    "https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@latest/data"
 
 #define JSON_BUFF_MAX     255
 #define MQTT_BUFF_MAX     200
@@ -227,6 +226,7 @@ bool        showRaw = false;
 bool        JsonRaw       = false;
 bool        LEDenabled    = true;
 bool        DSMR_NL       = true;
+bool        EnableHAdiscovery = true;
 char        bAuthUser[25], bAuthPW[25];
 
 char      cMsg[150];

@@ -9,6 +9,27 @@
 ***************************************************************************      
 */
 
+void GetFile(String filename){
+  HTTPClient http;
+  if(wifiClient.connect(HOST_DATA_FILES, 443)) {
+      http.begin(PATH_DATA_FILES + filename);
+      int httpResponseCode = http.GET();
+//      Serial.print(F("HTTP Response code: "));Serial.println(httpResponseCode);
+      if (httpResponseCode == 200 ){
+        String payload = http.getString();
+  //      Serial.println(payload);
+        File file = LittleFS.open(filename, "w"); // open for reading and writing
+        if (!file) DebugTln(F("open file FAILED!!!\r\n"));
+        else file.print(payload); 
+        file.close();
+      }
+      http.end(); 
+      wifiClient.stop(); //end client connection to server  
+  } else {
+    DebugTln(F("connection to server failed"));
+  }
+}
+
 template <typename TSource>
 void writeToJsonFile(const TSource &doc, File &_file) 
 {
@@ -75,10 +96,9 @@ void writeSettings()
   doc["LED"] = LEDenabled;
   doc["ota"] = BaseOTAurl;
   doc["enableHistory"] = EnableHistory;
-#ifdef USE_WATER_SENSOR
   doc["watermeter"] = WtrMtr;
   doc["waterfactor"] = WtrFactor;
-#endif
+  doc["HAdiscovery"] = EnableHAdiscovery;
 
   writeToJsonFile(doc, SettingsFile);
   
@@ -153,10 +173,11 @@ void readSettings(bool show)
   LEDenabled = doc["LED"];
   if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
   if (doc.containsKey("enableHistory")) EnableHistory = doc["enableHistory"];
-#ifdef USE_WATER_SENSOR
+
   if (doc.containsKey("watermeter")) WtrMtr = doc["watermeter"];
   if (doc.containsKey("waterfactor")) WtrFactor = doc["waterfactor"];
-#endif
+
+  if (doc.containsKey("HAdiscovery")) EnableHAdiscovery = doc["HAdiscovery"];
 
   SettingsFile.close();
   //end json
@@ -208,9 +229,7 @@ void readSettings(bool show)
   Debug(F("                 LED enabled : ")); Debugln(LEDenabled);
   Debug(F("                Base OTA url : ")); Debugln(BaseOTAurl);
   Debug(F("              History Enabled: ")); Debugln(EnableHistory);
-#ifdef USE_WATER_SENSOR
   Debug(F("          Water Meter Enabled: ")); Debugln(WtrMtr);
-#endif
   Debugln(F("-\r"));
 
 } // readSettings()

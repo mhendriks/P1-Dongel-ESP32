@@ -29,6 +29,10 @@ struct showValues {
 //==================================================================================
 void handleSlimmemeter()
 {
+
+#ifndef HAS_NO_SLIMMEMETER
+  return;
+#endif
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
     if (slimmeMeter.available()) {
       if (LEDenabled) digitalWrite(LED, !digitalRead(LED)); //toggle LED when telegram available

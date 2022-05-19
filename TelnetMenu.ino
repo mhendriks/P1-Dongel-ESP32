@@ -212,11 +212,9 @@ void handleKeyInput()
                       Verbose2 = false;
                     }
                     break;                    
-#ifdef USE_WATER_SENSOR
       case 'x':
       case 'X':     DebugTf("Watermeter readings: %i m3 and %i liters\n",P1Status.wtr_m3,P1Status.wtr_l);
                     break;
-#endif
       case 'Z':     P1StatusClear();
                     break;
                     
@@ -235,9 +233,7 @@ void handleKeyInput()
                     Debugln(F("  *R  - Reboot\r"));
                     Debugln(F("  *S+ - Update File System: Enter version -> S4.0.1\r"));
                     Debugln(F("  *U+ - Update Remote; Enter Firmware version -> U 4.0.1 \r"));
-#ifdef USE_WATER_SENSOR
                     Debugln(F("   X  - Watermeter reading\r"));
-#endif                    
                     Debugln(F("  *Z  - Zero counters\r\n"));
                     if (Verbose1 & Verbose2)  Debugln(F("   V  - Toggle Verbose Off\r"));
                     else if (Verbose1)        Debugln(F("   V  - Toggle Verbose 2\r"));

@@ -11,6 +11,10 @@
 #include <HTTPUpdate.h>
 bool bWebUpdate = false;
 
+void handleRemoteUpdate(){
+  if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
+}
+
 void update_finished() {
   LogFile("OTA UPDATE geslaagd", true);
 }

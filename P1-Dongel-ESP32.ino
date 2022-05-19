@@ -17,9 +17,9 @@ TODO
 - bug datagram RAW serial / Telegram komt niet altijd door
 - 24uur eens per minuut weergeven van gegevens (ESP32 only)
 - C3: logging via usb poort mogelijk maken
-- water interface altijd aanwezig via settingsfile te configureren (default = uit)
-- HA discover via settings aan en uit te zetten (default = aan) + default in de code
-- Watersensor via settings aan en uit te zetten (default = aan) + default in de code
+√ water interface altijd aanwezig via settingsfile te configureren (default = uit)
+√ HA discover via settings aan en uit te zetten (default = aan) + default in de code
+√ Watersensor via settings aan en uit te zetten (default = aan) + default in de code
 - hardcode / download DSMRindexEDGE.html en Frontend.json indien deze niet bestaat
 - C3: 8x push button : update firmware met laatste versie
 
@@ -39,18 +39,12 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-//#define USE_WATER_SENSOR              // define if there is enough memory and updateServer to be used
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //#define HAS_NO_SLIMMEMETER        // define for testing only!
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
-#define HA_DISCOVER
 //#define USE_PROFILE_MIN            
 
-#ifdef USE_WATER_SENSOR
-  #define ALL_OPTIONS "[MQTT][LITTLEFS][WATER][HA_DISCOVER]"
-#else
-  #define ALL_OPTIONS "[MQTT][LITTLEFS][HA_DISCOVER]"
-#endif
+#define ALL_OPTIONS "[MQTT][LITTLEFS][ALL]"
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
@@ -93,18 +87,7 @@ void setup()
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   startTelnet();
   startMDNS(settingHostname);
- 
-//================ startNTP =========================================
-#ifdef USE_NTP_TIME 
-  if (!startNTP()) {                                            
-    DebugTln(F("ERROR!!! No NTP server reached!\r\n\r"));   //USE_NTP
-    P1Reboot();                                             //USE_NTP
-  }                                                         //USE_NTP
-  prevNtpHour = hour();                                     //USE_NTP
-  time_t t = now(); // store the current time in time variable t                    //USE_NTP
-  snprintf(cMsg, sizeof(cMsg), "%02d%02d%02d%02d%02d%02dW\0\0", (year(t) - 2000), month(t), day(t), hour(t), minute(t), second(t)); 
-  DebugTf("Time is set to [%s] from NTP\r\n", cMsg);                                //USE_NTP
-#endif
+  startNTP();
 
 //================ Start MQTT  ======================================
 
@@ -114,12 +97,13 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
 
   //test if index page is available
   if (!DSMRfileExist(settingIndexPage, false) ) {
-    DebugTln(F("Oeps! not all files found on FS -> present FSexplorer!\r"));
-    FSNotPopulated = true;
+    DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
+    GetFile(settingIndexPage);
+    if (!DSMRfileExist(settingIndexPage, false) ) {FSNotPopulated = true;}
   } else {
     DebugTln(F("FS correct populated -> normal operation!\r"));
     httpServer.serveStatic("/", LittleFS, settingIndexPage);
-  } 
+  }
 
   setupFSexplorer();
  
@@ -138,7 +122,7 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
   xTaskCreatePinnedToCore(
                     CPU0Loop,   /* Task function. */
                     "CPU0",     /* name of task. */
-                    20000,       /* Stack size of task */
+                    30000,       /* Stack size of task */
                     NULL,        /* parameter of the task */
                     1,           /* priority of the task */
                     &CPU0,      /* Task handle to keep track of created task */
@@ -158,7 +142,7 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
 } // setup()
 
 
-//CPU0Loop
+//2n proces
 void CPU0Loop( void * pvParameters ){
   while(true) {
     //--- verwerk inkomende data
@@ -185,20 +169,18 @@ void delayms(unsigned long delay_ms)
 } // delayms()
 
 //===[ Do System tasks ]=============================================================
-void doSystemTasks()
-{
-  #ifndef HAS_NO_SLIMMEMETER
-    handleSlimmemeter();
-  #endif
+void doSystemTasks() {
+  
+  handleSlimmemeter();
   MQTTclient.loop();
   httpServer.handleClient();
   handleKeyInput();
   yield();
-
+  
 } // doSystemTasks()
 
-void loop () 
-{ 
+void loop () { 
+  
   doSystemTasks();
 
   //--- update statusfile + ringfiles
@@ -210,37 +192,12 @@ void loop ()
     CHANGE_INTERVAL_MIN(StatusTimer, 10);
   }
 
-  if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
-  
-#ifdef AUX_BUTTON
-  if ( Tpressed && ((millis() - Tpressed) > 1500 ) ) handleButtonPressed();
-#endif
-  
-#ifdef USE_WATER_SENSOR    
-  if ( WtrTimeBetween )  {
-    DebugTf("Wtr delta readings: %d | debounces: %d | waterstand: %i.%i\n",WtrTimeBetween,debounces, P1Status.wtr_m3, P1Status.wtr_l);
-    WtrTimeBetween = 0;
-  }
-#endif
+  handleRemoteUpdate();
 
-#ifdef USE_PROFILE_MIN
-  if (DUE(ProfileTimer)) writeRingFile( RINGPROFILE, "" );
-#endif
-
-//--- if NTP set, see if it needs synchronizing
-#ifdef USE_NTP_TIME                                                 //USE_NTP
-  if DUE(synchrNTP)                                                 //USE_NTP
-  {
-    if (timeStatus() == timeNeedsSync || prevNtpHour != hour())     //USE_NTP
-    {
-      prevNtpHour = hour();                                         //USE_NTP
-      setSyncProvider(getNtpTime);                                  //USE_NTP
-      setSyncInterval(600);                                         //USE_NTP
-    }
-  }
-#endif                                                              //USE_NTP
-
-  yield();
+  //only when compiler option is set
+  handleButton();
+  handleWater();
+  handleNTP();
   
 } // loop()
 
