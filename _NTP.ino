@@ -8,7 +8,47 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-#if defined(USE_NTP_TIME)
+
+//--- if NTP set, see if it needs synchronizing
+void handleNTP()
+{
+#ifdef USE_NTP_TIME
+  if DUE(synchrNTP) {
+    if (timeStatus() == timeNeedsSync || prevNtpHour != hour()) {
+      prevNtpHour = hour();
+      setSyncProvider(getNtpTime);
+      setSyncInterval(600);
+    }
+  }
+#endif
+}
+
+//=======================================================================
+void startNTP() {
+#ifdef USE_NTP_TIME 
+  DebugTln(F("Starting UDP"));
+  Udp.begin(localPort);
+  DebugT(F("Local port: "));
+  DebugTln(String(Udp.localPort()));
+  DebugTln(F("waiting for NTP sync"));
+  setSyncProvider(getNtpTime);
+  setSyncInterval(60);  // seconds!
+  if (timeStatus() == timeSet) {
+    prevNtpHour = hour(); 
+    time_t t = now(); // store the current time in time variable t
+    snprintf(cMsg, sizeof(cMsg), "%02d%02d%02d%02d%02d%02dW\0\0", (year(t) - 2000), month(t), day(t), hour(t), minute(t), second(t)); 
+    DebugTf("Time is set to [%s] from NTP\r\n", cMsg); 
+  } else {
+    DebugTln(F("ERROR!!! No NTP server reached!\r\n\r"));
+    P1Reboot();
+  }
+  
+#endif
+  
+} // startNTP()
+
+
+#ifdef USE_NTP_TIME
 
 #include <WiFiUdp.h>            // - part of ESP8266 Core https://github.com/esp8266/Arduino
 WiFiUDP           Udp;
@@ -35,23 +75,7 @@ static bool       externalNtpTime = false;
 static IPAddress  ntpServerIP; // NTP server's ip address
 
 
-//=======================================================================
-bool startNTP() 
-{
-  DebugTln(F("Starting UDP"));
-  Udp.begin(localPort);
-  DebugT(F("Local port: "));
-  DebugTln(String(Udp.localPort()));
-  DebugTln(F("waiting for NTP sync"));
-  setSyncProvider(getNtpTime);
-  setSyncInterval(60);  // seconds!
-  if (timeStatus() == timeSet)      // time is set,
-  {
-    return true;                    // exit with time set
-  }
-  return false;
 
-} // startNTP()
 
 
 //=======================================================================

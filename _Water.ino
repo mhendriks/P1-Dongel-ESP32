@@ -1,4 +1,9 @@
-#ifdef USE_WATER_SENSOR
+void handleWater(){ 
+  if ( WtrMtr && WtrTimeBetween )  {
+    DebugTf("Wtr delta readings: %d | debounces: %d | waterstand: %i.%i\n",WtrTimeBetween,debounces, P1Status.wtr_m3, P1Status.wtr_l);
+    WtrTimeBetween = 0;
+  }
+}
 
 void sendMQTTWater(){
   if (!WtrMtr) return;
@@ -19,10 +24,7 @@ void IRAM_ATTR iWater() {
     } else debounces++;
 }
 
-#endif
-
 void setupWater() {
-#ifdef USE_WATER_SENSOR
 #ifdef ARDUINO_ESP32C3_DEV
     pinMode(IO_WATER_SENSOR, INPUT_PULLUP);
 #else
@@ -30,5 +32,4 @@ void setupWater() {
 #endif
   attachInterrupt(IO_WATER_SENSOR, iWater, RISING);
   DebugTln(F("WaterSensor setup completed"));
-#endif
 }

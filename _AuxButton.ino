@@ -1,3 +1,9 @@
+void handleButton(){
+#ifdef AUX_BUTTON
+  if ( Tpressed && ((millis() - Tpressed) > 1500 ) ) handleButtonPressed();
+#endif
+}
+
 #ifdef AUX_BUTTON
 
 void IRAM_ATTR iButton_pressed() {
