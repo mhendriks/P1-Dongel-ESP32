@@ -31,12 +31,10 @@ void JsonGas(){
 
 void JsonWater(){
 
-#ifdef USE_WATER_SENSOR
   if (!WtrMtr) return;  
   jsonDoc["water"]["value"] =  (float)P1Status.wtr_m3 + (P1Status.wtr_l?P1Status.wtr_l/1000.0:0);
   jsonDoc["water"]["unit"]  = "m3";
   
-#endif
 }
 //--------------------------
 void JsonGasID(){
@@ -331,7 +329,7 @@ void sendDeviceSettings()
   doc["mqtt_interval"]["min"] = 0;
   doc["mqtt_interval"]["max"] = 600;
 
-#ifdef USE_WATER_SENSOR
+if (WtrMtr) {
   doc["water_m3"]["value"] = P1Status.wtr_m3;
   doc["water_m3"]["type"] = "i";
   doc["water_m3"]["min"] = 0;
@@ -341,7 +339,7 @@ void sendDeviceSettings()
   doc["water_l"]["type"] = "i";
   doc["water_l"]["min"] = 0;
   doc["water_l"]["max"] = 999;  
-#endif
+}
 
   sendJson(doc);
 

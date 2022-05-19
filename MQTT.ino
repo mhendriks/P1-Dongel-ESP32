@@ -25,19 +25,19 @@
 
   String            MQTTclientId;
 
-#ifdef HA_DISCOVER
 void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char* dev_title, const char* dev_unit, const char* dev_payload, const char* state_class, const char* extrapl ){
   char msg_topic[60];
   char msg_payload[350];
     sprintf(msg_topic,"homeassistant/sensor/%s/config",dev_name);
 //    Debugln(msg_topic);
-if (strlen(dev_class)) sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"dev_cla\": \"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"state_class\":\"%s\"%s }", dev_name,dev_class, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl);
-else sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"state_class\":\"%s\"%s }", dev_name, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl);
+  if (strlen(dev_class)) sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"dev_cla\": \"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"state_class\":\"%s\"%s }", dev_name,dev_class, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl);
+  else sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"state_class\":\"%s\"%s }", dev_name, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl);
 //    Debugln(msg_payload);
-    if (!MQTTclient.publish(msg_topic, msg_payload, true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", msg_topic, msg_payload, (strlen(msg_topic) + strlen(msg_payload)));
+  if (!MQTTclient.publish(msg_topic, msg_payload, true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", msg_topic, msg_payload, (strlen(msg_topic) + strlen(msg_payload)));
 }
 
 void AutoDiscoverHA(){
+  if (!EnableHAdiscovery) return;
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/power_delivered/config" -m '{"dev_cla": "gas", "name": "Power Delivered", "stat_t": "DSMR-API/power_delivered", "unit_of_meas": "Wh", "val_tpl": "{{ value_json.power_delivered[0].value | round(3) }}" }'
   MQTTclient.setBufferSize(350);
 
@@ -72,7 +72,6 @@ void AutoDiscoverHA(){
   SendAutoDiscoverHA("water", "", "Waterverbruik", "m³", "{{ value | round(0) }}","total_increasing",",\"icon\": \"mdi:water\"");
 
 }
-#endif
 
 //===========================================================================================
 void connectMQTT() {
@@ -174,9 +173,8 @@ bool connectMQTT_FSM()
             reconnectAttempts = 0;  
             Debugf(" .. connected -> MQTT status, rc=%d\r\n", MQTTclient.state());
 
-#ifdef HA_DISCOVER
             AutoDiscoverHA();
-#endif 
+
             //subscribe mqtt update topics
             MQTTclient.publish(cMsg,"Online", true);
             MQTTclient.setCallback(MQTTcallback); //set listner update callback
@@ -344,9 +342,8 @@ void sendMQTTData()
   fieldsElements = INFOELEMENTS;
   DSMRdata.applyEach(buildJsonMQTT());
   MQTTsendGas();
-#ifdef USE_WATER_SENSOR  
   sendMQTTWater();
-#endif
+
 
 } // sendMQTTData()
 
