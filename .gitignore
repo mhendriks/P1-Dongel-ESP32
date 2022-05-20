@@ -1,4 +1,4 @@
 bin/
 development/
 .DS_Store
-.gcode
+*.gcode
