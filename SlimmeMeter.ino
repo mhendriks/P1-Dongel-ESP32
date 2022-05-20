@@ -29,8 +29,7 @@ struct showValues {
 //==================================================================================
 void handleSlimmemeter()
 {
-
-#ifndef HAS_NO_SLIMMEMETER
+#ifdef HAS_NO_SLIMMEMETER
   return;
 #endif
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");

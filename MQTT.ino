@@ -265,6 +265,7 @@ struct buildJsonMQTT {
 //===========================================================================================
 
 void MQTTSend(const char* item, String value){
+  if (value.length()==0) return;
   sprintf(cMsg,"%s%s", settingMQTTtopTopic,item);
   if (!MQTTclient.publish(cMsg, value.c_str(),true )) {
     DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, value.c_str(), (strlen(cMsg) + value.length()));

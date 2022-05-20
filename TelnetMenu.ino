@@ -234,7 +234,7 @@ void handleKeyInput()
                     Debugln(F("  *S+ - Update File System: Enter version -> S4.0.1\r"));
                     Debugln(F("  *U+ - Update Remote; Enter Firmware version -> U 4.0.1 \r"));
                     Debugln(F("   X  - Watermeter reading\r"));
-                    Debugln(F("  *Z  - Zero counters\r\n"));
+                    Debugln(F("  *Z  - Zero counters\r"));
                     if (Verbose1 & Verbose2)  Debugln(F("   V  - Toggle Verbose Off\r"));
                     else if (Verbose1)        Debugln(F("   V  - Toggle Verbose 2\r"));
                     else                      Debugln(F("   V  - Toggle Verbose 1\r"));

@@ -17,13 +17,7 @@ TODO
 - bug datagram RAW serial / Telegram komt niet altijd door
 - 24uur eens per minuut weergeven van gegevens (ESP32 only)
 - C3: logging via usb poort mogelijk maken
-√ water interface altijd aanwezig via settingsfile te configureren (default = uit)
-√ HA discover via settings aan en uit te zetten (default = aan) + default in de code
-√ Watersensor via settings aan en uit te zetten (default = aan) + default in de code
-- hardcode / download DSMRindexEDGE.html en Frontend.json indien deze niet bestaat
 - C3: 8x push button : update firmware met laatste versie
-
-FIXES
 - handleiding frontend.json "HideInitial" key toevoegen
 - handleiding voor de esp32c3 updaten
 
@@ -99,12 +93,21 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
   if (!DSMRfileExist(settingIndexPage, false) ) {
     DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
     GetFile(settingIndexPage);
-    if (!DSMRfileExist(settingIndexPage, false) ) {FSNotPopulated = true;}
-  } else {
+    if (!DSMRfileExist(settingIndexPage, false) ) {
+      DebugTln(F("Index file still not pressent!\r"));
+      FSNotPopulated = true;
+      }
+  }
+  if (!FSNotPopulated) {
     DebugTln(F("FS correct populated -> normal operation!\r"));
     httpServer.serveStatic("/", LittleFS, settingIndexPage);
   }
-
+ //frontend.json
+  if (!DSMRfileExist("/Frontend.json", false) ) {
+    DebugTln(F("Frontend.json not pressent, try to download it!"));
+    GetFile("/Frontend.json");
+  }
+  
   setupFSexplorer();
  
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  

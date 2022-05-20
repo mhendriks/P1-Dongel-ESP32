@@ -230,6 +230,7 @@ void readSettings(bool show)
   Debug(F("                Base OTA url : ")); Debugln(BaseOTAurl);
   Debug(F("              History Enabled: ")); Debugln(EnableHistory);
   Debug(F("          Water Meter Enabled: ")); Debugln(WtrMtr);
+  Debug(F("    HA Auto Discovery Enabled: ")); Debugln(EnableHAdiscovery);
   Debugln(F("-\r"));
 
 } // readSettings()
