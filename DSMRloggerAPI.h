@@ -68,7 +68,7 @@ String TelegramRaw;
 #define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
 #define SETTINGS_FILE      "/DSMRsettings.json"
 #define HOST_DATA_FILES    "cdn.jsdelivr.net"
-#define PATH_DATA_FILES    "https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@latest/data"
+#define PATH_DATA_FILES    "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/data"
 
 #define JSON_BUFF_MAX     255
 #define MQTT_BUFF_MAX     200
