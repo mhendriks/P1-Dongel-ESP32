@@ -1408,7 +1408,7 @@ function handle_menu_click()
   
     for (let index=start; index>stop; index--)
     {  i = index % data.data.length;
-      	slotyearbefore = math.mod(i-12,24);
+      	slotyearbefore = math.mod(i-12,25);
       var tableRef = document.getElementById('lastMonthsTable').getElementsByTagName('tbody')[0];
       if( ( document.getElementById("lastMonthsTable_R"+i)) == null )
       {
@@ -2495,11 +2495,11 @@ function handle_menu_click()
           ,[ "p1_version",                "P1 Versie" ]
           ,[ "energy_delivered_tariff1",  "Energie Afgenomen teller 1 - Nacht" ]
           ,[ "energy_delivered_tariff2",  "Energie Afgenomen teller 2 - Dag" ]
-          ,[ "energy_returned_tariff1",   "Energie Tereggeleverd teller 1 - Nacht" ]
-          ,[ "energy_returned_tariff2",   "Energie Tereggeleverd teller 2 - Dag" ]
+          ,[ "energy_returned_tariff1",   "Energie Teruggeleverd teller 1 - Nacht" ]
+          ,[ "energy_returned_tariff2",   "Energie Teruggeleverd teller 2 - Dag" ]
           ,[ "electricity_tariff",        "Electriciteit tarief" ]
           ,[ "power_delivered",           "Vermogen Afgenomen" ]
-          ,[ "power_returned",            "Vermogen Tereggeleverd" ]
+          ,[ "power_returned",            "Vermogen Teruggeleverd" ]
           ,[ "electricity_threshold",     "Electricity Threshold" ]
           ,[ "electricity_switch_position","Electricity Switch Position" ]
           ,[ "electricity_failures",      "Electricity Failures" ]
@@ -2522,9 +2522,9 @@ function handle_menu_click()
           ,[ "power_delivered_l1",        "Vermogen Afgenomen l1" ]
           ,[ "power_delivered_l2",        "Vermogen Afgenomen l2" ]
           ,[ "power_delivered_l3",        "Vermogen Afgenomen l3" ]
-          ,[ "power_returned_l1",         "Vermogen Tereggeleverd l1" ]
-          ,[ "power_returned_l2",         "Vermogen Tereggeleverd l2" ]
-          ,[ "power_returned_l3",         "Vermogen Tereggeleverd l3" ]
+          ,[ "power_returned_l1",         "Vermogen Teruggeleverd l1" ]
+          ,[ "power_returned_l2",         "Vermogen Teruggeleverd l2" ]
+          ,[ "power_returned_l3",         "Vermogen Teruggeleverd l3" ]
           ,[ "gas_device_type",           "Gas Toestel Type" ]
           ,[ "gas_equipment_id",          "Gas Toestel ID" ]
           ,[ "gas_valve_position",        "Gas Klep Positie" ]
@@ -2543,8 +2543,8 @@ function handle_menu_click()
           ,[ "slave_delivered",           "Slave Gebruikt" ]
           ,[ "ed_tariff1",                "Energy Afgenomen Tarief-1/kWh" ]
           ,[ "ed_tariff2",                "Energy Afgenomen Tarief-2/kWh" ]
-          ,[ "er_tariff1",                "Energy Tereggeleverd Tarief-1/kWh" ]
-          ,[ "er_tariff2",                "Energy Tereggeleverd Tarief-2/kWh" ]
+          ,[ "er_tariff1",                "Energy Teruggeleverd Tarief-1/kWh" ]
+          ,[ "er_tariff2",                "Energy Teruggeleverd Tarief-2/kWh" ]
           ,[ "gd_tariff" ,                "Gas Tarief/m3" ]
           ,[ "electr_netw_costs",         "Netwerkkosten Energie/maand" ]
           ,[ "gas_netw_costs",            "Netwerkkosten Gas/maand" ]
