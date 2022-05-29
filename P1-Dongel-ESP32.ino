@@ -20,9 +20,6 @@ TODO
 - C3: 8x push button : update firmware met laatste versie
 - handleiding frontend.json "HideInitial" key toevoegen
 - handleiding voor de esp32c3 updaten
-√ fix: correct download path systemfiles 
-√ typo: Teruggeleverd in index.js
-
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
