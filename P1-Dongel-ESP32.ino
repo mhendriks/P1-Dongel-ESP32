@@ -20,6 +20,9 @@ TODO
 - C3: 8x push button : update firmware met laatste versie
 - handleiding frontend.json "HideInitial" key toevoegen
 - handleiding voor de esp32c3 updaten
+√ fix: correct download path systemfiles 
+√ typo: Teruggeleverd in index.js
+
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -34,11 +37,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
-//#define HAS_NO_SLIMMEMETER        // define for testing only!
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
 //#define USE_PROFILE_MIN            
 
-#define ALL_OPTIONS "[MQTT][LITTLEFS][ALL]"
+#define ALL_OPTIONS "[CORE]"
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
@@ -61,39 +63,34 @@ void setup()
   DebugTln("The board name is: " ARDUINO_BOARD);
   DebugT(F("Last reset reason: ")); Debugln(lastReset);
   
-//================ File System ===========================================
+//================ File System =====================================
   if (LittleFS.begin(true)) 
   {
     DebugTln(F("File System Mount succesfull\r"));
     FSmounted = true;     
   } else DebugTln(F("!!!! File System Mount failed\r"));   // Serious problem with File System 
   
-//==========================================================//
-// writeLastStatus();  // only for firsttime initialization //
-//==========================================================//
+//================ Status update ===================================
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
   P1StatusWrite();
   LogFile("",false); // write reboot status to file
   readSettings(true);
   
-//=============start Networkstuff==================================
+//=============start Networkstuff ==================================
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   startTelnet();
   startMDNS(settingHostname);
   startNTP();
 
 //================ Start MQTT  ======================================
-
 if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT();
 
-//================ Start HTTP Server ================================
-
-  //test if index page is available
+//================ Check necessary files ============================
   if (!DSMRfileExist(settingIndexPage, false) ) {
     DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
-    GetFile(settingIndexPage);
-    if (!DSMRfileExist(settingIndexPage, false) ) {
+    GetFile(settingIndexPage); //download file from cdn
+    if (!DSMRfileExist(settingIndexPage, false) ) { //check again
       DebugTln(F("Index file still not pressent!\r"));
       FSNotPopulated = true;
       }
@@ -102,7 +99,7 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
     DebugTln(F("FS correct populated -> normal operation!\r"));
     httpServer.serveStatic("/", LittleFS, settingIndexPage);
   }
- //frontend.json
+ 
   if (!DSMRfileExist("/Frontend.json", false) ) {
     DebugTln(F("Frontend.json not pressent, try to download it!"));
     GetFile("/Frontend.json");
@@ -114,10 +111,8 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
 
 //================ Start Slimme Meter ===============================
 
-#ifndef HAS_NO_SLIMMEMETER
   DebugTln(F("Enable slimmeMeter..\n"));
   slimmeMeter.enable(true);
-#endif //test or normal mode
 
 //================ End of Slimmer Meter ============================
 
@@ -130,17 +125,13 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
                     1,           /* priority of the task */
                     &CPU0,      /* Task handle to keep track of created task */
                     0);          /* pin task to core 0 */                  
-  delay(500); 
+  delay(250); 
 
   esp_register_shutdown_handler(ShutDownHandler);
 
   setupWater();
   setupAuxButton(); //esp32c3 only
   CheckRingExists();
-
-#ifdef USE_PROFILE_MIN
-    if ( !LittleFS.exists(RingFiles[RINGPROFILE].filename) ) createRingFile( RINGPROFILE );
-#endif
  
 } // setup()
 

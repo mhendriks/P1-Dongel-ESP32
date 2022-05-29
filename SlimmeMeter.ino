@@ -25,16 +25,12 @@ struct showValues {
   }
 };
 
-#if !defined(HAS_NO_SLIMMEMETER)
 //==================================================================================
 void handleSlimmemeter()
 {
-#ifdef HAS_NO_SLIMMEMETER
-  return;
-#endif
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
     if (slimmeMeter.available()) {
-      if (LEDenabled) digitalWrite(LED, !digitalRead(LED)); //toggle LED when telegram available
+      ToggleLED();
       TelegramRaw = slimmeMeter.raw(); //gelijk opslaan want async update
       if ( showRaw || JsonRaw ) {
         //-- process telegrams in raw mode
@@ -44,8 +40,7 @@ void handleSlimmemeter()
         JsonRaw = false;
       } 
       else processSlimmemeter();
-//      BlinkLED(); //laat succesvolle leesactie zien
-      if (LEDenabled) digitalWrite(LED, !digitalRead(LED)); //toggle LED when telegram available
+      ToggleLED();
     } //available
 } // handleSlimmemeter()
 
@@ -58,7 +53,6 @@ void processSlimmemeter()
     // Voorbeeld: [21:00:11][   9880/  8960] loop        ( 997): read telegram [28] => [140307210001S]
     Debugln(F("\r\n[Time----][FreeHeap/mBlck][Function----(line):"));
     DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
-
         
     DSMRdata = {};
     String    DSMRerror;
@@ -203,7 +197,6 @@ float modifyMbusDelivered()
     
 } //  modifyMbusDelivered()
 
-#endif
 
 /***************************************************************************
 *

@@ -34,6 +34,7 @@ static void onWifiEvent (WiFiEvent_t event) {
     switch (event) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED:
         DebugTf ("Connected to %s. Asking for IP address.\r\n", WiFi.BSSIDstr().c_str());
+        digitalWrite(LED, LED_ON);
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
         LogFile("Wifi Connected",true);

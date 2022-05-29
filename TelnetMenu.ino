@@ -164,11 +164,6 @@ void handleKeyInput()
                       break; }
       case 'E':     eraseFile();
                     break;
-      #if defined(HAS_NO_SLIMMEMETER)
-      case 'O':     forceBuildRingFiles = true;
-                    runMode = SInit;
-                    break;
-      #endif
       case 'f':
       case 'F':     listFS();
                     break;                        
@@ -225,9 +220,6 @@ void handleKeyInput()
                     Debugln(F("   F  - File info on SPIFFS\r"));                    
                     Debugln(F("   L  - list Settings\r"));
                     Debugln(F("   D+ - Display b=board info | d=Day table | h=Hour table | m=Month table | l=Logfile | s = File info\r"));
-                    #ifdef HAS_NO_SLIMMEMETER
-                      Debugln(F("  *O  - Force build RING files\r"));
-                    #endif
                     Debugln(F("   P  - No Parsing (show RAW data from Smart Meter)\r"));
                     Debugln(F("  *W  - Force Re-Config WiFi\r"));
                     Debugln(F("  *R  - Reboot\r"));
