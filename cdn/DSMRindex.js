@@ -1122,7 +1122,7 @@ function handle_menu_click()
         data.data[i].p_er      = (data.data[i].values[2] +data.data[i].values[3]).toFixed(3);
         data.data[i].p_erw     = (data.data[i].p_er * 1000).toFixed(0);
         data.data[i].p_gd      = (data.data[i].values[4]).toFixed(3);
-		data.data[i].water      = (data.data[i].values[5]).toFixed(3);
+		data.data[i].water     = (data.data[i].values[5]).toFixed(3);
         data.data[i].costs_e   = 0.0;
         data.data[i].costs_g   = 0.0;
         data.data[i].costs_nw  = 0.0;
@@ -1240,7 +1240,7 @@ function handle_menu_click()
                 showMonthsCosts(data);
           else  showMonthsHist(data);
         }
-        else  showMonthsGraph(data);
+        else  showMonthsGraph(data,"Days");
         Spinner(false);
       })
       .catch(function(error) {
@@ -1248,7 +1248,7 @@ function handle_menu_click()
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
         );
-    	alert_message("Fout bij ophalen van de historische maandgegevens");
+    	alert_message("Fout bij ophalen van de historische maandgegevens [" + error.message +"]");
 
       });
   } // resfreshMonths()
@@ -1381,10 +1381,8 @@ function handle_menu_click()
       if (data.data[index].p_gd >= 0) tableCells[3].innerHTML = data.data[index].p_gd;
       if (data.data[index].water >= 0) tableCells[4].innerHTML = data.data[index].water;
 
-      if (type == "Days")
-      {
-        tableCells[5].innerHTML = ( (data.data[index].costs_e + data.data[index].costs_g) * 1.0).toFixed(2);
-      }
+      if (type == "Days") tableCells[5].innerHTML = ( (data.data[index].costs_e + data.data[index].costs_g) * 1.0).toFixed(2);
+      
     };
 
     //--- hide canvas
@@ -1408,7 +1406,7 @@ function handle_menu_click()
   
     for (let index=start; index>stop; index--)
     {  i = index % data.data.length;
-      	slotyearbefore = math.mod(i-12,25);
+      	slotyearbefore = math.mod(i-12,data.data.length);
       var tableRef = document.getElementById('lastMonthsTable').getElementsByTagName('tbody')[0];
       if( ( document.getElementById("lastMonthsTable_R"+i)) == null )
       {
@@ -1481,10 +1479,12 @@ function handle_menu_click()
       if (data.data[slotyearbefore].p_gd >= 0) tableCells[12].innerHTML = data.data[slotyearbefore].p_gd;                     // gas
       
 		tableCells[13].innerHTML = "20"+data.data[i].date.substring(0,2);          // jaar
-      if (data.data[i].water >= 0) tableCells[14].innerHTML = data.data[i].water;                        // water
+      if (data.data[i].water >= 0) tableCells[14].innerHTML = data.data[i].water;
+      else tableCells[14].innerHTML = "-";
       
       tableCells[15].innerHTML = "20"+data.data[slotyearbefore].date.substring(0,2);      // jaar
-      if (data.data[slotyearbefore].water >= 0) tableCells[16].innerHTML = data.data[slotyearbefore].water;                     // water
+      if (data.data[slotyearbefore].water >= 0) tableCells[16].innerHTML = data.data[slotyearbefore].water; 
+      else tableCells[16].innerHTML = "-";
       
     };
     
@@ -1510,7 +1510,7 @@ function handle_menu_click()
   
     for (let index=start; index>stop; index--)
     {  i = index % data.data.length;
-      	slotyearbefore = math.mod(i-12,24);
+      	slotyearbefore = math.mod(i-12,data.data.length);
       //console.log("showMonthsHist(): data["+i+"] => data["+i+"].name["+data[i].recid+"]");
       var tableRef = document.getElementById('lastMonthsTableCosts').getElementsByTagName('tbody')[0];
       if( ( document.getElementById("lastMonthsTableCosts_R"+i)) == null )
