@@ -31,13 +31,11 @@ void handleSlimmemeter()
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
     if (slimmeMeter.available()) {
       ToggleLED();
-      TelegramRaw = slimmeMeter.raw(); //gelijk opslaan want async update
-      if ( showRaw || JsonRaw ) {
-        //-- process telegrams in raw mode
-        Debugf("Telegram Raw (%d)\n%s\n" , TelegramRaw.length(),TelegramRaw.c_str()); 
-        if (JsonRaw) sendJsonBuffer(TelegramRaw.c_str());
+//      TelegramRaw = slimmeMeter.raw(); //gelijk opslaan want async update
+      if ( showRaw ) {
+        //-- process telegram in raw mode
+        Debugf("Telegram Raw (%d)\n%s\n" , slimmeMeter.raw().length(),slimmeMeter.raw().c_str()); 
         showRaw = false; //only 1 reading
-        JsonRaw = false;
       } 
       else processSlimmemeter();
       ToggleLED();

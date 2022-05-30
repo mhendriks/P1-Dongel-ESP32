@@ -21,6 +21,11 @@ TODO
 - handleiding frontend.json "HideInitial" key toevoegen
 - handleiding voor de esp32c3 updaten
 
+- bugfix: maand frontend op diverse fronten gefixed (water voorgaande periode, gaswaardes etc)
+- bugfix: show telegram c3 werkt niet
+- bugfix; dongle naam in router
+- feature: nieuwe meter optie
+
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Board: "ESP32 Dev Module"
@@ -133,16 +138,16 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
 } // setup()
 
 
-//2n proces
+//2nd proces
 void CPU0Loop( void * pvParameters ){
   while(true) {
     //--- verwerk inkomende data
-    slimmeMeter.loop();
-
+    if ( slimmeMeter.loop() ) PrevTelegram = slimmeMeter.raw();   
+        
     //--- start volgend telegram
     if DUE(nextTelegram) {
-       if (Verbose1) DebugTln(F("Next Telegram"));
-       slimmeMeter.enable(true); 
+      if (Verbose1) DebugTln(F("Next Telegram"));
+      slimmeMeter.enable(true); 
     }
     delay(20);
   } 
@@ -182,7 +187,7 @@ void loop () {
     MQTTSentStaticInfo();
     CHANGE_INTERVAL_MIN(StatusTimer, 10);
   }
-
+  
   handleRemoteUpdate();
 
   //only when compiler option is set

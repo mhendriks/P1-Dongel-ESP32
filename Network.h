@@ -90,7 +90,6 @@ void PostMacIP() {
 void startWiFi(const char* hostname, int timeOut) 
 {
   WiFiManager manageWiFi;
-//  ESP_WiFiManager manageWiFi("p1-dongle");
   uint32_t lTime = millis();
   String thisAP = String(hostname) + "-" + WiFi.macAddress();
 
@@ -113,7 +112,7 @@ void startWiFi(const char* hostname, int timeOut)
   //--- if it does not connect it starts an access point with the specified name
   //--- here  "DSMR-WS-<MAC>"
   //--- and goes into a blocking loop awaiting configuration
-  if (!manageWiFi.autoConnect("P1-Dongle"))
+  if ( !manageWiFi.autoConnect("P1-Dongle-Pro") )
   {
     LogFile("Wifi failed to connect and hit timeout",true);
 //    DebugTln(F("Wifi failed to connect and hit timeout"));

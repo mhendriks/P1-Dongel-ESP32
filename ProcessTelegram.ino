@@ -17,9 +17,9 @@ void processTelegram(){
   newT = epoch(newTimestamp, strlen(newTimestamp), true); // update system time
   actT = epoch(actTimestamp, strlen(actTimestamp), false);
   
-  // Skip first 3 telegrams .. just to settle down a bit ;-)
+  // Skip first 2 telegrams .. just to settle down a bit ;-)
   
-  if ((int32_t)(telegramCount - telegramErrors) < 3) return;
+  if ((int32_t)(telegramCount - telegramErrors) < 2) return;
   
   strCopy(actTimestamp, sizeof(actTimestamp), newTimestamp);  // maar nog NIET actT!!!
   DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));

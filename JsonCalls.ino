@@ -403,7 +403,7 @@ void handleSmApi(const char *URI, const char *word4, const char *word5, const ch
     sendJson(jsonDoc);
     break;  
   case 't': //telegramm 
-    JsonRaw = true;
+    //moved to webserver handler
     break;
   default:
     sendApiNotFound(URI);

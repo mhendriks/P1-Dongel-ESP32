@@ -24,20 +24,32 @@
 const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCache-Control: no-cache\r\n";
 
 void checkauth(){
-  //if( !httpServer.authenticate("martijn", "hendriks") ) return httpServer.requestAuthentication();
+  //if( !httpServer.authenticate("username", "password") ) return httpServer.requestAuthentication();
+}
+
+void procestelegram(){
+  checkauth(); 
+
+  if (PrevTelegram.length() ) {
+      DebugTln("send previous telegram");
+      httpServer.sendHeader( "Access-Control-Allow-Origin", "*" );
+      httpServer.setContentLength( PrevTelegram.length() );
+      httpServer.send( 200, "application/json", PrevTelegram );      
+      PrevTelegram = "";
+  }
 }
 
 //=====================================================================================
 void setupFSexplorer()
 {    
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
-  httpServer.on("/api/sm/telegram", [](){checkauth(); sendJsonBuffer(TelegramRaw.c_str());});
-  httpServer.on("/api/listfiles", [](){checkauth(); APIlistFiles();} );
-  httpServer.on("/FSformat", [](){checkauth();formatFS;} );
-  httpServer.on("/upload", HTTP_POST, []() {checkauth();}, handleFileUpload);
-  httpServer.on("/ReBoot", [](){checkauth();reBootESP();} );
-  httpServer.on("/ResetWifi", [](){checkauth(); resetWifi() ;} );
-  httpServer.on("/remote-update", [](){checkauth();RemoteUpdate();} );
+  httpServer.on("/api/v2/sm/telegram", HTTP_GET, [](){ procestelegram(); });
+  httpServer.on("/api/listfiles", HTTP_GET, [](){ checkauth(); APIlistFiles(); });
+  httpServer.on("/FSformat", [](){ checkauth();formatFS; });
+  httpServer.on("/upload", HTTP_POST, []() { checkauth(); }, handleFileUpload );
+  httpServer.on("/ReBoot", [](){ checkauth();reBootESP(); });
+  httpServer.on("/ResetWifi", [](){ checkauth(); resetWifi() ;});
+  httpServer.on("/remote-update", [](){ checkauth();RemoteUpdate(); });
   httpServer.on("/updates", HTTP_GET, []() {
     checkauth();
     httpServer.sendHeader("Connection", "close");

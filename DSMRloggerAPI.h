@@ -53,7 +53,7 @@
   bool                 WtrMtr         = false;
   #define              DEBOUNCETIMER 1700
   
-String TelegramRaw;
+String PrevTelegram;
  
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
@@ -223,7 +223,6 @@ char        actTimestamp[20] = "";
 char        newTimestamp[20] = "";
 uint32_t    telegramCount = 0, telegramErrors = 0;
 bool        showRaw = false;
-bool        JsonRaw       = false;
 bool        LEDenabled    = true;
 bool        DSMR_NL       = true;
 bool        EnableHAdiscovery = true;
