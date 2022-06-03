@@ -51,9 +51,8 @@ Instructie is te vinden in de [setup/dsmr-api](https://github.com/mhendriks/DSMR
 De ESPHome firmware werkt ook fantastisch op deze Dongle Pro.
 
 ## Documentatie 
-Er zijn diverse beschrijvingen gemaakt. Deze zijn te vinden in de folders van [DSMR-API-V2](https://github.com/mhendriks/DSMR-API-V2/) 
-- Manuals : [DSMR-API-V2](https://github.com/mhendriks/DSMR-API-V2/tree/master/manual/)
-- Beschrijving mqtt : [DSMR-API-V2](https://github.com/mhendriks/DSMR-API-V2/tree/master/documentation/mqtt/) 
+Er zijn diverse handleidingen gemaakt. Deze zijn te vinden in de folders van [DSMR-API-V2](https://github.com/mhendriks/DSMR-API-V2/) 
+- handleidingen : [DSMR-API-V2](https://github.com/mhendriks/DSMR-API-V2/tree/master/manual/)
 - integratie: [DSMR-API-V2](https://github.com/mhendriks/DSMR-API-V2/tree/master/integratie/) 
 
 
