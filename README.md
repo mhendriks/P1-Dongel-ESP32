@@ -46,15 +46,15 @@ Afmeting van de print is: 20 x 28mm
 
 ## SOFTWARE
 De DSMR-API software is een doorontwikkeling van de ESP32 WROOM 32E software.
-Instructie is te vinden in de [setup/dsmr-api](../../../DSMR-API-V2/manual/dsmr-api/README.md) folder.
+Instructie is te vinden in de [setup/dsmr-api](../DSMR-API-V2/tree/master/manual/dsmr-api/README.md) folder.
 
 De ESPHome firmware werkt ook fantastisch op deze Dongle Pro.
 
 ## Documentatie 
 Er zijn diverse beschrijvingen gemaakt. Deze zijn te vinden in de folders van [DSMR-API-V2](../../../DSMR-API-V2/) 
-- Manuals : [DSMR-API-V2](../DSMR-API-V2/manual/)
-- Beschrijving mqtt : [DSMR-API-V2](../../../DSMR-API-V2/documentation/mqtt/) 
-- integratie: [DSMR-API-V2](../../../DSMR-API-V2/integratie/) 
+- Manuals : [DSMR-API-V2](../DSMR-API-V2/tree/master/manual/)
+- Beschrijving mqtt : [DSMR-API-V2](../DSMR-API-V2/tree/master/documentation/mqtt/) 
+- integratie: [DSMR-API-V2](../DSMR-API-V2/tree/master/integratie/) 
 
 
 ## Hardware maken of aanschaffen
