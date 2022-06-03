@@ -1,3 +1,2 @@
 # Integratie
-Er zijn meerdere mogelijkheden om de dsmr adapter te integreren met domotica oplossing.
-In de folders zijn er een paar uitgewerkt. Natuurlijk is het ter inspiratie.
+Zie documentatie in [DSMR-API-V2](../../DSMR-API-V2/integratie/) 
