@@ -64,7 +64,7 @@
 		<col class="col5"/>
 		</colgroup>
           <tr>
-            <th>Date/Time</th>
+            <th>Datum/Tijd</th>
             <th>Energie<br>Verbruik<br>(Wh)</th>
             <th>Energie<br>Teruglevering<br>(Wh)</th>
             <th>Gas-<br>verbruik<br>(m3)</th>
@@ -96,14 +96,16 @@
 		<col class="col4"/>
 		<col class="col5"/>
 		</colgroup>
+      <thead>
         <tr>
-            <th>Date/Time</th>
+            <th>Datum/Tijd</th>
             <th>Energie<br>Verbruik<br>(Wh)</th>
             <th>Energie<br>Teruglevering<br>(Wh)</th>
             <th>Gas-<br>verbruik<br>(m3)</th>
 			<th>Water-<br>verbruik<br>(m3)</th>
             <th>Kosten</th>
         </tr>
+      </thead>
       <tbody>
       </tbody>
       </table>
@@ -149,8 +151,8 @@
       <thead>
         <tr>
             <th></th>
-            <th colspan=4>Verbruik</th>
-            <th style="text-align:center" colspan=4>Opgewekt</th>
+            <th colspan=4>Afgenomen</th>
+            <th style="text-align:center" colspan=4>Teruggeleverd</th>
             <th colspan=4>Gasverbruik</th>
 			<th style="text-align:center" colspan=4>Waterverbruik</th>
         </tr>
@@ -171,11 +173,10 @@
             <th>Jaar</th>
             <th>(m3)</th>
             
-			<th>Jaar</th>
-            <th>(m3)</th>
             <th>Jaar</th>
             <th>(m3)</th>
-        </tr>
+            <th>Jaar</th>
+            <th>(m3)</th>        </tr>
       </thead>
       <tbody>
 	  </tbody>
@@ -211,9 +212,9 @@
       <table id="devInfoTable">
       <thead>
         <tr>
-            <th>Name</th>
-            <th>Value</th>
-            <th>Unit</th>
+            <th>Naam</th>
+            <th>Waarde</th>
+            <th>Eenheid</th>
         </tr>
       </thead>
       <tbody id="tb_info">
@@ -244,10 +245,10 @@
       <table id="fieldsTable">
       <thead>
         <tr>
-            <th>DSMR Name</th>
-            <th>Human Name</th>
-            <th>Value</th>
-            <th>Unit</th>
+            <th>DSMR ID</th>
+            <th>Leesbare Naam</th>
+            <th>Waarde</th>
+            <th>Eenheid</th>
         </tr>
       </thead>
       <tbody>
@@ -270,7 +271,7 @@
       <thead>
         <tr>
             <th>Onderdeel</th>
-			<th>Human Name</th>
+			<th>Leesbare Naam</th>
             <th>Instelling</th>
         </tr>
       </thead>
@@ -412,7 +413,7 @@
       <div id="btnFirmware" class="act_btn">
 		<p>Na het indrukken van de UPDATE FIRMWARE knop zal het updatescherm worden getoond. Hiermee kan een firmware of data update worden uitgevoerd.</p>
         <span>
-        <form  action='/updates' method='GET'>
+        <form  action='/update' method='GET'>
           <input id="update" type='submit' class='button' name='SUBMIT' value='Update Firmware...' hidden/>
         </form>
         </span>
@@ -452,9 +453,9 @@
       <table id="actualTable">
       <thead>
         <tr>
-            <th>Name</th>
-            <th>Value</th>
-            <th style="text-align: center;">Unit</th>
+            <th>Naam</th>
+            <th>Waarde</th>
+            <th style="text-align: center;">Eenheid</th>
         </tr>
       </thead>
       <tbody>
@@ -473,17 +474,25 @@
   <section id="DashTab" class="tabName default">
         <h2>Dashboard</h2>
     <h3 id=w8api style="margin-top:50%">Wacht op gegevens van Slimme Meter</h3>
-    <div class=outer>
-        <div class=card id=l1 style="display:none">
-            <h1 id=power_delivered_l1h >Actueel</h1>
-	        <div class="chart-container" id="gauge"></div>
+    <div class=outer id="inner-dash" style="display:none">
+
+        <div class=card id=l1 style="display:block">
+            <h1 id=power_delivered_l1h>Actueel</h1>
+<!-- 	        <div class="chart-container" id="gauge"></div> -->
+	        <canvas class="chart-container" id="gauge3f"></canvas>
+	        <div id=legenda>
+				<div id=f1 class="lblVerbuik vandaag">1<span class="tooltiptext">fase 1</span></div>
+				<div id=f2 class="lblVerbuik gisteren" style="display:none">2<span class="tooltiptext">fase 2</span></div>
+				<div id=f3 class="lblVerbuik eergisteren" style="display:none">3<span class="tooltiptext">fase 3</span></div>
+			</div>
+
             <hr/>
             <div style="text-align:center">Actueel [kW]</div>
             <h2 id="power_delivered">0.0</h2>
             <h3>max: <span id="power_delivered_1max">0.0</span> kW</h3>
             <h3>min: <span id="power_delivered_1min">0.0</span> kW</h3>
         </div>
-        <div class=card id=l3 style="display:none">
+        <div class=card id=l3 style="display:block">
             <h1 id=Ph class="mdi mdi-lightning-bolt">Electra</h1>
             <canvas class="chart-container" id="container-3"></canvas>
 <!--             <div class="label">ELECTRA</div>         -->
@@ -541,7 +550,7 @@
             <div style="text-align:center">Vandaag [㎥]</div>
             <h2 id="G">0.0</h2>
         </div>
-        <div class=card id=l7 style="display:none">
+                <div class=card id=l7 style="display:none">
             <h1 id=Gh class="mdi mdi-water">Water</h1>
             <canvas class="chart-container" id="container-7"></canvas>
 			<div id=legenda>
@@ -565,6 +574,7 @@
 
     </div> <!-- outer -->  
   </section>  <!-- END Dash Tab --> 
+  
   
   <div hidden id="loader"></div>
   <!-- REST -->
