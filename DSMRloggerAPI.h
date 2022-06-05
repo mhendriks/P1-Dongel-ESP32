@@ -25,7 +25,7 @@
 //  #define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
     #define IO_WATER_SENSOR     5
     #define OTAURL              "http://ota.smart-stuff.nl/v5/"
-    #define AUX_BUTTON          9 //download knop bij startup - AUX tijdens runtime
+    #define AUX_BUTTON          9 //download knop bij startup - multifunctional tijdens runtime
     
     volatile unsigned long      Tpressed = 0;
     volatile byte               pressed = 0;
@@ -64,7 +64,7 @@ String PrevTelegram;
 //#include <Ticker.h>
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git  
 
-#define _DEFAULT_HOSTNAME  "P1-DONGLE/" 
+#define _DEFAULT_HOSTNAME  "P1-Dongle-Pro/" 
 #define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
 #define SETTINGS_FILE      "/DSMRsettings.json"
 #define HOST_DATA_FILES    "cdn.jsdelivr.net"

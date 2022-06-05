@@ -16,15 +16,18 @@ TODO
 - AsynWebserver implementatie
 - bug datagram RAW serial / Telegram komt niet altijd door
 - 24uur eens per minuut weergeven van gegevens (ESP32 only)
+
 - C3: logging via usb poort mogelijk maken
 - C3: 8x push button : update firmware met laatste versie
-- handleiding frontend.json "HideInitial" key toevoegen
-- handleiding voor de esp32c3 updaten
-
-- bugfix: maand frontend op diverse fronten gefixed (water voorgaande periode, gaswaardes etc)
-- bugfix: show telegram c3 werkt niet
-- bugfix; dongle naam in router
-- feature: nieuwe meter optie
+- handleiding voor de esp32c3 updaten (aparte instructie)
+- load ballancing feature
+- ESP32C3 channel 113 wifi issues uitzoeken
+- esphome c3: ... check ESPHome addon 
+- feature: nieuwe meter = beginstand op 0
+- Standalone S0 API
+- front-end: splitsen dashboard / eenmalige instellingen bv fases 
+- aanpassen telegram capture -> niet continu 
+- C3 output serial
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
