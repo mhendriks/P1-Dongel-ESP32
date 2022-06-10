@@ -55,7 +55,7 @@ void writeToJsonFile(const TSource &doc, File &_file)
 //=======================================================================
 void writeSettings() 
 {
-  StaticJsonDocument<800> doc; 
+  StaticJsonDocument<1024> doc; 
   if (!FSmounted) return;
 
   DebugT(F("Writing to [")); Debug(SETTINGS_FILE); Debugln(F("] ..."));
@@ -99,6 +99,8 @@ void writeSettings()
   doc["watermeter"] = WtrMtr;
   doc["waterfactor"] = WtrFactor;
   doc["HAdiscovery"] = EnableHAdiscovery;
+  doc["basic-auth"]["user"] = bAuthUser;
+  doc["basic-auth"]["pass"] = bAuthPW;
 
   writeToJsonFile(doc, SettingsFile);
   
@@ -108,7 +110,7 @@ void writeSettings()
 //=======================================================================
 void readSettings(bool show) 
 {
-  StaticJsonDocument<800> doc; 
+  StaticJsonDocument<1024> doc; 
   File SettingsFile;
   if (!FSmounted) return;
 
@@ -179,6 +181,11 @@ void readSettings(bool show)
 
   if (doc.containsKey("HAdiscovery")) EnableHAdiscovery = doc["HAdiscovery"];
 
+  const char* temp = doc["basic-auth"]["user"];
+  if (temp) strcpy(bAuthUser, temp);
+  
+  temp = doc["basic-auth"]["pass"];
+  if (temp) strcpy(bAuthPW, temp);
   SettingsFile.close();
   //end json
 
