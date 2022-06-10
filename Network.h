@@ -19,7 +19,6 @@
 WebServer httpServer(80);
 
 bool FSmounted           = false; 
-//byte WiFiReconnectCount  = 0;
 bool WifiConnected       = false;
 bool WifiBoot            = true;
 char APIurl[42]          = "http://api.smart-stuff.nl/v1/register.php";
@@ -42,17 +41,15 @@ static void onWifiEvent (WiFiEvent_t event) {
         Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
         Debug (F(" ( gateway: " ));  Debug (WiFi.gatewayIP());Debug(" )\n\n");
-//        WiFiReconnectCount = 0;
         WifiBoot = false;
         WifiConnected = true;
         break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-          digitalWrite(LED, LED_OFF);
-          if (DUE(WifiReconnect)) {
-          if ( WifiConnected ) LogFile("Wifi connection lost",true); //log only once 
-          WifiConnected = false;                 
-          WiFi.reconnect();
-//          if ( (WiFiReconnectCount++ > MaxWifiReconnect)  && !WifiBoot ) P1Reboot();
+        digitalWrite(LED, LED_OFF);
+        if (DUE(WifiReconnect)) {
+        if ( WifiConnected ) LogFile("Wifi connection lost",true); //log only once 
+        WifiConnected = false;                 
+        WiFi.reconnect();
         }
         break;
     default:
@@ -98,24 +95,16 @@ void startWiFi(const char* hostname, int timeOut)
   digitalWrite(LED, LED_OFF);
   WifiBoot = true;
   WiFi.onEvent(onWifiEvent);
-  manageWiFi.setDebugOutput(false);
+  manageWiFi.setDebugOutput(true);
   
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
   manageWiFi.setAPCallback(configModeCallback);
 
-  //--- sets timeout until configuration portal gets turned off
-  //--- useful to make it all retry or go to sleep in seconds
-  //manageWiFi.setTimeout(240);  // 4 minuten
   manageWiFi.setTimeout(timeOut);  // in seconden ...
 
-  //--- fetches ssid and pass and tries to connect
-  //--- if it does not connect it starts an access point with the specified name
-  //--- here  "DSMR-WS-<MAC>"
-  //--- and goes into a blocking loop awaiting configuration
   if ( !manageWiFi.autoConnect("P1-Dongle-Pro") )
   {
     LogFile("Wifi failed to connect and hit timeout",true);
-//    DebugTln(F("Wifi failed to connect and hit timeout"));
     DebugTf(" took [%d] seconds ==> ERROR!\r\n", (millis() - lTime) / 1000);
     P1Reboot();
     return;
