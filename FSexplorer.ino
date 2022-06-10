@@ -24,7 +24,7 @@
 const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCache-Control: no-cache\r\n";
 
 void checkauth(){
-  //if( !httpServer.authenticate("username", "password") ) return httpServer.requestAuthentication();
+  if( strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW) ) return httpServer.requestAuthentication();
 }
 
 void procestelegram(){
@@ -49,7 +49,7 @@ void setupFSexplorer()
   httpServer.on("/upload", HTTP_POST, []() { checkauth(); }, handleFileUpload );
   httpServer.on("/ReBoot", [](){ checkauth();reBootESP(); });
   httpServer.on("/ResetWifi", [](){ checkauth(); resetWifi() ;});
-  httpServer.on("/remote-update", [](){ checkauth();RemoteUpdate(); });
+  httpServer.on("/remote-update", [](){ checkauth(); RemoteUpdate(); });
   httpServer.on("/updates", HTTP_GET, []() {
     checkauth();
     httpServer.sendHeader("Connection", "close");
