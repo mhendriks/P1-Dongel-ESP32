@@ -28,6 +28,7 @@ TODO
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
 - aanpassen telegram capture -> niet continu 
 - C3 output serial
+- oogje tonen wachtwoord wifi (Mike)
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
