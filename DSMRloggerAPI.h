@@ -226,7 +226,7 @@ bool        showRaw = false;
 bool        LEDenabled    = true;
 bool        DSMR_NL       = true;
 bool        EnableHAdiscovery = true;
-char        bAuthUser[25], bAuthPW[25];
+char        bAuthUser[25]="", bAuthPW[25]="";
 
 char      cMsg[150];
 String    lastReset           = "";
