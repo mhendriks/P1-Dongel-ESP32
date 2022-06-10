@@ -1,7 +1,7 @@
 <!--
 ***************************************************************************  
 **  Program  : DSMRindex_body.html, part of DSMRloggerAPI
-**  Version  : v2.3.0
+**  Version  : v4.3.0
 **
 **  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
@@ -183,6 +183,19 @@
       </table>
       
       <table id="lastMonthsTableCosts" style="display:none">
+      <colgroup>
+		<col class="col1"/>
+		<col class="col2"/>
+		<col class="col3"/>
+		<col class="col4"/>
+		<col class="col5"/>
+		<col class="col6"/>
+		<col class="col7"/>
+		<col class="col8"/>
+		<col class="col9"/>
+		<col class="col10"/>
+		<col class="col11"/>
+		</colgroup>
       <thead>
         <tr>
             <th style="text-align: right;" width='80px'>Maand</th>
@@ -477,7 +490,7 @@
     <div class=outer id="inner-dash" style="display:none">
 
         <div class=card id=l1 style="display:block">
-            <h1 id=power_delivered_l1h>Actueel</h1>
+            <h1 id=power_delivered_l1h class="mdi mdi-gauge">Actueel</h1>
 <!-- 	        <div class="chart-container" id="gauge"></div> -->
 	        <canvas class="chart-container" id="gauge3f"></canvas>
 	        <div id=legenda>
@@ -485,7 +498,6 @@
 				<div id=f2 class="lblVerbuik gisteren" style="display:none">2<span class="tooltiptext">fase 2</span></div>
 				<div id=f3 class="lblVerbuik eergisteren" style="display:none">3<span class="tooltiptext">fase 3</span></div>
 			</div>
-
             <hr/>
             <div style="text-align:center">Actueel [kW]</div>
             <h2 id="power_delivered">0.0</h2>
@@ -563,8 +575,13 @@
             <h2 id="W">0.0</h2>
         </div>
         <div class=card id=l2 style="display:none">
-            <h1 id=power_delivered_l2h>Spanning</h1>
-            <div class="chart-container" id="gauge-v"></div>
+            <h1 id=power_delivered_l2h class="mdi mdi-sine-wave">Spanning</h1>
+	        <canvas class="chart-container" id="gauge-v"></canvas>
+	        <div id=legenda>
+				<div id=v1 class="lblVerbuik vandaag">1<span class="tooltiptext">fase 1</span></div>
+				<div id=v2 class="lblVerbuik gisteren" style="display:none">2<span class="tooltiptext">fase 2</span></div>
+				<div id=v3 class="lblVerbuik eergisteren" style="display:none">3<span class="tooltiptext">fase 3</span></div>
+			</div>
             <hr/>
             <div style="text-align:center">Aantal fases</div>
             <h2 id="fases">1</h2>

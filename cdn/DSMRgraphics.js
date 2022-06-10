@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : DSMRgraphics.js, part of DSMRloggerAPI
-**  Version  : v2.3.5
+**  Version  : v4.3.0
 **
 **  Copyright (c) 2020 Willem Aandewiel
 **
@@ -197,21 +197,26 @@ var myWaterChart;
     myElectrChart.update();
     
     //renderGasChart(gasData, actGasOptions);
-    renderGasChart(gasData, "dm3");
-    myGasChart.update();
+    if (HeeftGas) {
+		renderGasChart(gasData, "dm3");
+		myGasChart.update();
+		document.getElementById("gasChart").style.display   = "block";
+    }
 
     //renderWaterChart(gasData, actGasOptions);
-    renderWaterChart(waterData, "dm3");
-    myWaterChart.update();
-      
+    if (HeeftWater) {
+        renderWaterChart(waterData, "dm3");
+    	myWaterChart.update();
+		document.getElementById("waterChart").style.display = "block";
+     } 
     //--- hide table
     document.getElementById("lastHours").style.display  = "none";
     document.getElementById("lastDays").style.display   = "none";
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
     document.getElementById("dataChart").style.display  = "block";
-    document.getElementById("gasChart").style.display   = "block";
-    document.getElementById("waterChart").style.display = "block";
+
+
   } // showHistGraph()
   
   
@@ -223,20 +228,23 @@ var myWaterChart;
     renderElectrChart(electrData, monthOptions);
     myElectrChart.update();
     //renderGasChart(gasData, actGasOptions);
-    renderGasChart(gasData, "m3");
-    myGasChart.update();
-  
-    renderWaterChart(waterData, "m3");
-    myWaterChart.update();
+    if (HeeftGas) {
+		renderGasChart(gasData, "m3");
+		myGasChart.update();
+		document.getElementById("gasChart").style.display = "block";
+    }  
+	if (HeeftWater) {
+		renderWaterChart(waterData, "m3");
+		myWaterChart.update();
+		document.getElementById("waterChart").style.display = "block";
+	}
   
     //--- hide table
     document.getElementById("lastHours").style.display  = "none";
     document.getElementById("lastDays").style.display   = "none";
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
-    document.getElementById("dataChart").style.display  = "block";
-    document.getElementById("gasChart").style.display   = "block";
-    document.getElementById("waterChart").style.display = "block";
+    document.getElementById("dataChart").style.display  = "block";    
 
     document.getElementById('mCOST').checked   = false;
 
@@ -453,8 +461,8 @@ var myWaterChart;
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
     document.getElementById("dataChart").style.display  = "block";
-    document.getElementById("gasChart").style.display   = "block";
-	document.getElementById("waterChart").style.display   = "block";
+//     document.getElementById("gasChart").style.display   = "block";
+// 	document.getElementById("waterChart").style.display   = "block";
 
 
   } // copyMonthsToChart()
