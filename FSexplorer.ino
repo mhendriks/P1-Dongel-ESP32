@@ -24,7 +24,19 @@
 const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCache-Control: no-cache\r\n";
 
 void checkauth(){
-  if( strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW) ) return httpServer.requestAuthentication();
+  if( strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW) ) {
+    httpServer.sendHeader("Location", String("/login"), true);
+    httpServer.send ( 302, "text/plain", "");
+  }
+}
+
+void auth(){
+//    httpServer.send(200, "text/html", UpdateHTML)
+    if( strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW) ) {
+      return httpServer.requestAuthentication();
+      httpServer.sendHeader("Location", String("/"), true);
+      httpServer.send ( 302, "text/plain", "");
+    }
 }
 
 void procestelegram(){
@@ -43,6 +55,7 @@ void procestelegram(){
 void setupFSexplorer()
 {    
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
+  httpServer.on("/login", HTTP_GET, []() { auth(); });
   httpServer.on("/api/v2/sm/telegram", HTTP_GET, [](){ procestelegram(); });
   httpServer.on("/api/listfiles", HTTP_GET, [](){ checkauth(); APIlistFiles(); });
   httpServer.on("/FSformat", [](){ checkauth();formatFS; });
