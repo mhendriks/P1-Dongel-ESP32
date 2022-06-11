@@ -384,14 +384,13 @@ function SetOnce(json){
 	show_hide_column('lastMonthsTableCosts',  8,HeeftGas);
 
 	show_hide_column('lastHoursTable',  2,Injection);
-	show_hide_column('lastDaysTable',  2,Injection);
+	show_hide_column('lastDaysTable',  	2,Injection);
 
-	show_hide_column('lastMonthsTable',  5,Injection);
-	show_hide_column('lastMonthsTable',  6,Injection);
-	show_hide_column('lastMonthsTable',  7,Injection);
-	show_hide_column('lastMonthsTable',  8,Injection);
+	show_hide_column('lastMonthsTable', 5,Injection);
+	show_hide_column('lastMonthsTable', 6,Injection);
+	show_hide_column('lastMonthsTable', 7,Injection);
+	show_hide_column('lastMonthsTable', 8,Injection);
 	FirstTime = true;
-	
 }
 
 //============================================================================  
@@ -433,7 +432,8 @@ function UpdateDash()
 //  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.123,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
  		//-------CHECKS
 
-		if (!FirstTime) SetOnce(json);
+// 		if (!FirstTime) SetOnce(json);
+		SetOnce(json);
 		//check of p1 gegevens via api binnen komen
 		if (json.timestamp.value == "-") {
 			console.log("timestamp missing : p1 gegevens correct?");
