@@ -248,7 +248,7 @@ void sendDeviceInfo()
 void sendDeviceSettings() 
 {
   DebugTln(F("sending device settings ...\r"));
-  DynamicJsonDocument doc(1500);
+  DynamicJsonDocument doc(1600);
   
   doc["hostname"]["value"] = settingHostname;
   doc["hostname"]["type"] = "s";
@@ -340,7 +340,7 @@ if (WtrMtr) {
   doc["water_l"]["min"] = 0;
   doc["water_l"]["max"] = 999;  
 }
-
+  doc["hist"] = EnableHistory;
   sendJson(doc);
 
 } // sendDeviceSettings()
@@ -470,7 +470,7 @@ void handleDevApi(const char *URI, const char *word4, const char *word5, const c
 //====================================================
 void handleHistApi(const char *URI, const char *word4, const char *word5, const char *word6)
 {
-
+  if (!EnableHistory) return; //do nothing
   //DebugTf("word4[%s], word5[%s], word6[%s]\r\n", word4, word5, word6);
   if (   strcmp(word4, "hours") == 0 )
   {

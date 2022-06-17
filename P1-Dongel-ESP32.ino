@@ -1,4 +1,3 @@
-
 /*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
@@ -8,28 +7,28 @@
 ***************************************************************************      
 *      
 TODO
-- lees/schrijffouten ringfiles terugmelden in frontend
 - keuze om voor lokale frontend assets of uit het cdn
 - mqtt broker benaderen via host name http://www.iotsharing.com/2017/06/how-to-get-ip-address-from-mdns-host-name-in-arduino-esp32.html 
 -- message bij drempelwaardes 
 -- verbruiksrapport einde dag/week/maand
 - AsynWebserver implementatie
-- bug datagram RAW serial / Telegram komt niet altijd door
-- 24uur eens per minuut weergeven van gegevens (ESP32 only)
-
+- 24uur eens per minuut weergeven van gegevens
 - C3: logging via usb poort mogelijk maken
-- C3: 8x push button : update firmware met laatste versie
-- handleiding voor de esp32c3 updaten (aparte instructie)
-- load ballancing feature
-- ESP32C3 channel 113 wifi issues uitzoeken
-- esphome c3: ... check ESPHome addon 
+- load ballancing feature (1000 samples)
+- ESP32C3 channel 13 wifi issues uitzoeken
 - feature: nieuwe meter = beginstand op 0
 - Standalone S0 API
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
 - aanpassen telegram capture -> niet continu 
-- C3 output serial
-- oogje tonen wachtwoord wifi (Mike)
+- pro: esphome samenvoegen p1 + watersensor 
+- front-end: knop toevoegen die de beschikbare versies toont (incl release notes) en je dan de keuze geeft welke te flashen. (Erik)
+- remote-update: redirect  na succesvolle update (Erik)
 
+√ frontend grafish mix up scherm ivm back button (Erik)
+√ show password wifi (Mike)
+√ minimal versie geen opslag historische gegevens
+√ C3: 8x push button : update firmware met laatste versie
+√ telnet: update latest
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Board: "ESP32 Dev Module"
@@ -44,7 +43,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 /******************** compiler options  ********************************************/
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
-//#define USE_PROFILE_MIN            
+//#define USE_PROFILE_MIN      
 
 #define ALL_OPTIONS "[CORE]"
 
@@ -110,7 +109,6 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
     DebugTln(F("Frontend.json not pressent, try to download it!"));
     GetFile("/Frontend.json");
   }
-  
   setupFSexplorer();
  
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
@@ -137,8 +135,9 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
 
   setupWater();
   setupAuxButton(); //esp32c3 only
-  CheckRingExists();
- 
+
+  if (EnableHistory) CheckRingExists();
+
 } // setup()
 
 

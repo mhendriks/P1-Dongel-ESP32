@@ -57,7 +57,7 @@ void RemoteUpdate(const char* versie, bool sketch){
   
   Debugln(F("\n!!! OTA UPDATE !!!"));
   Debugln(sketch ? "Update type: Sketch" : "Update type: File"); 
-  
+
   if (bWebUpdate) {
     if (httpServer.argName(0) != "version") {
         httpServer.send(200, "text/html", "OTA ERROR: No version argument");
@@ -74,18 +74,18 @@ void RemoteUpdate(const char* versie, bool sketch){
               return; 
             }
 
+  otaFile = strcmp(versie,"4-sketch-latest") == 0 ? "" : "DSMR-API-V";
+  otaFile += _versie + "_" + flashSize; 
+  otaFile+= sketch ? "Mb.bin" : "Mb.spiffs.bin";
+  path = String(BaseOTAurl) + otaFile;
+  Debugf("OTA versie: %s | flashsize: %i Mb\n", _versie.c_str(), flashSize);
+  Debugln("OTA path: " + path);
+
   // Add optional callback notifiers
   httpUpdate.onStart(update_started);
   httpUpdate.onEnd(update_finished);
   httpUpdate.onProgress(update_progress);
   httpUpdate.onError(update_error);
-  
-  otaFile = "DSMR-API-V" + _versie + "_" + flashSize; 
-  otaFile+= sketch ? "Mb.bin" : "Mb.spiffs.bin";
-  path = String(BaseOTAurl) + otaFile;
-  Debugf("OTA versie %s | flashsize %i Mb\n", _versie.c_str(), flashSize);
-  Debugln("OTA path: " + path);
-  
   httpUpdate.rebootOnUpdate(false); 
   
   //start update proces

@@ -96,6 +96,10 @@ void startWiFi(const char* hostname, int timeOut)
   WifiBoot = true;
   WiFi.onEvent(onWifiEvent);
   manageWiFi.setDebugOutput(true);
+      
+  //add custom html at inside <head> for all pages -> show password function
+  manageWiFi.setCustomHeadElement("<script>function f() {var x = document.getElementById('p');x.type==='password'?x.type='text':x.type='password';}</script>");
+  manageWiFi.setClass("invert"); //dark theme
   
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
   manageWiFi.setAPCallback(configModeCallback);

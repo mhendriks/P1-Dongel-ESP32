@@ -11,14 +11,14 @@
 
 void DisplayFile(const char *fname) { 
   if (bailout() || !FSmounted) return; //exit when heapsize is too small
-  File RingFile = LittleFS.open(fname, "r"); // open for reading
-  if (RingFile)  {
+  File file = LittleFS.open(fname, "r"); // open for reading
+  if (file)  {
     DebugTln(F("Ringfile output (telnet only): "));
     //read the content and output to serial interface
-    while (RingFile.available()) TelnetStream.println(RingFile.readStringUntil('\n'));
+    while (file.available()) TelnetStream.println(file.readStringUntil('\n'));
     Debugln();    
   } else DebugT(F("LogFile doesn't exist: "));
-  RingFile.close();
+  file.close();
 } //displaylogfile
 
 //--------------------------------
@@ -35,8 +35,9 @@ void P1Update(bool sketch){
   TelnetStream.setTimeout(1000);
   
   versie[strlen(versie)-1] = '\0'; //remove enter
-
-  if (strlen(versie)>4) RemoteUpdate(versie,sketch); 
+  
+  if (strcmp(versie,"latest") == 0) RemoteUpdate("4-sketch-latest",sketch);
+  else if (strlen(versie)>4) RemoteUpdate(versie,sketch); 
   else Debugln(F("Fout in versie opgave: formaat = x.x.x")); 
 }
 //--------------------------------

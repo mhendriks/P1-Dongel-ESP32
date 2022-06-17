@@ -120,6 +120,7 @@ void RingFileTo(E_ringfiletype ringfiletype, bool toFile)
 
 void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec) 
 {
+  if (!EnableHistory) return; //do nothing
   char key[9] = "";
   byte slot = 0;
   uint8_t actSlot = CalcSlot(ringfiletype, actTimestamp);
@@ -200,6 +201,7 @@ void writeRingFiles() {
   if (RingCylce > 2) RingCylce = 0;
 
 } // writeRingFiles()
+ 
 
 /***************************************************************************
 *

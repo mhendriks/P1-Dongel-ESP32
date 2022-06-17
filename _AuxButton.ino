@@ -28,7 +28,7 @@ void handleButtonPressed(){
           FacReset();
           break;
   case 8: DebugTln(F("Firmware update naar laaste versie"));
-          //todo
+          RemoteUpdate("4-sketch-latest", true);
           break;
   }
   Tpressed = 0;
