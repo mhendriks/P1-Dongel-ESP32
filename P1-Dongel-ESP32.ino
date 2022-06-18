@@ -21,14 +21,9 @@ TODO
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
 - aanpassen telegram capture -> niet continu 
 - pro: esphome samenvoegen p1 + watersensor 
-- front-end: knop toevoegen die de beschikbare versies toont (incl release notes) en je dan de keuze geeft welke te flashen. (Erik)
+- front-end: functie toevoegen die de beschikbare versies toont (incl release notes) en je dan de keuze geeft welke te flashen. (Erik)
 - remote-update: redirect  na succesvolle update (Erik)
 
-√ frontend grafish mix up scherm ivm back button (Erik)
-√ show password wifi (Mike)
-√ minimal versie geen opslag historische gegevens
-√ C3: 8x push button : update firmware met laatste versie
-√ telnet: update latest
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Board: "ESP32 Dev Module"

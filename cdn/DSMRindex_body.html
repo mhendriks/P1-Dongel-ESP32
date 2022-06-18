@@ -33,7 +33,7 @@
       <li><a id='bSettings'      class='nav-img nav-item' href="#Settings" ><span class="mdi mdi-cog"></span></a>
 		<ul>
 			<li><a id='bEditSettings' class='tabButton nav-item' href="#Settings" >Settings</a></li>
-			<li><a id='bEditMonths'   class='tabButton nav-item' href="#Settings" >Meterstanden</a></li>
+			<li><a id='bEditMonths'   class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
 			<li><a id='bReset'   	  class='tabButton nav-item' href="#Reset" >Reset & Update</a></li>
 		</ul></li>
 	  <li><a href="javascript:void(0);" class="icon" onclick="menu()"><i id="menuid" class="mdi mdi-menu"></i></a></li>
@@ -374,6 +374,18 @@
   <section id="Settings" class="tabName">
       <!-- START Tabbladen -->
   <h2>Instellingen</h2>
+  <div id="tabEditSettings" class="outer-div"">
+    <!-- START settingsTab Settings -->
+      <div id="settings_table" class="inner-div"></div>          
+  </div>  <!-- END tabSettings -->
+  <div id="settings_btns">
+      <a id='bUndo'   class='btn' onclick="undoReload()">Undo</a>
+      <a id='bSave'   class='btn' onclick="saveData()">Opslaan</a>
+      </div>
+  </section> <!-- end Settings Page -->
+ 
+  <section id="EditMonths" class="tabName"> 
+   <h2>Meterstanden invoeren</h2>
   <div id="tabEditMonths" class="tabName">
     <label for="Period"><b>Meterstand: </b></label>
       Energy Delivered
@@ -387,15 +399,11 @@
 		  <div id="editMonths" class="inner-div"></div> 
 	  </div>  <!-- END tabMonthss -->
   </div> <!-- tabMonths -->
-  <div id="tabEditSettings" class="outer-div"">
-    <!-- START settingsTab Settings -->
-      <div id="settings_table" class="inner-div"></div>          
-  </div>  <!-- END tabSettings -->
   <div id="settings_btns">
       <a id='bUndo'   class='btn' onclick="undoReload()">Undo</a>
       <a id='bSave'   class='btn' onclick="saveData()">Opslaan</a>
       </div>
-  </section> <!-- end Settings Page -->
+  </section> <!-- end tabEditMonths Page -->
   
   <!-- START FileExplorer Tab -->
   <section id="FileExplorer" class="tabName"><h2>Bestandsbeheer</h2>
@@ -426,7 +434,7 @@
       <div id="btnFirmware" class="act_btn">
 		<p>Na het indrukken van de UPDATE FIRMWARE knop zal het updatescherm worden getoond. Hiermee kan een firmware of data update worden uitgevoerd.</p>
         <span>
-        <form  action='/update' method='GET'>
+        <form  action='/updates' method='GET'>
           <input id="update" type='submit' class='button' name='SUBMIT' value='Update Firmware...' hidden/>
         </form>
         </span>

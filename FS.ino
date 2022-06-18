@@ -1,7 +1,6 @@
 /* 
 ***************************************************************************  
 **  Program  : File System, part of DSMRloggerAPI
-**  Version  : v4.2.1
 **
 **  Copyright (c) 2022 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
