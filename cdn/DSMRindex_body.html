@@ -497,8 +497,9 @@
     <h3 id=w8api style="margin-top:50%">Wacht op gegevens van Slimme Meter</h3>
     <div class=outer id="inner-dash" style="display:none">
 
+        <a href="#ActualTab" style="display:flex">
         <div class=card id=l1 style="display:block">
-            <h1 id=power_delivered_l1h class="mdi mdi-gauge">Actueel</h1>
+			<h1 id=power_delivered_l1h class="mdi mdi-gauge">Actueel</h1>
 <!-- 	        <div class="chart-container" id="gauge"></div> -->
 	        <canvas class="chart-container" id="gauge3f"></canvas>
 	        <div id=legenda>
@@ -512,6 +513,8 @@
             <h3>max: <span id="power_delivered_1max">0.0</span> kW</h3>
             <h3>min: <span id="power_delivered_1min">0.0</span> kW</h3>
         </div>
+		</a>
+		<a href="#HoursTab" style="display:flex">
         <div class=card id=l3 style="display:block">
             <h1 id=Ph class="mdi mdi-lightning-bolt">Electra</h1>
             <canvas class="chart-container" id="container-3"></canvas>
@@ -527,6 +530,7 @@
             <!--h3>max: <span id="Pmax">0.0</span></h3>
             <h3>min: <span id="Pmin">0.0</span></h3-->
         </div>
+    	</a>
         <div class=card id=l5 style="display:none">
             <h1 id=Ph class="mdi mdi-home-export-outline">Teruglevering</h1>
             <canvas class="chart-container" id="container-5"></canvas>
