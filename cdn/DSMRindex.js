@@ -2393,7 +2393,7 @@ function handle_menu_click()
   function readGitHubVersion()
   {
     if (GitHubVersion != 0) return;
-    fetch("https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat")
+    fetch("https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@master/cdn/DSMRversion.dat")
       .then(response => {
         if (response.ok) {
           return response.text();
