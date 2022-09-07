@@ -23,6 +23,10 @@ TODO
 - pro: esphome samenvoegen p1 + watersensor 
 - front-end: functie toevoegen die de beschikbare versies toont (incl release notes) en je dan de keuze geeft welke te flashen. (Erik)
 - remote-update: redirect  na succesvolle update (Erik)
+- verbruik - teruglevering lijn door maandgrafiek (Erik)
+- domoticz auto discovery mqtt
+- uitbreiden settingsscherm met niewue settings (bv authenticatie / historie)
+- automatische update
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:

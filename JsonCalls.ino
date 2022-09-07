@@ -130,10 +130,10 @@ if (bailout())
   {
     handleDevApi(URI, words[4].c_str(), words[5].c_str(), words[6].c_str());
   }
-  else if (words[3] == "hist")
-  {
-    handleHistApi(URI, words[4].c_str(), words[5].c_str(), words[6].c_str());
-  }
+//  else if (words[3] == "hist")
+//  {
+//    handleHistApi(URI, words[4].c_str(), words[5].c_str(), words[6].c_str());
+//  }
   else if (words[3] == "sm")
   {
     handleSmApi(URI, words[4].c_str(), words[5].c_str(), words[6].c_str());
@@ -304,7 +304,7 @@ void sendDeviceSettings()
   
   doc["mqtt_broker"]["value"]  = settingMQTTbroker;
   doc["mqtt_broker"]["type"] = "s";
-  doc["mqtt_broker"]["maxlen"] = sizeof(settingIndexPage) -1;
+  doc["mqtt_broker"]["maxlen"] = sizeof(settingMQTTbroker) -1;
   
   doc["mqtt_broker_port"]["value"] = settingMQTTbrokerPort;
   doc["mqtt_broker_port"]["type"] = "i";
@@ -347,16 +347,16 @@ if (WtrMtr) {
 //====================================================
 void sendApiNotFound(const char *URI)
 {
-  DebugTln(F("sending device settings ...\r"));
+//  DebugTln(F("sending device settings ...\r"));
 //  String output = "{\"error\":{\"url\":\"" + String(URI) + "\",\"message\":\"url not valid\"}}";
   
-  byte len = 47 + strlen(URI);
-  char buffer[len];
-  sprintf_P(buffer,PSTR("{\"error\":{\"url\":\"%s\",\"message\":\"url not valid\"}}"), URI);
+//  byte len = 47 + strlen(URI);
+//  char buffer[len];
+//  sprintf_P(buffer,PSTR("{\"error\":{\"url\":\"%s\",\"message\":\"url not valid\"}}"), URI);
   
-  httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-  httpServer.setContentLength(len);
-  httpServer.send(404, "application/json", buffer); 
+//  httpServer.sendHeader("Access-Control-Allow-Origin", "*");
+//  httpServer.setContentLength(len);
+  httpServer.send(404, "application/json", "{\"error\":{\"url\":\"" + String(URI) + "\",\"message\":\"url not valid\"}}"); 
   
 } // sendApiNotFound()
 
@@ -467,49 +467,49 @@ void handleDevApi(const char *URI, const char *word4, const char *word5, const c
 } // handleDevApi()
 
 //====================================================
-void handleHistApi(const char *URI, const char *word4, const char *word5, const char *word6)
-{
-  if (!EnableHistory) return; //do nothing
-  //DebugTf("word4[%s], word5[%s], word6[%s]\r\n", word4, word5, word6);
-  if (   strcmp(word4, "hours") == 0 )
-  {
-    RingFileTo(RINGHOURS, true);
-    return;
-  }
-  else if (strcmp(word4, "days") == 0 )
-  {
-    RingFileTo(RINGDAYS, true);
-    return;
-
-  }
-  else if (strcmp(word4, "months") == 0)
-  {
-    if (httpServer.method() == HTTP_PUT || httpServer.method() == HTTP_POST)
-    {
-      //------------------------------------------------------------ 
-      // json string: {"recid":"29013023"
-      //               ,"edt1":2601.146,"edt2":"9535.555"
-      //               ,"ert1":378.074,"ert2":208.746
-      //               ,"gdt":3314.404}
-      //------------------------------------------------------------ 
-    
-      //--- update MONTHS
-      writeRingFile(RINGMONTHS, httpServer.arg(0).c_str());
-      return;
-    }
-    else 
-    {
-      RingFileTo(RINGMONTHS,true);
-      return;
-    }
-  }
-  else 
-  {
-    sendApiNotFound(URI);
-    return;
-  }
-
-} // handleHistApi()
+//void handleHistApi(const char *URI, const char *word4, const char *word5, const char *word6)
+//{
+//  if (!EnableHistory) return; //do nothing
+//  DebugTf("word4[%s], word5[%s], word6[%s]\r\n", word4, word5, word6);
+//  if (   strcmp(word4, "hours") == 0 )
+//  {
+//    RingFileTo(RINGHOURS, true);
+//    return;
+//  }
+//  else if (strcmp(word4, "days") == 0 )
+//  {
+//    RingFileTo(RINGDAYS, true);
+//    return;
+//
+//  }
+//  else if (strcmp(word4, "months") == 0)
+//  {
+//    if (httpServer.method() == HTTP_PUT || httpServer.method() == HTTP_POST)
+//    {
+//      //------------------------------------------------------------ 
+//      // json string: {"recid":"29013023"
+//      //               ,"edt1":2601.146,"edt2":"9535.555"
+//      //               ,"ert1":378.074,"ert2":208.746
+//      //               ,"gdt":3314.404}
+//      //------------------------------------------------------------ 
+//    
+//      //--- update MONTHS
+//      writeRingFile(RINGMONTHS, httpServer.arg(0).c_str());
+//      return;
+//    }
+//    else 
+//    {
+//      RingFileTo(RINGMONTHS,true);
+//      return;
+//    }
+//  }
+//  else 
+//  {
+//    sendApiNotFound(URI);
+//    return;
+//  }
+//
+//} // handleHistApi()
 
 //=======================================================================
 void sendDeviceDebug(const char *URI, String tail) 
