@@ -1,10 +1,6 @@
 #include <Preferences.h>
 Preferences preferences;
 
-#define Eaddr   0
-#define Esize  50
-#define Ypos   30
-
 void P1StatusBegin(){ 
     preferences.begin("P1Status", false);
     P1StatusRead();

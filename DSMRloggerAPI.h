@@ -74,8 +74,6 @@ String PrevTelegram;
 #define LED_BLINK_MS       80
 #define MIN_TELEGR_INTV     1
 
-//Ticker LEDBlinker;
-
 P1Reader    slimmeMeter(&Serial1, DTR_IO);
 
 TaskHandle_t CPU0; //handler voor CPU task 0
