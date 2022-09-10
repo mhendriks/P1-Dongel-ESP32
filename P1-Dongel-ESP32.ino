@@ -8,25 +8,37 @@
 *      
 TODO
 - keuze om voor lokale frontend assets of uit het cdn
-- mqtt broker benaderen via host name http://www.iotsharing.com/2017/06/how-to-get-ip-address-from-mdns-host-name-in-arduino-esp32.html 
 -- message bij drempelwaardes 
 -- verbruiksrapport einde dag/week/maand
 - AsynWebserver implementatie
-- 24uur eens per minuut weergeven van gegevens
 - C3: logging via usb poort mogelijk maken
-- load ballancing feature (1000 samples)
+- detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
 - ESP32C3 channel 13 wifi issues uitzoeken
 - feature: nieuwe meter = beginstand op 0
-- Standalone S0 API
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
 - aanpassen telegram capture -> niet continu 
-- pro: esphome samenvoegen p1 + watersensor 
 - front-end: functie toevoegen die de beschikbare versies toont (incl release notes) en je dan de keuze geeft welke te flashen. (Erik)
 - remote-update: redirect  na succesvolle update (Erik)
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
 - domoticz auto discovery mqtt
-- uitbreiden settingsscherm met niewue settings (bv authenticatie / historie)
+- update laatste versie via knop frontend + check of reload van indexfile nodig is.
 - automatische update
+- influxdb koppeling onderzoeken
+
+-4.4.0
+++ refactor GET history data
+++ fix get version
+++ uitbreiden settingsscherm met nieuwe settings die alleen via settingsfile aanpasbaar waren 
+    -- b_auth √
+    -- watermeter √
+    -- watermeter factor √
+    -- enableHist √
+    -- HAdiscovery √
+    -- ota url √
+    -- LED √
+++ check laatste versie
+  -- ophalen versie informatie
+  -- opnemen op update pagina
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -41,8 +53,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 //#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
-//#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?
-//#define USE_PROFILE_MIN      
+//#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?     
 
 #define ALL_OPTIONS "[CORE]"
 
