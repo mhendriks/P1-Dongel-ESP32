@@ -101,6 +101,7 @@ void writeSettings()
   doc["HAdiscovery"] = EnableHAdiscovery;
   doc["basic-auth"]["user"] = bAuthUser;
   doc["basic-auth"]["pass"] = bAuthPW;
+  doc["auto-update"] = bAutoUpdate;  
 
   writeToJsonFile(doc, SettingsFile);
   
@@ -180,12 +181,15 @@ void readSettings(bool show)
   if (doc.containsKey("waterfactor")) WtrFactor = doc["waterfactor"];
 
   if (doc.containsKey("HAdiscovery")) EnableHAdiscovery = doc["HAdiscovery"];
+  if (doc.containsKey("auto-update")) bAutoUpdate = doc["auto-update"];
 
   const char* temp = doc["basic-auth"]["user"];
   if (temp) strcpy(bAuthUser, temp);
   
   temp = doc["basic-auth"]["pass"];
   if (temp) strcpy(bAuthPW, temp);
+
+  
   SettingsFile.close();
   //end json
 

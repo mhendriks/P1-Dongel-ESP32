@@ -366,6 +366,7 @@ if (WtrMtr) {
   doc["water_enabl"] = WtrMtr;
   doc["led"] = LEDenabled;
   doc["ha_disc_enabl"] = EnableHAdiscovery;
+  // doc["auto_update"] = bAutoUpdate;  TO DO ... 
   
   sendJson(doc);
 

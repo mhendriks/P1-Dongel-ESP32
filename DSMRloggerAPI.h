@@ -247,6 +247,7 @@ byte      RingCylce = 0;
 char      BaseOTAurl[30] = OTAURL;
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
+bool      bAutoUpdate = false;
 
 //MQTT
 char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[26] = _DEFAULT_HOSTNAME;
