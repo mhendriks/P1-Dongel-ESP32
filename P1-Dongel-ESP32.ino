@@ -24,21 +24,9 @@ TODO
 - update laatste versie via knop frontend + check of reload van indexfile nodig is.
 - automatische update
 - influxdb koppeling onderzoeken
+- GUID implementeren ivm remote hulp
+- auto update check + update every night 3:<random> hour
 
--4.4.0
-++ refactor GET history data
-++ fix get version
-++ uitbreiden settingsscherm met nieuwe settings die alleen via settingsfile aanpasbaar waren 
-    -- b_auth √
-    -- watermeter √
-    -- watermeter factor √
-    -- enableHist √
-    -- HAdiscovery √
-    -- ota url √
-    -- LED √
-++ check laatste versie
-  -- ophalen versie informatie
-  -- opnemen op update pagina
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
