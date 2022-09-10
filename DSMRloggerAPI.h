@@ -178,7 +178,7 @@ using MyData = ParsedData<
 //TODO
 //in mem houden van de ringfile gegevens voor een snelle oplevering naar de client. Vooral de Day gegevens die worden door het dashboard gebruikt.
 //struct P1DataRec {
-//  uint32_t  date;
+//  uint32_t  epoch;
 //  uint32_t  T1;
 //  uint32_t  T2;
 //  uint32_t  T1r;
@@ -224,6 +224,7 @@ bool        LEDenabled    = true;
 bool        DSMR_NL       = true;
 bool        EnableHAdiscovery = true;
 char        bAuthUser[25]="", bAuthPW[25]="";
+bool        EnableHistory = true;
 
 char      cMsg[150];
 String    lastReset           = "";
@@ -243,7 +244,6 @@ char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 byte      RingCylce = 0;
 
 //update
-bool      EnableHistory = true;
 char      BaseOTAurl[30] = OTAURL;
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
