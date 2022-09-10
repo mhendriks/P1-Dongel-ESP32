@@ -52,6 +52,16 @@
   var HeeftWater			= false	//watermeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
   var EnableHist			= true  //weergave historische gegevens
   var SettingsRead 			= false 
+  
+//---- Version globals
+  var LastVersion = "", 
+  LastVersionMajor = 0, 
+  LastVersionMinor = 0, 
+  LastVersionFix = 0, 
+  LastVersionBuid = 0,
+  LastVersionNotes = "", 
+  LastVersionOTA = "";
+  
 // ---- DASH
 var TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wmax;
 var hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
@@ -407,7 +417,28 @@ function SetOnSettings(json){
 	show_hide_column('lastMonthsTable', 7,Injection);
 	show_hide_column('lastMonthsTable', 8,Injection);
 }
+//============================================================================  
+  
+function ReadVersionManifest(){
+	console.log("ReadVersionManifest");
+	Spinner(true);
+	 fetch('http://ota.smart-stuff.nl/v5/version-manifest.json', {"setTimeout": 5000}).then(function (response) {
+		 return response.json();
+	 }).then(function (json) {
+	 	console.log("version manifest: " + JSON.stringify(json) );
+	 	
+	 	LastVersion = json.version;
+	 	LastVersionMajor = json.major;
+	 	LastVersionMinor = json.minor;
+	 	LastVersionFix = json.fix;
+	 	LastVersionBuid = json.build;
+	 	LastVersionNotes = json.notes;
+	 	LastVersionOTA = json.ota_url;
+	}
+	 );	// function(json)
+	 	Spinner(false);
 
+}
 //============================================================================  
   
 function UpdateDash()
@@ -447,6 +478,8 @@ function UpdateDash()
 //  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.123,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
 //no voltage
 //  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.123,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":"-","unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
+// 4.2 meter met teruglevering
+// json = JSON.parse('{"identification":{"value":"KFM5KAIFA-METER"},"p1_version":{"value":"42"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220706121611S"},"equipment_id":{"value":"4530303236303030303134363435373135"},"energy_delivered_tariff1":{"value":16120.922,"unit":"kWh"},"energy_delivered_tariff2":{"value":15221.887,"unit":"kWh"},"energy_returned_tariff1":{"value":32.012,"unit":"kWh"},"energy_returned_tariff2":{"value":106.573,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.252,"unit":"kW"},"message_short":{"value":""},"message_long":{"value":""},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":2,"unit":"A"},"current_l2":{"value":1,"unit":"A"},"current_l3":{"value":1,"unit":"A"},"power_delivered_l1":{"value":0,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0.54,"unit":"kW"},"power_returned_l2":{"value":0.461,"unit":"kW"},"power_returned_l3":{"value":0.251,"unit":"kW"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303332353631323431353834373135"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":8979.463,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":8979.463,"unit":"m3"},"gas_delivered_timestamp":{"value":"220706120000S"}}');
 
  		//-------CHECKS
 
@@ -933,6 +966,18 @@ function handle_menu_click()
         var tableRef = document.getElementById('tb_info');
         //clear table
 		while (tableRef.hasChildNodes()) { tableRef.removeChild(tableRef.lastChild);}
+
+		//add latest software version
+		ReadVersionManifest();
+		if (LastVersion != "") {
+			var newRow=tableRef.insertRow(-1);
+			var VerCel1 = newRow.insertCell(0);
+			var VerCel2 = newRow.insertCell(1);
+			var VerCel3 = newRow.insertCell(2);
+			VerCel1.innerHTML = "Laatste Firmware versie";
+			VerCel2.innerHTML = LastVersion;
+			console.log("last version: " + (Number(LastVersionMajor)*10000 + Number(LastVersionMinor)*100) );
+		}
 		//fill table
         for( let k in obj ) {
 			var newRow=tableRef.insertRow(-1);
@@ -953,6 +998,7 @@ function handle_menu_click()
 			   devVersion = obj[k];
            }
         } //for loop      
+ 
 	  //new fwversion detection
   	  document.getElementById('devVersion').innerHTML = obj.fwversion;
 	  var tmpFW = devVersion;
@@ -975,7 +1021,12 @@ function handle_menu_click()
 	  tlgrmInterval = obj.telegraminterval;
       if (firmwareVersion > 20000) document.getElementById("resetWifi").removeAttribute('hidden');
       if (firmwareVersion > 20102) document.getElementById("update").removeAttribute('hidden');
-
+		
+	  //check if update is needed
+	  if (LastVersion != "") {
+		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' href='/remote-update?version=" + LastVersion + "'>Klik voor update</a>";
+		  else VerCel3.innerHTML = "laatste versie";
+	  }
       })
       .catch(function(error) {
         var p = document.createElement('p');
@@ -1824,7 +1875,7 @@ function handle_menu_click()
         data = json;
         for( let i in data )
         {
-          if(i=="hist") next;
+//           if(i=="hist") continue;
           
           console.log("["+i+"]=>["+data[i].value+"]");
           var settings = document.getElementById('settings_table');
@@ -1843,7 +1894,12 @@ function handle_menu_click()
 
                     var sInput = document.createElement("INPUT");
                     sInput.setAttribute("id", "setFld_"+i);
-
+					if ( data[i].type === undefined ) {
+						sInput.setAttribute("type", "checkbox");
+						sInput.checked = data[i];
+						sInput.style.width = "auto";
+					}
+					else {
 					switch(data[i].type){
 					case "s":
 						sInput.setAttribute("type", "text");
@@ -1864,6 +1920,7 @@ function handle_menu_click()
 						break;
 					}
                     sInput.setAttribute("value", data[i].value);
+                    }
                     sInput.addEventListener('change',
                                 function() { setBackGround("setFld_"+i, "lightgray"); },
                                             false
@@ -2138,10 +2195,16 @@ function handle_menu_click()
   {
     for(var i in data)
     {
-      if (i=="hist") continue;
 	  var fldId  = i;
       var newVal = document.getElementById("setFld_"+fldId).value;
-      if (data[i].value != newVal)
+	  if ( data[i].value === undefined ) {
+	     newVal = document.getElementById("setFld_"+fldId).checked;
+	     if (data[i] != newVal) {
+	     console.log("save data ["+i+"] => from["+data[i]+"] to["+newVal+"]");
+	     sendPostSetting(fldId, newVal);
+	    }
+	  }
+	  else if (data[i].value != newVal)
       {
         console.log("save data ["+i+"] => from["+data[i].value+"] to["+newVal+"]");
         sendPostSetting(fldId, newVal);
@@ -2211,8 +2274,7 @@ function handle_menu_click()
   //============================================================================  
   function sendPostSetting(field, value) 
   {
-    const jsonString = {"name" : field, "value" : value};
-    console.log("send JSON:["+JSON.stringify(jsonString)+"]");
+    const jsonString = {"name" : field, "value" : escape(value) };
     const other_params = {
         headers : { "content-type" : "application/json; charset=UTF-8"},
         body : JSON.stringify(jsonString),
@@ -2393,7 +2455,7 @@ function handle_menu_click()
   function readGitHubVersion()
   {
     if (GitHubVersion != 0) return;
-    fetch("https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@master/cdn/DSMRversion.dat")
+    fetch("https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat")
       .then(response => {
         if (response.ok) {
           return response.text();
@@ -2659,7 +2721,7 @@ function handle_menu_click()
 
           ,[ "telegramcount",             "Telegrammen verwerkt" ]
           ,[ "telegramerrors",            "Telegrammen met fouten" ]          
-          ,[ "fwversion",                 "Firmware Versie" ]
+          ,[ "fwversion",                 "Huidige Firmware Versie" ]
           ,[ "compiled",                  "Gecompileerd" ]
           ,[ "hostname",                  "HostName" ]
           ,[ "ipaddress",                 "IP adres" ]
@@ -2695,6 +2757,14 @@ function handle_menu_click()
           ,[ "cdn",               		  "Frontend html/css uit de cloud" ]
           ,[ "GasAvailable",			  "Gasmeter beschikbaar? <br>[True = geen check op basis van meterdata]<br>[False = wel checken]"]
           ,[ "water",				  	  "Watermeter"]
+          ,[ "b_auth_user",				  "Basic Auth. Gebruiker"]
+          ,[ "b_auth_pw",				  "Basic Auth. Wachtwoord"]
+          ,[ "water_enabl",				  "Watersensor aanwezig"]
+          ,[ "led",				  		  "LED aan"]
+          ,[ "ha_disc_enabl",			  "HA Auto discovery"]
+          ,[ "ota_url",				  	  "Update url (zonder http://)"]
+  	 	  ,[ "hist",				  	  "Metergegevens lokaal opslaan"]
+		  ,[ "auto_update",				  "Automatisch updaten"]
 ];
 
 /*
