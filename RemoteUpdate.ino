@@ -109,6 +109,38 @@ void RemoteUpdate(const char* versie, bool sketch){
   bWebUpdate = false;
 } //RemoteUpdate
 
+//---------------
+
+void ReadManifest() {
+  HTTPClient http;
+  http.begin(wifiClient, "http://ota.smart-stuff.nl/v5/version-manifest.json");
+  
+  int httpResponseCode = http.GET();
+  if ( httpResponseCode<=0 ) { 
+    Debug("Error code: ");Debugln(httpResponseCode);
+    return; //leave on error
+  }
+  
+  Debugln( F("Version Manifest") );
+  Debug("HTTP Response code: ");Debugln(httpResponseCode);
+  String payload = http.getString();
+  Debugln(payload);
+  http.end();
+    
+  // Parse JSON object in response
+  DynamicJsonDocument doc(200);
+
+  // Parse JSON object
+  DeserializationError error = deserializeJson(doc, payload);
+  
+  Debugf("version: %s\r\n", doc["version"]);
+  Debugf("major: %i\r\n"  , doc["major"]);
+  Debugf("minor: %i\r\n"  , doc["minor"]);
+  Debugf("build: %i\r\n"  , doc["build"]);
+  Debugf("notes: %s\r\n"  , doc["notes"]);
+  Debugf("ota_url: %s\r\n", doc["ota_url"]);
+    
+} //ReadManifest
 
 
 /***************************************************************************
