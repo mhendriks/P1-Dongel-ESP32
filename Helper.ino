@@ -27,7 +27,7 @@ void FacReset() {
 }
 
 void ToggleLED() {
-  if (LEDenabled) digitalWrite(LED, !digitalRead(LED));
+  if (LEDenabled) digitalWrite(LED, !digitalRead(LED)); else digitalWrite(LED, LED_OFF);
 }
 
 //===========================================================================================
