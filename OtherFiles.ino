@@ -247,6 +247,7 @@ void readSettings(bool show)
 void updateSetting(const char *field, const char *newValue)
 {
   DebugTf("-> field[%s], newValue[%s]\r\n", field, newValue);
+
   if (!FSmounted) return;
 
   if (!stricmp(field, "Hostname")) {
@@ -322,7 +323,24 @@ void updateSetting(const char *field, const char *newValue)
     CHANGE_INTERVAL_SEC(publishMQTTtimer, settingMQTTinterval);
   }
   if (!stricmp(field, "mqtt_toptopic"))     strCopy(settingMQTTtopTopic, 20, newValue);  
+  
+  if (!stricmp(field, "b_auth_user")) strCopy(bAuthUser,25, newValue);  
+  if (!stricmp(field, "b_auth_pw")) strCopy(bAuthPW,25, newValue); 
 
+  if (!stricmp(field, "water_fact")) WtrFactor = String(newValue).toFloat(); 
+  
+  if (!stricmp(field, "ota_url")) {
+    char ota_url[sizeof(BaseOTAurl)] = "http://";
+    strcat(ota_url, newValue);
+    strCopy(BaseOTAurl,sizeof(ota_url), ota_url ); 
+  }
+  
+  //booleans
+  if (!stricmp(field, "led")) LEDenabled = (stricmp(newValue, "true") == 0?true:false); 
+  if (!stricmp(field, "hist")) EnableHistory = (stricmp(newValue, "true") == 0?true:false); 
+  if (!stricmp(field, "water_enabl")) WtrMtr = (stricmp(newValue, "true") == 0?true:false);  
+  if (!stricmp(field, "ha_disc_enabl")) EnableHAdiscovery = (stricmp(newValue, "true") == 0?true:false);  
+  
   writeSettings();
   
 } // updateSetting()

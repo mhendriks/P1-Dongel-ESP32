@@ -76,7 +76,7 @@ void PostMacIP() {
   HTTPClient http;
   http.begin(wifiClient, APIurl);
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-  String httpRequestData = "mac=" + WiFi.macAddress() + "&ip=" + WiFi.localIP().toString();           
+  String httpRequestData = "mac=" + WiFi.macAddress() + "&ip=" + WiFi.localIP().toString()+ "&version=" + _VERSION_ONLY;           
   int httpResponseCode = http.POST(httpRequestData);
   DebugT(F("HTTP Response code: "));Debugln(httpResponseCode);
   http.end();  

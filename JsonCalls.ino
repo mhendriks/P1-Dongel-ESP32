@@ -130,10 +130,6 @@ if (bailout())
   {
     handleDevApi(URI, words[4].c_str(), words[5].c_str(), words[6].c_str());
   }
-//  else if (words[3] == "hist")
-//  {
-//    handleHistApi(URI, words[4].c_str(), words[5].c_str(), words[6].c_str());
-//  }
   else if (words[3] == "sm")
   {
     handleSmApi(URI, words[4].c_str(), words[5].c_str(), words[6].c_str());
@@ -247,7 +243,7 @@ void sendDeviceInfo()
 void sendDeviceSettings() 
 {
   DebugTln(F("sending device settings ...\r"));
-  DynamicJsonDocument doc(1600);
+  DynamicJsonDocument doc(2100);
   
   doc["hostname"]["value"] = settingHostname;
   doc["hostname"]["type"] = "s";
@@ -338,8 +334,39 @@ if (WtrMtr) {
   doc["water_l"]["type"] = "i";
   doc["water_l"]["min"] = 0;
   doc["water_l"]["max"] = 999;  
+
+  doc["water_fact"]["value"] = WtrFactor;
+  doc["water_fact"]["type"] = "f";
+  doc["water_fact"]["min"] = 0;
+  doc["water_fact"]["max"] = 10;  
+
 }
+  
+  if ( strncmp(BaseOTAurl, "http://", 7) == 0 ){
+    char ota_url[sizeof(BaseOTAurl)];
+    strncpy( ota_url, BaseOTAurl + 7, strlen(BaseOTAurl) );
+    doc["ota_url"]["value"] = ota_url;
+    doc["ota_url"]["maxlen"] = sizeof(ota_url) - 1;  
+  } else {
+    doc["ota_url"]["value"] = BaseOTAurl;
+    doc["ota_url"]["maxlen"] = sizeof(BaseOTAurl) -1;  
+  }
+  doc["ota_url"]["type"] = "s";
+  
+  doc["b_auth_user"]["value"] = bAuthUser;
+  doc["b_auth_user"]["type"] = "s";
+  doc["b_auth_user"]["maxlen"] = sizeof(bAuthUser) -1;
+  
+  doc["b_auth_pw"]["value"] = bAuthPW;
+  doc["b_auth_pw"]["type"] = "s";
+  doc["b_auth_pw"]["maxlen"] = sizeof(bAuthPW) -1;
+
+  //booleans
   doc["hist"] = EnableHistory;
+  doc["water_enabl"] = WtrMtr;
+  doc["led"] = LEDenabled;
+  doc["ha_disc_enabl"] = EnableHAdiscovery;
+  
   sendJson(doc);
 
 } // sendDeviceSettings()
@@ -460,63 +487,11 @@ void handleDevApi(const char *URI, const char *word4, const char *word5, const c
   }
   else if (strcmp(word4, "debug") == 0)
   {
-    sendDeviceDebug(URI, word5);
+      sendApiNotFound(URI);
   }
   else sendApiNotFound(URI);
   
 } // handleDevApi()
-
-//====================================================
-//void handleHistApi(const char *URI, const char *word4, const char *word5, const char *word6)
-//{
-//  if (!EnableHistory) return; //do nothing
-//  DebugTf("word4[%s], word5[%s], word6[%s]\r\n", word4, word5, word6);
-//  if (   strcmp(word4, "hours") == 0 )
-//  {
-//    RingFileTo(RINGHOURS, true);
-//    return;
-//  }
-//  else if (strcmp(word4, "days") == 0 )
-//  {
-//    RingFileTo(RINGDAYS, true);
-//    return;
-//
-//  }
-//  else if (strcmp(word4, "months") == 0)
-//  {
-//    if (httpServer.method() == HTTP_PUT || httpServer.method() == HTTP_POST)
-//    {
-//      //------------------------------------------------------------ 
-//      // json string: {"recid":"29013023"
-//      //               ,"edt1":2601.146,"edt2":"9535.555"
-//      //               ,"ert1":378.074,"ert2":208.746
-//      //               ,"gdt":3314.404}
-//      //------------------------------------------------------------ 
-//    
-//      //--- update MONTHS
-//      writeRingFile(RINGMONTHS, httpServer.arg(0).c_str());
-//      return;
-//    }
-//    else 
-//    {
-//      RingFileTo(RINGMONTHS,true);
-//      return;
-//    }
-//  }
-//  else 
-//  {
-//    sendApiNotFound(URI);
-//    return;
-//  }
-//
-//} // handleHistApi()
-
-//=======================================================================
-void sendDeviceDebug(const char *URI, String tail) 
-{
-  sendApiNotFound(URI);
-
-} // sendDeviceDebug()
 
 bool isInFieldsArray(const char* lookUp)
 {                        
