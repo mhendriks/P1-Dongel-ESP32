@@ -63,7 +63,8 @@ String PrevTelegram;
 //#include <Ticker.h>
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git  
 
-#define _DEFAULT_HOSTNAME  "P1-Dongle-Pro/" 
+#define _DEFAULT_HOSTNAME  "P1-Dongle-Pro" 
+#define _DEFAULT_MQTT_TOPIC "P1-Dongle-Pro/" 
 #define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
 #define SETTINGS_FILE      "/DSMRsettings.json"
 #define HOST_DATA_FILES    "cdn.jsdelivr.net"
@@ -75,6 +76,7 @@ String PrevTelegram;
 #define MIN_TELEGR_INTV     1
 
 P1Reader    slimmeMeter(&Serial1, DTR_IO);
+
 
 TaskHandle_t CPU0; //handler voor CPU task 0
 
@@ -113,10 +115,15 @@ using MyData = ParsedData<
   /* String */                ,p1_version_be
   /* String */                ,timestamp
   /* String */                ,equipment_id
+#ifndef SE_VERSION
   /* FixedValue */            ,energy_delivered_tariff1
   /* FixedValue */            ,energy_delivered_tariff2
   /* FixedValue */            ,energy_returned_tariff1
   /* FixedValue */            ,energy_returned_tariff2
+#else
+   /* FixedValue */ energy_delivered_total,
+   /* FixedValue */ energy_returned_total,
+#endif
   /* String */                ,electricity_tariff
   /* FixedValue */            ,power_delivered
   /* FixedValue */            ,power_returned
@@ -215,6 +222,7 @@ struct Status {
 } P1Status;
   
 MyData      DSMRdata;
+bool        DSTactive;
 time_t      actT, newT;
 char        actTimestamp[20] = "";
 char        newTimestamp[20] = "";
@@ -250,7 +258,7 @@ bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;
 
 //MQTT
-char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[26] = _DEFAULT_HOSTNAME;
+char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[26] = _DEFAULT_MQTT_TOPIC;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;
@@ -265,9 +273,7 @@ DECLARE_TIMER_SEC(nextTelegram,        2);
 DECLARE_TIMER_SEC(reconnectMQTTtimer,  5); // try reconnecting cyclus timer
 DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time between MQTT messages  
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);
-DECLARE_TIMER_MIN(antiWearRing,       25); 
 DECLARE_TIMER_SEC(StatusTimer,        10); //first time = 10 sec usual 10min (see loop)
-//DECLARE_TIMER_MIN(ProfileTimer,        1); 
 
 /***************************************************************************
 *

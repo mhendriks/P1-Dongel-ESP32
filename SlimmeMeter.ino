@@ -45,7 +45,6 @@ void handleSlimmemeter()
 //==================================================================================
 void processSlimmemeter()
 {
-  slimmeMeter.loop();
     telegramCount++;
     
     // Voorbeeld: [21:00:11][   9880/  8960] loop        ( 997): read telegram [28] => [140307210001S]
@@ -67,6 +66,7 @@ void processSlimmemeter()
           yield();
         }
       }
+
           if (DSMRdata.p1_version_be_present)
       {
         DSMRdata.p1_version = DSMRdata.p1_version_be;
@@ -78,23 +78,22 @@ void processSlimmemeter()
       modifySmFaseInfo();
 
 #ifdef USE_NTP_TIME
-      if (!DSMRdata.timestamp_present)                        //USE_NTP
-      {                                                       //USE_NTP
-        sprintf(cMsg, "%02d%02d%02d%02d%02d%02dW\0\0"         //USE_NTP
-                        , (year() - 2000), month(), day()     //USE_NTP
-                        , hour(), minute(), second());        //USE_NTP
-        DSMRdata.timestamp         = cMsg;                    //USE_NTP
-        DSMRdata.timestamp_present = true;                    //USE_NTP
-      }                                                       //USE_NTP
+      if (Verbose2) DSMRdata.timestamp_present = false; ///test only activeert NTP tijd ipv p1 tijd
+
+      if (!DSMRdata.timestamp_present) {                                                       
+        if (Verbose2) DebugTln(F("NTP Time set"));
+        sprintf(cMsg, "%02d%02d%02d%02d%02d%02d%s\0\0", (year() - 2000), month(), day(), hour(), minute(), second(),DSTactive?"S":"W");
+        DSMRdata.timestamp         = cMsg;
+        DSMRdata.timestamp_present = true;
+      }
 #endif
       //-- handle mbus delivered values
       gasDelivered = modifyMbusDelivered();
       
       processTelegram();
       if (Verbose2) DSMRdata.applyEach(showValues());
-
     } 
-    else                  // Parser error, print error
+    else // Parser error, print error
     {
       telegramErrors++;
       DebugTf("Parse error\r\n%s\r\n\r\n", DSMRerror.c_str());
@@ -102,6 +101,34 @@ void processSlimmemeter()
     }
   
 } // handleSlimmeMeter()
+
+//==================================================================================
+void processTelegram(){
+  DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());  
+                                                    
+  strcpy(newTimestamp, DSMRdata.timestamp.c_str()); 
+
+  newT = epoch(newTimestamp, strlen(newTimestamp), true); // update system time
+  actT = epoch(actTimestamp, strlen(actTimestamp), false);
+  
+  // Skip first 2 telegrams .. just to settle down a bit ;-)
+  if ((int32_t)(telegramCount - telegramErrors) < 2) {
+    strCopy(actTimestamp, sizeof(actTimestamp), newTimestamp);
+    actT = epoch(actTimestamp, strlen(actTimestamp), false);   // update system time
+    return;
+  }
+  
+  DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));
+
+  // has the hour changed
+  if (     (hour(actT) != hour(newT)  ) )  writeRingFiles();
+
+  if ( DUE(publishMQTTtimer) ) sendMQTTData();
+
+  strCopy(actTimestamp, sizeof(actTimestamp), newTimestamp); //nu pas updaten na het schrijven van de data anders in tijdslot - 1
+  actT = epoch(actTimestamp, strlen(actTimestamp), true);   // update system time
+  
+} // processTelegram()
 
 //==================================================================================
 void modifySmFaseInfo()

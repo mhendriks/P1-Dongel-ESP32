@@ -77,46 +77,6 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, char* Timestamp)
 }
 
 //===========================================================================================
-//
-//void RingFileTo(E_ringfiletype ringfiletype, bool toFile) 
-//{  
-//  if (bailout() || !FSmounted) return; //exit when heapsize is too small
-//
-//  if (!LittleFS.exists(RingFiles[ringfiletype].filename))
-//  {
-//    DebugT(F("read(): Ringfile doesn't exist: "));Debugln(RingFiles[ringfiletype].filename);
-//    createRingFile(ringfiletype);
-//    return;
-//    }
-//
-//  File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "r"); // open for reading
-//
-//  if (RingFile.size() != RingFiles[ringfiletype].f_len) {
-//    DebugT(F("ringfile size incorrect: "));Debugln(RingFile.size());
-//    //todo log error to logfile
-//    if (toFile) {
-//        DebugTln(F("http: json sent .."));
-//        httpServer.send(503, "application/json", "{\"error\":\"Ringfile error: incorrect file length\"}");
-//      } else{
-//        TelnetStream.write("Ringfile error: incorrect file length");
-//      }
-//  } else if (toFile) {
-//      DebugTln(F("http: json sent .."));
-//      httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-//      httpServer.streamFile(RingFile, "application/json"); 
-//      } else {
-//          DebugT(F("Ringfile output: "));
-//          while (RingFile.available()) //read the content and output to serial interface
-//          { 
-//            //Serial.write(RingFile.read());
-//            TelnetStream.println(RingFile.readStringUntil('\n'));
-//          }
-//          Debugln();
-//      }
-//  RingFile.close();
-//} //RingFileTo
-
-//===========================================================================================
 
 void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec) 
 {
@@ -184,21 +144,27 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec)
   else RingFile.print("\n"); // no comma at last record
   
   RingFile.close();
+//    String log_temp = "Ringfile " + String(RingFiles[ringfiletype].filename) + " writen. actT:[" + String(actT) + "] newT:[" + String(newT) +"] ActSlot:[" + String(slot) + "]";
+//    LogFile(log_temp.c_str(),true);
 } // writeRingFile()
 
 //===========================================================================================
 void writeRingFiles() {
   if (!EnableHistory) return; //do nothing
-  switch(RingCylce){
-    case 0: writeRingFile(RINGHOURS, "");
-            break;
-    case 1: writeRingFile(RINGDAYS, "");
-            break;
-    case 2: writeRingFile(RINGMONTHS, "");
-            break;
-  }
-  RingCylce++;
-  if (RingCylce > 2) RingCylce = 0;
+  writeRingFile(RINGHOURS, "");
+  writeRingFile(RINGDAYS, "");
+  writeRingFile(RINGMONTHS, "");
+
+//  switch(RingCylce){
+//    case 0: writeRingFile(RINGHOURS, "");
+//            break;
+//    case 1: writeRingFile(RINGDAYS, "");
+//            break;
+//    case 2: writeRingFile(RINGMONTHS, "");
+//            break;
+//  }
+//  RingCylce++;
+//  if (RingCylce > 2) RingCylce = 0;
 
 } // writeRingFiles()
  

@@ -9,11 +9,10 @@
 TODO
 - keuze om voor lokale frontend assets of uit het cdn
 -- message bij drempelwaardes 
--- verbruiksrapport einde dag/week/maand
+-- verbruiksrapport einde dag/week/maandstartWiFi
 - AsynWebserver implementatie
 - C3: logging via usb poort mogelijk maken
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
-- ESP32C3 channel 13 wifi issues uitzoeken
 - feature: nieuwe meter = beginstand op 0
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
 - aanpassen telegram capture -> niet continu 
@@ -26,7 +25,12 @@ TODO
 - influxdb koppeling onderzoeken
 - GUID implementeren ivm remote hulp
 - auto update check + update every night 3:<random> hour
+- issue met reconnect dns name mqtt (Eric)
+- auto switch 3 - 1 fase max fuse
 
+4.4.2 fixes
+- NTP DSMR 2 & 3 support
+- issue met basic auth afscherming rng bestanden
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -40,9 +44,12 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-//#define USE_NTP_TIME              // define to generate Timestamp from NTP (Only Winter Time for now)
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?     
-
+//#define PRE_DSMR40                //support DSMR 2.x and 3.x slimme meters
+//#define SE_VERSION
+//#define USE_NTP_TIME
+//#define ETHERNET
+ 
 #define ALL_OPTIONS "[CORE]"
 
 /******************** don't change anything below this comment **********************/
@@ -52,8 +59,17 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 void setup() 
 {
   SerialOut.begin(115200); //debug stream
+#ifdef PRE_DSMR40 
+  #define USE_NTP_TIME
+  Serial1.begin(9600, SERIAL_7E1, RXP1, TXP1, true); //p1 serial input
+  slimmeMeter.doChecksum(false);
+  DebugTln(F("P1 serial set to 9600 baud / 7E1"));
+#else
   Serial1.begin(115200, SERIAL_8N1, RXP1, TXP1, true); //p1 serial input
-
+  slimmeMeter.doChecksum(true);
+  DebugTln(F("P1 serial set to 115200 baud / 8N1"));
+#endif
+  
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
   // sign of life
@@ -84,7 +100,10 @@ void setup()
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   startTelnet();
   startMDNS(settingHostname);
+
+#ifdef USE_NTP_TIME 
   startNTP();
+#endif
 
 //================ Start MQTT  ======================================
 if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT();
@@ -181,12 +200,12 @@ void loop () {
   doSystemTasks();
 
   //--- update statusfile + ringfiles
-  if ( DUE(antiWearRing) || RingCylce ) writeRingFiles(); //eens per 25min + elk uur overgang
+//  if ( DUE(antiWearRing) || RingCylce ) writeRingFiles(); //eens per 25min + elk uur overgang
 
-  if (DUE(StatusTimer)) { //eens per 10min of indien extra m3
+ if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
     P1StatusWrite();
     MQTTSentStaticInfo();
-    CHANGE_INTERVAL_MIN(StatusTimer, 10);
+    CHANGE_INTERVAL_MIN(StatusTimer, 30);
   }
   
   handleRemoteUpdate();
@@ -194,7 +213,6 @@ void loop () {
   //only when compiler option is set
   handleButton();
   handleWater();
-  handleNTP();
   
 } // loop()
 
