@@ -1,9 +1,8 @@
 /* 
 ***************************************************************************  
 **  Program  : processTelegram, part of DSMRloggerAPI
-**  Version  : v4.2.1
 **
-**  Copyright (c) 2021 Willem Aandewiel / Martijn Hendriks
+**  Copyright (c) 2022 Martijn Hendriks
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -21,7 +20,7 @@ void update_finished() {
 
 void update_started() {
   LogFile("OTA UPDATE gestart",true);
-  if (bWebUpdate) httpServer.send(200, "text/html", "OTA update gestart...");
+  if (bWebUpdate) httpServer.send(200, "text/html", "OTA update gestart, duurt ca. 2 - 3 minuten...");
 }
 
 void update_progress(int cur, int total) {
