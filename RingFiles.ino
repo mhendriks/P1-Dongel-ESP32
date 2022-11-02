@@ -130,7 +130,11 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec)
 //    DebugTln("actslot: "+actSlot);
 //    DebugT(F("update date: "));Debugln(key);
     //create record
+#ifdef SE_VERSION
+    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_total, 0, (float)DSMRdata.energy_returned_total, 0, (float)gasDelivered, (float)P1Status.wtr_m3+(float)P1Status.wtr_l/1000.0);
+#else    
     snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_tariff1, (float)DSMRdata.energy_delivered_tariff2, (float)DSMRdata.energy_returned_tariff1, (float)DSMRdata.energy_returned_tariff2, (float)gasDelivered, (float)P1Status.wtr_m3+(float)P1Status.wtr_l/1000.0);
+#endif    
   }
   //DebugT("update timeslot: ");Debugln(slot);
   //goto writing starting point  
@@ -154,18 +158,6 @@ void writeRingFiles() {
   writeRingFile(RINGHOURS, "");
   writeRingFile(RINGDAYS, "");
   writeRingFile(RINGMONTHS, "");
-
-//  switch(RingCylce){
-//    case 0: writeRingFile(RINGHOURS, "");
-//            break;
-//    case 1: writeRingFile(RINGDAYS, "");
-//            break;
-//    case 2: writeRingFile(RINGMONTHS, "");
-//            break;
-//  }
-//  RingCylce++;
-//  if (RingCylce > 2) RingCylce = 0;
-
 } // writeRingFiles()
  
 
