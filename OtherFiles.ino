@@ -70,7 +70,8 @@ void writeSettings()
   yield();
 
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), _DEFAULT_HOMEPAGE);
-  if (settingTelegramInterval < MIN_TELEGR_INTV)  settingTelegramInterval = 10;
+  byte min_value = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
+  if (settingTelegramInterval < min_value)  settingTelegramInterval = min_value;
   if (settingMQTTbrokerPort < 1)    settingMQTTbrokerPort = 1883;
     
   DebugTln(F("Start writing setting data to json settings file"));
@@ -101,7 +102,8 @@ void writeSettings()
   doc["HAdiscovery"] = EnableHAdiscovery;
   doc["basic-auth"]["user"] = bAuthUser;
   doc["basic-auth"]["pass"] = bAuthPW;
-  doc["auto-update"] = bAutoUpdate;  
+  doc["auto-update"] = bAutoUpdate;
+  doc["pre40"] = bPre40;
 
   writeToJsonFile(doc, SettingsFile);
   
@@ -182,6 +184,7 @@ void readSettings(bool show)
 
   if (doc.containsKey("HAdiscovery")) EnableHAdiscovery = doc["HAdiscovery"];
   if (doc.containsKey("auto-update")) bAutoUpdate = doc["auto-update"];
+  if (doc.containsKey("pre40")) bPre40 = doc["pre40"];
 
   const char* temp = doc["basic-auth"]["user"];
   if (temp) strcpy(bAuthUser, temp);
@@ -205,7 +208,9 @@ void readSettings(bool show)
 
 
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), "DSMRindexEDGE.html");
-  if (settingTelegramInterval  < MIN_TELEGR_INTV) settingTelegramInterval = 10;
+  
+  byte min_value = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
+  if (settingTelegramInterval  < min_value) settingTelegramInterval = min_value;
   if (settingMQTTbrokerPort    < 1) settingMQTTbrokerPort   = 1883;
 
   if (!show) return;
@@ -242,6 +247,7 @@ void readSettings(bool show)
   Debug(F("              History Enabled: ")); Debugln(EnableHistory);
   Debug(F("          Water Meter Enabled: ")); Debugln(WtrMtr);
   Debug(F("    HA Auto Discovery Enabled: ")); Debugln(EnableHAdiscovery);
+  Debug(F("   Support 2.x and 3.x meters: ")); Debugln(bPre40);
   Debugln(F("-\r"));
 
 } // readSettings()
@@ -344,6 +350,10 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "hist")) EnableHistory = (stricmp(newValue, "true") == 0?true:false); 
   if (!stricmp(field, "water_enabl")) WtrMtr = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "ha_disc_enabl")) EnableHAdiscovery = (stricmp(newValue, "true") == 0?true:false);  
+  if (!stricmp(field, "pre40")) {
+    bPre40 = (stricmp(newValue, "true") == 0?true:false);    
+    SetupSMRport();
+  }
   
   writeSettings();
   

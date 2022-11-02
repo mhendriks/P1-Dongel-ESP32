@@ -51,6 +51,7 @@
   var HeeftGas				= false	//gasmeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
   var HeeftWater			= false	//watermeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
   var EnableHist			= true  //weergave historische gegevens
+  var Act_Watt				= false  //display actual in Watt instead of kW
   var SettingsRead 			= false 
   
 //---- Version globals
@@ -581,14 +582,26 @@ function UpdateDash()
 		gauge3f.update();
 
 		//update actuele vermogen			
-		document.getElementById("power_delivered").innerHTML = TotalKW.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
+		if (Act_Watt) {
+			document.getElementById("power_delivered").innerHTML = TotalKW.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} ) * 1000;
+		} else {
+			document.getElementById("power_delivered").innerHTML = TotalKW.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
+		}
 
 		//vermogen min - max bepalen
 		let nvKW= json.power_delivered.value; 
 		if (minKW == 0.0 || nvKW < minKW) { minKW = nvKW;}
 		if (nvKW> maxKW){ maxKW = nvKW; }
-		document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString();                    
-		document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString();                        
+		
+		if (Act_Watt){		
+			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString() * 1000;                    
+			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString() * 1000;           
+			document.getElementsByName('power').forEach(function(ele, idx) { ele.innerHTML = 'Watt'; }) //for all elements
+		} else {
+			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString();                    
+			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString();                        
+		}
+		
 
 		if (!EnableHist) {Spinner(false);return;}
 		
@@ -1060,6 +1073,7 @@ function handle_menu_click()
           Injection=json.Injection;
           Phases=json.Phases;   
           HeeftGas=json.GasAvailable;
+          Act_Watt = json.Act_Watt;
           
           for (var item in data) 
           {
@@ -2741,7 +2755,7 @@ function handle_menu_click()
           ,[ "freeheap",                  "Free Heap Space" ]
           ,[ "maxfreeblock",              "Max. Free Heap Blok" ]
           ,[ "chipid",                    "Chip ID" ]
-          ,[ "coreversion",               "ESP8266 Core Versie" ]
+          ,[ "coreversion",               "ESP Core Versie" ]
           ,[ "sdkversion",                "SDK versie" ]
           ,[ "cpufreq",                   "CPU Frequency" ]
           ,[ "sketchsize",                "Sketch Size" ]
@@ -2776,7 +2790,7 @@ function handle_menu_click()
           ,[ "ota_url",				  	  "Update url (zonder http://)"]
   	 	  ,[ "hist",				  	  "Metergegevens lokaal opslaan"]
 		  ,[ "auto_update",				  "Automatisch updaten"]
-		  ,[ "pre40",				  	  "SMR 2 & 3 support (reboot)"]
+		  ,[ "pre40",				  	  "SMR 2 & 3 support"]
 ];
 
 /*

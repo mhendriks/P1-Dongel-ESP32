@@ -60,7 +60,6 @@ String PrevTelegram;
 #include "version.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
-//#include <Ticker.h>
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git  
 
 #define _DEFAULT_HOSTNAME  "P1-Dongle-Pro" 
@@ -74,6 +73,7 @@ String PrevTelegram;
 #define MQTT_BUFF_MAX     200
 #define LED_BLINK_MS       80
 #define MIN_TELEGR_INTV     1
+#define MIN_T_INTV_PRE40   10
 
 P1Reader    slimmeMeter(&Serial1, DTR_IO);
 
@@ -121,8 +121,10 @@ using MyData = ParsedData<
   /* FixedValue */            ,energy_returned_tariff1
   /* FixedValue */            ,energy_returned_tariff2
 #else
-   /* FixedValue */ energy_delivered_total,
-   /* FixedValue */ energy_returned_total,
+  /* FixedValue */            ,energy_delivered_total
+  /* FixedValue */            ,energy_delivered_tariff2
+  /* FixedValue */            ,energy_returned_total
+  /* FixedValue */            ,energy_returned_tariff2 
 #endif
   /* String */                ,electricity_tariff
   /* FixedValue */            ,power_delivered
@@ -222,6 +224,7 @@ struct Status {
 } P1Status;
   
 MyData      DSMRdata;
+struct tm   tm;
 bool        DSTactive;
 time_t      actT, newT;
 char        actTimestamp[20] = "";
@@ -233,23 +236,24 @@ bool        DSMR_NL       = true;
 bool        EnableHAdiscovery = true;
 char        bAuthUser[25]="", bAuthPW[25]="";
 bool        EnableHistory = true;
+bool        bPre40 = false;
 
 char      cMsg[150];
 String    lastReset           = "";
 bool      FSNotPopulated      = false;
 bool      mqttIsConnected     = false;
-bool      doLog = false, Verbose1 = false, Verbose2 = false;
-int8_t    thisHour = -1, prevNtpHour = 0, thisDay = -1, thisMonth = -1, lastMonth, thisYear = 15;
+bool      Verbose1 = false, Verbose2 = false;
+//int8_t    thisHour = -1, prevNtpHour = 0, thisDay = -1, thisMonth = -1, lastMonth, thisYear = 15;
 uint32_t  unixTimestamp;
 
 IPAddress ipDNS, ipGateWay, ipSubnet;
 float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5;
 float     settingENBK = 15.15, settingGNBK = 11.11;
-uint8_t   settingTelegramInterval = 2; //seconden
+uint8_t   settingTelegramInterval = 10; //10 seconden default
 uint8_t   settingSmHasFaseInfo = 1;
 char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
-byte      RingCylce = 0;
+//byte      RingCylce = 0;
 
 //update
 char      BaseOTAurl[30] = OTAURL;

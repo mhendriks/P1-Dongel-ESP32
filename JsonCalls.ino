@@ -19,7 +19,7 @@ const static PROGMEM char infoArray[][25]   = { "identification","p1_version","e
 #ifndef SE_VERSION
   const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
 #else
-  const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_total","energy_returned_total","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
+  const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_total","energy_delivered_tariff2","energy_returned_total","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
 #endif
 
 DynamicJsonDocument jsonDoc(4100);  // generic doc to return, clear() before use!
@@ -65,6 +65,10 @@ struct buildJson {
     void apply(Item &i) {
       String Name = String(Item::name);
       if (isInFieldsArray(Name.c_str())) {
+        #ifdef SE_VERSION
+        if (Name == "energy_delivered_total") Name = "energy_delivered_tariff1";
+        else if (Name == "energy_returned_total") Name = "energy_returned_tariff1";
+        #endif
         if (i.present()) {          
           String Unit = Item::unit();
           jsonDoc[Name]["value"] = value_to_json(i.val());
@@ -295,7 +299,8 @@ void sendDeviceSettings()
   
   doc["tlgrm_interval"]["value"] = settingTelegramInterval;
   doc["tlgrm_interval"]["type"] = "i";
-  doc["tlgrm_interval"]["min"] = MIN_TELEGR_INTV;
+  doc["tlgrm_interval"]["min"] = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
+  
   doc["tlgrm_interval"]["max"] = 60;
   
   doc["IndexPage"]["value"] = settingIndexPage;
@@ -370,6 +375,7 @@ if (WtrMtr) {
   doc["water_enabl"] = WtrMtr;
   doc["led"] = LEDenabled;
   doc["ha_disc_enabl"] = EnableHAdiscovery;
+  doc["pre40"] = bPre40;
   // doc["auto_update"] = bAutoUpdate;  TO DO ... 
   
   sendJson(doc);

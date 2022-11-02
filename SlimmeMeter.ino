@@ -7,7 +7,24 @@
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
-*/  
+*/                           
+
+void SetupSMRport(){
+  Serial1.end();
+  delay(100); //give it some time
+  DebugT(F("P1 serial set to ")); 
+  if(bPre40){
+    Serial1.begin(9600, SERIAL_7E1, RXP1, TXP1, true); //p1 serial input
+    slimmeMeter.doChecksum(false);
+    Debugln(F("9600 baud / 7E1"));  
+  } else {
+    Serial1.begin(115200, SERIAL_8N1, RXP1, TXP1, true); //p1 serial input
+    slimmeMeter.doChecksum(true);
+    Debugln(F("115200 baud / 8N1"));
+  }
+  delay(100); //give it some time
+}
+
 struct showValues {
   template<typename Item>
   void apply(Item &i) {
@@ -67,7 +84,7 @@ void processSlimmemeter()
         }
       }
 
-          if (DSMRdata.p1_version_be_present)
+      if (DSMRdata.p1_version_be_present)
       {
         DSMRdata.p1_version = DSMRdata.p1_version_be;
         DSMRdata.p1_version_be_present  = false;
@@ -76,17 +93,25 @@ void processSlimmemeter()
       }
 
       modifySmFaseInfo();
-
-#ifdef USE_NTP_TIME
-      if (Verbose2) DSMRdata.timestamp_present = false; ///test only activeert NTP tijd ipv p1 tijd
-
-      if (!DSMRdata.timestamp_present) {                                                       
+#ifndef USE_NTP_TIME
+  if (!DSMRdata.timestamp_present) { 
+#endif
         if (Verbose2) DebugTln(F("NTP Time set"));
-        sprintf(cMsg, "%02d%02d%02d%02d%02d%02d%s\0\0", (year() - 2000), month(), day(), hour(), minute(), second(),DSTactive?"S":"W");
+      if ( getLocalTime(&tm) ) {
+          DSTactive = tm.tm_isdst;
+//          sprintf(cMsg, "%02d%02d%02d%02d%02d%02d%s\0\0", (tm.tm_year -100 ), tm.tm_mon + 1, tm.tm_mday, (tm.tm_hour + telegramCount) % 24, tm.tm_min, tm.tm_sec,DSTactive?"S":"W");
+          sprintf(cMsg, "%02d%02d%02d%02d%02d%02d%s\0\0", (tm.tm_year -100 ), tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,DSTactive?"S":"W");
+      } else {
+//        strCopy(cMsg, sizeof(cMsg), "220101010101S");
+        strCopy(cMsg, sizeof(cMsg), actTimestamp);
+        LogFile("timestamp = old time",true);
+      }
         DSMRdata.timestamp         = cMsg;
         DSMRdata.timestamp_present = true;
-      }
-#endif
+
+#ifndef USE_NTP_TIME
+  } //!timestamp present
+#endif  
       //-- handle mbus delivered values
       gasDelivered = modifyMbusDelivered();
       
@@ -102,6 +127,18 @@ void processSlimmemeter()
   
 } // handleSlimmeMeter()
 
+//void NTPTest(){
+//struct tm timeinfo;
+//    time_t local_time;
+//    if ( getLocalTime(&timeinfo) ) {
+//      time(&local_time);
+//      DSTactive = timeinfo.tm_isdst;
+//      sprintf(actTimestamp, "%02d%02d%02d%02d%02d%02d%s\0\0", (timeinfo.tm_year -100 ), timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec,DSTactive?"S":"W");
+//    }
+//  actT = epoch(actTimestamp, strlen(actTimestamp), true);   // update system time
+//  Serial.printf("activeTimestamp: %s\n",actTimestamp);
+//}
+
 //==================================================================================
 void processTelegram(){
   DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());  
@@ -114,7 +151,7 @@ void processTelegram(){
   // Skip first 2 telegrams .. just to settle down a bit ;-)
   if ((int32_t)(telegramCount - telegramErrors) < 2) {
     strCopy(actTimestamp, sizeof(actTimestamp), newTimestamp);
-    actT = epoch(actTimestamp, strlen(actTimestamp), false);   // update system time
+    actT = epoch(actTimestamp, strlen(actTimestamp), false);
     return;
   }
   
