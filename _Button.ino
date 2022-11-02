@@ -41,6 +41,6 @@ void setupAuxButton() {
 #ifdef AUX_BUTTON
   pinMode(AUX_BUTTON, INPUT_PULLUP);
   attachInterrupt(AUX_BUTTON, iButton_pressed, FALLING);
-  DebugTln(F("AUX_BUTTON setup completed"));
+  DebugTln(F("BUTTON setup completed"));
 #endif
 }
