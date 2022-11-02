@@ -10,71 +10,65 @@
 */
 
 /** 
-  inspiration: https://randomnerdtutorials.com/esp32-ntp-timezones-daylight-saving/
+  inspiration: 
+  https://randomnerdtutorials.com/esp32-ntp-timezones-daylight-saving/
+  https://randomnerdtutorials.com/esp32-ntp-client-date-time-arduino-ide/
+  
   TZ table https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
 
   Europe/Amsterdam  CET-1CEST,M3.5.0,M10.5.0/3
   Europe/Brussels   CET-1CEST,M3.5.0,M10.5.0/3 same
 
+  DST mrt - oct -> +1h
+  zone UTC+1 (normaal = wintertijd) tijdens DST UTC+2
+
 */
 
-#ifdef USE_NTP_TIME 
+#include "esp_sntp.h"
 
-#define NPT_SYNC_INTERVAL 600 //10 minutes
+#define NTP_SYNC_INTERVAL 3600 // 60 * 60 = 3600 sec = 1h
+//#define NTP_SYNC_INTERVAL 600 //10min
 
 //=======================================================================
 void setTimezone(String timezone){
-  Serial.printf("  Setting Timezone to %s\n",timezone.c_str());
+  DebugTf("Set Timezone to %s\n",timezone.c_str());
   setenv("TZ",timezone.c_str(),1);  //  Now adjust the TZ.  Clock settings are adjusted to show the new local time
   tzset();
 }
 
 //=======================================================================
 void printLocalTime(){
-  struct tm timeinfo;
-  if(!getLocalTime(&timeinfo)){
-    DebugTln(F("Failed to obtain time 1"));
-    return;
-  }
-  DebugTln(&timeinfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+  if(getLocalTime(&tm)) DebugTln(&tm, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
+  else DebugTln(F("Failed to obtain time"));  
+}
+
+
+//=======================================================================
+void cbSyncTime(struct timeval *tv)  // callback function to show when NTP was synchronized
+{
+  if(getLocalTime(&tm)) setTime(tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_mday, tm.tm_mon + 1, tm.tm_year - 100 );
+  DSTactive = tm.tm_isdst;
+//  LogFile("NTP time synched", true);
 }
 
 //=======================================================================
 void startNTP() {
-  struct tm timeinfo;
-//  time_t local_time;
   DebugTln(F("Starting NTP"));
-  configTime(0, 0, "pool.ntp.org");    // First connect to NTP server, with 0 TZ offset
-  if(!getLocalTime(&timeinfo)){
+
+  sntp_set_time_sync_notification_cb(cbSyncTime);  // set a Callback function for time synchronization notification
+  sntp_set_sync_interval( NTP_SYNC_INTERVAL * 1000UL ); //sync 
+  configTime(0, 0, "europe.pool.ntp.org");    // First connect to NTP server, with 0 TZ offset
+  setTimezone("CET-1CEST,M3.5.0,M10.5.0/3");
+  if(!getLocalTime(&tm)){
     DebugTln(F("Failed to obtain time"));
     return;
   }
-  DebugTln(F("Got the time from NTP"));
+  DebugT(F("NTP Sync interval [sec]: "));Debugln(sntp_get_sync_interval()/1000);
   printLocalTime();
-  setTimezone("CET-1CEST,M3.5.0,M10.5.0/3");
-  printLocalTime();
-  setSyncProvider(getNtpTime);
-  setSyncInterval(NPT_SYNC_INTERVAL); 
+  sprintf(actTimestamp, "%02d%02d%02d%02d%02d%02d%s\0\0", (tm.tm_year - 100 ), tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,DSTactive?"S":"W");  
   
 } // startNTP()
 
-//=======================================================================
-time_t getNtpTime() {
-    struct tm timeinfo;
-    time_t local_time;
-    if ( getLocalTime(&timeinfo) ) {
-      time(&local_time);
-      DSTactive = timeinfo.tm_isdst;
-      sprintf(actTimestamp, "%02d%02d%02d%02d%02d%02d%s\0\0", (timeinfo.tm_year -100 ), timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec,DSTactive?"S":"W");
-//      Serial.print(("NTP Synced: ")); Serial.println(actTimestamp);
-      return local_time;
-  } else {
-    DebugTln(F("ERROR!!! No NTP server reached!\r\n\r"));
-    return 0;
-  }
-}
-
-#endif
 
 /***************************************************************************
 *
