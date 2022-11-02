@@ -94,7 +94,7 @@ void startWiFi(const char* hostname, int timeOut)
   digitalWrite(LED, LED_OFF);
   WifiBoot = true;
   WiFi.onEvent(onWifiEvent);
-  manageWiFi.setDebugOutput(true);
+  manageWiFi.setDebugOutput(false);
       
   //add custom html at inside <head> for all pages -> show password function
   manageWiFi.setCustomHeadElement("<script>function f() {var x = document.getElementById('p');x.type==='password'?x.type='text':x.type='password';}</script>");
