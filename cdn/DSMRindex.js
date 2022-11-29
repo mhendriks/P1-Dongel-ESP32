@@ -8,7 +8,7 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-  const APIGW='http://'+window.location.host+'/api/';
+const APIGW=window.location.protocol+'//'+window.location.host+'/api/';
 
   "use strict";
 
@@ -53,6 +53,7 @@
   var EnableHist			= true  //weergave historische gegevens
   var Act_Watt				= false  //display actual in Watt instead of kW
   var SettingsRead 			= false 
+  var AvoidSpikes			= false 
   
 //---- Version globals
   var LastVersion = "", 
@@ -514,7 +515,6 @@ function UpdateDash()
 		if (!isNaN(json.voltage_l3.value)) v3 = json.voltage_l3.value;
 
 
-		// TODO
 		if (v1 && (!Injection || ShowVoltage) ) {
 			document.getElementById("l2").style.display = "block"
 			document.getElementById("fases").innerHTML = Phases;
@@ -536,14 +536,15 @@ function UpdateDash()
 		}
 		//-------ACTUEEL METER		
 		//afname of teruglevering bepalen en signaleren
-		let TotalKW	= 0;
-		if (json.power_returned.value > 0) { 
-			TotalKW = -1.0 * json.power_returned.value;
+		let TotalKW	= json.power_delivered.value - json.power_returned.value;
+		
+		if ( !TotalKW ) { 
+// 			TotalKW = -1.0 * json.power_returned.value;
 			document.getElementById("power_delivered_l1h").style.backgroundColor = "green";
 // 			document.getElementById("power_delivered_l1h").innerHTML = "Teruglevering";
 		} else
 		{
-			TotalKW = json.power_delivered.value;
+// 			TotalKW = json.power_delivered.value;
 // 			document.getElementById("power_delivered_l1h").innerHTML = "Actueel";
 			if (Injection) document.getElementById("power_delivered_l1h").style.backgroundColor = "red";
 			else document.getElementById("power_delivered_l1h").style.backgroundColor = "#314b77";
@@ -572,21 +573,21 @@ function UpdateDash()
 			}
 		} else {
 			// current is missing = calc current based on actual power		
-			TotalAmps = Number((json.power_delivered.value+json.power_returned.value)*1000/230).toFixed(0);
+			TotalAmps = Number(Math.abs(TotalKW)*1000/230).toFixed(0);
 			
 // 			console.log("current : " + current);
 			gauge3f.data.datasets[0].data=[TotalAmps,AMPS-TotalAmps];
 		};	
 		
-		gauge3f.options.title.text = TotalAmps + " A";
+		gauge3f.options.title.text = TotalAmps.toFixed(2) + " A";
 		gauge3f.update();
 
 		//update actuele vermogen			
-		if (Act_Watt) {
-			document.getElementById("power_delivered").innerHTML = TotalKW.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} ) * 1000;
-		} else {
-			document.getElementById("power_delivered").innerHTML = TotalKW.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
-		}
+// 		if (Act_Watt) {
+			document.getElementById("power_delivered").innerHTML = TotalKW.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} ) * ( Act_Watt ? 1000 : 1 );
+// 		} else {
+// 			document.getElementById("power_delivered").innerHTML = TotalKW.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
+// 		}
 
 		//vermogen min - max bepalen
 		let nvKW= json.power_delivered.value; 
@@ -1074,6 +1075,7 @@ function handle_menu_click()
           Phases=json.Phases;   
           HeeftGas=json.GasAvailable;
           Act_Watt = json.Act_Watt;
+		  "AvoidSpikes" in json ? AvoidSpikes = json.AvoidSpikes : AvoidSpikes = false;
           
           for (var item in data) 
           {
@@ -1230,8 +1232,20 @@ function handle_menu_click()
     var slotbefore;
     	
     //--- first check op volgordelijkheid ------    
-//     if (activeTab == "bHoursTab") {  
-//     
+// 	if (activeTab == "HoursTab") {  
+//     for (let i=0; i<(data.length -1); i++)
+//     {
+//       slotbefore = math.mod(i-1, data.data.length);
+// 	  if (data[i].edt1 < data[i+1].edt1 || data[i].edt2 < data[i+1].edt2)
+//       {
+//         console.log("["+(i)+"] ["+data[i].recid+"] := ["+(i+1)+"]["+data[i+1].recid+"]"); 
+//         data[i].edt1 = data[i+1].edt1 * 1.0;
+//         data[i].edt2 = data[i+1].edt2 * 1.0;
+//         data[i].ert1 = data[i+1].ert1 * 1.0;
+//         data[i].ert2 = data[i+1].ert2 * 1.0;
+//         data[i].gdt  = data[i+1].gdt  * 1.0;
+//       }
+//     } // for ...
 //     }
     for (let x=data.data.length + data.actSlot; x > data.actSlot; x--)
     {	i = x % data.data.length;
@@ -1244,7 +1258,8 @@ function handle_menu_click()
       var     costs     = 0;
       if (x != data.actSlot 	)
       { 
-        data.data[i].p_ed  = ((data.data[i].values[0] + data.data[i].values[1])-(data.data[slotbefore].values[0] +data.data[slotbefore].values[1])).toFixed(3);
+        if ( AvoidSpikes && ( data.data[slotbefore].values[0] == 0 ) ) data.data[slotbefore].values = data.data[i].values;//avoid gaps and spikes
+		data.data[i].p_ed  = ((data.data[i].values[0] + data.data[i].values[1])-(data.data[slotbefore].values[0] +data.data[slotbefore].values[1])).toFixed(3);
         data.data[i].p_edw = (data.data[i].p_ed * 1000).toFixed(0);
         data.data[i].p_er  = ((data.data[i].values[2] + data.data[i].values[3])-(data.data[slotbefore].values[2] +data.data[slotbefore].values[3])).toFixed(3);
         data.data[i].p_erw = (data.data[i].p_er * 1000).toFixed(0);
@@ -2299,7 +2314,7 @@ function handle_menu_click()
   //============================================================================  
   function sendPostSetting(field, value) 
   {
-    const jsonString = {"name" : field, "value" : escape(value) };
+    const jsonString = {"name" : field, "value" : value };
     const other_params = {
         headers : { "content-type" : "application/json; charset=UTF-8"},
         body : JSON.stringify(jsonString),
