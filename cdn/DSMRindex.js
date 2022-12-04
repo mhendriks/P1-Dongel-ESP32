@@ -536,8 +536,8 @@ function UpdateDash()
 		}
 		//-------ACTUEEL METER		
 		//afname of teruglevering bepalen en signaleren
-		let TotalKW	= json.power_delivered.value - json.power_returned.value;
-		
+		var TotalKW	= json.power_delivered.value - json.power_returned.value;
+
 		if ( !TotalKW ) { 
 // 			TotalKW = -1.0 * json.power_returned.value;
 			document.getElementById("power_delivered_l1h").style.backgroundColor = "green";
@@ -583,24 +583,24 @@ function UpdateDash()
 		gauge3f.update();
 
 		//update actuele vermogen			
-// 		if (Act_Watt) {
-			document.getElementById("power_delivered").innerHTML = TotalKW.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} ) * ( Act_Watt ? 1000 : 1 );
-// 		} else {
-// 			document.getElementById("power_delivered").innerHTML = TotalKW.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
-// 		}
+		if (Act_Watt) {
+			document.getElementById("power_delivered").innerHTML = Number(TotalKW.toFixed(3))  * 1000.0;
+		} else {
+			document.getElementById("power_delivered").innerHTML = Number(TotalKW).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} ) ;
+		}
 
 		//vermogen min - max bepalen
-		let nvKW= json.power_delivered.value; 
+		let nvKW= TotalKW; 
 		if (minKW == 0.0 || nvKW < minKW) { minKW = nvKW;}
 		if (nvKW> maxKW){ maxKW = nvKW; }
 		
 		if (Act_Watt){		
-			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString() * 1000;                    
-			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString() * 1000;           
+			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)) * 1000;                    
+			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)) * 1000;           
 			document.getElementsByName('power').forEach(function(ele, idx) { ele.innerHTML = 'Watt'; }) //for all elements
 		} else {
-			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString();                    
-			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString();                        
+			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );                    
+			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );                        
 		}
 		
 
@@ -1074,7 +1074,7 @@ function handle_menu_click()
           Injection=json.Injection;
           Phases=json.Phases;   
           HeeftGas=json.GasAvailable;
-          Act_Watt = json.Act_Watt;
+		  "Act_Watt" in json ? Act_Watt = json.Act_Watt : Act_Watt = false;
 		  "AvoidSpikes" in json ? AvoidSpikes = json.AvoidSpikes : AvoidSpikes = false;
           
           for (var item in data) 
