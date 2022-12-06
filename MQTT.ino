@@ -69,7 +69,7 @@ void AutoDiscoverHA(){
 
   SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(2) }}","total_increasing","");
   
-  SendAutoDiscoverHA("water", "", "Waterverbruik", "m³", "{{ value | round(0) }}","total_increasing",",\"icon\": \"mdi:water\"");
+  SendAutoDiscoverHA("water", "water", "Waterverbruik", "m³", "{{ value | round(3) }}","total_increasing",",\"icon\": \"mdi:water\"");
 
 }
 
