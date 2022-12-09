@@ -538,7 +538,7 @@ function UpdateDash()
 		//afname of teruglevering bepalen en signaleren
 		var TotalKW	= json.power_delivered.value - json.power_returned.value;
 
-		if ( !TotalKW ) { 
+		if ( TotalKW <= 0 ) { 
 // 			TotalKW = -1.0 * json.power_returned.value;
 			document.getElementById("power_delivered_l1h").style.backgroundColor = "green";
 // 			document.getElementById("power_delivered_l1h").innerHTML = "Teruglevering";
