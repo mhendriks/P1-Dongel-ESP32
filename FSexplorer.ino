@@ -41,18 +41,21 @@ void auth(){
 void procestelegram(){
   checkauth(); 
 
-  if (PrevTelegram.length() ) {
-      DebugTln("send previous telegram");
-      httpServer.sendHeader( "Access-Control-Allow-Origin", "*" );
-      httpServer.setContentLength( PrevTelegram.length() );
-      httpServer.send( 200, "application/json", PrevTelegram );      
-      PrevTelegram = "";
-  }
+//  if (PrevTelegram.length() ) {
+//      DebugTln("send previous telegram");
+//      httpServer.sendHeader( "Access-Control-Allow-Origin", "*" );
+//      httpServer.setContentLength( PrevTelegram.length() );
+//      httpServer.send( 200, "application/json", PrevTelegram );      
+//      PrevTelegram = "";
+//  }
 }
 
 //=====================================================================================
 void setupFSexplorer()
 { 
+//  telegram.onNotFound([]() { telegram.send(200, "text/plain", "telegram"); });
+//  telegram.begin();
+  
   httpServer.serveStatic("/api/v2/hist/hours" , LittleFS, RingFiles[RINGHOURS].filename );
   httpServer.serveStatic("/api/v2/hist/days"  , LittleFS, RingFiles[RINGDAYS].filename );
   httpServer.serveStatic("/api/v2/hist/months", LittleFS, RingFiles[RINGMONTHS].filename );
@@ -60,7 +63,7 @@ void setupFSexplorer()
   
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
   httpServer.on("/login", HTTP_GET, []() { auth(); });
-  httpServer.on("/api/v2/sm/telegram", HTTP_GET, [](){ procestelegram(); });
+//  httpServer.on("/api/v2/sm/telegram", HTTP_GET, [](){ JsonRaw = true; });
   
   httpServer.on("/api/listfiles", HTTP_GET, [](){ checkauth(); APIlistFiles(); });
   httpServer.on("/FSformat", [](){ checkauth();formatFS; });

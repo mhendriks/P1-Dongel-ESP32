@@ -25,6 +25,7 @@ void DisplayFile(const char *fname) {
 void P1Update(bool sketch){
   char versie[30] = "";
 
+  bHideP1Log = true; //hide
   //clear buffer
   while (TelnetStream.available() > 0) { (char)TelnetStream.read(); yield(); }
   
@@ -39,6 +40,7 @@ void P1Update(bool sketch){
   if (strcmp(versie,"latest") == 0) RemoteUpdate("4-sketch-latest",sketch);
   else if (strlen(versie)>4) RemoteUpdate(versie,sketch); 
   else Debugln(F("Fout in versie opgave: formaat = x.x.x")); 
+  bHideP1Log = false; //unhide
 }
 //--------------------------------
 
@@ -212,6 +214,9 @@ void handleKeyInput()
       case 'x':
       case 'X':     DebugTf("Watermeter readings: %i m3 and %i liters\n",P1Status.wtr_m3,P1Status.wtr_l);
                     break;
+      case 'y':
+      case 'Y':     writeRingFiles();
+                    break;                    
       case 'Z':     P1StatusClear();
                     break;
                     

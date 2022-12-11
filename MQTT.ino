@@ -26,9 +26,9 @@
   String            MQTTclientId;
 
 void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char* dev_title, const char* dev_unit, const char* dev_payload, const char* state_class, const char* extrapl ){
-  char msg_topic[60];
-  char msg_payload[350];
-    sprintf(msg_topic,"homeassistant/sensor/%s/config",dev_name);
+  char msg_topic[80];
+  char msg_payload[500];
+    sprintf(msg_topic,"homeassistant/sensor/p1-dongle-pro/%s/config",dev_name);
 //    Debugln(msg_topic);
   if (strlen(dev_class)) sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"dev_cla\": \"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"state_class\":\"%s\"%s }", dev_name,dev_class, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl);
   else sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"state_class\":\"%s\"%s }", dev_name, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl);
@@ -39,7 +39,7 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
 void AutoDiscoverHA(){
   if (!EnableHAdiscovery) return;
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/power_delivered/config" -m '{"dev_cla": "gas", "name": "Power Delivered", "stat_t": "DSMR-API/power_delivered", "unit_of_meas": "Wh", "val_tpl": "{{ value_json.power_delivered[0].value | round(3) }}" }'
-  MQTTclient.setBufferSize(350);
+  MQTTclient.setBufferSize(400);
 
   SendAutoDiscoverHA("timestamp", "", "DSMR Last Update", "", "{{ strptime(value[0:12], \'%y%m%d%H%M%S\') }}","measurement", ",\"icon\": \"mdi:clock\"");
   
@@ -69,7 +69,7 @@ void AutoDiscoverHA(){
 
   SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(2) }}","total_increasing","");
   
-  SendAutoDiscoverHA("water", "", "Waterverbruik", "m³", "{{ value | round(0) }}","total_increasing",",\"icon\": \"mdi:water\"");
+  SendAutoDiscoverHA("water", "water", "Waterverbruik", "m³", "{{ value | round(3) }}","total_increasing",",\"icon\": \"mdi:water\"");
 
 }
 

@@ -70,8 +70,8 @@ void writeSettings()
   yield();
 
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), _DEFAULT_HOMEPAGE);
-  byte min_value = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
-  if (settingTelegramInterval < min_value)  settingTelegramInterval = min_value;
+//  byte min_value = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
+//  if (settingTelegramInterval < min_value)  settingTelegramInterval = min_value;
   if (settingMQTTbrokerPort < 1)    settingMQTTbrokerPort = 1883;
     
   DebugTln(F("Start writing setting data to json settings file"));
@@ -84,7 +84,7 @@ void writeSettings()
   doc["EnergyVasteKosten"] = settingENBK;
   doc["GasVasteKosten"] = settingGNBK;
   doc["SmHasFaseInfo"] = settingSmHasFaseInfo;
-  doc["TelegramInterval"] = settingTelegramInterval;
+//  doc["TelegramInterval"] = settingTelegramInterval;
   doc["IndexPage"] = settingIndexPage;
  
   doc["MQTTbroker"] = settingMQTTbroker;
@@ -161,9 +161,9 @@ void readSettings(bool show)
   settingGNBK = doc["GasVasteKosten"];
   settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
-  settingTelegramInterval = doc["TelegramInterval"];
-  CHANGE_INTERVAL_SEC(nextTelegram, settingTelegramInterval);
- 
+//  settingTelegramInterval = doc["TelegramInterval"];
+//  CHANGE_INTERVAL_SEC(nextTelegram, settingTelegramInterval);
+// 
   //sprintf(settingMQTTbroker, "%s:%d", MQTTbroker, MQTTbrokerPort);
   strcpy(settingMQTTbroker, doc["MQTTbroker"]);
   settingMQTTbrokerPort = doc["MQTTbrokerPort"];
@@ -209,8 +209,8 @@ void readSettings(bool show)
 
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), "DSMRindexEDGE.html");
   
-  byte min_value = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
-  if (settingTelegramInterval  < min_value) settingTelegramInterval = min_value;
+//  byte min_value = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
+//  if (settingTelegramInterval  < min_value) settingTelegramInterval = min_value;
   if (settingMQTTbrokerPort    < 1) settingMQTTbrokerPort   = 1883;
 
   if (!show) return;
@@ -225,7 +225,7 @@ void readSettings(bool show)
   Debugf("     Energy Netbeheer Kosten : %9.2f\r\n",  settingENBK);
   Debugf("        Gas Netbeheer Kosten : %9.2f\r\n",  settingGNBK);
   Debugf("  SM Fase Info (0=No, 1=Yes) : %d\r\n",     settingSmHasFaseInfo);
-  Debugf("   Telegram Process Interval : %d\r\n",     settingTelegramInterval);
+//  Debugf("   Telegram Process Interval : %d\r\n",     settingTelegramInterval);
   
   Debugf("                  Index Page : %s\r\n",     settingIndexPage);
 
@@ -296,11 +296,11 @@ void updateSetting(const char *field, const char *newValue)
     else                            settingSmHasFaseInfo = 0;  
   }
 
-  if (!stricmp(field, "tlgrm_interval"))    
-  {
-    settingTelegramInterval     = String(newValue).toInt();  
-    CHANGE_INTERVAL_SEC(nextTelegram, settingTelegramInterval)
-  }
+//  if (!stricmp(field, "tlgrm_interval"))    
+//  {
+//    settingTelegramInterval     = String(newValue).toInt();  
+//    CHANGE_INTERVAL_SEC(nextTelegram, settingTelegramInterval)
+//  }
 
   if (!stricmp(field, "IndexPage"))        strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), newValue);  
 

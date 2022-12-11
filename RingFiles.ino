@@ -11,7 +11,10 @@
 
 void CheckRingExists(){
   for (byte i = 0; i< 3; i++){
-    if ( !LittleFS.exists(RingFiles[i].filename) ) createRingFile( (E_ringfiletype)i );
+    if ( !LittleFS.exists(RingFiles[i].filename) ) {
+      createRingFile( (E_ringfiletype)i );
+//      FirstStart =  true; //when one or more files missing first start function triggers
+    }
   }
 }
 //===========================================================================================
@@ -58,7 +61,6 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, char* Timestamp)
 {
   //slot positie bepalen
   uint32_t  nr=0;
-  //time_t    t1 = epoch((char*)actTimestamp, strlen(actTimestamp), false);
   time_t    t1 = epoch(Timestamp, strlen(Timestamp), false);
   if (ringfiletype == RINGMONTHS ) nr = ( (year(t1) -1) * 12) + month(t1);    // eg: year(2023) * 12 = 24276 + month(9) = 202309
   else nr = t1 / RingFiles[ringfiletype].seconds;
@@ -156,8 +158,11 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec)
 void writeRingFiles() {
   if (!EnableHistory) return; //do nothing
   writeRingFile(RINGHOURS, "");
+  yield();
   writeRingFile(RINGDAYS, "");
+  yield();
   writeRingFile(RINGMONTHS, "");
+//  FirstStart = false; //write extra record once
 } // writeRingFiles()
  
 

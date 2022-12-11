@@ -46,15 +46,18 @@ struct showValues {
 void handleSlimmemeter()
 {
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
+#ifdef STUB
+  return; //escape when stub is active
+#endif
+    slimmeMeter.loop();
     if (slimmeMeter.available()) {
       ToggleLED();
-//      TelegramRaw = slimmeMeter.raw(); //gelijk opslaan want async update
-      if ( showRaw ) {
-        //-- process telegram in raw mode
+      CapTelegram = slimmeMeter.raw(); //capture last telegram
+      if (showRaw) {
+        //-- process telegrams in raw mode
         Debugf("Telegram Raw (%d)\n%s\n" , slimmeMeter.raw().length(),slimmeMeter.raw().c_str()); 
         showRaw = false; //only 1 reading
-      } 
-      else processSlimmemeter();
+      } else processSlimmemeter();
       ToggleLED();
     } //available
 } // handleSlimmemeter()
@@ -65,8 +68,10 @@ void processSlimmemeter()
     telegramCount++;
     
     // Voorbeeld: [21:00:11][   9880/  8960] loop        ( 997): read telegram [28] => [140307210001S]
-    Debugln(F("\r\n[Time----][FreeHeap/mBlck][Function----(line):"));
-    DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
+    if (!bHideP1Log) {
+      Debugln(F("\r\nP [Time----][FreeHeap/mBlck][Function----(line):"));
+      DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
+    }
         
     DSMRdata = {};
     String    DSMRerror;
@@ -127,43 +132,25 @@ void processSlimmemeter()
   
 } // handleSlimmeMeter()
 
-//void NTPTest(){
-//struct tm timeinfo;
-//    time_t local_time;
-//    if ( getLocalTime(&timeinfo) ) {
-//      time(&local_time);
-//      DSTactive = timeinfo.tm_isdst;
-//      sprintf(actTimestamp, "%02d%02d%02d%02d%02d%02d%s\0\0", (timeinfo.tm_year -100 ), timeinfo.tm_mon + 1, timeinfo.tm_mday, timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec,DSTactive?"S":"W");
-//    }
-//  actT = epoch(actTimestamp, strlen(actTimestamp), true);   // update system time
-//  Serial.printf("activeTimestamp: %s\n",actTimestamp);
-//}
-
 //==================================================================================
 void processTelegram(){
-  DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());  
+//  DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());  
                                                     
   strcpy(newTimestamp, DSMRdata.timestamp.c_str()); 
 
   newT = epoch(newTimestamp, strlen(newTimestamp), true); // update system time
   actT = epoch(actTimestamp, strlen(actTimestamp), false);
   
-  // Skip first 2 telegrams .. just to settle down a bit ;-)
-  if ((int32_t)(telegramCount - telegramErrors) < 2) {
-    strCopy(actTimestamp, sizeof(actTimestamp), newTimestamp);
-    actT = epoch(actTimestamp, strlen(actTimestamp), false);
-    return;
-  }
-  
-  DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));
-
   // has the hour changed
-  if (     (hour(actT) != hour(newT)  ) )  writeRingFiles();
+  if (     (hour(actT) != hour(newT)  ) )  {
+    writeRingFiles();
+    DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
+  }
 
   if ( DUE(publishMQTTtimer) ) sendMQTTData();
 
   strCopy(actTimestamp, sizeof(actTimestamp), newTimestamp); //nu pas updaten na het schrijven van de data anders in tijdslot - 1
-  actT = epoch(actTimestamp, strlen(actTimestamp), true);   // update system time
+  actT = newT; //epoch(actTimestamp, strlen(actTimestamp), true);   // update system time
   
 } // processTelegram()
 
@@ -190,7 +177,6 @@ void modifySmFaseInfo()
   
 } //  modifySmFaseInfo()
 
-
 //==================================================================================
 float modifyMbusDelivered()
 {
@@ -211,9 +197,7 @@ float modifyMbusDelivered()
     gasDeliveredTimestamp = DSMRdata.mbus1_delivered.timestamp;
 //    DebugTf("gasDelivered .. [%.3f]\r\n", tmpGasDelivered);
     mbusGas = 1;
-  }
-  
-  if ( DSMRdata.mbus2_device_type == 3 ){ //gasmeter
+  } else if ( DSMRdata.mbus2_device_type == 3 ){ //gasmeter
     if (DSMRdata.mbus2_delivered_ntc_present) DSMRdata.mbus2_delivered = DSMRdata.mbus2_delivered_ntc;
     else if (DSMRdata.mbus2_delivered_dbl_present) DSMRdata.mbus2_delivered = DSMRdata.mbus2_delivered_dbl;
     DSMRdata.mbus2_delivered_present     = true;
@@ -225,9 +209,7 @@ float modifyMbusDelivered()
       gasDeliveredTimestamp = DSMRdata.mbus2_delivered.timestamp;
   //    DebugTf("gasDelivered .. [%.3f]\r\n", tmpGasDelivered);
     mbusGas = 2;
-  }
-
-  if ( (DSMRdata.mbus3_device_type == 3) ){ //gasmeter
+  } else  if ( (DSMRdata.mbus3_device_type == 3) ){ //gasmeter
     if (DSMRdata.mbus3_delivered_ntc_present) DSMRdata.mbus3_delivered = DSMRdata.mbus3_delivered_ntc;
     else if (DSMRdata.mbus3_delivered_dbl_present) DSMRdata.mbus3_delivered = DSMRdata.mbus3_delivered_dbl;
     DSMRdata.mbus3_delivered_present     = true;
@@ -239,9 +221,7 @@ float modifyMbusDelivered()
       gasDeliveredTimestamp = DSMRdata.mbus3_delivered.timestamp;
   //    DebugTf("gasDelivered .. [%.3f]\r\n", tmpGasDelivered);
     mbusGas = 3;
-  }
-
-  if ( (DSMRdata.mbus4_device_type == 3) ){ //gasmeter
+  } else if ( (DSMRdata.mbus4_device_type == 3) ){ //gasmeter
     if (DSMRdata.mbus4_delivered_ntc_present) DSMRdata.mbus4_delivered = DSMRdata.mbus4_delivered_ntc;
     else if (DSMRdata.mbus4_delivered_dbl_present) DSMRdata.mbus4_delivered = DSMRdata.mbus4_delivered_dbl;
     DSMRdata.mbus4_delivered_present     = true;

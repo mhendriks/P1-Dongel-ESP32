@@ -53,9 +53,10 @@ void RemoteUpdate(const char* versie, bool sketch){
   int flashSize = (ESP.getFlashChipSize() / 1024.0 / 1024.0);
   String path, otaFile, _versie;
   t_httpUpdate_return ret;
-  
+
   Debugln(F("\n!!! OTA UPDATE !!!"));
   Debugln(sketch ? "Update type: Sketch" : "Update type: File"); 
+
 
   if (bWebUpdate) {
     if (httpServer.argName(0) != "version") {
@@ -72,6 +73,8 @@ void RemoteUpdate(const char* versie, bool sketch){
               bWebUpdate = false; 
               return; 
             }
+  
+  vTaskSuspend(tP1Reader);
 
   otaFile = strcmp(versie,"4-sketch-latest") == 0 ? "" : "DSMR-API-V";
   otaFile += _versie + "_" + flashSize; 
@@ -106,6 +109,7 @@ void RemoteUpdate(const char* versie, bool sketch){
   Debugln();
   UpdateRequested = false;
   bWebUpdate = false;
+  vTaskResume(tP1Reader); //ook als het hiet goed is gegaan weer starten met lezen
 } //RemoteUpdate
 
 //---------------

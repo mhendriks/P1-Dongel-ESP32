@@ -230,7 +230,11 @@ void sendDeviceInfo()
   doc["wifirssi"] = WiFi.RSSI();
   doc["uptime"] = upTime();
   doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
-  doc["telegraminterval"] = (int)settingTelegramInterval;
+
+//  doc["telegraminterval"] = (int)settingTelegramInterval;
+  if ( DSMRdata.p1_version == "50" || !DSMR_NL ) doc["telegraminterval"] = 1; 
+  else doc["telegraminterval"] = 10; 
+
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
 
@@ -297,11 +301,11 @@ void sendDeviceSettings()
   doc["sm_has_fase_info"]["min"] = 0;
   doc["sm_has_fase_info"]["max"] = 1;
   
-  doc["tlgrm_interval"]["value"] = settingTelegramInterval;
-  doc["tlgrm_interval"]["type"] = "i";
-  doc["tlgrm_interval"]["min"] = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
+//  doc["tlgrm_interval"]["value"] = settingTelegramInterval;
+//  doc["tlgrm_interval"]["type"] = "i";
+//  doc["tlgrm_interval"]["min"] = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
   
-  doc["tlgrm_interval"]["max"] = 60;
+//  doc["tlgrm_interval"]["max"] = 60;
   
   doc["IndexPage"]["value"] = settingIndexPage;
   doc["IndexPage"]["type"] = "s";
@@ -439,8 +443,10 @@ void handleSmApi(const char *URI, const char *word4, const char *word5, const ch
     JsonWater();
     sendJson(jsonDoc);
     break;  
+    
   case 't': //telegramm 
-    //moved to webserver handler
+//    JsonRaw = true;
+    sendJsonBuffer( CapTelegram.c_str() );
     break;
   default:
     sendApiNotFound(URI);

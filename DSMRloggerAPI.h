@@ -7,7 +7,6 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */  
-
 #ifdef ESP32
 //https://www.esp32.com/viewtopic.php?t=24280#
 //https://www.upesy.com/blogs/tutorials/esp32-pinout-reference-gpio-pins-ultimate-guide
@@ -44,6 +43,19 @@
   #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.
 #endif
 
+#ifdef ETHERNET
+    #warning Using ESP32-ETHERNET
+    #define LED                 0 //no led 
+    #define DTR_IO              0 //no dtr
+    #define RXP1                15
+    #define TXP1                0 //no txp1
+    #define LED_ON              LOW
+    #define LED_OFF             HIGH
+    #define SerialOut           Serial
+    #define IO_WATER_SENSOR     14  
+    #define OTAURL              "http://ota.smart-stuff.nl/v6/"
+#endif
+
 // water sensor
   volatile byte        WtrFactor      = 1;
   volatile time_t      WtrTimeBetween = 0;
@@ -51,8 +63,6 @@
   volatile time_t      WtrPrevReading = 0;
   bool                 WtrMtr         = false;
   #define              DEBOUNCETIMER 1700
-  
-String PrevTelegram;
  
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
@@ -77,8 +87,7 @@ String PrevTelegram;
 
 P1Reader    slimmeMeter(&Serial1, DTR_IO);
 
-
-TaskHandle_t CPU0; //handler voor CPU task 0
+TaskHandle_t tP1Reader; //  own proces for P1 reading
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS,RINGPROFILE};
@@ -129,19 +138,19 @@ using MyData = ParsedData<
   /* String */                ,electricity_tariff
   /* FixedValue */            ,power_delivered
   /* FixedValue */            ,power_returned
-//  /* FixedValue */            ,electricity_threshold
+  /* FixedValue */            ,electricity_threshold
 //  /* uint8_t */               ,electricity_switch_position
 //  /* uint32_t */              ,electricity_failures
 //  /* uint32_t */              ,electricity_long_failures
-//  /* String */                ,electricity_failure_log
+  /* String */                ,electricity_failure_log
 //  /* uint32_t */              ,electricity_sags_l1
 //  /* uint32_t */              ,electricity_sags_l2
 //  /* uint32_t */              ,electricity_sags_l3
 //  /* uint32_t */              ,electricity_swells_l1
 //  /* uint32_t */              ,electricity_swells_l2
 //  /* uint32_t */              ,electricity_swells_l3
-  /* String */                ,message_short
-  /* String */                ,message_long
+//  /* String */                ,message_short
+//  /* String */                ,message_long
   /* FixedValue */            ,voltage_l1
   /* FixedValue */            ,voltage_l2
   /* FixedValue */            ,voltage_l3
@@ -234,9 +243,12 @@ bool        showRaw = false;
 bool        LEDenabled    = true;
 bool        DSMR_NL       = true;
 bool        EnableHAdiscovery = true;
+//bool        FirstStart = false;
+bool        bHideP1Log = false;
 char        bAuthUser[25]="", bAuthPW[25]="";
 bool        EnableHistory = true;
 bool        bPre40 = false;
+String      CapTelegram;
 
 char      cMsg[150];
 String    lastReset           = "";
@@ -249,11 +261,10 @@ uint32_t  unixTimestamp;
 IPAddress ipDNS, ipGateWay, ipSubnet;
 float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5;
 float     settingENBK = 15.15, settingGNBK = 11.11;
-uint8_t   settingTelegramInterval = 10; //10 seconden default
+//uint8_t   settingTelegramInterval = 10; //10 seconden default
 uint8_t   settingSmHasFaseInfo = 1;
 char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
-//byte      RingCylce = 0;
 
 //update
 char      BaseOTAurl[30] = OTAURL;

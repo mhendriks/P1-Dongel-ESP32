@@ -26,11 +26,12 @@ TODO
 - issue met reconnect dns name mqtt (Eric)
 - auto switch 3 - 1 fase max fuse
 - Engelse frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
-- minimal telegram update time 10sec when not SMR 50
-- auto detect 2.2/3.0 smart meters 
+- issue met basic auth afscherming rng bestanden
+- Domoticz telegram op een aparte poort (Minke Bergsma)
+- djieno:  MQTT one total payload with telegram (key/value)
+- scheiding tussen T1 en T2 willen zien
 
 fixes
-- issue met basic auth afscherming rng bestanden
 
 
 ************************************************************************************
@@ -92,7 +93,11 @@ void setup()
   readSettings(true);
   
 //=============start Networkstuff ==================================
+#ifndef ETHERNET
   startWiFi(settingHostname, 240);  // timeout 4 minuten
+#else
+  startETH();
+#endif
   delay(100);
   startTelnet();
   startMDNS(settingHostname);
@@ -132,86 +137,40 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
   
   SetupSMRport();
   
-  //create a task that will be executed in the Task1code() function, with priority 1 and executed on core 0
-  xTaskCreatePinnedToCore(
-                    CPU0Loop,   /* Task function. */
-                    "CPU0",     /* name of task. */
-                    30000,       /* Stack size of task */
-                    NULL,        /* parameter of the task */
-                    1,           /* priority of the task */
-                    &CPU0,      /* Task handle to keep track of created task */
-                    0);          /* pin task to core 0 */                  
-  delay(250); 
+//create a task that will be executed in the fP1Reader() function, with priority 2
+  if( xTaskCreate( fP1Reader, "p1-reader", 30000, NULL, 2, &tP1Reader ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
   
-  DebugTln(F("Enable slimme meter..."));
-  slimmeMeter.enable(true);
-
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
-
 } // setup()
 
 
-//2nd proces
-void CPU0Loop( void * pvParameters ){
-  while(true) {
-    //--- verwerk inkomende data
-#ifndef STUB
-    if ( slimmeMeter.loop() ) PrevTelegram = slimmeMeter.raw();   
-        
-    //--- start volgend telegram
-    if DUE(nextTelegram) {
-      if (Verbose1) DebugTln(F("Next Telegram"));
-      slimmeMeter.enable(true); 
+//P1 reader task
+void fP1Reader( void * pvParameters ){
+    DebugTln(F("Enable slimme meter..."));
+    slimmeMeter.enable(false);
+    while(true) {
+      handleSlimmemeter();
+      vTaskDelay(10 / portTICK_PERIOD_MS);
     }
- #else 
-  if DUE(nextTelegram) handleSTUB();
- #endif
-    delay(20);
-  } 
 }
 
-//===[ no-blocking delay with running background tasks in ms ]============================
-DECLARE_TIMER_MS(timer_delay_ms, 1);
-void delayms(unsigned long delay_ms)
-{
-  DebugTln(F("Delayms"));
-  CHANGE_INTERVAL_MS(timer_delay_ms, delay_ms);
-  RESTART_TIMER(timer_delay_ms);
-  while (!DUE(timer_delay_ms)) doSystemTasks();
-    
-} // delayms()
-
-//===[ Do System tasks ]=============================================================
-void doSystemTasks() {
-  
-#ifndef STUB
-  handleSlimmemeter();
-#endif
-  MQTTclient.loop();
-  httpServer.handleClient();
-  handleKeyInput();
-  yield();
-  
-} // doSystemTasks()
-
 void loop () { 
-  
-  doSystemTasks();
 
-  //--- update statusfile + ringfiles
-//  if ( DUE(antiWearRing) || RingCylce ) writeRingFiles(); //eens per 25min + elk uur overgang
-
- if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
-    P1StatusWrite();
-    MQTTSentStaticInfo();
-    CHANGE_INTERVAL_MIN(StatusTimer, 30);
-  }
-  
-  handleRemoteUpdate();
-
-  //only when compiler option is set
-  handleButton();
-  handleWater();
+        httpServer.handleClient();
+        MQTTclient.loop();
+        
+        yield();
+      
+       if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
+          P1StatusWrite();
+          MQTTSentStaticInfo();
+          CHANGE_INTERVAL_MIN(StatusTimer, 30);
+       }
+       
+       handleKeyInput();
+       handleRemoteUpdate();
+       handleButton();
+       handleWater();
   
 } // loop()
 
