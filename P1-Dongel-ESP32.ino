@@ -10,7 +10,6 @@ TODO
 - keuze om voor lokale frontend assets of uit het cdn
 -- message bij drempelwaardes 
 -- verbruiksrapport einde dag/week/maandstartWiFi
-- AsynWebserver implementatie
 - C3: logging via usb poort mogelijk maken
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
 - feature: nieuwe meter = beginstand op 0
@@ -27,12 +26,14 @@ TODO
 - auto switch 3 - 1 fase max fuse
 - Engelse frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - issue met basic auth afscherming rng bestanden
-- Domoticz telegram op een aparte poort (Minke Bergsma)
-- djieno:  MQTT one total payload with telegram (key/value)
 - scheiding tussen T1 en T2 willen zien
+- temparatuur ook opnemen in grafieken (A van Dijken)
+- P. van Bennekom: wensockets voor de communicatie tussen client / dongle
 
 fixes
-
+√ Domoticz telegram op een aparte poort (Minke Bergsma)
+√ djieno:  MQTT one total payload with telegram (key/value)
+- AsynWebserver implementatie
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -51,6 +52,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define USE_NTP_TIME              //test only
 //#define ETHERNET
 //#define STUB                      //test only : first draft
+//#define USE_HEAT                      //test only : first draft
 
 #ifdef SE_VERSION
   #define ALL_OPTIONS "[CORE][SE]"
@@ -102,6 +104,7 @@ void setup()
   startTelnet();
   startMDNS(settingHostname);
   startNTP();
+  MQTTclient.setBufferSize(800);
 
 //================ Start MQTT  ======================================
 if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT();
@@ -141,6 +144,7 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
   if( xTaskCreate( fP1Reader, "p1-reader", 30000, NULL, 2, &tP1Reader ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
   
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
+  
 } // setup()
 
 
@@ -155,7 +159,7 @@ void fP1Reader( void * pvParameters ){
 }
 
 void loop () { 
-
+        
         httpServer.handleClient();
         MQTTclient.loop();
         

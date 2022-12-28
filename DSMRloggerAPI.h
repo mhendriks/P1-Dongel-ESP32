@@ -56,6 +56,13 @@
     #define OTAURL              "http://ota.smart-stuff.nl/v6/"
 #endif
 
+
+#ifdef USE_HEAT
+  #define MBUS_TYPE 4
+#else
+  #define MBUS_TYPE 3
+#endif  
+
 // water sensor
   volatile byte        WtrFactor      = 1;
   volatile time_t      WtrTimeBetween = 0;
@@ -248,20 +255,20 @@ bool        bHideP1Log = false;
 char        bAuthUser[25]="", bAuthPW[25]="";
 bool        EnableHistory = true;
 bool        bPre40 = false;
-String      CapTelegram;
+bool        bActJsonMQTT = false;
+bool        bRawPort = false;
 
-char      cMsg[150];
-String    lastReset           = "";
+String      CapTelegram;
+char        cMsg[150];
+String      lastReset           = "";
 bool      FSNotPopulated      = false;
 bool      mqttIsConnected     = false;
 bool      Verbose1 = false, Verbose2 = false;
-//int8_t    thisHour = -1, prevNtpHour = 0, thisDay = -1, thisMonth = -1, lastMonth, thisYear = 15;
 uint32_t  unixTimestamp;
 
 IPAddress ipDNS, ipGateWay, ipSubnet;
 float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5;
 float     settingENBK = 15.15, settingGNBK = 11.11;
-//uint8_t   settingTelegramInterval = 10; //10 seconden default
 uint8_t   settingSmHasFaseInfo = 1;
 char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;

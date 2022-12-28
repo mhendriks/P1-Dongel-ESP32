@@ -55,7 +55,7 @@ void writeToJsonFile(const TSource &doc, File &_file)
 //=======================================================================
 void writeSettings() 
 {
-  StaticJsonDocument<1024> doc; 
+  StaticJsonDocument<1200> doc; 
   if (!FSmounted) return;
 
   DebugT(F("Writing to [")); Debug(SETTINGS_FILE); Debugln(F("] ..."));
@@ -104,6 +104,8 @@ void writeSettings()
   doc["basic-auth"]["pass"] = bAuthPW;
   doc["auto-update"] = bAutoUpdate;
   doc["pre40"] = bPre40;
+  doc["act-json-mqtt"] = bActJsonMQTT;
+  doc["raw-port"] = bRawPort;
 
   writeToJsonFile(doc, SettingsFile);
   
@@ -185,6 +187,8 @@ void readSettings(bool show)
   if (doc.containsKey("HAdiscovery")) EnableHAdiscovery = doc["HAdiscovery"];
   if (doc.containsKey("auto-update")) bAutoUpdate = doc["auto-update"];
   if (doc.containsKey("pre40")) bPre40 = doc["pre40"];
+  if (doc.containsKey("raw-port")) bRawPort = doc["raw-port"];
+  if (doc.containsKey("act-json-mqtt")) bActJsonMQTT = doc["act-json-mqtt"];
 
   const char* temp = doc["basic-auth"]["user"];
   if (temp) strcpy(bAuthUser, temp);
@@ -248,6 +252,9 @@ void readSettings(bool show)
   Debug(F("          Water Meter Enabled: ")); Debugln(WtrMtr);
   Debug(F("    HA Auto Discovery Enabled: ")); Debugln(EnableHAdiscovery);
   Debug(F("   Support 2.x and 3.x meters: ")); Debugln(bPre40);
+  Debug(F("      Raw Telegram on port 82: ")); Debugln(bRawPort);
+  Debug(F("  Enables actual json in mqtt: ")); Debugln(bActJsonMQTT);
+    
   Debugln(F("-\r"));
 
 } // readSettings()
@@ -354,6 +361,8 @@ void updateSetting(const char *field, const char *newValue)
     bPre40 = (stricmp(newValue, "true") == 0?true:false);    
     SetupSMRport();
   }
+  if (!stricmp(field, "raw-port")) bRawPort = (stricmp(newValue, "true") == 0?true:false);  
+  if (!stricmp(field, "act-json-mqtt")) bActJsonMQTT = (stricmp(newValue, "true") == 0?true:false);  
   
   writeSettings();
   

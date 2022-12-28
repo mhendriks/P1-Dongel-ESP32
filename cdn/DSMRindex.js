@@ -9,7 +9,8 @@
 ***************************************************************************      
 */
 const APIGW=window.location.protocol+'//'+window.location.host+'/api/';
-
+const jsversie			= 221201
+  
   "use strict";
 
   let activeTab             = "bDashTab";

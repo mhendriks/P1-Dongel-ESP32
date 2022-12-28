@@ -39,7 +39,6 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
 void AutoDiscoverHA(){
   if (!EnableHAdiscovery) return;
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/power_delivered/config" -m '{"dev_cla": "gas", "name": "Power Delivered", "stat_t": "DSMR-API/power_delivered", "unit_of_meas": "Wh", "val_tpl": "{{ value_json.power_delivered[0].value | round(3) }}" }'
-  MQTTclient.setBufferSize(400);
 
   SendAutoDiscoverHA("timestamp", "", "DSMR Last Update", "", "{{ strptime(value[0:12], \'%y%m%d%H%M%S\') }}","measurement", ",\"icon\": \"mdi:clock\"");
   
@@ -232,20 +231,19 @@ struct buildJsonMQTT {
  *  msg = "{\""+Name+"\":[{\"value\":"+value_to_json(i.val())+",\"unit\":"+Unit+"}]}";
  *  msg = "\"{\""+Name+"\":[{\"value\":"+value_to_json(i.val())+"}]}\""
  *  
- */
-    String msg;
-    
+ */   
     template<typename Item>
     void apply(Item &i) {
-    String Name = (String)Item::name;
-    if (!isInFieldsArray(Name.c_str()) ) {
-      if (i.present()) {
-        sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name.c_str());
-        msg = value_to_json(i.val());
-        if (Verbose2) DebugTln("mqtt bericht: "+msg);
-        if ( !MQTTclient.publish(cMsg, msg.c_str()) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", cMsg, msg.c_str(), (strlen(cMsg) + msg.length()));
-      } // if i.present
-    } // if isInFieldsArray
+     char Name[25];
+     strncpy(Name,String(Item::name).c_str(),25);
+    if ( isInFieldsArray(Name) && i.present() ) {
+          if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
+          else {
+          sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
+          MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
+//        if ( !MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() ) ) DebugTf("Error publish(%s)\r\n", String(value_to_json(i.val())), strlen(cMsg) );
+          }
+    } // if isInFieldsArray && present
   } //apply
 
   template<typename Item>
@@ -253,14 +251,52 @@ struct buildJsonMQTT {
     return i;
   }
 
-  String value_to_json(TimestampedFixedValue i) {
-    return String(i.val(),3);
+  bool value_to_json(TimestampedFixedValue i) {
+    //wordt niet aangeroepen ivm niet uitvragen van dit type
+    return i;
   }
   
   String value_to_json(FixedValue i) {
-    return String(i.val(),3);
+    return String(i,3);
   }
+
+  template<typename Item>
+  Item& value_to_json_mqtt(Item& i) {
+    return i;
+  }
+
+  bool value_to_json_mqtt(TimestampedFixedValue i) {
+    //wordt niet aangeroepen ivm niet uitvragen van dit type
+    return 0;
+  }
+  
+  double value_to_json_mqtt(FixedValue i) {
+    return i.int_val()/1000.0;
+  }
+
 }; // buildJsonMQTT
+
+//------
+//struct buildActJsonMQTT {
+//    
+//  template<typename Item>
+//  void apply(Item &i) {
+//    if ( isInFieldsArray(String(Item::name).c_str()) && i.present() ) jsonDoc[String(Item::name)] = value_to_json(i.val());
+//  } //apply
+//
+//  template<typename Item>
+//  Item& value_to_json(Item& i) {
+//    return i;
+//  }
+//
+//  String value_to_json(TimestampedFixedValue i) {
+//    return String(i.val(),3);
+//  }
+//  
+//  double value_to_json(FixedValue i) {
+//    return (int)(i.val() * 1000 + 0.05) / 1000.0;
+//  }
+//}; // buildActJsonMQTT
 
 //===========================================================================================
 
@@ -340,8 +376,18 @@ void sendMQTTData()
 
   DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
   if (!StaticInfoSend)  MQTTSentStaticInfo();
-  fieldsElements = INFOELEMENTS;
+  fieldsElements = ACTUALELEMENTS;
+  
+  if ( bActJsonMQTT ) jsonDoc.clear();
+  
   DSMRdata.applyEach(buildJsonMQTT());
+  
+  if ( bActJsonMQTT ) {
+    String buffer;
+    serializeJson(jsonDoc,buffer);
+    MQTTSend("all",buffer);
+  }
+  
   MQTTsendGas();
   sendMQTTWater();
 

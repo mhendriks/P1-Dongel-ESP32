@@ -17,7 +17,9 @@ bool onlyIfPresent = false;
 
 const static PROGMEM char infoArray[][25]   = { "identification","p1_version","equipment_id" }; //waardes dient redelijk statisch zijn niet elke keer versturen
 #ifndef SE_VERSION
-  const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
+//  const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
+  const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3","peak_pwr_last_q", "highest_peak_pwr"};
+
 #else
   const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_total","energy_delivered_tariff2","energy_returned_total","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
 #endif
@@ -63,16 +65,17 @@ struct buildJson {
     
     template<typename Item>
     void apply(Item &i) {
-      String Name = String(Item::name);
-      if (isInFieldsArray(Name.c_str())) {
+     char Name[25];
+     strncpy(Name,String(Item::name).c_str(),25);
+
+      if (isInFieldsArray(Name)) {
         #ifdef SE_VERSION
         if (Name == "energy_delivered_total") Name = "energy_delivered_tariff1";
         else if (Name == "energy_returned_total") Name = "energy_returned_tariff1";
         #endif
         if (i.present()) {          
-          String Unit = Item::unit();
           jsonDoc[Name]["value"] = value_to_json(i.val());
-          if (Unit.length() > 0) jsonDoc[Name]["unit"]  = Unit;
+          if (String(Item::unit()).length() > 0) jsonDoc[Name]["unit"]  = Item::unit();
         }  else if (!onlyIfPresent) jsonDoc[Name]["value"] = "-";   
     } //infielsarrayname
   }
@@ -92,60 +95,6 @@ struct buildJson {
 
 }; // buildjson{} 
  
-//=======================================================================
-void processAPI() {
-//  char fName[40] = "";
-  char URI[50]   = "";
-  String words[10];
-
-  strncpy( URI, httpServer.uri().c_str(), sizeof(URI) );
-
-  if (httpServer.method() == HTTP_GET)
-        DebugTf("from[%s] URI[%s] method[GET] \r\n"
-                                  , httpServer.client().remoteIP().toString().c_str()
-                                        , URI); 
-  else  DebugTf("from[%s] URI[%s] method[PUT] \r\n" 
-                                  , httpServer.client().remoteIP().toString().c_str()
-                                        , URI); 
-
-if (bailout())
-  {
-      DebugTf("==> Bailout due to low heap (%d bytes))\r\n", ESP.getFreeHeap() );
-      
-    httpServer.send(500, "text/plain", "500: internal server error (low heap)\r\n"); 
-    return;
-  }
-
-  int8_t wc = splitString(URI, '/', words, 10);
-  
-  if (Verbose2) 
-  {
-    DebugT(">>");
-    for (int w=0; w<wc; w++)
-    {
-      Debugf("word[%d] => [%s], ", w, words[w].c_str());
-    }
-    Debugln(" ");
-  }
-  
-  if (words[2] != "v2")
-  {
-    sendApiNotFound(URI);
-    return;
-  }
-
-  if (words[3] == "dev")
-  {
-    handleDevApi(URI, words[4].c_str(), words[5].c_str(), words[6].c_str());
-  }
-  else if (words[3] == "sm")
-  {
-    handleSmApi(URI, words[4].c_str(), words[5].c_str(), words[6].c_str());
-  }
-  else sendApiNotFound(URI);
-  
-} // processAPI()
-
 template <typename TSource>
 void sendJson(const TSource &doc) 
 {  
@@ -163,7 +112,7 @@ void sendJson(const TSource &doc)
 //  DebugT(F("Sending json: ")); Debugln(buffer);
 //  DebugT("strsize:"); Debugln(strsize);
   sendJsonBuffer(buffer.c_str());
-  DebugTln(F("sendJson: json sent .."));
+  if (Verbose1) DebugTln(F("sendJson: json sent .."));
     
 }
 
@@ -387,85 +336,73 @@ if (WtrMtr) {
 } // sendDeviceSettings()
 
 //====================================================
-void sendApiNotFound(const char *URI)
-{
-//  DebugTln(F("sending device settings ...\r"));
-//  String output = "{\"error\":{\"url\":\"" + String(URI) + "\",\"message\":\"url not valid\"}}";
+void sendApiNotFound() {
   
-//  byte len = 47 + strlen(URI);
-//  char buffer[len];
-//  sprintf_P(buffer,PSTR("{\"error\":{\"url\":\"%s\",\"message\":\"url not valid\"}}"), URI);
-  
-//  httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-//  httpServer.setContentLength(len);
-  httpServer.send(404, "application/json", "{\"error\":{\"url\":\"" + String(URI) + "\",\"message\":\"url not valid\"}}"); 
-  
+  httpServer.send(404, "application/json", "{\"error\":{\"url\":\"" + httpServer.uri() + "\",\"message\":\"url not valid\"}}");  
+
 } // sendApiNotFound()
 
-//====================================================
 
-void handleSmApi(const char *URI, const char *word4, const char *word5, const char *word6)
+//====================================================
+void handleSmApiField(){
+    onlyIfPresent = false;
+    strCopy(Onefield, 24, httpServer.pathArg(0).c_str());
+    fieldsElements = FIELDELEMENTS;
+    jsonDoc.clear();
+    DSMRdata.applyEach(buildJson());
+    sendJson(jsonDoc);
+}
+
+void handleSmApi()
 {
-  //DebugTf("word4[%s], word5[%s], word6[%s]\r\n", word4, word5, word6);
-  switch (word4[0]) {
+  switch ( httpServer.pathArg(0)[0]) {
     
   case 'i': //info
     onlyIfPresent = false;
     fieldsElements = INFOELEMENTS;
-    jsonDoc.clear();
-    DSMRdata.applyEach(buildJson());
-    JsonGasID();
-    JsonWater();
-    sendJson(jsonDoc);
   break;
   
   case 'a': //actual
     fieldsElements = ACTUALELEMENTS;
     onlyIfPresent = true;
-    jsonDoc.clear();
-    DSMRdata.applyEach(buildJson());
-    JsonGas();
-    JsonWater();
-    sendJson(jsonDoc);
   break;
   
   case 'f': //fields
     fieldsElements = 0;
     onlyIfPresent = false;
-    if (strlen(word5) > 0)
-    {
-       strCopy(Onefield, 24, word5);
-       fieldsElements = FIELDELEMENTS;
-    }
-    jsonDoc.clear();
-    DSMRdata.applyEach(buildJson());
-    if (strlen(word5) == 0) JsonGas();
-    JsonWater();
-    sendJson(jsonDoc);
     break;  
     
   case 't': //telegramm 
-//    JsonRaw = true;
-    sendJsonBuffer( CapTelegram.c_str() );
-    break;
+    if ( CapTelegram.length() ) sendJsonBuffer( CapTelegram.c_str() );
+    else sendJsonBuffer( "no telegram available" );
+    return;
+    
   default:
-    sendApiNotFound(URI);
-  }
+    sendApiNotFound();
+    return;
+    
+  } //switch
+
+    jsonDoc.clear();
+    DSMRdata.applyEach(buildJson());
+    JsonGas();
+    JsonWater();
+    sendJson(jsonDoc);
+    
 } // handleSmApi()
 //====================================================
 
-void handleDevApi(const char *URI, const char *word4, const char *word5, const char *word6)
+void handleDevApi()
 {
-  //DebugTf("word4[%s], word5[%s], word6[%s]\r\n", word4, word5, word6);
-  if (strcmp(word4, "info") == 0)
+   if ( httpServer.pathArg(0) == "info" )
   {
     sendDeviceInfo();
   }
-  else if (strcmp(word4, "time") == 0)
+  else if ( httpServer.pathArg(0) == "time")
   {
     sendDeviceTime();
   }
-  else if (strcmp(word4, "settings") == 0)
+  else if (httpServer.pathArg(0) == "settings")
   {
     if (httpServer.method() == HTTP_PUT || httpServer.method() == HTTP_POST)
     {
@@ -502,18 +439,14 @@ void handleDevApi(const char *URI, const char *word4, const char *word5, const c
       sendDeviceSettings();
     }
   }
-  else if (strcmp(word4, "debug") == 0)
-  {
-      sendApiNotFound(URI);
-  }
-  else sendApiNotFound(URI);
+  else sendApiNotFound();
   
 } // handleDevApi()
 
 bool isInFieldsArray(const char* lookUp)
 {                        
 //    DebugTf("Elemts[%2d] | LookUp [%s] | LookUpType[%2d]\r\n", elemts, lookUp, LookUpType);
-if (fieldsElements == 0) return true;  
+  if (fieldsElements == 0) return true;  
   for (int i=0; i<fieldsElements; i++)
   {
     //if (Verbose2) DebugTf("[%2d] Looking for [%s] in array[%s]\r\n", i, lookUp, fieldsArray[i]); 

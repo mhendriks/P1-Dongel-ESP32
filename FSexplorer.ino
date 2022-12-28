@@ -53,9 +53,6 @@ void procestelegram(){
 //=====================================================================================
 void setupFSexplorer()
 { 
-//  telegram.onNotFound([]() { telegram.send(200, "text/plain", "telegram"); });
-//  telegram.begin();
-  
   httpServer.serveStatic("/api/v2/hist/hours" , LittleFS, RingFiles[RINGHOURS].filename );
   httpServer.serveStatic("/api/v2/hist/days"  , LittleFS, RingFiles[RINGDAYS].filename );
   httpServer.serveStatic("/api/v2/hist/months", LittleFS, RingFiles[RINGMONTHS].filename );
@@ -63,7 +60,9 @@ void setupFSexplorer()
   
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
   httpServer.on("/login", HTTP_GET, []() { auth(); });
-//  httpServer.on("/api/v2/sm/telegram", HTTP_GET, [](){ JsonRaw = true; });
+  httpServer.on(UriBraces("/api/v2/dev/{}"),[]() { auth(); handleDevApi(); });
+  httpServer.on(UriBraces("/api/v2/sm/{}"),[](){ auth(); handleSmApi(); });
+  httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){ auth(); handleSmApiField(); });
   
   httpServer.on("/api/listfiles", HTTP_GET, [](){ checkauth(); APIlistFiles(); });
   httpServer.on("/FSformat", [](){ checkauth();formatFS; });
@@ -115,18 +114,11 @@ void setupFSexplorer()
     checkauth();
     
     if (Verbose2) DebugTf("in 'onNotFound()'!! [%s] => \r\n", String(httpServer.uri()).c_str());
-    if (httpServer.uri().indexOf("/api/") == 0) 
-    {
-      if (Verbose1) DebugTf("next: processAPI(%s)\r\n", String(httpServer.uri()).c_str());
-      processAPI();
-    }
-    else
-    {
-      DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
-      String filename = httpServer.uri();
-      DebugT("Filename: ");Debugln(filename);
-      if ( !handleFile(filename.c_str()) ) httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
-    }
+    DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
+    String filename = httpServer.uri();
+    DebugT("Filename: ");Debugln(filename);
+    if ( !handleFile(filename.c_str()) ) httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
+    
   });
   httpServer.begin();
   DebugTln( F("HTTP server started\r") );

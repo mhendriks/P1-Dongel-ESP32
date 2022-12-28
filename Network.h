@@ -1,3 +1,4 @@
+
 /*
 ***************************************************************************  
 **  Program  : networkStuff.h, part of DSMRloggerAPI
@@ -14,9 +15,11 @@
 #include "Html.h"
 #include <WiFiManager.h>        // version 0.16.0 - https://github.com/tzapu/WiFiManager
 #include <HTTPClient.h>
+#include "NetTypes.h"
+#include <uri/UriBraces.h>
 
 WebServer httpServer(80);
-//WebServer telegram(88);
+NetServer ws_raw(82);
 
 bool FSmounted           = false; 
 bool WifiConnected       = false;
@@ -123,9 +126,9 @@ void startWiFi(const char* hostname, int timeOut)
 void startTelnet() 
 {
   TelnetStream.begin();
-  DebugTln(F("Telnet server started .."));
+  ws_raw.begin();
   TelnetStream.flush();
-  TelnetStream.print(F("Firmware Version: "));  TelnetStream.println( _VERSION );
+  DebugTln(F("Telnet server started .."));
 } // startTelnet()
 
 
@@ -133,14 +136,8 @@ void startTelnet()
 void startMDNS(const char *Hostname) 
 {
   DebugTf("[1] mDNS setup as [%s.local]\r\n", Hostname);
-  if (MDNS.begin(Hostname))               // Start the mDNS responder for Hostname.local
-  {
-    DebugTf("[2] mDNS responder started as [%s.local]\r\n", Hostname);    
-  } 
-  else 
-  {
-    DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
-  }
+  if (MDNS.begin(Hostname)) DebugTf("[2] mDNS responder started as [%s.local]\r\n", Hostname);    
+  else  DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
   MDNS.addService("http", "tcp", 80);
   
 } // startMDNS()
