@@ -28,12 +28,10 @@ TODO
 - issue met basic auth afscherming rng bestanden
 - scheiding tussen T1 en T2 willen zien
 - temparatuur ook opnemen in grafieken (A van Dijken)
-- P. van Bennekom: wensockets voor de communicatie tussen client / dongle
+- websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
+- 90 dagen opslaan van uur gegevens ( R de Grijs )
 
 fixes
-√ Domoticz telegram op een aparte poort (Minke Bergsma)
-√ djieno:  MQTT one total payload with telegram (key/value)
-- AsynWebserver implementatie
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:

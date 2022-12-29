@@ -55,7 +55,7 @@ void handleSlimmemeter()
       CapTelegram = slimmeMeter.raw(); //capture last telegram
       if (showRaw) {
         //-- process telegrams in raw mode
-        Debugf("Telegram Raw (%d)\n%s\n" , slimmeMeter.raw().length(),slimmeMeter.raw().c_str()); 
+        Debugf("Telegram Raw (%d)\n/%s!%x\n", slimmeMeter.raw().length(), slimmeMeter.raw().c_str(), slimmeMeter.GetCRC() ); 
         showRaw = false; //only 1 reading
       } else processSlimmemeter();
       ToggleLED();
@@ -88,6 +88,10 @@ void processSlimmemeter()
           yield();
         }
       }
+
+//      DebugT("CRC:");Debugln(slimmeMeter.GetCRC(), HEX);
+//      TelnetStream.print("CRC:");TelnetStream.println(slimmeMeter.GetCRC(), HEX);
+      CRCTelegram = slimmeMeter.GetCRC();
 
       if (DSMRdata.p1_version_be_present)
       {
@@ -149,7 +153,10 @@ void processTelegram(){
   
   strCopy(actTimestamp, sizeof(actTimestamp), newTimestamp); 
   actT = newT; //epoch(actTimestamp, strlen(actTimestamp), true);   // update system time
-  if ( bRawPort ) ws_raw.println("/" + CapTelegram + "!DUMY"); //print telegram to dongle port
+  if ( bRawPort ) {
+    ws_raw.print("/" + CapTelegram + "!" ); //print telegram to dongle port
+    ws_raw.println(CRCTelegram, HEX);
+  }
   
 } // processTelegram()
 

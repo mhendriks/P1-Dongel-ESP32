@@ -259,6 +259,7 @@ bool        bActJsonMQTT = false;
 bool        bRawPort = false;
 
 String      CapTelegram;
+uint16_t    CRCTelegram;
 char        cMsg[150];
 String      lastReset           = "";
 bool      FSNotPopulated      = false;
