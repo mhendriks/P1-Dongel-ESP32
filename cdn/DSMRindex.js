@@ -425,7 +425,7 @@ function SetOnSettings(json){
 function ReadVersionManifest(){
 	console.log("ReadVersionManifest");
 	Spinner(true);
-	 fetch('http://ota.smart-stuff.nl/v5/version-manifest.json', {"setTimeout": 5000}).then(function (response) {
+	 fetch('http://ota.smart-stuff.nl/v5/version-manifest.json?dummy='+Date.now()', {"setTimeout": 5000}).then(function (response) {
 		 return response.json();
 	 }).then(function (json) {
 	 	console.log("version manifest: " + JSON.stringify(json) );
