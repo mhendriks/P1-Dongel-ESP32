@@ -129,6 +129,8 @@ using MyData = ParsedData<
   /* String */                 identification
   /* String */                ,p1_version
   /* String */                ,p1_version_be
+  /* FixedValue */            ,peak_pwr_last_q
+  /* TimestampedFixedValue */ ,highest_peak_pwr
   /* String */                ,timestamp
   /* String */                ,equipment_id
 #ifndef SE_VERSION
