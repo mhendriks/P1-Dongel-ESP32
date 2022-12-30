@@ -31,7 +31,8 @@ TODO
 - websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
 
-fixes
+WiP
+
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -50,7 +51,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define USE_NTP_TIME              //test only
 //#define ETHERNET
 //#define STUB                      //test only : first draft
-//#define USE_HEAT                      //test only : first draft
+//#define USE_HEAT                  //first draft
 
 #ifdef SE_VERSION
   #define ALL_OPTIONS "[CORE][SE]"
