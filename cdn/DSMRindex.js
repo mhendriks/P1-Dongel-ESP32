@@ -625,6 +625,7 @@ function UpdateDash()
 
 		if (!EnableHist) {Spinner(false);return;}
 		
+		if (Dongle_Config != "p1-q") {
 		//-------VERBRUIK METER	
 		//bereken verschillen afname, teruglevering en totaal
 		for(let i=0;i<3;i++){
@@ -672,7 +673,7 @@ function UpdateDash()
 			//vermogen vandaag, min - max bepalen
 			document.getElementById("Pa").innerHTML = Number(Parra[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
 		}
-		
+		} != p1-q
 		//-------GAS METER	
 		if (HeeftGas) 
 		{
