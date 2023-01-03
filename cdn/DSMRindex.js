@@ -673,7 +673,7 @@ function UpdateDash()
 			//vermogen vandaag, min - max bepalen
 			document.getElementById("Pa").innerHTML = Number(Parra[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
 		}
-		} != p1-q
+		} //!= p1-q
 		//-------GAS METER	
 		if (HeeftGas) 
 		{
