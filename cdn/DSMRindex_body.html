@@ -66,11 +66,10 @@
 		</colgroup>
           <tr>
             <th>Datum/Tijd</th>
-            <th>Energie<br>Verbruik<br>(Wh)</th>
-            <th>Energie<br>Teruglevering<br>(Wh)</th>
-            <th>Gas-<br>verbruik<br>(m3)</th>
-			<th>Water-<br>verbruik<br>(m3)</th>
-        <!--<th style="text-align: right;  border-bottom: 2px solid #ddd;">Kosten</th>-->
+            <th class=th-energy>Energie<br>Verbruik<br>(Wh)</th>
+            <th class=th-energy-r>Energie<br>Teruglevering<br>(Wh)</th>
+            <th class=mbus-name>Gas-<br>verbruik<br>(m3)</th>
+			<th class=water>Water-<br>verbruik<br>(m3)</th>
           </tr>
       </table>
     </div>
@@ -102,7 +101,7 @@
             <th>Datum/Tijd</th>
             <th>Energie<br>Verbruik<br>(Wh)</th>
             <th>Energie<br>Teruglevering<br>(Wh)</th>
-            <th>Gas-<br>verbruik<br>(m3)</th>
+            <th class=mbus-name>Gas-<br>verbruik<br>(m3)</th>
 			<th>Water-<br>verbruik<br>(m3)</th>
             <th>Kosten</th>
         </tr>
@@ -129,7 +128,7 @@
       &nbsp;&nbsp;
     </div>
     <div id='lastMonths'>
-      <table id="lastMonthsTable" style="display:block">
+      <table id="lastMonthsTable" style="display:none">
 		<colgroup>
 		<col class="col1"/>
 		<col class="col2"/>
@@ -154,7 +153,7 @@
             <th></th>
             <th colspan=4>Afgenomen</th>
             <th style="text-align:center" colspan=4>Teruggeleverd</th>
-            <th colspan=4>Gasverbruik</th>
+            <th colspan=4 class=mbus-name>Gasverbruik</th>
 			<th style="text-align:center" colspan=4>Waterverbruik</th>
         </tr>
         <tr>
@@ -170,14 +169,14 @@
             <th>(kWh)</th>
             
             <th>Jaar</th>
-            <th>(m3)</th>
+            <th class=mbus-unit>(m3)</th>
             <th>Jaar</th>
-            <th>(m3)</th>
+            <th class=mbus-unit>(m3)</th>
             
             <th>Jaar</th>
             <th>(m3)</th>
             <th>Jaar</th>
-            <th>(m3)</th>        </tr>
+            <th class=mbus-unit>(m3)</th></tr>
       </thead>
       <tbody>
 	  </tbody>
@@ -202,13 +201,13 @@
             <th style="text-align: right;" width='80px'>Maand</th>
             <th>Jaar</th>
             <th style="text-align: right;" width='70px'>Electra</th>
-            <th>Gas</th>
+            <th class=mbus-name>Gas</th>
             <th>Netw.</th>
             <th style="text-align: right;" width='70px'>Totaal</th>
 
             <th>Jaar</th>
             <th style="text-align: right;" width='70px'>Electra</th>
-            <th>Gas</th>
+            <th class=mbus-name>Gas</th>
             <th>Netw.</th>
             <th style="text-align: right;" width='70px'>Totaal</th>
         </tr>

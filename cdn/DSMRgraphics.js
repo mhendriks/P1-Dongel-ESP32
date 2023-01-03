@@ -198,7 +198,9 @@ var myWaterChart;
     
     //renderGasChart(gasData, actGasOptions);
     if (HeeftGas) {
-		renderGasChart(gasData, "dm3");
+		if ( Dongle_Config == "p1-q") renderGasChart(gasData, "GJ");
+		else renderGasChart(gasData, "dm3");
+
 		myGasChart.update();
 		document.getElementById("gasChart").style.display   = "block";
     }
@@ -214,7 +216,7 @@ var myWaterChart;
     document.getElementById("lastDays").style.display   = "none";
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
-    document.getElementById("dataChart").style.display  = "block";
+	document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
 
 
   } // showHistGraph()
@@ -229,7 +231,8 @@ var myWaterChart;
     myElectrChart.update();
     //renderGasChart(gasData, actGasOptions);
     if (HeeftGas) {
-		renderGasChart(gasData, "m3");
+		if ( Dongle_Config == "p1-q") renderGasChart(gasData, "GJ");
+		else renderGasChart(gasData, "m3");
 		myGasChart.update();
 		document.getElementById("gasChart").style.display = "block";
     }  
@@ -244,7 +247,7 @@ var myWaterChart;
     document.getElementById("lastDays").style.display   = "none";
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
-    document.getElementById("dataChart").style.display  = "block";    
+	document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
 
     document.getElementById('mCOST').checked   = false;
 
@@ -295,7 +298,9 @@ var myWaterChart;
     gasData.datasets[0].borderColor        = "blue";
     gasData.datasets[0].backgroundColor    = "blue";
     gasData.datasets[0].data               = []; //contains the 'Y; axis data
-    gasData.datasets[0].label              = "Gas Gebruikt"; //"S"+s; //contains the 'Y; axis label
+//     gasData.datasets[0].label              = "Gas Gebruikt"; //"S"+s; //contains the 'Y; axis label
+    if ( Dongle_Config == "p1-q") gasData.datasets[0].label = "Warmte Gebruikt"; //"S"+s; //contains the 'Y; axis label
+    else gasData.datasets[0].label = "Gas Gebruikt"; //"S"+s; //contains the 'Y; axis label
  
  // idx 0 => WATER
     waterData.datasets.push({}); //create a new dataset
@@ -398,14 +403,17 @@ var myWaterChart;
     gasData.datasets[0].borderColor     = "blue";
     gasData.datasets[0].backgroundColor = "blue";
     gasData.datasets[0].data            = []; //contains the 'Y; axis data
-    gasData.datasets[0].label           = "Gas deze Periode"; //"S"+s; //contains the 'Y; axis label
+	gasData.datasets[0].label           = (Dongle_Config == "p1-q" ? "Warmte": "Gas") + " deze Periode"; //"S"+s; //contains the 'Y; axis label
+    
+    
     // idx 0 => GD -1
     gasData.datasets.push({}); //create a new dataset
     gasData.datasets[1].fill            = 'false';
     gasData.datasets[1].borderColor     = "lightblue";
     gasData.datasets[1].backgroundColor = "lightblue";
     gasData.datasets[1].data            = []; //contains the 'Y; axis data
-    gasData.datasets[1].label           = "Gas vorige Periode"; //"S"+s; //contains the 'Y; axis label
+	gasData.datasets[1].label           = (Dongle_Config == "p1-q" ? "Warmte": "Gas") + " vorige Periode"; //"S"+s; //contains the 'Y; axis label
+	
     // idx 0 => WATER
     waterData.datasets.push({}); //create a new dataset
     waterData.datasets[0].fill            = 'false';
@@ -608,7 +616,7 @@ var myWaterChart;
     actGasData.datasets[0].borderColor     = "blue";
     actGasData.datasets[0].backgroundColor = "blue";
     actGasData.datasets[0].data            = []; //contains the 'Y; axis data
-    actGasData.datasets[0].label           = "Gas Verbruikt"; //"S"+s; //contains the 'Y; axis label
+    actGasData.datasets[0].label           = Dongle_Config == "p1-q" ? "Warmte": "Gas" +" Verbruikt"; //"S"+s; //contains the 'Y; axis label
 
     actPoint = 0;
   
@@ -632,7 +640,8 @@ var myWaterChart;
     myElectrChart.update();
     
     //renderGasChart(actGasData, actGasOptions);
-    renderGasChart(actGasData, "dm3");
+    renderGasChart(actGasData, Dongle_Config == "p1-q" ? "GJ": "dm3" );
+
     gasChart.update();
 
   } // showActualGraph()
