@@ -1599,13 +1599,12 @@ function show_hide_column2(table, col_no, do_show) {
       tableCells = document.getElementById("actualTable_"+item).cells;
       if ( (item == "gas_delivered") && (Dongle_Config == "p1-q") ){
       	  tableCells[0].innerHTML = "Warmtemeter stand";
-      	  tableCells[1].innerHTML = "GJ";
+      	  tableCells[2].innerHTML = "GJ";
       } else {
 		  tableCells[0].innerHTML = data[item].humanName;	
-		  tableCells[1].innerHTML = data[item].value;
-      }      
-      if (data[item].hasOwnProperty('unit')) tableCells[2].innerHTML = data[item].unit;
-      
+  		  if (data[item].hasOwnProperty('unit')) tableCells[2].innerHTML = data[item].unit;
+      }
+	  tableCells[1].innerHTML = data[item].value;
     }
 
     //--- hide canvas
