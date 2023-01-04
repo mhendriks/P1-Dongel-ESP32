@@ -198,7 +198,7 @@ var myWaterChart;
     
     //renderGasChart(gasData, actGasOptions);
     if (HeeftGas) {
-		if ( Dongle_Config == "p1-q") renderGasChart(gasData, "GJ");
+		if ( Dongle_Config == "p1-q") renderGasChart(gasData, "kJ");
 		else renderGasChart(gasData, "dm3");
 
 		myGasChart.update();
@@ -231,7 +231,7 @@ var myWaterChart;
     myElectrChart.update();
     //renderGasChart(gasData, actGasOptions);
     if (HeeftGas) {
-		if ( Dongle_Config == "p1-q") renderGasChart(gasData, "GJ");
+		if ( Dongle_Config == "p1-q") renderGasChart(gasData, "kJ");
 		else renderGasChart(gasData, "m3");
 		myGasChart.update();
 		document.getElementById("gasChart").style.display = "block";
@@ -640,7 +640,7 @@ var myWaterChart;
     myElectrChart.update();
     
     //renderGasChart(actGasData, actGasOptions);
-    renderGasChart(actGasData, Dongle_Config == "p1-q" ? "GJ": "dm3" );
+    renderGasChart(actGasData, Dongle_Config == "p1-q" ? "GJ * 1000": "dm3" );
 
     gasChart.update();
 

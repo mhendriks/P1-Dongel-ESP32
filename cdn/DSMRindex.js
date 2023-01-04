@@ -162,6 +162,51 @@ let TrendG = {
 };
 
 
+let TrendQ = {
+    type: 'doughnut',
+    data: {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    },
+    options: {
+    title: {
+            display: true,
+            text: 'kJ',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+			rotation: -Math.PI,
+      plugins: {
+      labels: {
+        render: function (args) {
+          return args.value;
+        },//render
+        arc: true,
+        fontColor: ["#fff","rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+    legend: {display: false},
+    }, //options
+};
+
 
 let Trend3f = {
     type: 'doughnut',
@@ -381,7 +426,7 @@ function SetOnSettings(json){
 	//check of teruglevering actief is 
 	if (!Injection) Injection = isNaN(json.energy_returned_tariff1.value)?false:json.energy_returned_tariff1.value;
 	
-	if (!Phases) {
+	if (!Phases && (Dongle_Config != "p1-q") ) {
 		//bereken het aantal fases aan de hand van de slimme meter data
 		if ( isNaN(json.voltage_l1.value) ) alert_message("Spanningsvelden slimme meter niet gevuld : Pas 'Phases' aan in Frontend.json bij 3 fases");
 		Phases = 1;
@@ -424,8 +469,9 @@ function SetOnSettings(json){
 	if ( Dongle_Config == "p1-q" ) {
 		document.getElementById("l1").style.display = "none";
 		document.getElementById("l3").style.display = "none";
-		document.getElementById("Gh").innerHTML = "Warmte";
-		trend_g.options.title.text = "GJ";	
+		document.getElementById("l8").style.display = "block";
+// 		trend_g.options.title.text = "kJ";	
+// 		trend_g.options.labels = "{render: function (args) {return args.value + ' kJ';}";
 		const mbusn = document.querySelectorAll('.mbus-name');
 		mbusn.forEach(tmp => { tmp.innerHTML = "Warmte<br>(GJ)"});
 		const mbusu = document.querySelectorAll('.mbus-unit');
@@ -492,8 +538,10 @@ function UpdateDash()
 	  .then(json => {
 	  
 //wartelink
+// 		  	json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"timestamp":{"value":"230104081758W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.667,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.667,"unit":"m3"},"gas_delivered_timestamp":{"value":"230104081758W"}}');
 // 	   	  json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"221231161038W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.613,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.613,"unit":"m3"},"gas_delivered_timestamp":{"value":"221231161038W"}}');
 
+//others
 // 	   	  json = JSON.parse('{"timestamp":{"value":"220606085610S"},"energy_delivered_tariff1":{"value":55.026,"unit":"kWh"},"energy_delivered_tariff2":{"value":53.923,"unit":"kWh"},"energy_returned_tariff1":{"value":0,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0.398,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"voltage_l1":{"value":232.5,"unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":0,"unit":"A"},"power_delivered_l1":{"value":0.114,"unit":"kW"},"power_delivered_l2":{"value":0.284,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":5471.227,"unit":"m3"},"gas_delivered_timestamp":{"value":"220606085510S"},"water":{"value":379.782,"unit":"m3"}}');	   	  
 //  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.102,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
 //  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.123,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
@@ -521,7 +569,7 @@ function UpdateDash()
 			document.getElementById("l6").style.display = "block";
 			document.getElementById("Ph").innerHTML = "Afname-Terug";
 		}
-		if (HeeftGas && EnableHist) document.getElementById("l4").style.display = "block";
+		if (HeeftGas && EnableHist && Dongle_Config != "p1-q") document.getElementById("l4").style.display = "block";
 		if (HeeftWater && EnableHist) { 
 			document.getElementById("l7").style.display = "block";
 			document.getElementById("l2").style.display = "none";
@@ -675,7 +723,7 @@ function UpdateDash()
 		}
 		} //!= p1-q
 		//-------GAS METER	
-		if (HeeftGas) 
+		if (HeeftGas && Dongle_Config != "p1-q") 
 		{
 			//bereken verschillen gas, afname, teruglevering en totaal
 			for(let i=0;i<3;i++){
@@ -707,6 +755,23 @@ function UpdateDash()
 			trend_w.update();
 			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString();
 		}
+		
+		
+		//-------Warmte METER	
+		if (Dongle_Config == "p1-q") 
+		{
+			for(let i=0;i<3;i++){
+				if (i==0) Garr[0]=Number(json.gas_delivered.value - hist_arrG[1]).toFixed(3)*1000 ;
+				else Garr[i]=Number(hist_arrG[i] - hist_arrG[i+1]).toFixed(3)*1000;
+				if (Garr[i] < 0) Garr[i] = 0;
+			}
+
+			Gmax = math.max(Garr);
+			for(let i=0;i<3;i++) trend_q.data.datasets[i].data=[Number(Garr[i]).toFixed(0),Number(Gmax-Garr[i]).toFixed(0)];
+			trend_q.update();
+			document.getElementById("Q").innerHTML = Number(Garr[0]);
+		}
+		
 								
 		Spinner(false);
 		}); //end fetch fields
@@ -772,6 +837,7 @@ function handle_menu_click()
 // 	gauge = new JustGage(GaugeOptions); // initialize gauge
 // 	gauge_v = new JustGage(GaugeOptionsV); // initialize gauge
 	trend_g = new Chart(document.getElementById("container-4"), TrendG);
+	trend_q = new Chart(document.getElementById("container-q"), TrendQ);
 	trend_p = new Chart(document.getElementById("container-3"), {type: 'doughnut', data:dataP, options: optionsP});
 	trend_pi = new Chart(document.getElementById("container-5"), {type: 'doughnut', data:dataPi, options: optionsP});
 	trend_pa = new Chart(document.getElementById("container-6"), {type: 'doughnut', data:dataPa, options: optionsP} );
@@ -1510,6 +1576,7 @@ function show_hide_column2(table, col_no, do_show) {
 
     for (var item in data) 
     {
+     	if ( (item == "gas_delivered_timestamp") && (Dongle_Config == "p1-q") ) continue;
        	//console.log("showActualTableV2 i: "+item);
     	//console.log("showActualTableV2 data[i]: "+data[item]);
     	//console.log("showActualTableV2 data[i].value: "+data[item].value);
@@ -1530,8 +1597,13 @@ function show_hide_column2(table, col_no, do_show) {
         newCell.appendChild(newText);
       }
       tableCells = document.getElementById("actualTable_"+item).cells;
-      tableCells[0].innerHTML = data[item].humanName;	
-      tableCells[1].innerHTML = data[item].value;
+      if ( (item == "gas_delivered") && (Dongle_Config == "p1-q") ){
+      	  tableCells[0].innerHTML = "Warmtemeter stand";
+      	  tableCells[1].innerHTML = "GJ";
+      } else {
+		  tableCells[0].innerHTML = data[item].humanName;	
+		  tableCells[1].innerHTML = data[item].value;
+      }      
       if (data[item].hasOwnProperty('unit')) tableCells[2].innerHTML = data[item].unit;
       
     }
@@ -1893,13 +1965,13 @@ function show_hide_column2(table, col_no, do_show) {
       .then(response => response.json())
       .then(json => {
         console.log("getDevSettings: parsed .., data is ["+ JSON.stringify(json)+"]");
-        ed_tariff1 = json.ed_tariff1.value;
-        ed_tariff2 = json.ed_tariff2.value;
-        er_tariff1 = json.er_tariff1.value;
-        er_tariff2 = json.er_tariff2.value;
-        gd_tariff = json.gd_tariff.value;
+        "ed_tariff1" in json ? ed_tariff1 = json.ed_tariff1.value : ed_tariff1 = 0;
+        "ed_tariff2" in json ? ed_tariff2 = json.ed_tariff2.value : ed_tariff2 = 0;
+        "er_tariff1" in json ? er_tariff1 = json.er_tariff1.value : er_tariff1 = 0;
+        "er_tariff2" in json ? er_tariff2 = json.er_tariff2.value : er_tariff2 = 0;
+        "gd_tariff" in json ? gd_tariff = json.gd_tariff.value : gd_tariff = 0;
 	  	"conf" in json ? Dongle_Config = json.conf : Dongle_Config = "";
-        electr_netw_costs = json.electr_netw_costs.value;
+        "electr_netw_costs" in json ? electr_netw_costs = json.electr_netw_costs.value : electr_netw_costs = 0;
         gas_netw_costs = json.gas_netw_costs.value;
         hostName = json.hostname.value;
         EnableHist =  "hist" in json ? json.hist : true;
@@ -2009,7 +2081,9 @@ function show_hide_column2(table, col_no, do_show) {
             rowDiv.setAttribute("id", "settingR_"+i);
             //--- field Name ---
               var fldDiv = document.createElement("div");
-                  fldDiv.textContent = translateToHuman(i);
+              	  if ( i == "gd_tariff") fldDiv.textContent = "Warmte tarief (GJ)";
+              	  else if ( i == "gas_netw_costs") fldDiv.textContent = "Netwerkkosten Warmte/maand";
+                  else fldDiv.textContent = translateToHuman(i);
                   rowDiv.appendChild(fldDiv);
             //--- input ---
               var inputDiv = document.createElement("div");

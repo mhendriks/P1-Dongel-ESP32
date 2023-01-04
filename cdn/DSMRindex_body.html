@@ -234,7 +234,7 @@
       </tbody>
       <tfoot>
         <tr>
-            <td colspan=3>Data uit de DSMR-logger</td>
+            <td colspan=3>Data uit de Dongle</td>
         </tr>
       </tfoot>
       </table>
@@ -609,6 +609,19 @@
             <h3>max: <span id="power_delivered_2max">0.0</span> Volt</h3>
             <h3>min: <span id="power_delivered_2min">0.0</span> Volt</h3>
         </div>
+         <div class=card id=l8 style="display:none">
+            <h1 id=Qh class="mdi mdi-heat-wave">Warmte</h1>
+            <canvas class="chart-container" id="container-q"></canvas>
+			<div id=legenda>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+			</div>
+            <hr/>
+            <div style="text-align:center">Vandaag [kJ]</div>
+            <h2 id="Q">0.0</h2>
+        </div>
+
 
     </div> <!-- outer -->  
   </section>  <!-- END Dash Tab --> 
