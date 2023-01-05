@@ -22,9 +22,7 @@
     #define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
 //  #define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
     #define IO_WATER_SENSOR     5
-    #define OTAURL              "http://ota.smart-stuff.nl/v5/"
     #define AUX_BUTTON          9 //download knop bij startup - multifunctional tijdens runtime
-    
     volatile unsigned long      Tpressed = 0;
     volatile byte               pressed = 0;
   #else//v4.2
@@ -56,12 +54,22 @@
     #define OTAURL              "http://ota.smart-stuff.nl/v6/"
 #endif
 
-
-#ifdef USE_HEAT
+#ifdef HEATLINK
   #define MBUS_TYPE 4
+  #define _DEFAULT_HOSTNAME   "Q-Dongle-Pro" 
+  #define _DEFAULT_MQTT_TOPIC "Q-Dongle-Pro/" 
+  #define OTAURL              "http://ota.smart-stuff.nl/v5-q/"
 #else
   #define MBUS_TYPE 3
+  #define _DEFAULT_HOSTNAME   "P1-Dongle-Pro"
+  #define _DEFAULT_MQTT_TOPIC "P1-Dongle-Pro/" 
+  #define OTAURL              "http://ota.smart-stuff.nl/v5/"
 #endif  
+
+#define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
+#define SETTINGS_FILE      "/DSMRsettings.json"
+#define HOST_DATA_FILES    "cdn.jsdelivr.net"
+#define PATH_DATA_FILES    "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/data"
 
 // water sensor
   volatile byte        WtrFactor      = 1;
@@ -79,12 +87,6 @@
 #include <LittleFS.h>
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git  
 
-#define _DEFAULT_HOSTNAME  "P1-Dongle-Pro" 
-#define _DEFAULT_MQTT_TOPIC "P1-Dongle-Pro/" 
-#define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
-#define SETTINGS_FILE      "/DSMRsettings.json"
-#define HOST_DATA_FILES    "cdn.jsdelivr.net"
-#define PATH_DATA_FILES    "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/data"
 
 #define JSON_BUFF_MAX     255
 #define MQTT_BUFF_MAX     200
@@ -277,7 +279,7 @@ char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 
 //update
-char      BaseOTAurl[30] = OTAURL;
+char      BaseOTAurl[35] = OTAURL;
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;

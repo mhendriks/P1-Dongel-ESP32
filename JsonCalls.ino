@@ -136,7 +136,11 @@ void sendDeviceInfo()
   doc["fwversion"] = _VERSION;
   snprintf(cMsg, sizeof(cMsg), "%s %s", __DATE__, __TIME__);
   doc["compiled"] = cMsg;
+
+#ifndef HEATLINK
   doc["smr_version"] = DSMR_NL?"NL":"BE";
+#endif
+  
   doc["hostname"] = settingHostname;
   doc["ipaddress"] = WiFi.localIP().toString();
   doc["indexfile"] = settingIndexPage;
@@ -177,7 +181,9 @@ void sendDeviceInfo()
 #endif
   doc["wifirssi"] = WiFi.RSSI();
   doc["uptime"] = upTime();
+#ifndef HEATLINK
   doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
+#endif
 
 //  doc["telegraminterval"] = (int)settingTelegramInterval;
   if ( DSMRdata.p1_version == "50" || !DSMR_NL ) doc["telegraminterval"] = 1; 
@@ -204,11 +210,12 @@ void sendDeviceSettings()
 {
   DebugTln(F("sending device settings ...\r"));
   DynamicJsonDocument doc(2100);
-  
+
   doc["hostname"]["value"] = settingHostname;
   doc["hostname"]["type"] = "s";
   doc["hostname"]["maxlen"] = sizeof(settingHostname) -1;
   
+#ifndef HEATLINK
   doc["ed_tariff1"]["value"] = settingEDT1;
   doc["ed_tariff1"]["type"] = "f";
   doc["ed_tariff1"]["min"] = 0;
@@ -228,32 +235,28 @@ void sendDeviceSettings()
   doc["er_tariff2"]["type"] = "f";
   doc["er_tariff2"]["min"] = 0;
   doc["er_tariff2"]["max"] = 10;
-  
+#endif  
   doc["gd_tariff"]["value"] = settingGDT;
   doc["gd_tariff"]["type"] = "f";
   doc["gd_tariff"]["min"] = 0;
   doc["gd_tariff"]["max"] = 10;
-  
+#ifndef HEATLINK  
   doc["electr_netw_costs"]["value"] = settingENBK;
   doc["electr_netw_costs"]["type"] = "f";
   doc["electr_netw_costs"]["min"] = 0;
   doc["electr_netw_costs"]["max"] = 100;
-  
+#endif  
   doc["gas_netw_costs"]["value"] = settingGNBK;
   doc["gas_netw_costs"]["type"] = "f";
   doc["gas_netw_costs"]["min"] = 0;
   doc["gas_netw_costs"]["max"] = 100;
-  
+
+#ifndef HEATLINK  
   doc["sm_has_fase_info"]["value"] = settingSmHasFaseInfo;
   doc["sm_has_fase_info"]["type"] = "i";
   doc["sm_has_fase_info"]["min"] = 0;
   doc["sm_has_fase_info"]["max"] = 1;
-  
-//  doc["tlgrm_interval"]["value"] = settingTelegramInterval;
-//  doc["tlgrm_interval"]["type"] = "i";
-//  doc["tlgrm_interval"]["min"] = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
-  
-//  doc["tlgrm_interval"]["max"] = 60;
+#endif  
   
   doc["IndexPage"]["value"] = settingIndexPage;
   doc["IndexPage"]["type"] = "s";
@@ -327,7 +330,14 @@ if (WtrMtr) {
   doc["water_enabl"] = WtrMtr;
   doc["led"] = LEDenabled;
   doc["ha_disc_enabl"] = EnableHAdiscovery;
+
+#ifdef HEATLINK
+  doc["conf"] = "p1-q";  
+#else
   doc["pre40"] = bPre40;
+  doc["conf"] = "p1-p";  
+#endif 
+ 
   // doc["auto_update"] = bAutoUpdate;  TO DO ... 
   
   sendJson(doc);

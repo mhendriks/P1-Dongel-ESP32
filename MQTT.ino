@@ -276,28 +276,6 @@ struct buildJsonMQTT {
 
 }; // buildJsonMQTT
 
-//------
-//struct buildActJsonMQTT {
-//    
-//  template<typename Item>
-//  void apply(Item &i) {
-//    if ( isInFieldsArray(String(Item::name).c_str()) && i.present() ) jsonDoc[String(Item::name)] = value_to_json(i.val());
-//  } //apply
-//
-//  template<typename Item>
-//  Item& value_to_json(Item& i) {
-//    return i;
-//  }
-//
-//  String value_to_json(TimestampedFixedValue i) {
-//    return String(i.val(),3);
-//  }
-//  
-//  double value_to_json(FixedValue i) {
-//    return (int)(i.val() * 1000 + 0.05) / 1000.0;
-//  }
-//}; // buildActJsonMQTT
-
 //===========================================================================================
 
 void MQTTSend(const char* item, String value){
@@ -333,8 +311,13 @@ void MQTTSentStaticInfo(){
 //---------------------------------------------------------------
 void MQTTsendGas(){
   if (!gasDelivered) return;
+#ifdef HEATLINK
+  MQTTSend( "heat_delivered", gasDelivered );
+//  MQTTSend( "heat_delivered_timestamp", gasDeliveredTimestamp ); // double: because device timestamp is equal
+#else
   MQTTSend( "gas_delivered", gasDelivered );
   MQTTSend( "gas_delivered_timestamp", gasDeliveredTimestamp );
+#endif
 }
 
 //---------------------------------------------------------------

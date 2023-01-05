@@ -19,7 +19,7 @@
   Lesser General Public License for more details.
 *******************************************************************
 */
-
+#include <uri/UriBraces.h>
 const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCache-Control: no-cache\r\n";
 
 void checkauth(){

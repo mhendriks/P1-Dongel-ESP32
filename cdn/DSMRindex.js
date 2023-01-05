@@ -1235,7 +1235,7 @@ function show_hide_column2(table, col_no, do_show) {
 		if (error.name === "AbortError") {console.log("time abort error")}
 //         var p = document.createElement('p');
 //         p.appendChild( document.createTextNode('Error: ' + error.message) );
-        alert_message("Datum/tijd kan niet opgehaald worden");
+//         alert_message("Datum/tijd kan niet opgehaald worden");
       });     
       
     document.getElementById('message').innerHTML = newVersionMsg;
@@ -1627,16 +1627,19 @@ function show_hide_column2(table, col_no, do_show) {
     var index;
     	//console.log("showHistTable start: "+start);
     	//console.log("showHistTable stop: "+stop);
+    var tableRef = document.getElementById('last'+type+'Table');
+	tableRef.getElementsByTagName('tbody')[0].innerHTML = ''; //clear tbody content
+
     
     for (let i=start; i>stop; i--)
     {  index = i % data.data.length;
 		//console.log("showHistTable index: "+index);
 		//console.log("showHistTable("+type+"): data["+i+"] => data["+i+"]name["+data[i].recid+"]");
 
-      var tableRef = document.getElementById('last'+type+'Table');
-      if( ( document.getElementById(type +"Table_"+type+"_R"+index)) == null )
-      {
-        var newRow   = tableRef.insertRow();
+//       var tableRef = document.getElementById('last'+type+'Table');
+//       if( ( document.getElementById(type +"Table_"+type+"_R"+index)) == null )
+//       {
+        var newRow   = tableRef.getElementsByTagName('tbody')[0].insertRow();
         //newRow.setAttribute("id", type+"Table_"+data[i].recid, 0);
         newRow.setAttribute("id", type+"Table_"+type+"_R"+index, 0);
         // Insert a cell in the row at index 0
@@ -1655,7 +1658,7 @@ function show_hide_column2(table, col_no, do_show) {
           newCell  = newRow.insertCell(5);
           newCell.appendChild(newText);
         }
-      }
+//       }
       	
       tableCells = document.getElementById(type+"Table_"+type+"_R"+index).cells;
       tableCells[0].innerHTML = formatDate(type, data.data[index].date);

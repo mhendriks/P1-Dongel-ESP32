@@ -8,7 +8,6 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-
 void DisplayFile(const char *fname) { 
   if (bailout() || !FSmounted) return; //exit when heapsize is too small
   File file = LittleFS.open(fname, "r"); // open for reading
@@ -30,7 +29,7 @@ void P1Update(bool sketch){
   while (TelnetStream.available() > 0) { (char)TelnetStream.read(); yield(); }
   
   Debugln(F("\n/!\\ UPDATE MODULE /!\\"));
-  Debugf("Geef update %s versie op (bv. 4.0.1): ",sketch?"SKETCH":"FILE");
+  Debugf("Geef update %s versie op (bv. 4.5.1): ",sketch?"SKETCH":"FILE");
   TelnetStream.setTimeout(10000);
   TelnetStream.readBytesUntil('\n', versie, sizeof(versie)); 
   TelnetStream.setTimeout(1000);
@@ -230,8 +229,8 @@ void handleKeyInput()
                     Debugln(F("   P  - No Parsing (show RAW data from Smart Meter)\r"));
                     Debugln(F("  *W  - Force Re-Config WiFi\r"));
                     Debugln(F("  *R  - Reboot\r"));
-                    Debugln(F("  *S+ - Update File System: Enter version -> S4.0.1\r"));
-                    Debugln(F("  *U+ - Update Remote; Enter Firmware version -> U 4.0.1 \r"));
+                    Debugln(F("  *S+ - Update File System\r"));
+                    Debugln(F("  *U+ - Update Remote\r"));
                     Debugln(F("   X  - Watermeter reading\r"));
                     Debugln(F("  *Z  - Zero counters\r"));
                     if (Verbose1 & Verbose2)  Debugln(F("   V  - Toggle Verbose Off\r"));

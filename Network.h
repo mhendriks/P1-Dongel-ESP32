@@ -10,13 +10,16 @@
 */
 #include <WiFi.h>        // Core WiFi Library         
 #include <ESPmDNS.h>        // part of Core https://github.com/esp8266/Arduino
-#include <WiFiUdp.h>            // part of ESP8266 Core https://github.com/esp8266/Arduino
 #include <Update.h>
 #include "Html.h"
 #include <WiFiManager.h>        // version 0.16.0 - https://github.com/tzapu/WiFiManager
 #include <HTTPClient.h>
 #include "NetTypes.h"
-#include <uri/UriBraces.h>
+
+#ifdef INSIGHT
+  #include "Insights.h"
+  #include <insights_custom.h>
+#endif
 
 WebServer httpServer(80);
 NetServer ws_raw(82);
@@ -101,7 +104,7 @@ void startWiFi(const char* hostname, int timeOut)
   manageWiFi.setDebugOutput(false);
       
   //add custom html at inside <head> for all pages -> show password function
-  manageWiFi.setCustomHeadElement("<script>function f() {var x = document.getElementById('p');x.type==='password'?x.type='text':x.type='password';}</script>");
+//  manageWiFi.setCustomHeadElement("<script>function f() {var x = document.getElementById('p');x.type==='password'?x.type='text':x.type='password';}</script>");
   manageWiFi.setClass("invert"); //dark theme
   
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
@@ -118,6 +121,9 @@ void startWiFi(const char* hostname, int timeOut)
   } 
   //  phy_bbpll_en_usb(true); 
   DebugTf("Took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
+#ifdef INSIGHT 
+  Insights.begin(insights_auth_key);
+#endif
   PostMacIP(); //post mac en ip 
 
 } // startWiFi()

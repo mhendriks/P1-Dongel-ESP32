@@ -32,6 +32,8 @@ TODO
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
 
 WiP
+- Q Dongle version
+- fix: new values are no longer add to the bottom of a tablet (Hour/Day/Month)
 
 
 ************************************************************************************
@@ -48,15 +50,22 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
-//#define USE_NTP_TIME              //test only
+//#define USE_NTP_TIME              
 //#define ETHERNET
 //#define STUB                      //test only : first draft
-//#define USE_HEAT                  //first draft
+//#define HEATLINK                  //first draft
+//#define INSIGHT            
 
+#define ALL_OPTIONS "[CORE]"
+  
 #ifdef SE_VERSION
+  #undef ALL_OPTIONS
   #define ALL_OPTIONS "[CORE][SE]"
-#else
-  #define ALL_OPTIONS "[CORE]"
+#endif
+
+#ifdef HEATLINK
+  #undef ALL_OPTIONS
+  #define ALL_OPTIONS "[CORE][Q]"
 #endif
 
 /******************** don't change anything below this comment **********************/
@@ -69,10 +78,9 @@ void setup()
   
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
-  // sign of life
+  // sign of life = ON during setup
   digitalWrite(LED, LED_ON);
-  delay(1200);
-  digitalWrite(LED, LED_OFF);
+//  delay(1200);
 
   lastReset = getResetReason();
   Debug("\n\n ----> BOOTING....[" _VERSION "] <-----\n\n");
@@ -143,6 +151,7 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
   if( xTaskCreate( fP1Reader, "p1-reader", 30000, NULL, 2, &tP1Reader ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
   
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
+  digitalWrite(LED, LED_OFF);
   
 } // setup()
 
