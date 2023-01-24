@@ -2394,6 +2394,7 @@ function show_hide_column2(table, col_no, do_show) {
   {
     for(var i in data)
     {
+	  if ( i == "conf") continue;
 	  var fldId  = i;
       var newVal = document.getElementById("setFld_"+fldId).value;
 	  if ( data[i].value === undefined ) {
@@ -2965,6 +2966,9 @@ function show_hide_column2(table, col_no, do_show) {
   	 	  ,[ "hist",				  	  "Metergegevens lokaal opslaan"]
 		  ,[ "auto_update",				  "Automatisch updaten"]
 		  ,[ "pre40",				  	  "SMR 2 & 3 support"]
+		  ,[ "raw-port",				  "Telegram op poort 82"]
+		  ,[ "led-prt",				  	  "Bridge leds aan/uit"]
+		  		  		  
 ];
 
 /*
