@@ -55,6 +55,7 @@ const jsversie			= 221201
   var Act_Watt				= false  //display actual in Watt instead of kW
   var SettingsRead 			= false 
   var AvoidSpikes			= false 
+  var IgnoreInjection		= false 
   var Dongle_Config			= ""
   
 //---- Version globals
@@ -425,6 +426,7 @@ function SetOnSettings(json){
 	if (!HeeftWater) HeeftWater =  "water" in json ? !isNaN(json.water.value) : false ;
 	//check of teruglevering actief is 
 	if (!Injection) Injection = isNaN(json.energy_returned_tariff1.value)?false:json.energy_returned_tariff1.value;
+	Injection = Injection && !IgnoreInjection;
 	
 	if (!Phases && (Dongle_Config != "p1-q") ) {
 		//bereken het aantal fases aan de hand van de slimme meter data
@@ -1186,6 +1188,7 @@ function show_hide_column2(table, col_no, do_show) {
           HeeftGas=json.GasAvailable;
 		  "Act_Watt" in json ? Act_Watt = json.Act_Watt : Act_Watt = false;
 		  "AvoidSpikes" in json ? AvoidSpikes = json.AvoidSpikes : AvoidSpikes = false;
+          "IgnoreInjection" in json ? IgnoreInjection = json.IgnoreInjection : IgnoreInjection = false;
           
           for (var item in data) 
           {
@@ -2083,7 +2086,7 @@ function show_hide_column2(table, col_no, do_show) {
             rowDiv.setAttribute("id", "settingR_"+i);
             //--- field Name ---
               var fldDiv = document.createElement("div");
-              	  if ( i == "gd_tariff") fldDiv.textContent = "Warmte tarief (GJ)";
+              	  if ( (i == "gd_tariff") && (Dongle_Config == "p1-q") ) fldDiv.textContent = "Warmte tarief (GJ)Warmte tarief (GJ)";
               	  else if ( i == "gas_netw_costs") fldDiv.textContent = "Netwerkkosten Warmte/maand";
                   else fldDiv.textContent = translateToHuman(i);
                   rowDiv.appendChild(fldDiv);
