@@ -207,7 +207,7 @@ void readSettings(bool show)
   //set hostname
     mdns_hostname_set(settingHostname);
     //set default instance
-    mdns_instance_name_set(Hostname);
+    mdns_instance_name_set(_DEFAULT_HOSTNAME);
 if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
 
   Debug(F(".. done\r"));
