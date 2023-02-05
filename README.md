@@ -17,25 +17,13 @@ Doorontwikkeling van de P1 dongel naar een Pro / ESP32C3 versie.
 - 6P6C aansluiting
 - USB micro aansluiting voor usb voeding
 - signaal inversie door de ESP zelf
-- te gebruiken voor BE, NL, DK, Lux 2/3/4.x en 5.x meters
+- te gebruiken voor BE, NL, DK, SE, Lux 2/3/4.x en 5.x meters
 - aansluiting voor watersensor
+- multifunctioneel drukknopje
+- Status led
 - USB flashing
 - ESD beveiliging
 
-## SCHEMA
-Gekozen voor de ESP32C3 MINI 1
-Op de pcb zitten de onderstaande onderdelen.
-- spanningsregulator (LDO) de 3.3Volt en buffering ivm vermogenspiek bij initialiseren van de Wifi
-- de ESP32 C3 natuurlijk
-- Aansluiting voor de P1 + logica
-- usb micro aansluiting met ESD protectie
-- aansluiting watersensor
-- status led omdat deze niet standaard op de SOC zit
-- knopje om de module in download modus te brengen tijdens boot of multifunctioneel in runtime
-- rj12 connector om makkelijk met de slimme meter te verbinden
-
-Totale schema:
-<img src=".images/kicad-schema.png" width="100%">
 
 Omgezet naar een board ziet dit er zo uit:
 Bovenkant             |  Onderkant |  Eindresultaat <br>
@@ -51,9 +39,7 @@ Instructie is te vinden in de [setup/dsmr-api](https://github.com/mhendriks/DSMR
 De ESPHome firmware werkt ook fantastisch op deze Dongle Pro.
 
 ## Documentatie 
-Er zijn diverse handleidingen gemaakt. Deze zijn te vinden in de folders van [DSMR-API-V2](https://github.com/mhendriks/DSMR-API-V2/) 
-- handleidingen : [DSMR-API-V2](https://github.com/mhendriks/DSMR-API-V2/tree/master/manual/)
-- integratie: [DSMR-API-V2](https://github.com/mhendriks/DSMR-API-V2/tree/master/integratie/) 
+De handleiding is te vinden in [Documentatie P1 Dongle Pro](https://docs.smart-stuff.nl/) 
 
 
 ## Hardware maken of aanschaffen

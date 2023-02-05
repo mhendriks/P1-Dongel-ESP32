@@ -207,7 +207,7 @@ void readSettings(bool show)
   //set hostname
     mdns_hostname_set(settingHostname);
     //set default instance
-    mdns_instance_name_set("P1 Dongle Pro");
+    mdns_instance_name_set(Hostname);
 if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
 
   Debug(F(".. done\r"));

@@ -37,14 +37,7 @@ TODO
 - issue: wegvallen wifi geen reconnect / reconnect mqtt
 
 WiP
-√ raw poort ook in web settings muteren
-√ bugje: upload new firmware zonder ingave beginnen en rebooten ( P. bij de Leij )
-√ waterstand in telnet bugfix ( Roberto )
-√ Dongle type in Preferences T1 = PRo Bridge, T0 - Pro
-- Initiele verbruik wegschrijven
--- check initeel opstart
--- schrijf initele data weg op 1 slot eerder
-√- avoid peaks default aan
+
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
