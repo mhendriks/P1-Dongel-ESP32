@@ -7,7 +7,7 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-#define ACTUALELEMENTS  20
+#define ACTUALELEMENTS  22
 #define INFOELEMENTS     3
 #define FIELDELEMENTS    1
 
@@ -27,7 +27,6 @@ DynamicJsonDocument jsonDoc(4100);  // generic doc to return, clear() before use
 
 void JsonGas(){
   if (!gasDelivered) return;
-  
   jsonDoc["gas_delivered"]["value"] =  (int)(gasDelivered*1000)/1000.0;
   jsonDoc["gas_delivered"]["unit"]  = "m3";
   jsonDoc["gas_delivered_timestamp"]["value"] = gasDeliveredTimestamp;
@@ -68,10 +67,12 @@ struct buildJson {
      strncpy(Name,String(Item::name).c_str(),25);
 
       if (isInFieldsArray(Name)) {
-        #ifdef SE_VERSION
-        if (Name == "energy_delivered_total") Name = "energy_delivered_tariff1";
-        else if (Name == "energy_returned_total") Name = "energy_returned_tariff1";
+        
+        #ifdef SE_VERSION     
+        if (strcmp(Name, "energy_delivered_total") == 0) strcpy(Name,"energy_delivered_tariff1");
+        else if (strcmp(Name, "energy_returned_total") == 0) strcpy(Name,"energy_returned_tariff1");
         #endif
+        
         if (i.present()) {          
           jsonDoc[Name]["value"] = value_to_json(i.val());
           if (String(Item::unit()).length() > 0) jsonDoc[Name]["unit"]  = Item::unit();
@@ -329,7 +330,11 @@ if (WtrMtr) {
   doc["hist"] = EnableHistory;
   doc["water_enabl"] = WtrMtr;
   doc["led"] = LEDenabled;
+  doc["raw-port"] = bRawPort;
+
   doc["ha_disc_enabl"] = EnableHAdiscovery;
+if ( P1Status.dev_type == PRO_BRIDGE ) doc["led-prt"] = bLED_PRT;
+
 
 #ifdef HEATLINK
   doc["conf"] = "p1-q";  
@@ -428,6 +433,7 @@ void handleDevApi()
       String wOut[5];
       String wPair[5];
       String jsonIn  = httpServer.arg(0).c_str();
+      DebugT("json in :");Debugln(jsonIn);
       char field[25] = "";
       char newValue[101]="";
       jsonIn.replace("{", "");

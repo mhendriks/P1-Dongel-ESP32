@@ -13,7 +13,8 @@ void CheckRingExists(){
   for (byte i = 0; i< 3; i++){
     if ( !LittleFS.exists(RingFiles[i].filename) ) {
       createRingFile( (E_ringfiletype)i );
-//      FirstStart =  true; //when one or more files missing first start function triggers
+      P1SetDevFirstUse( true ); //when one or more files are missing first use mode triggers
+      DebugTln(F("First Use mode"));
     }
   }
 }
@@ -56,6 +57,21 @@ void createRingFile(String filename)
 }
 
 //===========================================================================================
+// Calc slot based on actT
+
+uint8_t CalcSlot(E_ringfiletype ringfiletype, bool prev_slot) 
+{
+  uint32_t  nr=0;
+  if (ringfiletype == RINGMONTHS ) nr = ( (year(actT) -1) * 12) + month(actT);    // eg: year(2023) * 12 = 24276 + month(9) = 202309
+  else nr = actT / RingFiles[ringfiletype].seconds;
+  if ( prev_slot ) nr--;
+  uint8_t slot = nr  % RingFiles[ringfiletype].slots;
+  DebugTf("slot: Slot is [%d] nr is [%d]\r\n", slot, nr);
+
+  return slot;
+}
+
+//===========================================================================================
 
 uint8_t CalcSlot(E_ringfiletype ringfiletype, char* Timestamp) 
 {
@@ -65,28 +81,27 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, char* Timestamp)
   if (ringfiletype == RINGMONTHS ) nr = ( (year(t1) -1) * 12) + month(t1);    // eg: year(2023) * 12 = 24276 + month(9) = 202309
   else nr = t1 / RingFiles[ringfiletype].seconds;
   uint8_t slot = nr % RingFiles[ringfiletype].slots;
-    DebugTf("slot: Slot is [%d]\r\n", slot);
-    DebugTf("nr: nr is [%d]\r\n", nr);
+  DebugTf("slot: Slot is [%d] nr is [%d]\r\n", slot, nr);
 
-  if (slot < 0 || slot >= RingFiles[ringfiletype].slots)
-  {
-    DebugTf("RINGFile: Some serious error! Slot is [%d]\r\n", slot);
-    slot = RingFiles[ringfiletype].slots;
-    P1Status.sloterrors++;
-    return 99;
-  }
   return slot;
 }
 
 //===========================================================================================
 
-void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec) 
+void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec) {
+  uint8_t slot = CalcSlot(ringfiletype, false);
+  writeRingFile(ringfiletype, JsonRec, slot);
+}
+
+//===========================================================================================
+
+void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, byte actSlot) 
 {
-  if (!EnableHistory) return; //do nothing
+  if ( !EnableHistory || !FSmounted ) return; //do nothing
   char key[9] = "";
   byte slot = 0;
-  uint8_t actSlot = CalcSlot(ringfiletype, actTimestamp);
-  if ((actSlot == 99) || !FSmounted) return;  // stop if error occured
+//  uint8_t actSlot = CalcSlot(ringfiletype, false);
+//  if ( actSlot == 99 ) return;  // stop if error occured
   StaticJsonDocument<145> rec;
 
   char buffer[DATA_RECLEN];
@@ -155,14 +170,31 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec)
 } // writeRingFile()
 
 //===========================================================================================
+void WritePrevRingRecord(E_ringfiletype ringfiletype){
+  uint8_t slot = CalcSlot(ringfiletype, true);
+  writeRingFile(ringfiletype, "", slot);
+}
+
+//===========================================================================================
 void writeRingFiles() {
   if (!EnableHistory) return; //do nothing
+
+  if ( P1Status.FirstUse ) {
+    // write previous slot first because of the current act_slot in the file
+    WritePrevRingRecord(RINGHOURS);
+    yield();
+    WritePrevRingRecord(RINGDAYS);
+    yield();
+    WritePrevRingRecord(RINGMONTHS);
+    P1SetDevFirstUse( false ); 
+  }
+  //normal 
   writeRingFile(RINGHOURS, "");
   yield();
   writeRingFile(RINGDAYS, "");
   yield();
   writeRingFile(RINGMONTHS, "");
-//  FirstStart = false; //write extra record once
+  
 } // writeRingFiles()
  
 

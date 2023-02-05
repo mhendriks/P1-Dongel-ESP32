@@ -67,7 +67,6 @@ void writeSettings()
     DebugTf("open(%s, 'w') FAILED!!! --> Bailout\r\n", SETTINGS_FILE);
     return;
   }
-  yield();
 
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), _DEFAULT_HOMEPAGE);
 //  byte min_value = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
@@ -86,7 +85,7 @@ void writeSettings()
   doc["SmHasFaseInfo"] = settingSmHasFaseInfo;
 //  doc["TelegramInterval"] = settingTelegramInterval;
   doc["IndexPage"] = settingIndexPage;
- 
+  yield();
   doc["MQTTbroker"] = settingMQTTbroker;
   doc["MQTTbrokerPort"] = settingMQTTbrokerPort;
   doc["MQTTUser"] = settingMQTTuser;
@@ -106,7 +105,7 @@ void writeSettings()
   doc["pre40"] = bPre40;
   doc["act-json-mqtt"] = bActJsonMQTT;
   doc["raw-port"] = bRawPort;
-
+  doc["led-prt"] = bLED_PRT;
   writeToJsonFile(doc, SettingsFile);
   
 } // writeSettings()
@@ -188,6 +187,8 @@ void readSettings(bool show)
   if (doc.containsKey("auto-update")) bAutoUpdate = doc["auto-update"];
   if (doc.containsKey("pre40")) bPre40 = doc["pre40"];
   if (doc.containsKey("raw-port")) bRawPort = doc["raw-port"];
+  if (doc.containsKey("led-prt")) bLED_PRT = doc["led-prt"];
+  
   if (doc.containsKey("act-json-mqtt")) bActJsonMQTT = doc["act-json-mqtt"];
 
   const char* temp = doc["basic-auth"]["user"];
@@ -206,7 +207,8 @@ void readSettings(bool show)
   //set hostname
     mdns_hostname_set(settingHostname);
     //set default instance
-    mdns_instance_name_set("DSMR P1 Adapter");
+    mdns_instance_name_set("P1 Dongle Pro");
+if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
 
   Debug(F(".. done\r"));
 
@@ -357,6 +359,12 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "hist")) EnableHistory = (stricmp(newValue, "true") == 0?true:false); 
   if (!stricmp(field, "water_enabl")) WtrMtr = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "ha_disc_enabl")) EnableHAdiscovery = (stricmp(newValue, "true") == 0?true:false);  
+  if ( P1Status.dev_type == PRO_BRIDGE ) {
+    if (!stricmp(field, "led-prt")) {
+      bLED_PRT = (stricmp(newValue, "true") == 0?true:false);  
+      digitalWrite(PRT_LED, bLED_PRT);
+    }
+   }
   if (!stricmp(field, "pre40")) {
     bPre40 = (stricmp(newValue, "true") == 0?true:false);    
     SetupSMRport();

@@ -51,14 +51,14 @@ void handleSlimmemeter()
 #endif
     slimmeMeter.loop();
     if (slimmeMeter.available()) {
-      ToggleLED();
+      ToggleLED(LED_ON);
       CapTelegram = slimmeMeter.raw(); //capture last telegram
       if (showRaw) {
         //-- process telegrams in raw mode
         Debugf("Telegram Raw (%d)\n/%s!%x\n", slimmeMeter.raw().length(), slimmeMeter.raw().c_str(), slimmeMeter.GetCRC() ); 
         showRaw = false; //only 1 reading
       } else processSlimmemeter();
-      ToggleLED();
+      ToggleLED(LED_OFF);
     } //available
 } // handleSlimmemeter()
 
@@ -138,25 +138,29 @@ void processSlimmemeter()
 void processTelegram(){
 //  DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());  
                                                     
-  strcpy(newTimestamp, DSMRdata.timestamp.c_str()); 
+//  strcpy(newTimestamp, DSMRdata.timestamp.c_str()); 
 
-  newT = epoch(newTimestamp, strlen(newTimestamp), true); // update system time
-  actT = epoch(actTimestamp, strlen(actTimestamp), false);
-  
+  newT = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), true); // update system time
+//  actT = epoch(actTimestamp, strlen(actTimestamp), false); //niet nodig ... is al gezet initieel en in vorige processing
+
+      DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
+
   // has the hour changed
-  if (     (hour(actT) != hour(newT)  ) )  {
+  if (     ( hour(actT) != hour(newT) ) || P1Status.FirstUse )  {
+//    DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
     writeRingFiles();
-    DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
   }
 
   if ( DUE(publishMQTTtimer) ) sendMQTTData();
-  
-  strCopy(actTimestamp, sizeof(actTimestamp), newTimestamp); 
-  actT = newT; //epoch(actTimestamp, strlen(actTimestamp), true);   // update system time
+
   if ( bRawPort ) {
     ws_raw.print("/" + CapTelegram + "!" ); //print telegram to dongle port
     ws_raw.println(CRCTelegram, HEX);
   }
+
+  //update actual time
+  strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
+  actT = newT; //epoch(actTimestamp, strlen(actTimestamp), true);   // update system time
   
 } // processTelegram()
 

@@ -14,23 +14,27 @@
 
 static const char UpdateHTML[] PROGMEM =
 R"(<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>
-<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>
-<h1>Update P1 Dongel</h1><br>
-<div>Update software of data van de P1 Dongel. Software is te herkennen aan <b>.bin(.gz)</b> databestand aan <b>.spiffs.bin(.gz)</b><br><br></div>
-<input type='file' name='update' id='file' onchange='sub(this)'>
-<label id='file-input' for='file'><span>Selecteer file...</span></label>
-<div id='prg'></div><div id='prgbar'><div id='bar'></div></div><br>
-<input type='submit' class=btn value='UPDATE' onchange='upload(this)'></div>
-<div id=letop>LETOP!<br>Maak een kopie van databestanden (via bestandsbeheer) en zet de databestanden na het updaten weer terug.</div>
+<form method='POST' action='#' enctype='multipart/form-data' id='uf'>
+<h1>Dongle Update</h1><br>
+<div>Update software of data van de Dongel. Software is te herkennen aan <b>.bin(.gz)</b> databestand aan <b>.spiffs.bin(.gz)</b><br><br></div>
+<input type='file' name='update' id='f' onchange='sub(this)'>
+<label id='fi' for='f'><span>Selecteer file...</span></label>
+<div id='prg'></div><div id='pb'><div id='bar'></div></div><br>
+<input type='submit' id='xx' class=btn value='UPDATE' onchange='upload(this)'></div>
+<div id=w>LETOP!<br>Maak een kopie van databestanden (via bestandsbeheer).</div>
 </form>
 <script>
 function sub(obj){
 var fileName = obj.value.split('\\\\');
-$('#file-input').html('<span>'+ fileName[fileName.length-1]+'</span>');
-if (obj.value.indexOf('spiffs')>-1) {$('#letop').css('display','block')} else $('#letop').css('display','none');}
+$('#fi').html('<span>'+ fileName[fileName.length-1]+'</span>');
+if (obj.value.indexOf('spiffs')>-1) {$('#w').css('display','block')} else $('#w').css('display','none');}
 $('form').submit(function(e){
+if(!$("form input[type=file]").val()) {
+ alert('You must select a file!');
+ return false;
+}
 e.preventDefault();
-var form = $('#upload_form')[0];
+var form = $('#uf')[0];
 var data = new FormData(form);
 $.ajax({
 url: '/update',
@@ -61,14 +65,14 @@ error: function (a, b, c) {
 });
 });
 </script><style>
-#file-input,input{width:100%;height:44px;border-radius:4px;margin:10px auto;font-size:15px}
+#fi,input{width:100%;height:44px;border-radius:4px;margin:10px auto;font-size:15px}
 input{background:#f1f1f1;border:0;padding:0 15px}body{background:#3498db;font-family:sans-serif;font-size:14px;color:#777}
-#file-input{padding:0;border:1px solid #ddd;line-height:44px;display:block;cursor:pointer}
-#bar,#prgbar{background-color:#f1f1f1;border-radius:10px;width:100%}#bar{background-color:#3498db;width:0%;height:10px}
-#file-input span{margin-left:6px}
+#fi{padding:0;border:1px solid #ddd;line-height:44px;display:block;cursor:pointer}
+#bar,#pb{background-color:#f1f1f1;border-radius:10px;width:100%}#bar{background-color:#3498db;width:0%;height:10px}
+#fi span{margin-left:6px}
 form{background:#fff;max-width:450px;margin:75px auto;padding:30px;border-radius:5px}
 .btn{background:#3498db;color:#fff;cursor:pointer}
 div{margin:10px auto}
 h1{text-align:center}
-#letop, input[type=file]{display:none;color:red}
+#w, input[type=file]{display:none;color:red}
 </style>)"; 

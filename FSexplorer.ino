@@ -72,7 +72,7 @@ void setupFSexplorer()
   httpServer.on("/remote-update", [](){ checkauth(); RemoteUpdate(); });
   httpServer.on("/updates", HTTP_GET, []() {
     checkauth();
-    ReadManifest();
+//    ReadManifest();
     httpServer.sendHeader("Connection", "close");
     httpServer.send(200, "text/html", UpdateHTML);
   });

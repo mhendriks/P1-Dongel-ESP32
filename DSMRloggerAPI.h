@@ -13,14 +13,14 @@
 
   #ifdef ARDUINO_ESP32C3_DEV
     #warning Using ESP32C3
-    #define LED                 7 
+    #define LED                 7
     #define DTR_IO              4 // nr = IO pulse = N/A
     #define RXP1               10
     #define TXP1               -1 //disable
     #define LED_ON              LOW
     #define LED_OFF             HIGH
     #define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
-//  #define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
+//    #define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
     #define IO_WATER_SENSOR     5
     #define AUX_BUTTON          9 //download knop bij startup - multifunctional tijdens runtime
     volatile unsigned long      Tpressed = 0;
@@ -43,8 +43,8 @@
 
 #ifdef ETHERNET
     #warning Using ESP32-ETHERNET
-    #define LED                 0 //no led 
-    #define DTR_IO              0 //no dtr
+//    #define LED                 0 //no led 
+//    #define DTR_IO              0 //no dtr
     #define RXP1                15
     #define TXP1                0 //no txp1
     #define LED_ON              LOW
@@ -65,6 +65,22 @@
   #define _DEFAULT_MQTT_TOPIC "P1-Dongle-Pro/" 
   #define OTAURL              "http://ota.smart-stuff.nl/v5/"
 #endif  
+
+
+// Device Types
+#define PRO         0
+#define PRO_BRIDGE  1
+
+  #define RGBLED_PIN        8
+  #define PRT_LED           0
+  #include <Adafruit_NeoPixel.h>
+  Adafruit_NeoPixel RGBLED(1, RGBLED_PIN, NEO_GRB + NEO_KHZ800);
+  #define BRIGHTNESS 50 // Set BRIGHTNESS to about 1/5 (max = 255)
+  //LED COLORS
+  #define BLUE  3
+  #define RED   1
+  #define GREEN 2
+  byte R_value = 0, B_value = 0, G_value = 0;
 
 #define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
 #define SETTINGS_FILE      "/DSMRsettings.json"
@@ -133,6 +149,7 @@ using MyData = ParsedData<
   /* String */                ,p1_version_be
   /* FixedValue */            ,peak_pwr_last_q
   /* TimestampedFixedValue */ ,highest_peak_pwr
+  /* String */                ,highest_peak_pwr_13mnd
   /* String */                ,timestamp
   /* String */                ,equipment_id
 #ifndef SE_VERSION
@@ -237,10 +254,12 @@ static PubSubClient MQTTclient(wifiClient);
 
 struct Status {
    uint32_t           reboots;
-   uint32_t           sloterrors;
+   uint32_t           sloterrors; //deprecated
    char               timestamp[14];
    volatile uint32_t  wtr_m3;
    volatile uint16_t  wtr_l;
+   uint16_t           dev_type;
+   bool               FirstUse;
 } P1Status;
   
 MyData      DSMRdata;
@@ -254,13 +273,13 @@ bool        showRaw = false;
 bool        LEDenabled    = true;
 bool        DSMR_NL       = true;
 bool        EnableHAdiscovery = true;
-//bool        FirstStart = false;
 bool        bHideP1Log = false;
 char        bAuthUser[25]="", bAuthPW[25]="";
 bool        EnableHistory = true;
 bool        bPre40 = false;
 bool        bActJsonMQTT = false;
 bool        bRawPort = false;
+bool        bLED_PRT = true;
 
 String      CapTelegram;
 uint16_t    CRCTelegram;
@@ -296,7 +315,6 @@ bool      StaticInfoSend = false;
 //===========================================================================================
 // setup timers 
 DECLARE_TIMER_SEC(synchrNTP,          30);
-DECLARE_TIMER_SEC(nextTelegram,        2);
 DECLARE_TIMER_SEC(reconnectMQTTtimer,  5); // try reconnecting cyclus timer
 DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time between MQTT messages  
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);

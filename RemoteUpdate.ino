@@ -15,11 +15,11 @@ void handleRemoteUpdate(){
 }
 
 void update_finished() {
-  LogFile("OTA UPDATE geslaagd", true);
+  LogFile("OTA UPDATE succesfull", true);
 }
 
 void update_started() {
-  LogFile("OTA UPDATE gestart",true);
+  LogFile("OTA UPDATE started",true);
   if (bWebUpdate) httpServer.send(200, "text/html", "OTA update gestart, duurt ca. 2 - 3 minuten...");
 }
 
@@ -61,7 +61,7 @@ void RemoteUpdate(const char* versie, bool sketch){
   if (bWebUpdate) {
     if (httpServer.argName(0) != "version") {
         httpServer.send(200, "text/html", "OTA ERROR: No version argument");
-        LogFile("OTA ERROR: versienr ontbreekt",true );
+        LogFile("OTA ERROR: missing version argument",true );
         bWebUpdate = false;
         return;
     }
@@ -69,7 +69,7 @@ void RemoteUpdate(const char* versie, bool sketch){
   } //bWebUpdate
   else if ( strlen(versie) ) _versie = versie; 
        else {   
-              LogFile("OTA ERROR: versienr ontbreekt", true);
+              LogFile("OTA ERROR: missing version argument", true);
               bWebUpdate = false; 
               return; 
             }
@@ -120,28 +120,28 @@ void ReadManifest() {
   
   int httpResponseCode = http.GET();
   if ( httpResponseCode<=0 ) { 
-    Debug("Error code: ");Debugln(httpResponseCode);
+    Debug(F("Error code: "));Debugln(httpResponseCode);
     return; //leave on error
   }
   
   Debugln( F("Version Manifest") );
-  Debug("HTTP Response code: ");Debugln(httpResponseCode);
+  Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
   String payload = http.getString();
   Debugln(payload);
   http.end();
     
   // Parse JSON object in response
-  DynamicJsonDocument doc(200);
+  DynamicJsonDocument manifest(256);
 
   // Parse JSON object
-  DeserializationError error = deserializeJson(doc, payload);
-  
-  Debugf("version: %s\r\n", doc["version"]);
-  Debugf("major: %i\r\n"  , doc["major"]);
-  Debugf("minor: %i\r\n"  , doc["minor"]);
-  Debugf("build: %i\r\n"  , doc["build"]);
-  Debugf("notes: %s\r\n"  , doc["notes"]);
-  Debugf("ota_url: %s\r\n", doc["ota_url"]);
+//  DeserializationError error = deserializeJson(manifest, payload);
+//  if (error) Debugln(F("Error deserialisation Json"));
+//  Debugf("version: %s\n\r",manifest["version"]);
+//  Debugf("major: %i\n\r",manifest["major"]);
+//  Debugf("minor: %i\n\r",manifest["minor"]);
+//  Debug(F("build: "));Debugln(String(manifest["build"]).c_str());
+//  Debug(F("notes: "));Debugln(String(manifest["notes"]).c_str());
+//  Debug(F("ota_url: "));Debugln(String(manifest["ota_url"]).c_str());
     
 } //ReadManifest
 

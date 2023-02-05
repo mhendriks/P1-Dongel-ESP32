@@ -137,6 +137,7 @@ void handleKeyInput()
                         case 'r': P1StatusRead(); break;
                         case 'w': P1StatusWrite(); break;
                         case 'p': P1StatusPrint(); break;
+                        case 't': P1StatusDefType(); break;
                         case 'z': P1StatusReset(); break;
                         default : Debugln(F("P1 Status info:\nr = read\nw = write\np = print\nz = erase"));
                         } //switch
@@ -146,6 +147,16 @@ void handleKeyInput()
       case 'b':
       case 'B':     displayBoardInfo();
                     break;
+      case 'T':   {        
+                      char c;
+                      Debugln(F("Devices types: 0 = P1 Pro, 1 = P1 Pro Bridge"));
+                      while (TelnetStream.available() > 0) { 
+                        c = (char)TelnetStream.read();
+                            while (TelnetStream.available() > 0) {(char)TelnetStream.read();} //verwijder extra input
+                      } //while
+                      P1Status.dev_type = int(c) - 48;
+                      P1SetDevType();
+                      break; }                           
       case 'l':
       case 'L':     readSettings(true);
                     break;

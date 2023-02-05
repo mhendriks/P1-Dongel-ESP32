@@ -19,7 +19,6 @@
   char                lastMQTTtimestamp[15] = "-";
   char                mqttBuff[100];
 
-
   enum states_of_MQTT { MQTT_STATE_INIT, MQTT_STATE_TRY_TO_CONNECT, MQTT_STATE_IS_CONNECTED, MQTT_STATE_ERROR };
   enum states_of_MQTT stateMQTT = MQTT_STATE_INIT;
 
@@ -298,11 +297,12 @@ void MQTTSend(const char* item, float value){
 void MQTTSentStaticInfo(){
   if ((settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   StaticInfoSend = true;
-  MQTTSend("identification",DSMRdata.identification);
-  MQTTSend("p1_version",DSMRdata.p1_version);
-  MQTTSend("equipment_id",DSMRdata.equipment_id);
-  MQTTSend("firmware",_VERSION_ONLY);
-  MQTTSend("ip_address",WiFi.localIP().toString());
+  MQTTSend( "identification",DSMRdata.identification );
+  MQTTSend( "mac",String(WiFi.macAddress()) );
+  MQTTSend( "p1_version",DSMRdata.p1_version );
+  MQTTSend( "equipment_id",DSMRdata.equipment_id );
+  MQTTSend( "firmware",_VERSION_ONLY );
+  MQTTSend( "ip_address",WiFi.localIP().toString());
   MQTTSend( "wifi_rssi",String( WiFi.RSSI() ) );
   if (DSMRdata.mbus1_device_type_present){ MQTTSend("gas_device_type", String(DSMRdata.mbus1_device_type) ); }
   if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc); }  

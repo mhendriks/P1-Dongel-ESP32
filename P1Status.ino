@@ -16,6 +16,11 @@ void P1StatusEnd(){
 void P1StatusPrint(){
       DebugTf("P1 Status: reboots[%i] | sloterrors [%i] | Timestamp [%s] | water [%i] m3 [%i] liter\n",P1Status.reboots, P1Status.sloterrors, P1Status.timestamp, P1Status.wtr_m3, P1Status.wtr_l);
   }
+
+void P1StatusDefType(){
+  DebugT(F("P1 Status Device Type: "));Debugln(P1Status.dev_type);
+  DebugT(F("P1 Status Device Fist Use: "));Debugln(P1Status.FirstUse);
+}
   
 void P1StatusRead(){
     /*  
@@ -29,10 +34,20 @@ void P1StatusRead(){
     preferences.getString("timestamp",P1Status.timestamp,14);
     P1Status.wtr_m3 = preferences.getShort("wtr_m3", 0);
     P1Status.wtr_l = preferences.getUInt("wtr_l", 0);
-    
+    P1Status.dev_type = preferences.getUShort("dev_type", 0);
+    P1Status.FirstUse = preferences.getBool("first_use", false);
     if (strlen(P1Status.timestamp)!=13) strcpy(P1Status.timestamp,"010101010101X"); 
     strcpy(actTimestamp, P1Status.timestamp);
     P1StatusPrint();
+}
+
+void P1SetDevFirstUse(bool first_use){
+  P1Status.FirstUse = first_use;
+  preferences.putBool("first_use", first_use);
+}
+
+void P1SetDevType(){
+   preferences.putUShort("dev_type", P1Status.dev_type);
 }
 
 void P1StatusWrite(){
@@ -42,6 +57,7 @@ void P1StatusWrite(){
     preferences.putString("timestamp",P1Status.timestamp);
     preferences.putShort("wtr_m3", P1Status.wtr_m3);
     preferences.putUInt("wtr_l", P1Status.wtr_l);
+    
     DebugTln(F("P1Status successfully writen"));
 }
 
@@ -55,6 +71,7 @@ void P1StatusClear(){
   P1Status.reboots    = 0;
   P1Status.wtr_m3     = 0;
   P1Status.wtr_l      = 0;
+  P1Status.FirstUse   = false;
   telegramCount       = 0;
   telegramErrors      = 0;
   P1StatusWrite();

@@ -26,9 +26,34 @@ void FacReset() {
   resetWifi();
 }
 
-void ToggleLED() {
-  if (LEDenabled) digitalWrite(LED, !digitalRead(LED)); else digitalWrite(LED, LED_OFF);
+void ToggleLED(byte mode) {
+
+  if ( P1Status.dev_type == PRO_BRIDGE ) { 
+    if ( LEDenabled ) SwitchLED( mode, GREEN ); 
+    else { RGBLED.setPixelColor(0,0,0,0);RGBLED.show(); }; 
+  } // PRO_BRIDGE
+  else if ( LEDenabled ) digitalWrite(LED, !digitalRead(LED)); else digitalWrite(LED, LED_OFF);
+
 }
+
+void SwitchLED( byte mode, byte color) {
+if ( P1Status.dev_type == PRO_BRIDGE ) {
+    if ( LEDenabled ) {
+      byte value = 0;
+      if ( mode == LED_ON ) value = 255;
+      
+      switch ( color ) {
+      case RED:   R_value = value; break;
+      case GREEN: G_value = value; break;
+      case BLUE:  B_value = value; break;  
+      } 
+    } 
+
+    RGBLED.setPixelColor(0,R_value,G_value,B_value);
+    RGBLED.show(); 
+   } else digitalWrite(LED, mode);
+}
+
 
 //===========================================================================================
 

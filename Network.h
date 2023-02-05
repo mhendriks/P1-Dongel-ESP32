@@ -34,16 +34,19 @@ DECLARE_TIMER_SEC(WifiReconnect, 5); //try after x sec
 
 void LogFile(const char*, bool);
 void P1Reboot();
+void SwitchLED( byte mode, byte color);
 
 static void onWifiEvent (WiFiEvent_t event) {
     switch (event) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED:
         DebugTf ("Connected to %s. Asking for IP address.\r\n", WiFi.BSSIDstr().c_str());
-        digitalWrite(LED, LED_ON);
+//        digitalWrite(LED, LED_ON);
+        SwitchLED( LED_ON, BLUE );
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
         LogFile("Wifi Connected",true);
-        digitalWrite(LED, LED_ON);
+//        digitalWrite(LED, LED_ON);
+        SwitchLED( LED_ON, BLUE );
         Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
         Debug (F(" ( gateway: " ));  Debug (WiFi.gatewayIP());Debug(" )\n\n");
@@ -51,15 +54,16 @@ static void onWifiEvent (WiFiEvent_t event) {
         WifiConnected = true;
         break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-        digitalWrite(LED, LED_OFF);
+//        digitalWrite(LED, LED_OFF);
+        SwitchLED( LED_OFF, BLUE );
         if (DUE(WifiReconnect)) {
-        if ( WifiConnected ) LogFile("Wifi connection lost",true); //log only once 
-        WifiConnected = false;                 
-        WiFi.reconnect();
+          if ( WifiConnected ) LogFile("Wifi connection lost",true); //log only once 
+          WifiConnected = false;                 
+          WiFi.reconnect();
         }
         break;
     default:
-        DebugTf ("[WiFi-event] event: %d\n", event);
+        DebugT(F("[WiFi-event] event: ")); Debugln(event);
         break;
     }
 }
@@ -98,7 +102,9 @@ void startWiFi(const char* hostname, int timeOut)
 
 //  DebugTln("start ...");
   LogFile("Wifi Starting",true);
-  digitalWrite(LED, LED_OFF);
+//  digitalWrite(LED, LED_OFF);
+  SwitchLED( LED_OFF, BLUE );
+  
   WifiBoot = true;
   WiFi.onEvent(onWifiEvent);
   manageWiFi.setDebugOutput(false);
@@ -115,7 +121,7 @@ void startWiFi(const char* hostname, int timeOut)
   if ( !manageWiFi.autoConnect("P1-Dongle-Pro") )
   {
     LogFile("Wifi failed to connect and hit timeout",true);
-    DebugTf(" took [%d] seconds ==> ERROR!\r\n", (millis() - lTime) / 1000);
+//    DebugTf(" took [%d] seconds ==> ERROR!\r\n", (millis() - lTime) / 1000);
     P1Reboot();
     return;
   } 

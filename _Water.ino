@@ -1,6 +1,6 @@
 void handleWater(){ 
   if ( WtrMtr && WtrTimeBetween )  {
-    DebugTf("Wtr delta readings: %d | debounces: %d | waterstand: %i.%i\n",WtrTimeBetween,debounces, P1Status.wtr_m3, P1Status.wtr_l);
+    DebugTf("Wtr delta readings: %d | debounces: %d | waterstand: %im3 en %i liters\n",WtrTimeBetween,debounces, P1Status.wtr_m3, P1Status.wtr_l);
     WtrTimeBetween = 0;
   }
 }
