@@ -1,1 +1,13 @@
-{"ShowVoltage":true,"Injection":false,"Phases":0,"Fuse":25,"cdn":true,"GasAvailable":false,"HideInitial":false,"Act_Watt":false,"AvoidSpikes":true,"IgnoreInjection":false}
+{
+	"ShowVoltage": true,
+	"Injection": false,
+	"Phases": 0,
+	"Fuse": 25,
+	"cdn": true,
+	"GasAvailable": false,
+	"HideInitial": false,
+	"Act_Watt": false,
+	"AvoidSpikes": true,
+	"IgnoreInjection": false,
+	"IgnoreGas": false
+}
