@@ -52,7 +52,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?     
-#define SE_VERSION
+//#define SE_VERSION
 //#define USE_NTP_TIME              
 //#define ETHERNET
 //#define STUB                      //test only : first draft
