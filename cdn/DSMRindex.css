@@ -135,7 +135,7 @@ input[type=number]{
 
 #lastMonthsTableCosts th{
 	border-bottom: 2px solid #ddd;
-	width=40px;
+	width:40px;
 	text-align: center;
 }
 
@@ -552,7 +552,6 @@ h1::before{ padding-right:3px; }
 #DashTab h3 {
 	text-align: center;
 	font-size: 1.3rem;
-	font-family: 'Heiti TC';
 	padding: 0.2rem 0.2rem;	
 	margin: 0;
 }
