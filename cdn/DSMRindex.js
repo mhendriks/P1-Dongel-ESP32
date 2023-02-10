@@ -423,7 +423,7 @@ function SetOnSettings(json){
 	- teruglevering
 	*/
 	//check of gasmeter beschikbaar is	(indien HeeftGas = true uit Frontend,json of eerdere meeting dan niet meer checken uit meterdata, bij false wel checken in meterdata)
-	if (!HeeftGas) HeeftGas = "gas_delivered" in json ? !isNaN(json.gas_delivered.value) : false ;
+	if (!HeeftGas && !IgnoreGas) HeeftGas = "gas_delivered" in json ? !isNaN(json.gas_delivered.value) : false ;
 	if (!HeeftWater) HeeftWater =  "water" in json ? !isNaN(json.water.value) : false ;
 	//check of teruglevering actief is 
 	if (!Injection) Injection = isNaN(json.energy_returned_tariff1.value)?false:json.energy_returned_tariff1.value;
@@ -545,7 +545,7 @@ function UpdateDash()
 // 	   	  json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"221231161038W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.613,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.613,"unit":"m3"},"gas_delivered_timestamp":{"value":"221231161038W"}}');
 
 //others
-// 	   	  json = JSON.parse('{"timestamp":{"value":"220606085610S"},"energy_delivered_tariff1":{"value":55.026,"unit":"kWh"},"energy_delivered_tariff2":{"value":53.923,"unit":"kWh"},"energy_returned_tariff1":{"value":1,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0.398,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"voltage_l1":{"value":232.5,"unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":0,"unit":"A"},"power_delivered_l1":{"value":0.114,"unit":"kW"},"power_delivered_l2":{"value":0.284,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":5471.227,"unit":"m3"},"gas_delivered_timestamp":{"value":"220606085510S"},"water":{"value":379.782,"unit":"m3"}}');	   	  
+//	   	  json = JSON.parse('{"timestamp":{"value":"220606085610S"},"energy_delivered_tariff1":{"value":55.026,"unit":"kWh"},"energy_delivered_tariff2":{"value":53.923,"unit":"kWh"},"energy_returned_tariff1":{"value":1,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0.398,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"voltage_l1":{"value":232.5,"unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":0,"unit":"A"},"power_delivered_l1":{"value":0.114,"unit":"kW"},"power_delivered_l2":{"value":0.284,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":5471.227,"unit":"m3"},"gas_delivered_timestamp":{"value":"220606085510S"},"water":{"value":379.782,"unit":"m3"}}');	   	  
 //  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.102,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
 //  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.123,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
 //no voltage
@@ -611,12 +611,14 @@ function UpdateDash()
 		if ( TotalKW <= 0 ) { 
 // 			TotalKW = -1.0 * json.power_returned.value;
 			document.getElementById("power_delivered_l1h").style.backgroundColor = "green";
-// 			document.getElementById("power_delivered_l1h").innerHTML = "Teruglevering";
+			document.getElementById("Ph").style.backgroundColor = "green";
 		} else
 		{
 // 			TotalKW = json.power_delivered.value;
-// 			document.getElementById("power_delivered_l1h").innerHTML = "Actueel";
-			if (Injection) document.getElementById("power_delivered_l1h").style.backgroundColor = "red";
+			if (Injection) {
+				document.getElementById("power_delivered_l1h").style.backgroundColor = "red";
+				document.getElementById("Ph").style.backgroundColor = "red";
+			}
 			else document.getElementById("power_delivered_l1h").style.backgroundColor = "#314b77";
 		}
 		
@@ -726,7 +728,7 @@ function UpdateDash()
 		}
 		} //!= p1-q
 		//-------GAS METER	
-		if ( HeeftGas && (Dongle_Config != "p1-q") && !IgnoreGas ) 
+		if ( HeeftGas && (Dongle_Config != "p1-q") ) 
 		{
 			//bereken verschillen gas, afname, teruglevering en totaal
 			for(let i=0;i<3;i++){
@@ -1608,7 +1610,8 @@ function show_hide_column2(table, col_no, do_show) {
 		  tableCells[0].innerHTML = data[item].humanName;	
   		  if (data[item].hasOwnProperty('unit')) tableCells[2].innerHTML = data[item].unit;
       }
-	  tableCells[1].innerHTML = data[item].value;
+	  if (!isNaN(data[item].value) ) tableCells[1].innerHTML =  Number(data[item].value).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 3} );                    
+	  else tableCells[1].innerHTML =  data[item].value;
     }
 
     //--- hide canvas
@@ -1666,16 +1669,19 @@ function show_hide_column2(table, col_no, do_show) {
       	
       tableCells = document.getElementById(type+"Table_"+type+"_R"+index).cells;
       tableCells[0].innerHTML = formatDate(type, data.data[index].date);
-      if (data.data[index].p_edw >= 0) tableCells[1].innerHTML = data.data[index].p_edw;
+      
+      if (data.data[index].p_edw >= 0) tableCells[1].innerHTML = Number(data.data[index].p_edw).toLocaleString( 'nl-NL' );
+      
+      
       else tableCells[1].innerHTML = "-";
 
-      if (data.data[index].p_erw >= 0) tableCells[2].innerHTML = data.data[index].p_erw;
+      if (data.data[index].p_erw >= 0) tableCells[2].innerHTML = Number(data.data[index].p_erw).toLocaleString( 'nl-NL' );
       else tableCells[2].innerHTML = "-";
 
-      if (data.data[index].p_gd >= 0) tableCells[3].innerHTML = data.data[index].p_gd;
-      if (data.data[index].water >= 0) tableCells[4].innerHTML = data.data[index].water;
+      if (data.data[index].p_gd >= 0) tableCells[3].innerHTML = Number(data.data[index].p_gd).toLocaleString( 'nl-NL' );
+      if (data.data[index].water >= 0) tableCells[4].innerHTML = Number(data.data[index].water).toLocaleString( 'nl-NL' );
 
-      if (type == "Days") tableCells[5].innerHTML = ( (data.data[index].costs_e + data.data[index].costs_g) * 1.0).toFixed(2);
+      if (type == "Days") tableCells[5].innerHTML = Number( (data.data[index].costs_e + data.data[index].costs_g) * 1.0 ).toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2} );
       
     };
 
@@ -1769,29 +1775,29 @@ function show_hide_column2(table, col_no, do_show) {
       tableCells[0].innerHTML = monthNames[mmNr];                           // maand
       
       tableCells[1].innerHTML = "20"+data.data[i].date.substring(0,2);          // jaar
-      if (data.data[i].p_ed >= 0) tableCells[2].innerHTML = data.data[i].p_ed;                         // verbruik
+	  if (data.data[i].p_ed >= 0) tableCells[2].innerHTML = Number(data.data[i].p_ed).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} );
       
       tableCells[3].innerHTML = "20"+data.data[slotyearbefore].date.substring(0,2);       // jaar
-      if (data.data[slotyearbefore].p_ed >= 0) tableCells[4].innerHTML = data.data[slotyearbefore].p_ed;                      // verbruik
+      if (data.data[slotyearbefore].p_ed >= 0) tableCells[4].innerHTML = Number(data.data[slotyearbefore].p_ed).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} );                      // verbruik
       
       tableCells[5].innerHTML = "20"+data.data[i].date.substring(0,2);          // jaar
-      if (data.data[i].p_er >= 0) tableCells[6].innerHTML = data.data[i].p_er;                         // opgewekt
+      if (data.data[i].p_er >= 0) tableCells[6].innerHTML = Number(data.data[i].p_er).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} );                         // opgewekt
       
       tableCells[7].innerHTML = "20"+data.data[slotyearbefore].date.substring(0,2);       // jaar
-      if (data.data[slotyearbefore].p_er >= 0) tableCells[8].innerHTML = data.data[slotyearbefore].p_er;                      // opgewekt
+      if (data.data[slotyearbefore].p_er >= 0) tableCells[8].innerHTML = Number(data.data[slotyearbefore].p_er).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} );                      // opgewekt
       
       tableCells[9].innerHTML = "20"+data.data[i].date.substring(0,2);          // jaar
-      if (data.data[i].p_gd >= 0) tableCells[10].innerHTML = data.data[i].p_gd;                        // gas
+      if (data.data[i].p_gd >= 0) tableCells[10].innerHTML = Number(data.data[i].p_gd).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} );                        // gas
       
       tableCells[11].innerHTML = "20"+data.data[slotyearbefore].date.substring(0,2);      // jaar
-      if (data.data[slotyearbefore].p_gd >= 0) tableCells[12].innerHTML = data.data[slotyearbefore].p_gd;                     // gas
+      if (data.data[slotyearbefore].p_gd >= 0) tableCells[12].innerHTML = Number(data.data[slotyearbefore].p_gd).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} );                       // gas
       
 		tableCells[13].innerHTML = "20"+data.data[i].date.substring(0,2);          // jaar
-      if (data.data[i].water >= 0) tableCells[14].innerHTML = data.data[i].water;
+      if (data.data[i].water >= 0) tableCells[14].innerHTML = Number(data.data[i].water).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} );  
       else tableCells[14].innerHTML = "-";
       
       tableCells[15].innerHTML = "20"+data.data[slotyearbefore].date.substring(0,2);      // jaar
-      if (data.data[slotyearbefore].water >= 0) tableCells[16].innerHTML = data.data[slotyearbefore].water; 
+      if (data.data[slotyearbefore].water >= 0) tableCells[16].innerHTML = Number(data.data[slotyearbefore].water).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} ); 
       else tableCells[16].innerHTML = "-";
       
     };
