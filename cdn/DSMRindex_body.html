@@ -20,6 +20,7 @@
       <li><a id='bHoursTab'     class='tabButton nav-item' href="#HoursTab" >Uur</a></li>
       <li><a id='bDaysTab'      class='tabButton nav-item' href="#DaysTab" >Dag</a></li>
       <li><a id='bMonthsTab'    class='tabButton nav-item' href="#MonthsTab" >Maand</a></li>
+      <li><a id='bPlafond'    	class='tabButton nav-item' href="#PlafondTab" >PrijsPlafond</a></li>
 	  <li>
 	  	<a id='bSysInfoTab' class='nav-img nav-item' href="#SysInfoTab" ><span class="mdi mdi-information-outline"></span></a>
 		<ul>
@@ -221,6 +222,25 @@
       </table>
     </div>
   </section> <!-- END MonthsTab -->
+  
+  <section id="PlafondTab" class="tabName">
+	<h2>Prijsplafond (NL)</h2>
+	<p>Deze grafiek laat verbruik zien t.o.v. prijsplafond om een idee te geven hoe het verbruik zich ontwikkeld.<br>
+	In de jaar grafieken is de seizoensinvloed meegenomen. In de maand grafieken is de verdeling linear.<br>
+	Het is een hulpmiddel om een beeld te krijgen van het gebruik ten opzichte van het prijsplafond.</p>
+    <div>
+      <b>Grafiek per:</b>
+      <input type="radio" id="btnYear" name=burnup onchange="setViewYEAR()" checked/>
+      <label for="btnYear">Jaar</label>
+      <input type="radio" id="btnMonth" name=burnup onchange="setViewMONTH()"/>
+      <label for="btnMonth">Maand</label>
+    </div>
+    
+    <div class="chart-container" style="position: relative; height:40vh; width:80vw">
+		<canvas id="myChart1" ></canvas>
+		<canvas id="myChart2" ></canvas>
+	</div>
+  </section> <!-- END PLAFOND -->
 
   <!-- START SysInfo Tab -->
   <section id="SysInfoTab" class="tabName subTab">
@@ -512,7 +532,7 @@
 
         <a href="#ActualTab" style="display:flex">
         <div class=card id=l1 style="display:block">
-			<h1 id=power_delivered_l1h class="mdi mdi-gauge">Actueel</h1>
+			<h1 id=power_delivered_l1h class="mdi mdi-gauge" i18n-key="Actueel">Actueel</h1>
 <!-- 	        <div class="chart-container" id="gauge"></div> -->
 	        <canvas class="chart-container" id="gauge3f"></canvas>
 	        <div id=legenda>

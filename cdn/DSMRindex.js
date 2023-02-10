@@ -841,14 +841,14 @@ function handle_menu_click()
 
 // 	gauge = new JustGage(GaugeOptions); // initialize gauge
 // 	gauge_v = new JustGage(GaugeOptionsV); // initialize gauge
-	trend_g = new Chart(document.getElementById("container-4"), TrendG);
-	trend_q = new Chart(document.getElementById("container-q"), TrendQ);
-	trend_p = new Chart(document.getElementById("container-3"), {type: 'doughnut', data:dataP, options: optionsP});
-	trend_pi = new Chart(document.getElementById("container-5"), {type: 'doughnut', data:dataPi, options: optionsP});
-	trend_pa = new Chart(document.getElementById("container-6"), {type: 'doughnut', data:dataPa, options: optionsP} );
-	trend_w = new Chart(document.getElementById("container-7"), TrendW);
-	gauge3f = new Chart(document.getElementById("gauge3f"), Trend3f);
-	gaugeV = new Chart(document.getElementById("gauge-v"), TrendV);
+	trend_g 	= new Chart(document.getElementById("container-4"), TrendG);
+	trend_q 	= new Chart(document.getElementById("container-q"), TrendQ);
+	trend_p 	= new Chart(document.getElementById("container-3"), {type: 'doughnut', data:dataP, options: optionsP});
+	trend_pi 	= new Chart(document.getElementById("container-5"), {type: 'doughnut', data:dataPi, options: optionsP});
+	trend_pa 	= new Chart(document.getElementById("container-6"), {type: 'doughnut', data:dataPa, options: optionsP} );
+	trend_w 	= new Chart(document.getElementById("container-7"), TrendW);
+	gauge3f 	= new Chart(document.getElementById("gauge3f"), Trend3f);
+	gaugeV 		= new Chart(document.getElementById("gauge-v"), TrendV);
             
 	handle_menu_click();
 	FrontendConfig();
@@ -872,6 +872,8 @@ function handle_menu_click()
 
 	//reselect Dash when Home icon has been clicked
  	document.getElementById("Home").addEventListener("click", function() { document.getElementById('bDashTab').click(); });
+ 	
+ 	BurnupBootstrap();
   } // bootsTrapMain()
   
   

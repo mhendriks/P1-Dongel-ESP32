@@ -320,6 +320,7 @@ nav {
     left: 0;
     top: 0;
     width: 100%;
+    z-index: 999;
 }
 ul.main-navigation {
 	background-color:rgba(0,0,0,0.8);
@@ -508,8 +509,10 @@ body > div.bottom.right-0 {
 
 .chart-container {
 	display: block;
-    height: 90px!important;
+ /* 
+   height: 90px!important;
     width: 180px!important;
+ */
     position: relative;
     margin: auto;
     margin-top: 10px;
@@ -559,6 +562,11 @@ h1::before{ padding-right:3px; }
 #DashTab hr {width: 80%;}
 
 svg{position:inherit!important}
+
+#btnYear, #btnMonth {
+  	color:black;
+  }
+  
 /*
 ***************************************************************************
 *
