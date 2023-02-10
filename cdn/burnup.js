@@ -324,39 +324,23 @@ function fillArrayNULL(array) {
 
 // window.onload = fnBootstrap;
 
-function fnBootstrap() 
+function BurnupBootstrap() 
 {
 	createCharts();
 
 	//create storage
 	objStorage = new localstorage();
 
-	//handle #
-	if (location.hash)
-	{
-		console.log(location.hash);
-		subpage = location.hash.slice(1);
-		switch(subpage){
-			case "year": sCurrentChart = "YEAR"; break;
-			case "month": sCurrentChart = "MONTH"; break;
-		}
-	}
-
+	sCurrentChart = "YEAR"
 	//refresh and schedule every 60sec
 	refreshData();
 	clearInterval(timerRefresh);
     timerRefresh = setInterval(refreshData, 30 * 1000); // repeat every 20s
-
-	//add handlers for the buttons
-	document.getElementById("btnYear").onclick = setViewYEAR;
-	document.getElementById("btnMonth").onclick = setViewMONTH;
 }
 
 function setViewMONTH()
 {
 	sCurrentChart = "MONTH";
-	document.getElementById("btnYear").classList.remove("active");
-	document.getElementById("btnMonth").classList.add("active");
 	getDays();
 	clearInterval(timerRefresh);
     timerRefresh = setInterval(refreshData, 30 * 1000); // repeat every 20s
@@ -365,8 +349,6 @@ function setViewMONTH()
 function setViewYEAR()
 {
 	sCurrentChart = "YEAR";
-	document.getElementById("btnMonth").classList.remove("active");
-	document.getElementById("btnYear").classList.add("active");
 	getMonths();
 	clearInterval(timerRefresh);
     timerRefresh = setInterval(refreshData, 30 * 1000); // repeat every 20s
