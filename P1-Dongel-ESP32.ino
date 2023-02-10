@@ -35,6 +35,7 @@ TODO
 - Sluipverbruik bijhouden
 - localisation + 3 decimals frontend tables (R Wiegers)
 - issue: wegvallen wifi geen reconnect / reconnect mqtt
+- ringbuffer naar 31 dagen
 
 WiP
 
