@@ -20,6 +20,7 @@ var actElectrData = createChartDataContainer();
 var actGasData = createChartDataContainer();
 var actWaterData = createChartDataContainer();
 
+//helper functions for datacontainers and datasets
 function createChartDataContainer(){
 	let ds = {};	
 	ds.labels = [];
@@ -76,19 +77,26 @@ var optionsGLOBAL = {
       },
     }]
   } // scales
-}; // options
+}; // optionsGLOBAL
 
 var actElectrOptions = structuredClone(optionsGLOBAL);
 actElectrOptions.scales.yAxes[0].scaleLabel.labelString = "kilo Watt";
 
 var hourOptions = structuredClone(optionsGLOBAL);
-actElectrOptions.scales.yAxes[0].scaleLabel.labelString = "Watt/Uur";
+hourOptions.scales.yAxes[0].scaleLabel.labelString = "Watt/Uur";
 
 var dayOptions = structuredClone(optionsGLOBAL);
 dayOptions.scales.yAxes[0].scaleLabel.labelString = "kWh";
 
 var monthOptions = structuredClone(optionsGLOBAL);
 monthOptions.scales.yAxes[0].scaleLabel.labelString = "kWh";
+
+var optionsGAS = structuredClone(optionsGLOBAL);
+optionsGAS.scales.yAxes[0].scaleLabel.labelString = "m3";
+
+var optionsWATER = structuredClone(optionsGLOBAL);
+optionsWATER.scales.yAxes[0].scaleLabel.labelString = "m3";
+
 
 //----------------Chart's-------------------------------------------------------
 var myElectrChart;
@@ -113,7 +121,7 @@ var myWaterChart;
   } // renderElectrChart()
 
   //============================================================================  
-  function renderWaterChart(dataSet, labelString) {
+  function renderWaterChart(dataSet) {
     //console.log("Now in renderGasChart() ..");
     
     if (myWaterChart) {
@@ -124,27 +132,13 @@ var myWaterChart;
     myWaterChart = new Chart(ctxWater, {
       type: 'line',
       data: dataSet,
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        scales: {
-          yAxes: [{
-            ticks : {
-              beginAtZero : true,
-            },
-            scaleLabel: {
-              display: true,
-              labelString: labelString,
-            },
-          }]
-        } // scales
-      } // options
-
+      options: optionsWATER
     });
     
   } // renderWaterChart()
+  
   //============================================================================  
-  function renderGasChart(dataSet, labelString) {
+  function renderGasChart(dataSet) {
     //console.log("Now in renderGasChart() ..");
     
     if (myGasChart) {
@@ -155,22 +149,7 @@ var myWaterChart;
     myGasChart = new Chart(ctxGas, {
       type: 'line',
       data: dataSet,
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        scales: {
-          yAxes: [{
-            ticks : {
-              beginAtZero : true,
-            },
-            scaleLabel: {
-              display: true,
-              labelString: labelString,
-            },
-          }]
-        } // scales
-      } // options
-
+      options: optionsGAS
     });
     
   } // renderGasChart()
@@ -187,27 +166,29 @@ var myWaterChart;
     myElectrChart.update();
     
     //renderGasChart(gasData, actGasOptions);
-    if (HeeftGas) {
-		if ( Dongle_Config == "p1-q") renderGasChart(gasData, "kJ");
-		else renderGasChart(gasData, "dm3");
-
-		myGasChart.update();
-		document.getElementById("gasChart").style.display   = "block";
+    if (HeeftGas) {       
+      renderGasChart(gasData);
+      var labelString = "dm3";
+      if ( Dongle_Config == "p1-q") labelString = "kJ";
+      myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
+      myGasChart.update();
+      document.getElementById("gasChart").style.display   = "block";
     }
 
     //renderWaterChart(gasData, actGasOptions);
     if (HeeftWater) {
-        renderWaterChart(waterData, "dm3");
+      renderWaterChart(waterData);
+      myGasChart.options.scales.yAxes[0].scaleLabel.labelString = "dm3";
     	myWaterChart.update();
-		document.getElementById("waterChart").style.display = "block";
-     } 
+		  document.getElementById("waterChart").style.display = "block";
+    }
+
     //--- hide table
     document.getElementById("lastHours").style.display  = "none";
     document.getElementById("lastDays").style.display   = "none";
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
-	document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
-
+	  document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
 
   } // showHistGraph()
   
@@ -219,26 +200,30 @@ var myWaterChart;
     copyMonthsToChart(data, type);
     renderElectrChart(electrData, monthOptions);
     myElectrChart.update();
+
     //renderGasChart(gasData, actGasOptions);
     if (HeeftGas) {
-		if ( Dongle_Config == "p1-q") renderGasChart(gasData, "kJ");
-		else renderGasChart(gasData, "m3");
-		myGasChart.update();
-		document.getElementById("gasChart").style.display = "block";
+      renderGasChart(gasData);
+      var labelString = "m3";
+      if ( Dongle_Config == "p1-q") labelString = "kJ";
+      myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
+      myGasChart.update();
+      document.getElementById("gasChart").style.display = "block";
     }  
-	if (HeeftWater) {
-		renderWaterChart(waterData, "m3");
-		myWaterChart.update();
-		document.getElementById("waterChart").style.display = "block";
-	}
+    if (HeeftWater) {
+      renderWaterChart(waterData);
+      myWaterChart.options.scales.yAxes[0].scaleLabel.labelString = "m3";
+      myWaterChart.update();
+      document.getElementById("waterChart").style.display = "block";
+    }
   
     //--- hide table
     document.getElementById("lastHours").style.display  = "none";
     document.getElementById("lastDays").style.display   = "none";
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
-	document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
-
+	  document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
+    //reset cost checkbox
     document.getElementById('mCOST').checked   = false;
 
   } // showMonthsGraph()
@@ -273,9 +258,9 @@ var myWaterChart;
     {	
       var i = y % data.data.length;
 
-    //console.log("i: "+i);            
-    //console.log("y: "+y);
-    //console.log("slotbefore: "+slotbefore);
+      //console.log("i: "+i);            
+      //console.log("y: "+y);
+      //console.log("slotbefore: "+slotbefore);
     
       //console.log("["+i+"] label["+data.data[i].date+"] => slotbefore["+slotbefore+"]");
       // adds x axis labels (timestamp)
@@ -313,8 +298,8 @@ var myWaterChart;
   {
     console.log("Now in copyMonthsToChart()..");
 
-    electrData = createChartDataContainerWithStack();    
-    gasData = createChartDataContainerWithStack();    
+    electrData= createChartDataContainerWithStack();    
+    gasData   = createChartDataContainerWithStack();    
 	  waterData = createChartDataContainerWithStack();
     
     // idx 0 => ED
@@ -396,8 +381,6 @@ var myWaterChart;
     document.getElementById("dataChart").style.display  = "block";
 //     document.getElementById("gasChart").style.display   = "block";
 // 	document.getElementById("waterChart").style.display   = "block";
-
-
   } // copyMonthsToChart()
     
   
@@ -525,9 +508,11 @@ var myWaterChart;
     myElectrChart.update();
     
     //renderGasChart(actGasData, actGasOptions);
-    renderGasChart(actGasData, Dongle_Config == "p1-q" ? "GJ * 1000": "dm3" );
-
-    gasChart.update();
+    renderGasChart(actGasData);
+    var labelString = "dm3";
+    if( Dongle_Config == "p1-q") labelString = "GJ * 1000";
+    myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;    
+    myGasChart.update();
 
   } // showActualGraph()
   
