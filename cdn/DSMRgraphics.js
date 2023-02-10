@@ -15,90 +15,88 @@ let maxPoints       = 100;
 var actLabel        = "-";
 var gasDelivered    = 0;
 
-var electrData          = {};     // declare an object
-electrData.labels       = [];     //  add 'labels' element to object (X axis)
-electrData.datasets     = [];     //  add 'datasets' array element to object
+var electrData = createChartDataContainer();
+var actElectrData = createChartDataContainer();
+var actGasData = createChartDataContainer();
+var actWaterData = createChartDataContainer();
 
-var actElectrData       = {};     // declare an object
-actElectrData.labels    = [];     //  add 'labels' element to object (X axis)
-actElectrData.datasets  = [];     //  add 'datasets' array element to object
+//helper functions for datacontainers and datasets
+function createChartDataContainer(){
+	let ds = {};	
+	ds.labels = [];
+	ds.datasets=[];
+	return ds;
+}
 
-var actGasData          = {};     // declare an object
-actGasData.labels       = [];     //  add 'labels' element to object (X axis)
-actGasData.datasets     = [];     //  add 'datasets' array element to object
+function createChartDataContainerWithStack()
+{
+	let ds = {};	
+	ds.labels = [];
+	ds.datasets=[];
+  ds.stack = [];
+	return ds;
+}
 
-var actWaterData          = {};     // declare an object
-actWaterData.labels       = [];     //  add 'labels' element to object (X axis)
-actWaterData.datasets     = [];     //  add 'datasets' array element to object
+function createDatasetBAR(fill, color, label, stack)
+{
+	let ds = {};
+	ds.fill = fill;
+	ds.borderColor = color;
+	ds.backgroundColor = color;
+	ds.data = [];
+	ds.label = label;
+	ds.stack = stack;
+	return ds;
+}
 
+function createDatasetLINE(fill, color, label)
+{
+	let ds = {};
+  ds.type= "line";
+	ds.fill = fill;
+	ds.borderColor = color;
+	ds.backgroundColor = color;
+	ds.data = [];
+	ds.label = label;
+	//no stack
+	return ds;
+}
 
-var actElectrOptions = {
-		plugins: {labels: false},
-        responsive: true,
-        maintainAspectRatio: true,
-        scales: {
-          yAxes: [{
-            ticks : {
-              beginAtZero : true
-            },
-            scaleLabel: {
-              display: true,
-              labelString: 'kilo Watt',
-            },
-          }]
-        } // scales
-      }; // options
+var optionsGLOBAL = {
+  plugins: {labels: false},
+  responsive: true,
+  maintainAspectRatio: true,
+  scales: {
+    yAxes: [{
+      ticks : {
+        beginAtZero : true
+      },
+      scaleLabel: {
+        display: true,
+        labelString: '---',
+      },
+    }]
+  } // scales
+}; // optionsGLOBAL
 
-var hourOptions = {
-		plugins: {labels: false},
-        responsive: true,
-        maintainAspectRatio: true,
-        scales: {
-          yAxes: [{
-            ticks : {
-              beginAtZero : true
-            },
-            scaleLabel: {
-              display: true,
-              labelString: 'Watt/Uur',
-            },
-          }]
-        } // scales
-      }; // options
+var actElectrOptions = structuredClone(optionsGLOBAL);
+actElectrOptions.scales.yAxes[0].scaleLabel.labelString = "kilo Watt";
 
-var dayOptions = {
-		plugins: {labels: false},
-        responsive: true,
-        maintainAspectRatio: true,
-        scales: {
-          yAxes: [{
-            ticks : {
-              beginAtZero : true
-            },
-            scaleLabel: {
-              display: true,
-              labelString: 'kWh',
-            },
-          }]
-        } // scales
-      }; // options
+var hourOptions = structuredClone(optionsGLOBAL);
+hourOptions.scales.yAxes[0].scaleLabel.labelString = "Watt/Uur";
 
-var monthOptions = {
-		plugins: {labels: false},
-		responsive: true,
-        maintainAspectRatio: true,
-        scales: {
-          yAxes: [{
-            ticks : {
-              beginAtZero : true
-            },
-            scaleLabel: {
-              display: true,
-              labelString: 'kWh',
-            },
-          }]
-        } // scales
-      }; // options
+var dayOptions = structuredClone(optionsGLOBAL);
+dayOptions.scales.yAxes[0].scaleLabel.labelString = "kWh";
+
+var monthOptions = structuredClone(optionsGLOBAL);
+monthOptions.scales.yAxes[0].scaleLabel.labelString = "kWh";
+
+var optionsGAS = structuredClone(optionsGLOBAL);
+optionsGAS.scales.yAxes[0].scaleLabel.labelString = "m3";
+
+var optionsWATER = structuredClone(optionsGLOBAL);
+optionsWATER.scales.yAxes[0].scaleLabel.labelString = "m3";
+
 
 //----------------Chart's-------------------------------------------------------
 var myElectrChart;
@@ -123,7 +121,7 @@ var myWaterChart;
   } // renderElectrChart()
 
   //============================================================================  
-  function renderWaterChart(dataSet, labelString) {
+  function renderWaterChart(dataSet) {
     //console.log("Now in renderGasChart() ..");
     
     if (myWaterChart) {
@@ -134,27 +132,13 @@ var myWaterChart;
     myWaterChart = new Chart(ctxWater, {
       type: 'line',
       data: dataSet,
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        scales: {
-          yAxes: [{
-            ticks : {
-              beginAtZero : true,
-            },
-            scaleLabel: {
-              display: true,
-              labelString: labelString,
-            },
-          }]
-        } // scales
-      } // options
-
+      options: optionsWATER
     });
     
   } // renderWaterChart()
+  
   //============================================================================  
-  function renderGasChart(dataSet, labelString) {
+  function renderGasChart(dataSet) {
     //console.log("Now in renderGasChart() ..");
     
     if (myGasChart) {
@@ -165,22 +149,7 @@ var myWaterChart;
     myGasChart = new Chart(ctxGas, {
       type: 'line',
       data: dataSet,
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        scales: {
-          yAxes: [{
-            ticks : {
-              beginAtZero : true,
-            },
-            scaleLabel: {
-              display: true,
-              labelString: labelString,
-            },
-          }]
-        } // scales
-      } // options
-
+      options: optionsGAS
     });
     
   } // renderGasChart()
@@ -197,27 +166,29 @@ var myWaterChart;
     myElectrChart.update();
     
     //renderGasChart(gasData, actGasOptions);
-    if (HeeftGas) {
-		if ( Dongle_Config == "p1-q") renderGasChart(gasData, "kJ");
-		else renderGasChart(gasData, "dm3");
-
-		myGasChart.update();
-		document.getElementById("gasChart").style.display   = "block";
+    if (HeeftGas) {       
+      renderGasChart(gasData);
+      var labelString = "dm3";
+      if ( Dongle_Config == "p1-q") labelString = "kJ";
+      myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
+      myGasChart.update();
+      document.getElementById("gasChart").style.display   = "block";
     }
 
     //renderWaterChart(gasData, actGasOptions);
     if (HeeftWater) {
-        renderWaterChart(waterData, "dm3");
+      renderWaterChart(waterData);
+      myGasChart.options.scales.yAxes[0].scaleLabel.labelString = "dm3";
     	myWaterChart.update();
-		document.getElementById("waterChart").style.display = "block";
-     } 
+		  document.getElementById("waterChart").style.display = "block";
+    }
+
     //--- hide table
     document.getElementById("lastHours").style.display  = "none";
     document.getElementById("lastDays").style.display   = "none";
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
-	document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
-
+	  document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
 
   } // showHistGraph()
   
@@ -229,26 +200,30 @@ var myWaterChart;
     copyMonthsToChart(data, type);
     renderElectrChart(electrData, monthOptions);
     myElectrChart.update();
+
     //renderGasChart(gasData, actGasOptions);
     if (HeeftGas) {
-		if ( Dongle_Config == "p1-q") renderGasChart(gasData, "kJ");
-		else renderGasChart(gasData, "m3");
-		myGasChart.update();
-		document.getElementById("gasChart").style.display = "block";
+      renderGasChart(gasData);
+      var labelString = "m3";
+      if ( Dongle_Config == "p1-q") labelString = "kJ";
+      myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
+      myGasChart.update();
+      document.getElementById("gasChart").style.display = "block";
     }  
-	if (HeeftWater) {
-		renderWaterChart(waterData, "m3");
-		myWaterChart.update();
-		document.getElementById("waterChart").style.display = "block";
-	}
+    if (HeeftWater) {
+      renderWaterChart(waterData);
+      myWaterChart.options.scales.yAxes[0].scaleLabel.labelString = "m3";
+      myWaterChart.update();
+      document.getElementById("waterChart").style.display = "block";
+    }
   
     //--- hide table
     document.getElementById("lastHours").style.display  = "none";
     document.getElementById("lastDays").style.display   = "none";
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
-	document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
-
+	  document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
+    //reset cost checkbox
     document.getElementById('mCOST').checked   = false;
 
   } // showMonthsGraph()
@@ -258,57 +233,22 @@ var myWaterChart;
   function copyDataToChart(data, type)
   {
 //    console.log("Now in copyDataToChart()..");
-
-
-    electrData    = {};     // empty electrData
-    electrData.labels   = [];     // empty .labels
-    electrData.stack    = [];     // empty .stack
-    electrData.datasets = [];     // empty .datasets
-
-    gasData       = {};     // empty gasData
-    gasData.labels      = [];     // empty .labels
-    gasData.stack       = [];     // empty .stack
-    gasData.datasets    = [];     // empty .datasets
-
-	waterData       = {};     // empty gasData[]
-    waterData.labels      = [];     // empty .labels
-    waterData.stack       = [];     // empty .stack
-    waterData.datasets    = [];     // empty .datasets
+    electrData = createChartDataContainerWithStack();
+    gasData = createChartDataContainerWithStack();
+	  waterData = createChartDataContainerWithStack();
     
     // idx 0 => ED
-    electrData.datasets.push({}); //create a new dataset
-    electrData.datasets[0].fill            = 'false';
-    electrData.datasets[0].borderColor     = "red";
-    electrData.datasets[0].backgroundColor = "red";
-    electrData.datasets[0].data            = []; //contains the 'Y; axis data
-    electrData.datasets[0].label           = "Gebruikt"; //"S"+s; //contains the 'Y; axis label
-    electrData.datasets[0].stack           = "STACK"
+    var dsE1 = createDatasetBAR('false', 'red', "Gebruikt", "STACK");
+    
     // idx 0 => ER
-    electrData.datasets.push({}); //create a new dataset
-    electrData.datasets[1].fill            = 'false';
-    electrData.datasets[1].borderColor     = "green";
-    electrData.datasets[1].backgroundColor = "green";
-    electrData.datasets[1].data            = []; //contains the 'Y; axis data
-    electrData.datasets[1].label           = "Opgewekt"; //"S"+s; //contains the 'Y; axis label
-    electrData.datasets[1].stack           = "STACK"
+    var dsE2 = createDatasetBAR('false', 'green', "Opgewekt", "STACK");
     
     // idx 0 => GAS
-    gasData.datasets.push({}); //create a new dataset
-    gasData.datasets[0].fill               = 'false';
-    gasData.datasets[0].borderColor        = "blue";
-    gasData.datasets[0].backgroundColor    = "blue";
-    gasData.datasets[0].data               = []; //contains the 'Y; axis data
-//     gasData.datasets[0].label              = "Gas Gebruikt"; //"S"+s; //contains the 'Y; axis label
-    if ( Dongle_Config == "p1-q") gasData.datasets[0].label = "Warmte Gebruikt"; //"S"+s; //contains the 'Y; axis label
-    else gasData.datasets[0].label = "Gas Gebruikt"; //"S"+s; //contains the 'Y; axis label
- 
- // idx 0 => WATER
-    waterData.datasets.push({}); //create a new dataset
-    waterData.datasets[0].fill               = 'false';
-    waterData.datasets[0].borderColor        = "blue";
-    waterData.datasets[0].backgroundColor    = "blue";
-    waterData.datasets[0].data               = []; //contains the 'Y; axis data
-    waterData.datasets[0].label              = "Water Gebruikt"; //"S"+s; //contains the 'Y; axis label
+    var dsG1 = createDatasetLINE('false', 'blue', "Gas Gebruikt");
+    if ( Dongle_Config == "p1-q") dsG1.label = "Warmte Gebruikt";
+   
+    // idx 0 => WATER
+    var dsW1 = createDatasetLINE('false', 'blue', "Water Gebruikt");    
     
   //      console.log("data.actSlot "+data.actSlot);
   //      console.log("data.data.length "+data.data.length);
@@ -318,29 +258,37 @@ var myWaterChart;
     {	
       var i = y % data.data.length;
 
-    //console.log("i: "+i);            
-    //console.log("y: "+y);
-    //console.log("slotbefore: "+slotbefore);
+      //console.log("i: "+i);            
+      //console.log("y: "+y);
+      //console.log("slotbefore: "+slotbefore);
     
       //console.log("["+i+"] label["+data.data[i].date+"] => slotbefore["+slotbefore+"]");
       // adds x axis labels (timestamp)
       electrData.labels.push(formatGraphDate(type, data.data[i].date)); 
       gasData.labels.push(formatGraphDate(type, data.data[i].date)); 
-	  waterData.labels.push(formatGraphDate(type, data.data[i].date));
+	    waterData.labels.push(formatGraphDate(type, data.data[i].date));
+
+      //add data to the sets
       if (type == "Hours")
       {
-        if (data.data[i].p_edw >= 0) electrData.datasets[0].data[p]  = (data.data[i].p_edw *  1.0);
-        if (data.data[i].p_erw >= 0) electrData.datasets[1].data[p]  = (data.data[i].p_erw * -1.0);
+        if (data.data[i].p_edw >= 0) dsE1.data[p] = (data.data[i].p_edw *  1.0);
+        if (data.data[i].p_erw >= 0) dsE2.data[p] = (data.data[i].p_erw * -1.0);
       }
       else
       {
-        if (data.data[i].p_ed >= 0) electrData.datasets[0].data[p]  = (data.data[i].p_ed *  1.0).toFixed(3);
-        if (data.data[i].p_er >= 0) electrData.datasets[1].data[p]  = (data.data[i].p_er * -1.0).toFixed(3);
+        if (data.data[i].p_ed >= 0) dsE1.data[p] = (data.data[i].p_ed *  1.0).toFixed(3);
+        if (data.data[i].p_er >= 0) dsE2.data[p] = (data.data[i].p_er * -1.0).toFixed(3);
       }
-      if (data.data[i].p_gd  >= 0) gasData.datasets[0].data[p]      = (data.data[i].p_gd * 1000.0).toFixed(0);
-      if (data.data[i].water  >= 0) waterData.datasets[0].data[p]   = (data.data[i].water * 1000.0).toFixed(0);
-	p++;
+      if (data.data[i].p_gd  >= 0)  dsG1.data[p] = (data.data[i].p_gd * 1000.0).toFixed(0);
+      if (data.data[i].water  >= 0) dsW1.data[p] = (data.data[i].water * 1000.0).toFixed(0);
+	    p++;
     } // for i ..
+
+    //push all the datasets to the container
+    electrData.datasets.push(dsE1);
+    electrData.datasets.push(dsE2);
+    gasData.datasets.push(dsG1);
+    waterData.datasets.push(dsW1);
 
   } // copyDataToChart()
   
@@ -349,130 +297,90 @@ var myWaterChart;
   function copyMonthsToChart(data)
   {
     console.log("Now in copyMonthsToChart()..");
-    
-    electrData    = {};     // empty electrData
-    electrData.labels   = [];     // empty .labels
-    electrData.stack    = [];     // empty .stack
-    electrData.datasets = [];     // empty .datasets
-    
-    gasData       = {};     // empty electrData
-    gasData.labels      = [];     // empty .labels
-    gasData.stack       = [];     // empty .stack
-    gasData.datasets    = [];     // empty .datasets
-    
-	waterData       = {};     // empty gasData[]
-    waterData.labels      = [];     // empty .labels
-    waterData.stack       = [];     // empty .stack
-    waterData.datasets    = [];     // empty .datasets
+
+    electrData= createChartDataContainerWithStack();    
+    gasData   = createChartDataContainerWithStack();    
+	  waterData = createChartDataContainerWithStack();
     
     // idx 0 => ED
-    electrData.datasets.push({}); //create a new dataset
-    electrData.datasets[0].fill            = 'false';
-    electrData.datasets[0].borderColor     = "red";
-    electrData.datasets[0].backgroundColor = "red";
-    electrData.datasets[0].data            = []; //contains the 'Y; axis data
-    electrData.datasets[0].label           = "Gebruikt deze periode"; //"S"+s; //contains the 'Y; axis label
-    electrData.datasets[0].stack           = "DP"
+    var dsED1 = createDatasetBAR('false', 'red', "Gebruikt deze periode", "DP");    
+
     // idx 1 => ER
-    electrData.datasets.push({}); //create a new dataset
-    electrData.datasets[1].fill            = 'false';
-    electrData.datasets[1].borderColor     = "green";
-    electrData.datasets[1].backgroundColor = "green";
-    electrData.datasets[1].data            = []; //contains the 'Y; axis data
-    electrData.datasets[1].label           = "Opgewekt deze Periode"; //"S"+s; //contains the 'Y; axis label
-    electrData.datasets[1].stack           = "DP"
-    // idx 2 => ED -1
-    electrData.datasets.push({}); //create a new dataset
-    electrData.datasets[2].fill            = 'false';
-    electrData.datasets[2].borderColor     = "orange";
-    electrData.datasets[2].backgroundColor = "orange";
-    electrData.datasets[2].data            = []; //contains the 'Y; axis data
-    electrData.datasets[2].label           = "Gebruikt vorige periode"; //"S"+s; //contains the 'Y; axis label
-    electrData.datasets[2].stack           = "RP"
-    // idx 3 => ER -1
-    electrData.datasets.push({}); //create a new dataset
-    electrData.datasets[3].fill            = 'false';
-    electrData.datasets[3].borderColor     = "lightgreen";
-    electrData.datasets[3].backgroundColor = "lightgreen";
-    electrData.datasets[3].data            = []; //contains the 'Y; axis data
-    electrData.datasets[3].label           = "Opgewekt vorige Periode"; //"S"+s; //contains the 'Y; axis label
-    electrData.datasets[3].stack           = "RP"
-    // idx 0 => GD
-    gasData.datasets.push({}); //create a new dataset
-    gasData.datasets[0].fill            = 'false';
-    gasData.datasets[0].borderColor     = "blue";
-    gasData.datasets[0].backgroundColor = "blue";
-    gasData.datasets[0].data            = []; //contains the 'Y; axis data
-	gasData.datasets[0].label           = (Dongle_Config == "p1-q" ? "Warmte": "Gas") + " deze Periode"; //"S"+s; //contains the 'Y; axis label
+    var dsER1 = createDatasetBAR('false', 'green', "Opgewekt deze periode", "DP");    
     
+    // idx 2 => ED -1
+    var dsED2 = createDatasetBAR('false', 'orange', "Gebruikt vorige periode", "RP");    
+
+    // idx 3 => ER -1
+    var dsER2 = createDatasetBAR('false', 'lightgreen', "Opgewekt vorige periode", "RP");
+
+    // idx 0 => GD
+    var dsGD1 =  createDatasetLINE('false', "blue", "Gas deze periode");
+    if(Dongle_Config == "p1-q") dsGD1.label = "Warmte deze periode";    
     
     // idx 0 => GD -1
-    gasData.datasets.push({}); //create a new dataset
-    gasData.datasets[1].fill            = 'false';
-    gasData.datasets[1].borderColor     = "lightblue";
-    gasData.datasets[1].backgroundColor = "lightblue";
-    gasData.datasets[1].data            = []; //contains the 'Y; axis data
-	gasData.datasets[1].label           = (Dongle_Config == "p1-q" ? "Warmte": "Gas") + " vorige Periode"; //"S"+s; //contains the 'Y; axis label
-	
-    // idx 0 => WATER
-    waterData.datasets.push({}); //create a new dataset
-    waterData.datasets[0].fill            = 'false';
-    waterData.datasets[0].borderColor     = "blue";
-    waterData.datasets[0].backgroundColor = "blue";
-    waterData.datasets[0].data            = []; //contains the 'Y; axis data
-    waterData.datasets[0].label           = "Water deze Periode"; //"S"+s; //contains the 'Y; axis label
-    // idx 0 => WATER -1    
-	waterData.datasets.push({}); //create a new dataset
-    waterData.datasets[1].fill            = 'false';
-    waterData.datasets[1].borderColor     = "lightblue";
-    waterData.datasets[1].backgroundColor = "lightblue";
-    waterData.datasets[1].data            = []; //contains the 'Y; axis data
-    waterData.datasets[1].label           = "Water vorige Periode"; //"S"+s; //contains the 'Y; axis label
-    
-    
+    var dsGD2 =  createDatasetLINE('false', "blue", "Gas vorige periode");
+    if(Dongle_Config == "p1-q") dsGD2.label = "Warmte vorige periode";
+
+    var dsW1 =  createDatasetLINE('false', "blue", "Water deze periode");
+    var dsW2 =  createDatasetLINE('false', "lightblue", "Water vorige periode");
+       
     //console.log("there are ["+data.data.length+"] rows");
   
-	var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
+	  var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
     var stop = start - 12;
     var i;
     var slotyearbefore = 0;
     var p        = 0;
   	for (let index=start; index>stop; index--)
-    {  i = index % data.data.length;
-      	slotyearbefore = math.mod(i-12,data.data.length);
+    {  
+      i = index % data.data.length;
+      slotyearbefore = math.mod(i-12,data.data.length);
 
+      //add labels
       electrData.labels.push(formatGraphDate("Months", data.data[i].date)); // adds x axis labels (timestamp)
       gasData.labels.push(formatGraphDate("Months", data.data[i].date)); // adds x axis labels (timestamp)
       waterData.labels.push(formatGraphDate("Months", data.data[i].date)); // adds x axis labels (timestamp)
       //electrData.labels.push(p); // adds x axis labels (timestamp)
+
+      //add data to the datatsets
       if (data.data[i].p_ed >= 0) {
-      	electrData.datasets[0].data[p]  = (data.data[i].p_ed *  1.0).toFixed(3);
-		electrData.datasets[2].data[p]  = (data.data[slotyearbefore].p_ed *  1.0).toFixed(3);
-	  }
+      	dsED1.data[p]  = (data.data[i].p_ed *  1.0).toFixed(3);
+		    dsED2.data[p]  = (data.data[slotyearbefore].p_ed *  1.0).toFixed(3);
+	    }
       
-	  if (data.data[i].p_er >= 0) {
-	  	electrData.datasets[1].data[p]  = (data.data[i].p_er * -1.0).toFixed(3);
-      	electrData.datasets[3].data[p]  = (data.data[slotyearbefore].p_er * -1.0).toFixed(3);
+	    if (data.data[i].p_er >= 0) {
+	  	  dsER1.data[p]  = (data.data[i].p_er * -1.0).toFixed(3);
+      	dsER2.data[p]  = (data.data[slotyearbefore].p_er * -1.0).toFixed(3);
       }
       
       if (data.data[i].p_gd >= 0) {
-		  gasData.datasets[0].data[p]     = data.data[i].p_gd;
-		  gasData.datasets[1].data[p]     = data.data[slotyearbefore].p_gd;
-	  }
-	  if (data.data[i].water >= 0) {
-		  waterData.datasets[0].data[p]     = data.data[i].water;
-		  waterData.datasets[1].data[p]     = data.data[slotyearbefore].water;
-	  }
+		    dsGD1.data[p]     = data.data[i].p_gd;
+		    dsGD2.data[p]     = data.data[slotyearbefore].p_gd;
+	    }
+	    if (data.data[i].water >= 0) {
+		    dsW1.data[p]     = data.data[i].water;
+		    dsW2.data[p]     = data.data[slotyearbefore].water;
+	    }
       p++;
-    }
+    }//endfor
+
+    //add datasets to the container
+    electrData.datasets.push(dsED1);
+    electrData.datasets.push(dsER1);
+    electrData.datasets.push(dsED2);
+    electrData.datasets.push(dsER2);
+    gasData.datasets.push(dsGD1);
+    gasData.datasets.push(dsGD2);
+    waterData.datasets.push(dsW1);
+    waterData.datasets.push(dsW2); 
+
     //--- hide months Table
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
     document.getElementById("dataChart").style.display  = "block";
 //     document.getElementById("gasChart").style.display   = "block";
 // 	document.getElementById("waterChart").style.display   = "block";
-
-
   } // copyMonthsToChart()
     
   
@@ -546,77 +454,37 @@ var myWaterChart;
   {
     //console.log("Now in initActualGraph()..");
 
-    actElectrData     = {};     // empty actElectrData
-    actElectrData.labels   = [];     // empty .labels
-    actElectrData.stack    = [];     // empty .stack
-    actElectrData.datasets = [];     // empty .datasets
+    actElectrData = createChartDataContainerWithStack();
+    actGasData = createChartDataContainerWithStack();
 
-    actGasData     = {};     // empty actElectrData
-    actGasData.labels   = [];     // empty .labels
-    actGasData.stack    = [];     // empty .stack
-    actGasData.datasets = [];     // empty .datasets
-    
     // idx 0 => EDL1
-    actElectrData.datasets.push({}); //create a new dataset
-    actElectrData.datasets[0].fill            = 'false';
-    actElectrData.datasets[0].borderColor     = "red";
-    actElectrData.datasets[0].backgroundColor = "red";
-    actElectrData.datasets[0].data            = []; //contains the 'Y; axis data
-    actElectrData.datasets[0].label           = "Gebruikt L1"; //"S"+s; //contains the 'Y; axis label
-    actElectrData.datasets[0].stack           = "A"
+    var dsE1 = createDatasetBAR('false', 'red', "Gebruikt L1", "A");
+    actElectrData.datasets.push(dsE1);
     
     // idx 1 => EDL2
-    actElectrData.datasets.push({}); //create a new dataset
-    actElectrData.datasets[1].fill            = 'false';
-    actElectrData.datasets[1].borderColor     = "tomato";
-    actElectrData.datasets[1].backgroundColor = "tomato";
-    actElectrData.datasets[1].data            = []; //contains the 'Y; axis data
-    actElectrData.datasets[1].label           = "Gebruikt L2"; //"S"+s; //contains the 'Y; axis label
-    actElectrData.datasets[1].stack           = "A"
+    var dsE2 = createDatasetBAR('false', 'tomato', "Gebruikt L2", "A");
+    actElectrData.datasets.push(dsE2);
     
     // idx 2 => EDL3
-    actElectrData.datasets.push({}); //create a new dataset
-    actElectrData.datasets[2].fill            = 'false';
-    actElectrData.datasets[2].borderColor     = "salmon";
-    actElectrData.datasets[2].backgroundColor = "salmon";
-    actElectrData.datasets[2].data            = []; //contains the 'Y; axis data
-    actElectrData.datasets[2].label           = "Gebruikt L3"; //"S"+s; //contains the 'Y; axis label
-    actElectrData.datasets[2].stack           = "A"
-    
-    // idx 3 => ERL1
-    actElectrData.datasets.push({}); //create a new dataset
-    actElectrData.datasets[3].fill            = 'false';
-    actElectrData.datasets[3].borderColor     = "yellowgreen";
-    actElectrData.datasets[3].backgroundColor = "yellowgreen";
-    actElectrData.datasets[3].data            = []; //contains the 'Y; axis data
-    actElectrData.datasets[3].label           = "Opgewekt L1"; //"S"+s; //contains the 'Y; axis label
-    actElectrData.datasets[3].stack           = "A"
+    var dsE3 = createDatasetBAR('false', 'salmon', "Gebruikt L3", "A");
+    actElectrData.datasets.push(dsE3);
+
+    // idx 3 ERL1
+    var dsER1 = createDatasetBAR('false', 'yellowgreen', "Opgewekt L1", "A");
+    actElectrData.datasets.push(dsER1);
     
     // idx 4 => ERL2
-    actElectrData.datasets.push({}); //create a new dataset
-    actElectrData.datasets[4].fill            = 'false';
-    actElectrData.datasets[4].borderColor     = "springgreen";
-    actElectrData.datasets[4].backgroundColor = "springgreen";
-    actElectrData.datasets[4].data            = []; //contains the 'Y; axis data
-    actElectrData.datasets[4].label           = "Opgewekt L2"; //"S"+s; //contains the 'Y; axis label
-    actElectrData.datasets[4].stack           = "A"
+    var dsER2 = createDatasetBAR('false', 'springgreen', "Opgewekt L2", "A");
+    actElectrData.datasets.push(dsER2);
     
     // idx 5 => ERL3
-    actElectrData.datasets.push({}); //create a new dataset
-    actElectrData.datasets[5].fill            = 'false';
-    actElectrData.datasets[5].borderColor     = "green";
-    actElectrData.datasets[5].backgroundColor = "green";
-    actElectrData.datasets[5].data            = []; //contains the 'Y; axis data
-    actElectrData.datasets[5].label           = "Opgewekt L3"; //"S"+s; //contains the 'Y; axis label
-    actElectrData.datasets[5].stack           = "A"
+    var dsER3 = createDatasetBAR('false', 'green', "Opgewekt L3", "A");
+    actElectrData.datasets.push(dsER3);
     
     // idx 0 => GDT
-    actGasData.datasets.push({}); //create a new dataset
-    actGasData.datasets[0].fill            = 'false';
-    actGasData.datasets[0].borderColor     = "blue";
-    actGasData.datasets[0].backgroundColor = "blue";
-    actGasData.datasets[0].data            = []; //contains the 'Y; axis data
-    actGasData.datasets[0].label           = Dongle_Config == "p1-q" ? "Warmte": "Gas" +" Verbruikt"; //"S"+s; //contains the 'Y; axis label
+    var dsG1 = createDatasetLINE('false', 'blue', "Gas verbruikt");
+    if(Dongle_Config == "p1-q") dsG1.label = "Warmte verbruikt";
+    actGasData.datasets.push(dsG1);
 
     actPoint = 0;
   
@@ -640,9 +508,11 @@ var myWaterChart;
     myElectrChart.update();
     
     //renderGasChart(actGasData, actGasOptions);
-    renderGasChart(actGasData, Dongle_Config == "p1-q" ? "GJ * 1000": "dm3" );
-
-    gasChart.update();
+    renderGasChart(actGasData);
+    var labelString = "dm3";
+    if( Dongle_Config == "p1-q") labelString = "GJ * 1000";
+    myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;    
+    myGasChart.update();
 
   } // showActualGraph()
   
