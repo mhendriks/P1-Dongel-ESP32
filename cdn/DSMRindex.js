@@ -1272,66 +1272,154 @@ function show_hide_column2(table, col_no, do_show) {
       }); //catch
   };  // refreshSmActual()
   
+// format a identifier
+// input = "4530303433303036393938313736353137"
+// output = "E0043006998176517"
+function formatIdentifier(value) {
+  var sTotal = "";
+  for (var pos = 0; pos < value.length; pos += 2) {
+    nVal = parseInt(value.substring(pos, pos + 2), 16);
+    sTotal += String.fromCharCode(nVal);
+  }
+  return sTotal;
+}
+
+// format a timestamp 
+// input "230125125424W" 
+// output "2023-01-25 12:54:24 (dst=off)"
+function formatTimestamp(value) {
+  var date = value.substring(0, 6);
+  var time = value.substring(6, 12);
+  var dst = value[12] == "S" ? "on" : "off";
+  //console.log(date, time, dst);
+  var sDate = "20" + date.slice(0, 2) + "-" + date.slice(2, 4) + "-" + date.slice(4, 6);
+  var sTime = time.substring(0, 2) + ":" + time.substring(2, 4) + ":" + time.substring(4, 6);
+
+  var sTST = sDate + " " + sTime + " (dst=" + dst + ")";
+  return sTST;
+};
+
+//parse the value from electricity_failure_log into json with timestamp and duration
+//input= ""
+//output = ""
+function parseFailureLog(value) {
+  var failures = [];
+  //remove start '(' and end ')'
+  var v = value.slice(1, -1);
+  var items = v.split(")(");
+  var count = items[0];
+  var id = items[1]; //not used for now
+  for (var i = 0; i < count; i++) {
+    var timestamp = items[2 + (i * 2)];
+    var duration = items[3 + (i * 2)];
+    var failure = { 'timestamp': timestamp, 'duration': duration };
+    failures.push(failure);
+  }
+  return failures;
+};
+
+function formatDuration(value) {
+  var t = "";
+  var sMIN = value / 60;
+  var sHRS = value / 3600;
+  if (Math.floor(sHRS) == 0) {
+    if (Math.floor(sMIN) == 0) {
+      t = value + " sec";
+    }
+    else
+      t = sMIN.toFixed(2) + " min";
+  }
+  else
+    t = sHRS.toFixed(2) + " hours";
+  return t;
+}
+
+function formatFailureLog(svalue) {
+  var t = "";
+  failures = parseFailureLog(svalue);
+  for (pos in failures) {
+    failure = failures[pos];
+    tst = formatTimestamp(failure.timestamp);
+    dur = formatDuration(parseInt(failure.duration.slice(0, -2)));
+    sLine = "restored on " + tst + " after " + dur + " downtime.<br>";
+    t += sLine;
+  }
+  return t;
+}
+
+function parseSmFields(data)
+  {
+    //console.log("parsed .., fields is ["+ JSON.stringify(data)+"]");
+    for (var item in data) 
+    {
+      console.log("fields item: " +item);
+      console.log("fields data[item].value: " +data[item].value);
+
+      data[item].humanName = translateToHuman(item);
+      //get tableref
+      var tableRef = document.getElementById('fieldsTable').getElementsByTagName('tbody')[0];
+      //create row if not exist
+      if( ( document.getElementById("fieldsTable_"+item)) == null )
+      {
+        var newRow   = tableRef.insertRow();
+        newRow.setAttribute("id", "fieldsTable_"+item, 0);
+        // Insert a cell in the row at index 0
+        var newCell  = newRow.insertCell(0);                  // name
+        var newText  = document.createTextNode('');
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(1);                      // humanName
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(2);                      // value
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(3);                      // unit
+        newCell.appendChild(newText);
+      }
+      //get ref to tablecells
+      tableCells = document.getElementById("fieldsTable_"+item).cells;
+
+      //fill cells
+      tableCells[0].innerHTML = item;
+      tableCells[1].innerHTML = data[item].humanName;
+      switch (item) {
+        case 'electricity_failure_log':          
+          tableCells[0].setAttribute("style", "vertical-align: top");
+          tableCells[1].setAttribute("style", "vertical-align: top");
+          tableCells[2].innerHTML = formatFailureLog(data[item].value);
+          break;
+
+        case 'timestamp':
+        case 'gas_delivered_timestamp':
+          tableCells[2].innerHTML = formatTimestamp(data[item].value);
+          break;
+
+        case 'equipment_id':
+        case 'mbus1_equipment_id_tc':
+        case 'mbus2_equipment_id_tc':
+        case 'mbus3_equipment_id_tc':
+        case 'mbus4_equipment_id_tc':
+          tableCells[2].innerHTML = formatIdentifier(data[item].value);
+          break;
+
+        default:
+          tableCells[2].innerHTML = data[item].value;
+      }
+      if (data[item].hasOwnProperty('unit')) {
+        tableCells[2].style.textAlign = "right";              // value
+        tableCells[3].style.textAlign = "center";             // unit
+        tableCells[3].innerHTML = data[item].unit;
+      }
+    }
+  }
   
   //============================================================================  
   function refreshSmFields()
-  { Spinner(true);
+  { 
+    Spinner(true);
     fetch(APIGW+"v2/sm/fields", {"setTimeout": 5000})
       .then(response => response.json())
       .then(json => {
-          console.log("parsed .., fields is ["+ JSON.stringify(json)+"]");
-          data = json;
-          for (var item in data) 
-          {
-          	console.log("fields item: " +item);
-          	console.log("fields data[item].value: " +data[item].value);
-            data[item].humanName = translateToHuman(item);
-            var tableRef = document.getElementById('fieldsTable').getElementsByTagName('tbody')[0];
-            if( ( document.getElementById("fieldsTable_"+item)) == null )
-            {
-              var newRow   = tableRef.insertRow();
-              newRow.setAttribute("id", "fieldsTable_"+item, 0);
-              // Insert a cell in the row at index 0
-              var newCell  = newRow.insertCell(0);                  // name
-              var newText  = document.createTextNode('');
-              newCell.appendChild(newText);
-              newCell  = newRow.insertCell(1);                      // humanName
-              newCell.appendChild(newText);
-              newCell  = newRow.insertCell(2);                      // value
-              newCell.appendChild(newText);
-              newCell  = newRow.insertCell(3);                      // unit
-              newCell.appendChild(newText);
-            }
-            tableCells = document.getElementById("fieldsTable_"+item).cells;
-            tableCells[0].innerHTML = item;
-            tableCells[1].innerHTML = data[item].humanName;
-            if (item == "electricity_failure_log" && data[item].value.length > 50) 
-            {
-              tableCells[2].innerHTML = data[item].value.substring(0,50);
-              var lLine = data[item].value.substring(50);
-              while (lLine.length > 50)
-              {
-                tableCells[2].innerHTML += "<br>" + lLine.substring(0,50);
-                lLine = lLine.substring(50);
-              }
-              tableCells[2].innerHTML += "<br>" + lLine;
-              tableCells[0].setAttribute("style", "vertical-align: top");
-              tableCells[1].setAttribute("style", "vertical-align: top");
-            }
-            else
-            {
-              tableCells[2].innerHTML = data[item].value;
-            }
-            if (data[item].hasOwnProperty('unit'))
-            {
-              tableCells[2].style.textAlign = "right";              // value
-              tableCells[3].style.textAlign = "center";             // unit
-              tableCells[3].innerHTML = data[item].unit;
-            }
-          }
-          //console.log("-->done..");
+        parseSmFields(json);        
         Spinner(false);
-
       })
       .catch(function(error) {
         var p = document.createElement('p');
@@ -1574,6 +1662,16 @@ function show_hide_column2(table, col_no, do_show) {
       });     
   } // refreshSmTelegram()
 
+  //
+  function formatValue(value)
+  {
+    var t="";
+    if (!isNaN(value) ) 
+      t = Number(value).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 3} );
+    else 
+      t = value;
+    return t;
+  }
 
   //============================================================================  
   function showActualTable(data)
@@ -1604,22 +1702,39 @@ function show_hide_column2(table, col_no, do_show) {
         newCell  = newRow.insertCell(2);                // unit
         newCell.appendChild(newText);
       }
+      //get ref to tablecells
       tableCells = document.getElementById("actualTable_"+item).cells;
-      if ( (item == "gas_delivered") && (Dongle_Config == "p1-q") ){
-      	  tableCells[0].innerHTML = "Warmtemeter stand";
-      	  tableCells[2].innerHTML = "GJ";
-      } else {
-		  tableCells[0].innerHTML = data[item].humanName;	
-  		  if (data[item].hasOwnProperty('unit')) tableCells[2].innerHTML = data[item].unit;
-      }
-	  if (!isNaN(data[item].value) ) tableCells[1].innerHTML =  Number(data[item].value).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 3} );                    
-	  else tableCells[1].innerHTML =  data[item].value;
+      //fill cells
+      switch(item)
+      {
+        case "gas_delivered":
+          tableCells[0].innerHTML = data[item].humanName;
+          tableCells[2].innerHTML = data[item].unit;
+          if(Dongle_Config == "p1-q"){
+            tableCells[0].innerHTML = "Warmtemeter stand";            
+      	    tableCells[2].innerHTML = "GJ";
+          }
+          tableCells[1].innerHTML = formatValue(data[item].value);
+          break;
+        
+        case "gas_delivered_timestamp":
+        case "timestamp":
+          tableCells[0].innerHTML = data[item].humanName;
+          tableCells[1].innerHTML = formatTimestamp(data[item].value);
+          //timestamps have no units
+          break;
+
+        default:
+          tableCells[0].innerHTML = data[item].humanName;
+          tableCells[1].innerHTML = formatValue(data[item].value);
+          if (data[item].hasOwnProperty('unit')) tableCells[2].innerHTML = data[item].unit;
+      }//endswitch
     }
 
     //--- hide canvas
     document.getElementById("dataChart").style.display = "none";
     document.getElementById("gasChart").style.display  = "none";
-	document.getElementById("waterChart").style.display  = "none";
+	  document.getElementById("waterChart").style.display  = "none";
     //--- show table
     document.getElementById("actual").style.display    = "block";
 
@@ -2860,7 +2975,7 @@ function show_hide_column2(table, col_no, do_show) {
           ,[ "energy_delivered_tariff2",  "Energie Afgenomen teller 2" ]
           ,[ "energy_returned_tariff1",   "Energie Teruggeleverd teller 1" ]
           ,[ "energy_returned_tariff2",   "Energie Teruggeleverd teller 2" ]
-          ,[ "electricity_tariff",        "Electriciteit tarief" ]
+          ,[ "electricity_tariff",        "Huidig Teller Electriciteit" ]
           ,[ "power_delivered",           "Vermogen Afgenomen" ]
           ,[ "power_returned",            "Vermogen Teruggeleverd" ]
           ,[ "electricity_threshold",     "Electricity Threshold" ]
@@ -2979,9 +3094,29 @@ function show_hide_column2(table, col_no, do_show) {
 		  ,[ "auto_update",				  "Automatisch updaten"]
 		  ,[ "pre40",				  	  "SMR 2 & 3 support"]
 		  ,[ "raw-port",				  "Telegram op poort 82"]
-		  ,[ "led-prt",				  	  "Bridge leds aan/uit"]
+		  ,[ "led-prt",				  	  "Bridge leds aan/uit"]      
+      ,[ "gas_delivered_timestamp", "Tijdcode Gasmeterstand" ]
+      ,[ "equipment_id",          "Toestel ID"]
+      ,[ "mbus1_equipment_id_tc", "Toestel ID MBUS1"]      
+      ,[ "mbus2_equipment_id_tc", "Toestel ID MBUS2"]
+      ,[ "mbus3_equipment_id_tc", "Toestel ID MBUS3"]
+      ,[ "mbus4_equipment_id_tc", "Toestel ID MBUS4"]
+      ,[ "mbus1_device_type",     "Toestel Type MBUS1"]
+      ,[ "mbus2_device_type",     "Toestel Type MBUS2"]
+      ,[ "mbus3_device_type",     "Toestel Type MBUS3"]
+      ,[ "mbus4_device_type",     "Toestel Type MBUS4"]
+
+      ,[ "mbus1_delivered",       "Toestel Geleverd MBUS1"]
+      ,[ "mbus1_delivered",       "Toestel Geleverd MBUS2"]
+      ,[ "mbus1_delivered",       "Toestel Geleverd MBUS3"]
+      ,[ "mbus1_delivered",       "Toestel Geleverd MBUS4"]
+
+      ,[ "p1_version_be",         "P1 Versie BE"]
+      ,[ "peak_pwr_last_q",       "Gemiddelde Elektra laatste kwartier"]
+      ,[ "highest_peak_pwr",      "Piek Elektra huidige maand"]
+      ,[ "highest_peak_pwr_13mnd","Piek Elektra over 13 maanden"]
 		  		  		  
-];
+  ];
 
 /*
 ***************************************************************************
