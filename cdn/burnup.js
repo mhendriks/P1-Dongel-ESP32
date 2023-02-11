@@ -12,7 +12,7 @@ const listValuesCeilingE = [339, 280, 267, 207, 181, 159, 161, 176, 199, 266, 30
 const listValuesCeilingG = [221, 188, 159,  86,  35,  19,  17,  17,  24,  81, 146, 207];
 
 let timerRefresh = 0;
-let sCurrentChart = "MONTH"; //YEAR
+let sCurrentChart = "YEAR"; //YEAR
 var objStorage;
 
 var testdata_days = {"actSlot":14,"data":[
@@ -182,15 +182,13 @@ function createCharts() {
 		type: 'line',
 		data: [],
 		options: {
-			plugins: {
-				title: {
+			title: {
 					display: true,
 					text: 'BURNUP ELEKTRA',
 				},
-				legend: {
+			legend: {
 					position: 'right',
-				}				
-			},			
+				},			
 			responsive: true,
 			maintainAspectRatio: true,
 			scales: {
@@ -215,15 +213,13 @@ function createCharts() {
 		type: 'line',
 		data: {},
 		options: {
-			plugins: {
-				legend: {
-					position: 'right',
-				},
-				title: {
-					display: true,
-					text: 'BURNUP GAS',
-				}
-			},	
+			legend: {
+				position: 'right',
+			},
+			title: {
+				display: true,
+				text: 'BURNUP GAS',
+			},
 			responsive: true,
 			maintainAspectRatio: true,
 			scales: {
@@ -331,7 +327,6 @@ function BurnupBootstrap()
 	//create storage
 	objStorage = new localstorage();
 
-	sCurrentChart = "YEAR"
 	//refresh and schedule every 60sec
 	refreshData();
 	clearInterval(timerRefresh);
