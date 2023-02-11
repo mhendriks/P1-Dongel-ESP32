@@ -556,8 +556,8 @@ function createDatasetsForBURNUP_DAYS(listLABELS, hcBURNUP, listCeiling) {
 
 	//config for ceiling
 	dsE4.data = listCeiling;
-	dsE4.fill = "end";
-	dsE4.backgroundColor = 'rgba(255, 0, 0, .125)';
+	dsE4.fill = "start";
+	dsE4.backgroundColor = 'rgba(0, 255, 0, .125)';
 
 	//add datasets to chartdata
 	cdcBurnup.datasets.push(dsE1);
@@ -789,8 +789,8 @@ function createDatasetsForBURNUP_MONTHS(listLABELS, hcBURNUP, listCeiling)
 
 	//config for ceiling
 	dsE4.data = listCeiling;
-	dsE4.fill = "end";
-	dsE4.backgroundColor = 'rgba(255, 0, 0, .125)';
+	dsE4.fill = "start";
+	dsE4.backgroundColor = 'rgba(0,255, 0, .125)';
 	
 	//add datasets to chartdata
 	cdcBurnup.datasets.push(dsE1);
