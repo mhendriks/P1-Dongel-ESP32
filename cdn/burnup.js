@@ -329,25 +329,40 @@ function BurnupBootstrap()
 	//create storage
 	objStorage = new dsmr_dal();
 
-	//refresh and schedule every 60sec
-	refreshData();
-	clearInterval(timerRefresh);
-    timerRefresh = setInterval(refreshData, 30 * 1000); // repeat every 20s
-
 	//set a flag that we are ready
 	fLoadedBurnup = true;
+
+	//refresh and schedule every 60sec
+	//refreshData();
+	//clearInterval(timerRefresh);
+    //timerRefresh = setInterval(refreshData, 30 * 1000); // repeat every 20s
+
+	//default view
+	setViewYEAR();
 }
 
+// when network is slow, the bootstrap function of this file is not available 
+// at the time it gets called from the main func resulting in a empty page.
+// To ensure the bootstrap is loaded, we load again if needed at the two other entry points
+function ensureBurnupLoaded()
+{
+	if( !fLoadedBurnup ) BurnupBootstrap();
+}
+
+//entry point from radiobutton 'Maand' in HTML
 function setViewMONTH()
 {
+	ensureBurnupLoaded();
 	sCurrentChart = "MONTH";
 	getDays();
 	clearInterval(timerRefresh);
     timerRefresh = setInterval(refreshData, 30 * 1000); // repeat every 20s
 }
 
+//entry point from radiobutton 'Jaar' in HTML
 function setViewYEAR()
 {
+	ensureBurnupLoaded();
 	sCurrentChart = "YEAR";
 	getMonths();
 	clearInterval(timerRefresh);
