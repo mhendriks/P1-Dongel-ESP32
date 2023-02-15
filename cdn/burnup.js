@@ -8,68 +8,36 @@
 const URL_HISTORY_HOURS = APIGW + "../RNGhours.json";
 const URL_HISTORY_DAYS = APIGW + "../RNGdays.json";
 const URL_HISTORY_MONTHS = APIGW + "../RNGmonths.json";
-const listValuesCeilingE = [339, 280, 267, 207, 181, 159, 161, 176, 199, 266, 306, 356];
-const listValuesCeilingG = [221, 188, 159,  86,  35,  19,  17,  17,  24,  81, 146, 207];
+const URL_HISTORY_ACTUAL = APIGW + "v2/sm/actual";
+const MAX_ACTUAL_HISTORY = 15*6;	//store last 15 minutes (with a call per 10 sec)
+
+//Deze data is gebaseerd op een gemiddeld gebruikprofiel. 
+// zie o.a.
+//  https://www.anwb.nl/huis/energie/het-prijsplafond-voor-energie
+//  https://www.vattenfall.nl/nieuws/verbruiksplafond/
+const listValuesCeilingE = [339, 280, 267, 207, 181, 159, 161, 176, 199, 266, 306, 356];	//totaal 2900 kWh	
+const listValuesCeilingG = [221, 188, 159,  86,  35,  19,  17,  17,  24,  81, 146, 207];	//totaal 1200 m3
+
 
 let timerRefresh = 0;
 let sCurrentChart = "YEAR"; //YEAR
 var objStorage;
+var fLoadedBurnup = false;
 
-var testdata_days = {"actSlot":14,"data":[
-	{"date":"23012323","values":[  8819.390,  7695.284,     0.049,     0.000,  6652.291,     0.000]},
-	{"date":"23012423","values":[  8820.347,  7697.796,     0.049,     0.000,  6660.381,     0.000]},
-	{"date":"23012515","values":[  8821.141,  7699.504,     0.049,     0.000,  6666.551,     0.000]},
-	{"date":"23012623","values":[  8822.313,  7703.584,     0.049,     0.000,  6677.245,     0.000]},
-	{"date":"23012723","values":[  8823.235,  7706.149,     0.049,     0.000,  6683.432,     0.000]},
-	{"date":"23012823","values":[  8827.208,  7706.149,     0.049,     0.000,  6690.690,     0.000]},
-	{"date":"23012923","values":[  8831.034,  7706.149,     0.049,     0.000,  6697.351,     0.000]},
-	{"date":"23013023","values":[  8832.304,  7708.166,     0.049,     0.000,  6698.475,     0.000]},
-	{"date":"23013123","values":[  8833.276,  7709.986,     0.049,     0.000,  6700.638,     0.000]},
-	{"date":"23020123","values":[  8834.253,  7712.194,     0.049,     0.000,  6708.270,     0.000]},
-	{"date":"23020223","values":[  8835.141,  7714.685,     0.049,     0.000,  6713.317,     0.000]},
-	{"date":"23020323","values":[  8836.044,  7717.141,     0.049,     0.000,  6718.636,     0.000]},
-	{"date":"23020423","values":[  8840.016,  7717.141,     0.049,     0.000,  6724.678,     0.000]},
-	{"date":"23020523","values":[  8846.244,  7717.141,     0.049,     0.000,  6729.662,     0.000]},
-	{"date":"23020616","values":[  8847.025,  7719.304,     0.049,     0.000,  6733.392,     0.000]}
-	]};
-var testdata_months= {"actSlot":16,"data":[
-	{"date":"21100101","values":[  5987.000,  6198.000,     0.000,     0.000,  5170.000,     0.000]},
-	{"date":"21110101","values":[  6074.000,  6418.000,     0.000,     0.000,  5234.000,     0.000]},
-	{"date":"21120101","values":[  6163.000,  6712.000,     0.000,     0.000,  5343.000,     0.000]},
-	{"date":"22010101","values":[  6535.000,  7059.000,     0.000,     0.000,  5496.000,     0.000]},
-	{"date":"22020101","values":[  6887.000,  7093.000,     0.000,     0.000,  5683.000,     0.000]},
-	{"date":"22030101","values":[  7186.000,  7131.000,     0.000,     0.000,  5837.000,     0.000]},
-	{"date":"22040101","values":[  7409.000,  7176.000,     0.000,     0.000,  5982.000,     0.000]},
-	{"date":"22050101","values":[  7559.000,  7230.000,     0.000,     0.000,  6104.004,     0.000]},
-	{"date":"22060101","values":[  7653.000,  7295.000,     0.000,     0.000,  6191.000,     0.000]},
-	{"date":"22070101","values":[  7728.000,  7368.000,     0.000,     0.000,  6245.000,     0.000]},
-	{"date":"22080101","values":[  7823.000,  7443.000,     0.000,     0.000,  6274.000,     0.000]},
-	{"date":"22090101","values":[  7972.000,  7516.000,     0.000,     0.000,  6294.000,     0.000]},
-	{"date":"22100101","values":[  8196.000,  7581.000,     0.000,     0.000,  6324.000,     0.000]},
-	{"date":"22110101","values":[  8494.000,  7635.000,     0.000,     0.000,  6377.000,     0.000]},
-	{"date":"22120101","values":[  8650.000,  7680.000,     0.000,     0.000,  6479.000,     0.000]},
-	{"date":"23013123","values":[  8833.276,  7709.986,     0.049,     0.000,  6700.638,     0.000]},
-	{"date":"23020616","values":[  8847.025,  7719.304,     0.049,     0.000,  6733.392,     0.000]},
-	{"date":"21020101","values":[  5352.000,  5124.000,     0.000,     0.000,  4373.000,     0.000]},
-	{"date":"21030101","values":[  5438.000,  5417.000,     0.000,     0.000,  4573.000,     0.000]},
-	{"date":"21040101","values":[  5521.000,  5417.000,     0.000,     0.000,  4759.000,     0.000]},
-	{"date":"21050101","values":[  5599.000,  5638.000,     0.000,     0.000,  4913.000,     0.000]},
-	{"date":"21060101","values":[  5675.000,  5785.000,     0.000,     0.000,  5022.000,     0.000]},
-	{"date":"21070101","values":[  5751.000,  5880.000,     0.000,     0.000,  5087.000,     0.000]},
-	{"date":"21080101","values":[  5826.000,  5956.000,     0.000,     0.000,  5118.000,     0.000]},
-	{"date":"21090101","values":[  5905.000,  6050.000,     0.000,     0.000,  5138.000,     0.000]}
-	]};
-
-class localstorage{
+//DSMR DataAccessLayer
+class dsmr_dal{
 	constructor() {
-        this.months=testdata_months;
-        this.days=testdata_days;
+        this.months=[];
+        this.days=[];
         this.hours=[];
-        this.minutes=[];
+        this.minutes=[];	//not used for now
 		this.timerREFRESH = 0;
+		this.actual=[];
+		this.actual_history = [];
+		this.timerREFRESH_ACTUAL = 0;
 		this.init();
     }
-	
+
 	fetchDataJSON(url, fnHandleData)
 	{
 		console.log("fetchDataJSON()");		
@@ -80,14 +48,16 @@ class localstorage{
 			var p = document.createElement('p');
 			p.appendChild( document.createTextNode('Error: ' + error.message) );
 		});
-	}
+	}	
 
 	init()
 	{
 		this.refresh();
+		//this.refreshActual();
 	}
 
-    //store json data 
+    // refresh and parse the ringfiles
+	// refresh every 60 sec
     refresh()
 	{
 		console.log("refresh");
@@ -96,8 +66,7 @@ class localstorage{
 		this.fetchDataJSON( URL_HISTORY_DAYS, this.parseDays.bind(this));
 		this.fetchDataJSON( URL_HISTORY_HOURS, this.parseHours.bind(this));
     	this.timerREFRESH = setInterval(this.refresh.bind(this), 60 * 1000);
-	}	
-
+	}
 	parseMonths(json)
 	{
 		console.log("parseMonths");
@@ -120,6 +89,28 @@ class localstorage{
 		this.hours = json;
 	}
 
+	// refresh and parse actual data, store and add to history
+	//refresh every 10 sec
+	refreshActual()
+	{
+		console.log("refreshActual");
+		clearInterval(this.timerREFRESH_ACTUAL);
+		this.fetchDataJSON( URL_HISTORY_ACTUAL, this.parseActual.bind(this));
+    	this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), 10 * 1000);
+	}
+	parseActual(json)
+	{
+		this.actual = json;
+		this.addActualHistory( json );
+	}
+	addActualHistory(json)
+	{
+		if( this.actual_history.length >= MAX_ACTUAL_HISTORY) this.actual_history.pop();
+		this.actual_history.push(json);
+	}
+
+	//
+	// get functions
 	getMonths()
 	{
 		return this.months;
@@ -168,6 +159,17 @@ class localstorage{
 			return a.date.localeCompare(b.date);
 		});
 		return ret;
+	}
+
+	getActual()
+	{
+		return this.actual;
+	}
+	
+	//the last (MAX_ACTUAL_HISTORY) actuals
+	getActualHistory()
+	{
+		return this.actual_history;
 	}
 }
 
@@ -318,19 +320,22 @@ function fillArrayNULL(array) {
 	fillArray(array, null);
 }
 
-// window.onload = fnBootstrap;
-
 function BurnupBootstrap() 
 {
+	console.log("BurnupBootstrap");
+
 	createCharts();
 
 	//create storage
-	objStorage = new localstorage();
+	objStorage = new dsmr_dal();
 
 	//refresh and schedule every 60sec
 	refreshData();
 	clearInterval(timerRefresh);
     timerRefresh = setInterval(refreshData, 30 * 1000); // repeat every 20s
+
+	//set a flag that we are ready
+	fLoadedBurnup = true;
 }
 
 function setViewMONTH()
@@ -365,8 +370,6 @@ function getMonths()
 
 function parseMonths(json)
 {
-	//console.log("parseMonth");
-
 	data = expandData_v2(json);
 	
 	//show months
@@ -429,8 +432,6 @@ function showMonths(histdata)
 	objChart2.update();
 }
 
-//=============================TODO: REFACTOR=============================================================
-
 function getDays() {
 	json = objStorage.getDays();
 	parseDays(json);
@@ -447,8 +448,6 @@ function parseDays(json) {
 
 function showDays(histdata)
 {
-	//console.log(histdata);
-
 	const [dcE1,dcG1] = prepareDataBURNUP_DAYSINMONTH(histdata);
 	
 	objChart1.options.scales.x.title.text = "Dagen";
@@ -462,11 +461,8 @@ function showDays(histdata)
 
 function prepareDataBURNUP_DAYSINMONTH(histdata)
 {
-	//only this month
+	//only this month and no water in the ceiling
 	const [hcED, hcGD, hcWD] = convertRingBufferToStaticHistoryContainerDIM( histdata);
-	//console.log(hcED);
-	//console.log(hcGD);
-	//console.log(hcWD);
 
 	//get day 0 values
 	objToday = new Date();
@@ -478,7 +474,7 @@ function prepareDataBURNUP_DAYSINMONTH(histdata)
 	var nCGD0 = itemCM.values[4];
 	var nCWD0 = itemCM.values[5];
 
-	//get meterreadiung previous month
+	//get meterreadung previous month
 	if( nMM-2 <= 0)
 	{
 		nYY -= 1;
@@ -541,42 +537,39 @@ function createDatasetsForBURNUP_DAYS(listLABELS, hcBURNUP, listCeiling) {
 	//create datasets
 	var dsE1 = createDatasetLINE(false, 'rgba(0, 0, 139, 1)', hcBURNUP.current.name);
 	var dsE2 = createDatasetLINE(false, 'rgba(0, 0, 139, .25)', hcBURNUP.previous.name);
-	var dsE4 = createDatasetLINE(false, 'red', "plafond");
+	var dsE3 = createDatasetLINE(false, 'red', "plafond");
 
 	//attach data
 	dsE1.data = hcBURNUP.current.data;
 	dsE2.data = hcBURNUP.previous.data;
 
 	//set additional config
+	dsE1.spanGaps = true;
 	dsE2.spanGaps = true;		//this dataset is not complete, so straighten line from 0 to first datapoint
-	dsE4.spanGaps = true;		//for DAYS_IN_MONTH we only provide start and end
+	dsE3.spanGaps = true;		//for DAYS_IN_MONTH we only provide start and end
 
 	//hide previous years by default	
 	dsE2.hidden = true;
 
 	//config for ceiling
-	dsE4.data = listCeiling;
-	dsE4.fill = "start";
-	dsE4.backgroundColor = 'rgba(0, 255, 0, .125)';
+	dsE3.data = listCeiling;
+	dsE3.fill = "start";
+	dsE3.backgroundColor = 'rgba(0, 255, 0, .125)';
 
 	//add datasets to chartdata
 	cdcBurnup.datasets.push(dsE1);
-	cdcBurnup.datasets.push(dsE2);
-	cdcBurnup.datasets.push(dsE4);
+	if(hcBURNUP.previous.valid)  cdcBurnup.datasets.push(dsE2);
+	cdcBurnup.datasets.push(dsE3);
 
 	//return chartdata
 	return cdcBurnup;
 }
 
-//
-//============================================ CHECKED ====================================================
-//
-
 //create chartdata for the history ringbuffer MONTHS
 function prepareDataBURNUP_MONTHSINYEAR(data) 
 {
 	//labels for a year
-	var listLABELS = ["0", "JAN", "FEB", "MRT", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+	var listLABELS = ["0", "JAN", "FEB", "MRT", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 	//calculate chart data
 	const [hcED, hcGD, hcWD] = convertRingBufferToStaticHistoryContainerMIY(data);
 	//create datasets for ELEKTRA
@@ -609,8 +602,7 @@ function createHistoryContainerDIM(listLEGEND)
 	hcED.current.data = new Array(31);
 	hcED.previous.name = listLEGEND[1];
 	hcED.previous.data = new Array(31);
-	//hcED.preprevious.name = listLEGEND[2];
-	//hcED.preprevious.data = new Array(12);
+	//no preprevious needed
 	return hcED;
 }
 
@@ -648,25 +640,34 @@ function convertRingBufferToStaticHistoryContainerMIY(data)
 
 		//select correct array based on the year
 		if(nYY == nCurrentYY) 
-		{
-			hcED.current.valid = true;			
+		{			
 			hcED.current.data[nMM] = item.p_ed * 1.0;
 			hcGD.current.data[nMM] = item.p_gd * 1.0;
 			hcWD.current.data[nMM] = item.p_wd * 1.0;
+
+			hcED.current.valid = true;
+			hcGD.current.valid = true;
+			hcWD.current.valid = true;
 		}
 		if(nYY == nPreviousYY)
-		{
-			hcED.previous.valid = true;
+		{			
 			hcED.previous.data[nMM] = item.p_ed * 1.0;
 			hcGD.previous.data[nMM] = item.p_gd * 1.0;
 			hcWD.previous.data[nMM] = item.p_wd * 1.0;
+
+			hcED.previous.valid = true;
+			hcGD.previous.valid = true;
+			hcWD.previous.valid = true;
 		}
 		if(nYY == nPrePreviousYY)
-		{
-			hcED.preprevious.valid = true;
+		{			
 			hcED.preprevious.data[nMM] = item.p_ed * 1.0;
 			hcGD.preprevious.data[nMM] = item.p_gd * 1.0;
 			hcWD.preprevious.data[nMM] = item.p_wd * 1.0;
+
+			hcED.preprevious.valid = true;
+			hcGD.preprevious.valid = true;
+			hcWD.preprevious.valid = true;
 		}
 	} //end for
 
@@ -709,35 +710,31 @@ function convertRingBufferToStaticHistoryContainerDIM(data)
 		//select correct array based on the year
 		if(nMM == nCurrentMM)
 		{
-			hcED.current.valid = true;			
-			//hcED.current.data[nDD] = item.p_ed * 1.0;
-			//hcGD.current.data[nDD] = item.p_gd * 1.0;
-			//hcWD.current.data[nDD] = item.p_wd * 1.0;
-
 			var nED = item.values[0] + item.values[1];
 			var nGD = item.values[4];
 			var nWD = item.values[5];
-			
-			//console.log("CCC", nGD, nCGD0, nGD-nCGD0, item.p_gd);
+						
 			hcED.current.data[nDD] = nED;
 			hcGD.current.data[nDD] = nGD;
 			hcWD.current.data[nDD] = nWD;
+
+			hcED.current.valid = true;
+			hcGD.current.valid = true;
+			hcWD.current.valid = true;
 		}
 		if(nMM == nPreviousMM)
 		{
-			hcED.previous.valid = true;
-			//hcED.previous.data[nDD] = item.p_ed * 1.0;
-			//hcGD.previous.data[nDD] = item.p_gd * 1.0;
-			//hcWD.previous.data[nDD] = item.p_wd * 1.0;
-
 			var nED = item.values[0] + item.values[1];
 			var nGD = item.values[4];
 			var nWD = item.values[5];			
 
-			//console.log("PPP", nGD, nPGD0, nGD-nPGD0, item.p_gd);
 			hcED.previous.data[nDD] = nED;
 			hcGD.previous.data[nDD] = nGD;
 			hcWD.previous.data[nDD] = nWD;
+
+			hcED.previous.valid = true;
+			hcGD.previous.valid = true;
+			hcWD.previous.valid = true;
 		}
 	} //end for
 
@@ -794,8 +791,8 @@ function createDatasetsForBURNUP_MONTHS(listLABELS, hcBURNUP, listCeiling)
 	
 	//add datasets to chartdata
 	cdcBurnup.datasets.push(dsE1);
-	cdcBurnup.datasets.push(dsE2);
-	cdcBurnup.datasets.push(dsE3);
+	if(hcBURNUP.previous.valid) 	cdcBurnup.datasets.push(dsE2);
+	if(hcBURNUP.preprevious.valid) 	cdcBurnup.datasets.push(dsE3);
 	cdcBurnup.datasets.push(dsE4);
 
 	//return chartdata
