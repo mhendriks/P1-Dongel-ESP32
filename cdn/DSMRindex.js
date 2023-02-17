@@ -9,9 +9,14 @@
 ***************************************************************************      
 */
 const APIGW=window.location.protocol+'//'+window.location.host+'/api/';
-const jsversie			= 221201
+
+const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
+const URL_DEVICE_INFO   = APIGW + "v2/dev/info";
+const URL_DEVICE_TIME   = APIGW + "v2/dev/time";
+
+const jsversie			= 221201;
   
-  "use strict";
+"use strict";
 
   let activeTab             = "bDashTab";
   let PauseAPI				= false; //pause api call when browser is inactive
@@ -38,7 +43,79 @@ const jsversie			= 221201
   var data       			= [];
   var DayEpoch				= 0;
   let monthType        		= "ED";
-  let settingFontColor 		= 'white'
+  let settingFontColor 		= 'white';
+  var objDAL = null;
+
+  //The Data Access Layer for the DSMR
+  // - acts as an cache between frontend and server
+  // - schedules refresh to keep data fresh
+  // - stores data for the history functions
+  class dsmr_dal{
+    constructor() {
+      this.devinfo=[];
+      this.actual=[];
+      this.actual_history = [];
+      this.timerREFRESH_ACTUAL = 0;
+      this.init();
+      }
+  
+    fetchDataJSON(url, fnHandleData) {
+      console.log("fetchDataJSON()");		
+      fetch(url)
+      .then(response => response.json())
+      .then(json => { fnHandleData(json); })
+      .catch(function (error) {
+        var p = document.createElement('p');
+        p.appendChild( document.createTextNode('Error: ' + error.message) );
+      });
+    }	
+  
+    init(){
+      this.refreshDeviceInformation();
+      this.refreshActual();
+    }
+
+    //single call; no timer
+    refreshDeviceInformation(){
+      console.log("refreshDeviceInformation");      
+      this.fetchDataJSON( URL_DEVICE_INFO, this.parseDeviceInfo.bind(this));
+    }
+
+    parseDeviceInfo(json){
+      this.devinfo = json;
+    }
+
+    // refresh and parse actual data, store and add to history
+    //refresh every 10 sec
+    refreshActual(){
+      console.log("refreshActual");
+      clearInterval(this.timerREFRESH_ACTUAL);      
+      this.fetchDataJSON( URL_SM_ACTUAL, this.parseActual.bind(this));
+      this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), 10 * 1000);
+    }
+    parseActual(json){
+      this.actual = json;
+      this.#addActualHistory( json );
+    }
+    #addActualHistory(json){
+      if( this.actual_history.length >= MAX_ACTUAL_HISTORY) this.actual_history.shift();
+      this.actual_history.push(json);
+    }
+  
+    //
+    // getters
+    //
+    getDeviceInfo(){
+      return this.devinfo;
+    }
+    getActual(){
+      return this.actual;
+    }    
+    //the last (MAX_ACTUAL_HISTORY) actuals
+    getActualHistory(){
+      return this.actual_history;
+    }
+  }
                     
   var monthNames 			= [ "indxNul","Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December","\0"];
   const spinner 			= document.getElementById("loader");
