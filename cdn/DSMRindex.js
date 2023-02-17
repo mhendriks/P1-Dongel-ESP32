@@ -827,7 +827,7 @@ function handle_menu_click()
 
 			activeTab = this.id;
 			//console.log("ActiveID - " + activeTab );
-			openTab();  		
+// 			openTab();  		
   		});
 	}
 }
@@ -969,6 +969,8 @@ function show_hide_column2(table, col_no, do_show) {
             actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
       else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
 
+    } else if (activeTab == "bPlafondTab") {
+      refreshData();
     } else if (activeTab == "bHoursTab") {
       refreshHours();
       clearInterval(tabTimer);
