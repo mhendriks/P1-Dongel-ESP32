@@ -40,7 +40,7 @@ class dsmr_dal{
 
 	fetchDataJSON(url, fnHandleData)
 	{
-		console.log("fetchDataJSON()");		
+		console.log("fetchDataJSON("+url+")");		
 		fetch(url)
 		.then(response => response.json())
 		.then(json => { fnHandleData(json); })
@@ -338,7 +338,7 @@ function BurnupBootstrap()
     //timerRefresh = setInterval(refreshData, 30 * 1000); // repeat every 20s
 
 	//default view
-	setViewYEAR();
+	setViewMONTH();
 }
 
 // when network is slow, the bootstrap function of this file is not available 

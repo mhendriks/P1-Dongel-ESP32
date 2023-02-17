@@ -188,7 +188,7 @@ void handleKeyInput()
                     break;
                     
       case 'Q':     ResetDataFiles();
-                    P1StatusClear();
+                    P1StatusReset();
                     resetWifi();  
                     break;                      
                     

@@ -30,11 +30,10 @@ void listFS()
   
   File root = LittleFS.open("/");
   File file = root.openNextFile();
-  while (file)  
+  while ( file && ( fileNr < 30 ) )  
   {
     dirMap[fileNr].Name[0] = '\0';
-//    strncat(dirMap[fileNr].Name, file.name()+1, 19); // remove leading '/'
-      strcpy( dirMap[fileNr].Name, file.name() ); //littlefs
+    strncpy( dirMap[fileNr].Name, file.name(),20 );
     dirMap[fileNr].Size = file.size();
     fileNr++;
     file = root.openNextFile();
@@ -67,9 +66,6 @@ void listFS()
   else  {
     Debugf("Available File System space [%6d]kB\r\n", (freeSpace() / 1024));
     Debugf("           File System Size [%6d]kB\r\n", (LittleFS.totalBytes() / 1024));
-//    Debugf("     File System block Size [%6d]bytes\r\n", fs_info.blockSize); 
-//    Debugf("      File System page Size [%6d]bytes\r\n", fs_info.pageSize); 
-//    Debugf(" File System max.Open Files [%6d]\r\n\r\n", fs_info.maxOpenFiles); 
   }
 
 } // listFS()
@@ -125,10 +121,8 @@ void eraseFile()
 bool DSMRfileExist(const char* fileName, bool doDisplay) 
 {
   char fName[30] = "";
-  if (fileName[0] != '/')
-  {
-    strConcat(fName, 5, "/");
-  }
+  if (fileName[0] != '/') strConcat(fName, 5, "/");
+  
   strConcat(fName, 29, fileName);
   
   DebugTf("check if [%s] exists .. ", fName);

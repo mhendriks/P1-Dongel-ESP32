@@ -137,11 +137,10 @@ void APIlistFiles()             // Senden aller Daten an den Client
   int fileNr = 0;
   File root = LittleFS.open("/");
   File file = root.openNextFile();
-  while (file)  
+  while ( file && ( fileNr < 30 ) )  
   {
     dirMap[fileNr].Name[0] = '\0';
-//    strncat(dirMap[fileNr].Name, file.name()+1, 29); // remove leading '/'
-    strcpy( dirMap[fileNr].Name, file.name() ); //littlefs
+    strncpy( dirMap[fileNr].Name, file.name(), 20 );
     dirMap[fileNr].Size = file.size();
     fileNr++;
     file = root.openNextFile();

@@ -12,7 +12,7 @@
 <div class="header">
   <nav>
   	<div id=messages class="mdi mdi-alert"></div>
-   	<div class="nav-clock topcorner"><span id="theTime">2021-07-08 22:31:49</span></div>
+   	<div class="nav-clock topcorner"><span id="theTime">2023-01-01 00:31:49</span></div>
     <ul class="main-navigation" id="myTopnav">
       <li><a id='Home'   		class='nav-img' href="#DashTab" onclick="activeTab='bDashTab';openTab()"><span class="mdi mdi-chart-box-outline"></span></a></li>
 	  <li><a id='bDashTab'    	class='tabButton nav-item active' href="#DashTab">Dash</a></li>
@@ -20,7 +20,7 @@
       <li><a id='bHoursTab'     class='tabButton nav-item' href="#HoursTab" >Uur</a></li>
       <li><a id='bDaysTab'      class='tabButton nav-item' href="#DaysTab" >Dag</a></li>
       <li><a id='bMonthsTab'    class='tabButton nav-item' href="#MonthsTab" >Maand</a></li>
-      <li><a id='bPlafond'    	class='tabButton nav-item' href="#PlafondTab" >PrijsPlafond</a></li>
+      <li><a id='bPlafondTab'   class='tabButton nav-item' href="#PlafondTab" >PrijsPlafond</a></li>
 	  <li>
 	  	<a id='bSysInfoTab' class='nav-img nav-item' href="#SysInfoTab" ><span class="mdi mdi-information-outline"></span></a>
 		<ul>
@@ -230,9 +230,9 @@
 	Het is een hulpmiddel om een beeld te krijgen van het gebruik ten opzichte van het prijsplafond.</p>
     <div>
       <b>Grafiek per:</b>
-      <input type="radio" id="btnYear" name=burnup onchange="setViewYEAR()" checked/>
+      <input type="radio" id="btnYear" name=burnup onchange="setViewYEAR()"/>
       <label for="btnYear">Jaar</label>
-      <input type="radio" id="btnMonth" name=burnup onchange="setViewMONTH()"/>
+      <input type="radio" id="btnMonth" name=burnup onchange="setViewMONTH()" checked/>
       <label for="btnMonth">Maand</label>
     </div>
     
