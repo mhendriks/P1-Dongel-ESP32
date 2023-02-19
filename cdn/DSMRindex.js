@@ -13,8 +13,13 @@ const APIGW=window.location.protocol+'//'+window.location.host+'/api/';
 const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
 const URL_DEVICE_INFO   = APIGW + "v2/dev/info";
 const URL_DEVICE_TIME   = APIGW + "v2/dev/time";
+const MAX_SM_ACTUAL     = 15*6; //store the last 15 minutes (each interval is 10sec)
+
+const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
 
 const jsversie			= 221201;
+
+const SQUARE_M_CUBED = "\u33A5";
   
 "use strict";
 
@@ -50,17 +55,18 @@ const jsversie			= 221201;
   // - acts as an cache between frontend and server
   // - schedules refresh to keep data fresh
   // - stores data for the history functions
-  class dsmr_dal{
+  class dsmr_dal_main{
     constructor() {
       this.devinfo=[];
+			this.version_manifest = [];
       this.actual=[];
       this.actual_history = [];
-      this.timerREFRESH_ACTUAL = 0;
-      this.init();
+      this.timerREFRESH_ACTUAL = 0;      
+      this.callback=null;
       }
   
     fetchDataJSON(url, fnHandleData) {
-      console.log("fetchDataJSON()");		
+      console.log("DAL::fetchDataJSON( "+url+" )");
       fetch(url)
       .then(response => response.json())
       .then(json => { fnHandleData(json); })
@@ -68,27 +74,39 @@ const jsversie			= 221201;
         var p = document.createElement('p');
         p.appendChild( document.createTextNode('Error: ' + error.message) );
       });
-    }	
+    }
+
+    //use a callback when you want to know if the data is updated
+    setCallback(fnCB){
+      this.callback = fnCB;
+    }
   
     init(){
       this.refreshDeviceInformation();
       this.refreshActual();
-    }
+    } 	
 
     //single call; no timer
     refreshDeviceInformation(){
-      console.log("refreshDeviceInformation");      
+      console.log("DAL::refreshDeviceInformation");
+			this.fetchDataJSON( URL_VERSION_MANIFEST, this.parseVersionManifest.bind(this));
       this.fetchDataJSON( URL_DEVICE_INFO, this.parseDeviceInfo.bind(this));
     }
-
+    //store result and call callback if set
     parseDeviceInfo(json){
       this.devinfo = json;
+      if(this.callback) this.callback('devinfo', json);
     }
+    //store result and call callback if set
+		parseVersionManifest(json){
+			this.version_manifest = json;
+      if(this.callback) this.callback('versionmanifest', json);
+		}
 
     // refresh and parse actual data, store and add to history
     //refresh every 10 sec
     refreshActual(){
-      console.log("refreshActual");
+      console.log("DAL::refreshActual");
       clearInterval(this.timerREFRESH_ACTUAL);      
       this.fetchDataJSON( URL_SM_ACTUAL, this.parseActual.bind(this));
       this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), 10 * 1000);
@@ -98,7 +116,7 @@ const jsversie			= 221201;
       this.#addActualHistory( json );
     }
     #addActualHistory(json){
-      if( this.actual_history.length >= MAX_ACTUAL_HISTORY) this.actual_history.shift();
+      if( this.actual_history.length >= MAX_SM_ACTUAL) this.actual_history.shift();
       this.actual_history.push(json);
     }
   
@@ -108,6 +126,9 @@ const jsversie			= 221201;
     getDeviceInfo(){
       return this.devinfo;
     }
+		getVersionManifest(){
+			return this.version_manifest;
+		}
     getActual(){
       return this.actual;
     }    
