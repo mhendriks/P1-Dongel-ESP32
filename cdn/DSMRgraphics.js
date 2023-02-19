@@ -14,6 +14,7 @@ let actPoint        = 0;
 let maxPoints       = 100;
 var actLabel        = "-";
 var gasDelivered    = 0;
+var fGraphsReady = false;
 
 var electrData = createChartDataContainer();
 var actElectrData = createChartDataContainer();
@@ -79,6 +80,9 @@ var optionsGLOBAL = {
   } // scales
 }; // optionsGLOBAL
 
+var optionsELEKTRA = structuredClone(optionsGLOBAL);
+optionsELEKTRA.scales.yAxes[0].scaleLabel.labelString = "kWh";
+
 var actElectrOptions = structuredClone(optionsGLOBAL);
 actElectrOptions.scales.yAxes[0].scaleLabel.labelString = "kilo Watt";
 
@@ -102,6 +106,22 @@ optionsWATER.scales.yAxes[0].scaleLabel.labelString = "m3";
 var myElectrChart;
 var myGasChart;
 var myWaterChart;
+
+function createChartsGRAPH()
+{
+  var ctx = null;
+  ctx = document.getElementById("dataChart").getContext("2d");
+  myElectrChart = new Chart(ctx, { type: 'bar', data: [], options: optionsELEKTRA});
+  ctx = document.getElementById("gasChart").getContext("2d");
+  myGasChart = new Chart(ctx, { type: 'line', data: [], options: optionsGAS });
+  ctx = document.getElementById("waterChart").getContext("2d");
+  myWaterChart = new Chart(ctx, { type: 'line', data: [], options: optionsWATER });
+  fGraphsReady = true;
+}
+function ensureChartsReady()
+{
+  if( !fGraphsReady) createChartsGRAPH();
+}
 
   //============================================================================  
   function renderElectrChart(dataSet, options) {
@@ -158,27 +178,31 @@ var myWaterChart;
   //============================================================================  
   function showHistGraph(data, type)
   {
-    //console.log("Now in showHistGraph()..");
+    ensureChartsReady();
+
     copyDataToChart(data, type);
-    if (type == "Hours")
-          renderElectrChart(electrData, hourOptions);
-    else  renderElectrChart(electrData, dayOptions);
+
+    var labelString = "kWh";
+    if( type == "Hours") labelString = "Watt";
+    myElectrChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
+    myElectrChart.data = electrData;
     myElectrChart.update();
     
-    //renderGasChart(gasData, actGasOptions);
-    if (HeeftGas) {       
-      renderGasChart(gasData);
-      var labelString = "dm3";
+    if (HeeftGas) {           
+      myGasChart.data = gasData;
+      labelString = "m3";
+      if( type == "Hours") labelString = "dm3";
       if ( Dongle_Config == "p1-q") labelString = "kJ";
       myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
       myGasChart.update();
       document.getElementById("gasChart").style.display   = "block";
     }
 
-    //renderWaterChart(gasData, actGasOptions);
     if (HeeftWater) {
-      renderWaterChart(waterData);
-      myGasChart.options.scales.yAxes[0].scaleLabel.labelString = "dm3";
+      myWaterChart.data = waterData;
+      labelString = "m3";
+      if( type == "Hours") labelString = "dm3";
+      myWaterChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
     	myWaterChart.update();
 		  document.getElementById("waterChart").style.display = "block";
     }
@@ -191,28 +215,29 @@ var myWaterChart;
 	  document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
 
   } // showHistGraph()
-  
-  
+    
   //============================================================================  
   function showMonthsGraph(data, type)
   {
+    ensureChartsReady();
+    
     //console.log("Now in showMonthsGraph()..");
     copyMonthsToChart(data, type);
-    renderElectrChart(electrData, monthOptions);
+    myElectrChart.data = electrData;
     myElectrChart.update();
 
-    //renderGasChart(gasData, actGasOptions);
     if (HeeftGas) {
-      renderGasChart(gasData);
-      var labelString = "m3";
+      myGasChart.data = gasData;
+      var labelString = SQUARE_M_CUBED;
       if ( Dongle_Config == "p1-q") labelString = "kJ";
       myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
       myGasChart.update();
       document.getElementById("gasChart").style.display = "block";
-    }  
+    }
+
     if (HeeftWater) {
-      renderWaterChart(waterData);
-      myWaterChart.options.scales.yAxes[0].scaleLabel.labelString = "m3";
+      myWaterChart.data = waterData;
+      myWaterChart.options.scales.yAxes[0].scaleLabel.labelString = SQUARE_M_CUBED;
       myWaterChart.update();
       document.getElementById("waterChart").style.display = "block";
     }
@@ -232,7 +257,6 @@ var myWaterChart;
   //============================================================================  
   function copyDataToChart(data, type)
   {
-//    console.log("Now in copyDataToChart()..");
     electrData = createChartDataContainerWithStack();
     gasData = createChartDataContainerWithStack();
 	  waterData = createChartDataContainerWithStack();
@@ -257,16 +281,11 @@ var myWaterChart;
     for (let y=data.data.length + data.actSlot; y > data.actSlot+1; y--)
     {	
       var i = y % data.data.length;
-
-      //console.log("i: "+i);            
-      //console.log("y: "+y);
-      //console.log("slotbefore: "+slotbefore);
     
-      //console.log("["+i+"] label["+data.data[i].date+"] => slotbefore["+slotbefore+"]");
       // adds x axis labels (timestamp)
       electrData.labels.push(formatGraphDate(type, data.data[i].date)); 
-      gasData.labels.push(formatGraphDate(type, data.data[i].date)); 
-	    waterData.labels.push(formatGraphDate(type, data.data[i].date));
+      gasData.labels.push(   formatGraphDate(type, data.data[i].date)); 
+	    waterData.labels.push( formatGraphDate(type, data.data[i].date));
 
       //add data to the sets
       if (type == "Hours")
@@ -338,11 +357,10 @@ var myWaterChart;
       slotyearbefore = math.mod(i-12,data.data.length);
 
       //add labels
-      electrData.labels.push(formatGraphDate("Months", data.data[i].date)); // adds x axis labels (timestamp)
-      gasData.labels.push(formatGraphDate("Months", data.data[i].date)); // adds x axis labels (timestamp)
-      waterData.labels.push(formatGraphDate("Months", data.data[i].date)); // adds x axis labels (timestamp)
-      //electrData.labels.push(p); // adds x axis labels (timestamp)
-
+      electrData.labels.push(formatGraphDate("Months", data.data[i].date));
+      gasData.labels.push(   formatGraphDate("Months", data.data[i].date));
+      waterData.labels.push( formatGraphDate("Months", data.data[i].date));
+      
       //add data to the datatsets
       if (data.data[i].p_ed >= 0) {
       	dsED1.data[p]  = (data.data[i].p_ed *  1.0).toFixed(3);
@@ -379,8 +397,7 @@ var myWaterChart;
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
     document.getElementById("dataChart").style.display  = "block";
-//     document.getElementById("gasChart").style.display   = "block";
-// 	document.getElementById("waterChart").style.display   = "block";
+
   } // copyMonthsToChart()
     
   
@@ -448,9 +465,7 @@ var myWaterChart;
     
   } // copyActualToChart()
 
-  
   //============================================================================  
-  function initActualGraph()
   {
     //console.log("Now in initActualGraph()..");
 
@@ -486,33 +501,42 @@ var myWaterChart;
     if(Dongle_Config == "p1-q") dsG1.label = "Warmte verbruikt";
     actGasData.datasets.push(dsG1);
 
+  //============================================================================  
+  function initActualGraph()
+  {
+    //reset pos
     actPoint = 0;
+    if(!fGraphsReady) createChartsGRAPH();
   
   } // initActualGraph()
-  
-  
+
   //============================================================================  
   function showActualGraph()
   {
     if (activeTab != "bActualTab") return;
-
-    //console.log("Now in showActualGraph()..");
 
     //--- hide Table
     document.getElementById("actual").style.display    = "none";
     //--- show canvas
     document.getElementById("dataChart").style.display = "block";
     document.getElementById("gasChart").style.display  = "block";
+
+    //display current listTELEGRAMS
+    const [dcEX, dcGX] = createDataContainersACTUAL( listTELEGRAMS );
     
-    renderElectrChart(actElectrData, actElectrOptions);
-    myElectrChart.update();
+    //update Elektra
+    myElectrChart.data = dcEX;
+    myElectrChart.update(0);
     
-    //renderGasChart(actGasData, actGasOptions);
-    renderGasChart(actGasData);
+    //update Gas
+    myGasChart.data = dcGX;
     var labelString = "dm3";
     if( Dongle_Config == "p1-q") labelString = "GJ * 1000";
     myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;    
-    myGasChart.update();
+    myGasChart.update(0);
+
+    //update water???
+    //TODO
 
   } // showActualGraph()
   
