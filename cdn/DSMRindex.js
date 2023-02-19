@@ -1326,84 +1326,77 @@ function parseSmFields(data)
   //============================================================================  
   function expandData(data)
   {
-	//console.log("expandData2: data length:"+ data.data.length );
-	//console.log("expandData2: actslot:"+ data.actSlot );
     var i;
     var slotbefore;
-    	
-    //--- first check op volgordelijkheid ------    
-// 	if (activeTab == "HoursTab") {  
-//     for (let i=0; i<(data.length -1); i++)
-//     {
-//       slotbefore = math.mod(i-1, data.data.length);
-// 	  if (data[i].edt1 < data[i+1].edt1 || data[i].edt2 < data[i+1].edt2)
-//       {
-//         console.log("["+(i)+"] ["+data[i].recid+"] := ["+(i+1)+"]["+data[i+1].recid+"]"); 
-//         data[i].edt1 = data[i+1].edt1 * 1.0;
-//         data[i].edt2 = data[i+1].edt2 * 1.0;
-//         data[i].ert1 = data[i+1].ert1 * 1.0;
-//         data[i].ert2 = data[i+1].ert2 * 1.0;
-//         data[i].gdt  = data[i+1].gdt  * 1.0;
-//       }
-//     } // for ...
-//     }
     for (let x=data.data.length + data.actSlot; x > data.actSlot; x--)
-    {	i = x % data.data.length;
-        slotbefore = math.mod(i-1, data.data.length);
-		//console.log("ExpandData2 - x: "+x); 
-		//console.log("ExpandData2 - i: "+i);
-		//console.log("ExpandData2 - slotbefore: "+slotbefore); 
-		//console.log("gd_tariff: "+gd_tariff); 
-		//console.log("ed_tariff: "+ed_tariff1); 
-      var     costs     = 0;
+    {
+      i = x % data.data.length;
+      slotbefore = math.mod(i-1, data.data.length);
+      var costsED = 0;
+      var costsER = 0;
       if (x != data.actSlot 	)
-      { 
-        if ( AvoidSpikes && ( data.data[slotbefore].values[0] == 0 ) ) data.data[slotbefore].values = data.data[i].values;//avoid gaps and spikes
-		data.data[i].p_ed  = ((data.data[i].values[0] + data.data[i].values[1])-(data.data[slotbefore].values[0] +data.data[slotbefore].values[1])).toFixed(3);
-        data.data[i].p_edw = (data.data[i].p_ed * 1000).toFixed(0);
-        data.data[i].p_er  = ((data.data[i].values[2] + data.data[i].values[3])-(data.data[slotbefore].values[2] +data.data[slotbefore].values[3])).toFixed(3);
-        data.data[i].p_erw = (data.data[i].p_er * 1000).toFixed(0);
-        data.data[i].p_gd  = (data.data[i].values[4]  - data.data[slotbefore].values[4]).toFixed(3);
-		data.data[i].water  = (data.data[i].values[5]  - data.data[slotbefore].values[5]).toFixed(3);
+      {
+        //avoid gaps and spikes
+        if ( AvoidSpikes && ( data.data[slotbefore].values[0] == 0 ) ) data.data[slotbefore].values = data.data[i].values;
+        
+        //simple differences
+        data.data[i].p_edt1= (data.data[i].values[0] - data.data[slotbefore].values[0]);
+        data.data[i].p_edt2= (data.data[i].values[1] - data.data[slotbefore].values[1]);
+        data.data[i].p_ert1= (data.data[i].values[2] - data.data[slotbefore].values[2]);
+        data.data[i].p_ert2= (data.data[i].values[3] - data.data[slotbefore].values[3]);
+		    data.data[i].p_gd  = (data.data[i].values[4] - data.data[slotbefore].values[4]);
+        data.data[i].water = (data.data[i].values[5] - data.data[slotbefore].values[5]);
 
-        //-- calculate Energy Delivered costs
-        costs = ( (data.data[i].values[0] - data.data[slotbefore].values[0]) * ed_tariff1 );
-        costs = costs + ( (data.data[i].values[1] - data.data[slotbefore].values[1]) * ed_tariff2 );
-        //-- subtract Energy Returned costs
-        costs = costs - ( (data.data[i].values[2] - data.data[slotbefore].values[2]) * er_tariff1 );
-        costs = costs - ( (data.data[i].values[3] - data.data[slotbefore].values[3]) * er_tariff2 );
-        data.data[i].costs_e = costs;
+        //sums of T1 & T2
+		    data.data[i].p_ed  = (data.data[i].p_edt1 + data.data[i].p_edt2);
+        data.data[i].p_er  = (data.data[i].p_ert1 + data.data[i].p_ert2);
+        
+        //sums in watts
+        data.data[i].p_edw = (data.data[i].p_ed * 1000);
+        data.data[i].p_erw = (data.data[i].p_er * 1000);        
+
+        //-- calculate costs
+        costsED  = ( data.data[i].p_edt1 * ed_tariff1 ) + ( data.data[i].p_edt2 * ed_tariff2 );
+        costsER  = ( data.data[i].p_ert1 * er_tariff1 ) + ( data.data[i].p_ert2 * er_tariff2 );
+        data.data[i].costs_e = costsED - costsER;
+        
         //-- add Gas Delivered costs
-        data.data[i].costs_g = HeeftGas?( (data.data[i].values[4]  - data.data[slotbefore].values[4])  * gd_tariff ):0;
+        data.data[i].costs_g = HeeftGas ? ( data.data[i].p_gd  * gd_tariff ) : 0;
+
         //-- compute network costs
-        data.data[i].costs_nw = (electr_netw_costs + (HeeftGas?gas_netw_costs:0)) * 1.0;
-		
-// 		console.log("costs_nw: "+data.data[i].costs_nw); 
-// 		console.log("gas_netw_costs: "+gas_netw_costs); 
-// 		console.log("electr_netw_costs: "+electr_netw_costs); 
-// 		console.log("HeeftGas: "+HeeftGas?"yes":"no"); 
-		
+        data.data[i].costs_nw = (electr_netw_costs + (HeeftGas ? gas_netw_costs : 0)) * 1.0;
+
         //-- compute total costs
         data.data[i].costs_tt = ( (data.data[i].costs_e + data.data[i].costs_g + data.data[i].costs_nw) * 1.0);
       }
       else
       {
-        costs             = 0;
-        data.data[i].p_ed      = (data.data[i].values[0] +data.data[i].values[1]).toFixed(3);
-        data.data[i].p_edw     = (data.data[i].p_ed * 1000).toFixed(0);
-        data.data[i].p_er      = (data.data[i].values[2] +data.data[i].values[3]).toFixed(3);
-        data.data[i].p_erw     = (data.data[i].p_er * 1000).toFixed(0);
-        data.data[i].p_gd      = (data.data[i].values[4]).toFixed(3);
-		data.data[i].water     = (data.data[i].values[5]).toFixed(3);
+        costs = 0;
+        data.data[i].p_edt1    = data.data[i].values[0];
+        data.data[i].p_edt2    = data.data[i].values[1];
+        data.data[i].p_ert1    = data.data[i].values[2];        
+        data.data[i].p_ert2    = data.data[i].values[3];        
+        data.data[i].p_gd      = data.data[i].values[4];
+		    data.data[i].water     = data.data[i].values[5];
+        data.data[i].p_ed      = (data.data[i].p_edt1 + data.data[i].p_edt2);
+        data.data[i].p_er      = (data.data[i].p_ert1 + data.data[i].p_ert2);        
+        data.data[i].p_edw     = (data.data[i].p_ed * 1000);
+        data.data[i].p_erw     = (data.data[i].p_er * 1000);
         data.data[i].costs_e   = 0.0;
         data.data[i].costs_g   = 0.0;
         data.data[i].costs_nw  = 0.0;
         data.data[i].costs_tt  = 0.0;
       }
     } // for i ..
-    //console.log("leaving expandData() ..");
-	//console.log("expandData2: eind data "+ JSON.stringify(data));
   } // expandData()
+
+  //limit every value in the array to n decimals
+  //toFixed() will convert all into strings, so also add  convertion back to Number
+  function applyArrayFixedDecimals(data, decimals){
+    for( var i=0; i<data.length; i++){
+      if( !isNaN(data[i]) ) data[i] = Number(data[i].toFixed(decimals));
+    }
+  }
   
   //============================================================================  
   function alert_message(msg) {
