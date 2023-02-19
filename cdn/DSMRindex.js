@@ -171,312 +171,96 @@ var TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wm
 var hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
 var day = 0;
 
-let TrendV = {
-    type: 'doughnut',
-    data: {
-      datasets: [
-        {
-          label: "l1",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "l2",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "l3",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-    },
-    options: {
+//default struct for the gauge element
+// ! structuredClone can NOT copy a struct with functions
+let cfgDefaultGAUGE = {
+  type: 'doughnut',
+  data: {
+    datasets: [
+      {
+        label: "l1",
+        backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+      },
+      {
+        label: "l2",
+        backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+      },
+      {
+        label: "l3",
+        backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+      }
+    ]
+  },
+  options: {
     events: [],
     title: {
-            display: true,
-            text: 'Voltage',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-	  rotation: -Math.PI,
-      plugins: {
-      	labels: {
-			render: function (args) {
-				return args.value + 207 + " V";
-			},//render
-        arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
-      },//labels      
-    }, //plugins
-    legend: {display: false},
-    }, //options
-};
-
-let TrendG = {
-    type: 'doughnut',
-    data: {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
+      display: true,
+      text: 'Voltage',
+      position: "bottom",
+      padding: -18,
+      fontSize: 17,
+      fontColor: "#000",
+      fontFamily: "Dosis",
     },
-    options: {
-    title: {
-            display: true,
-            text: 'm3',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-			rotation: -Math.PI,
-      plugins: {
+    responsive: true,
+    circumference: Math.PI,
+    rotation: -Math.PI,
+    plugins: {
       labels: {
-        render: function (args) {
-          return args.value + " \u33A5";
-        },//render
+        render: {},   //structuredClone will fail if there is a function
         arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
+        fontColor: ["#fff", "rgba(0,0,0,0)"],
       },//labels      
     }, //plugins
-    legend: {display: false},
-    }, //options
+    legend: { display: false },
+  }, //options
 };
 
+//copy for phases based gauges
+let cfgDefaultPHASES = structuredClone(cfgDefaultGAUGE);
+cfgDefaultPHASES.data.datasets[0].label = "L1";
+cfgDefaultPHASES.data.datasets[1].label = "L2";
+cfgDefaultPHASES.data.datasets[2].label = "L3";
 
-let TrendQ = {
-    type: 'doughnut',
-    data: {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-    },
-    options: {
-    title: {
-            display: true,
-            text: 'kJ',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-			rotation: -Math.PI,
-      plugins: {
-      labels: {
-        render: function (args) {
-          return args.value;
-        },//render
-        arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
-      },//labels      
-    }, //plugins
-    legend: {display: false},
-    }, //options
-};
+//copy for trend based gauges
+let cfgDefaultTREND = structuredClone(cfgDefaultGAUGE);
+cfgDefaultTREND.data.datasets[0].label = "vandaag";
+cfgDefaultTREND.data.datasets[1].label = "gister";
+cfgDefaultTREND.data.datasets[2].label = "eergisteren";
 
 
-let Trend3f = {
-    type: 'doughnut',
-    data: {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "l1",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "l2",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "l3",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-    },
-    options: {
-    title: {
-            display: true,
-            text: 'Ampere',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-			rotation: -Math.PI,
-      plugins: {
-      labels: {
-        render: function (args) {
-          return args.value + " A";
-        },//render
-        arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
-      },//labels      
-    }, //plugins
-    legend: {display: false},
-    }, //options
-};
+//phases based gauges
+function renderLabelVoltage(args){return args.value + 207 + " V";}
+let cfgGaugeVOLTAGE = structuredClone(cfgDefaultPHASES);
+cfgGaugeVOLTAGE.options.title.text = "Voltage";
+cfgGaugeVOLTAGE.options.plugins.labels.render = renderLabelVoltage;
+
+function renderLabel3F(args){return args.value + " A";}
+let cfgGauge3F = structuredClone(cfgDefaultPHASES);
+cfgGauge3F.options.title.text = "Ampere";
+cfgGauge3F.options.plugins.labels.render = renderLabel3F;
 
 
-let TrendW = {
-    type: 'doughnut',
-    data: {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-    },
-    options: {
-    title: {
-            display: true,
-            text: 'liter',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-			rotation: -Math.PI,
-      plugins: {
-      labels: {
-        render: function (args) {
-          return args.value + " ltr";
-        },//render
-        arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
-      },//labels      
-    }, //plugins
-    legend: {display: false},
-    }, //options
-};
+//trend based gauges
+function renderLabelElektra(args){return args.value + " kWh";}
+let cfgGaugeELEKTRA = structuredClone(cfgDefaultTREND);
+cfgGaugeELEKTRA.options.title.text = "kWh";
+cfgGaugeELEKTRA.options.plugins.labels.render = renderLabelElektra;
 
-let optionsP = {
-title: {
-            display: true,
-            text: 'kWh',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-		rotation:  - Math.PI,
-      plugins: {
-      labels: {
-        render: function (args) {
-          return args.value + " kWh";
-        },//render
-        arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
-      },//labels      
-    }, //plugins
-      legend: {display: false},
-}; 
-    
-let dataP = {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-};
+function renderLabelGas(args){return args.value + " " + SQUARE_M_CUBED;}
+let cfgGaugeGAS = structuredClone(cfgDefaultTREND);
+cfgGaugeGAS.options.title.text = SQUARE_M_CUBED;
+cfgGaugeGAS.options.plugins.labels.render = renderLabelGas;
 
-let dataPi = {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-	};
+function renderLabelWarmte(args){return args.value;}
+let cfgGaugeWARMTE = structuredClone(cfgDefaultTREND);
+cfgGaugeWARMTE.options.title.text = "kJ";
+cfgGaugeWARMTE.options.plugins.labels.render = renderLabelWarmte;
 
-let dataPa = {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-    };
+function renderLabelWater(args){return args.value + " ltr";}
+let cfgGaugeWATER = structuredClone(cfgDefaultTREND);
+cfgGaugeWATER.options.title.text = "Liter";
+cfgGaugeWATER.options.plugins.labels.render = renderLabelWater;
 
 window.onload=bootsTrapMain;
 
@@ -931,22 +715,25 @@ function handle_menu_click()
 }
 
   //============================================================================  
+function createDashboardGauges()
+{
+  trend_p 	= new Chart(document.getElementById("container-3"), cfgGaugeELEKTRA);
+	trend_pi 	= new Chart(document.getElementById("container-5"), cfgGaugeELEKTRA);
+	trend_pa 	= new Chart(document.getElementById("container-6"), cfgGaugeELEKTRA);
+  trend_g 	= new Chart(document.getElementById("container-4"), cfgGaugeGAS);
+	trend_q 	= new Chart(document.getElementById("container-q"), cfgGaugeWARMTE);
+  trend_w 	= new Chart(document.getElementById("container-7"), cfgGaugeWATER);
+  gauge3f 	= new Chart(document.getElementById("gauge3f"),     cfgGauge3F);
+  gaugeV 		= new Chart(document.getElementById("gauge-v"),     cfgGaugeVOLTAGE);
+}
+function bootsTrapMain() 
+{
+  console.log("bootsTrapMain()");
   
-  function bootsTrapMain() {
-    console.log("bootsTrapMain()");
-	getDevSettings(); //first of all ... get the device settings
-// 	console.log("hash:"+ location.hash);
+  getDevSettings();
 
-// 	gauge = new JustGage(GaugeOptions); // initialize gauge
-// 	gauge_v = new JustGage(GaugeOptionsV); // initialize gauge
-	trend_g 	= new Chart(document.getElementById("container-4"), TrendG);
-	trend_q 	= new Chart(document.getElementById("container-q"), TrendQ);
-	trend_p 	= new Chart(document.getElementById("container-3"), {type: 'doughnut', data:dataP, options: optionsP});
-	trend_pi 	= new Chart(document.getElementById("container-5"), {type: 'doughnut', data:dataPi, options: optionsP});
-	trend_pa 	= new Chart(document.getElementById("container-6"), {type: 'doughnut', data:dataPa, options: optionsP} );
-	trend_w 	= new Chart(document.getElementById("container-7"), TrendW);
-	gauge3f 	= new Chart(document.getElementById("gauge3f"), Trend3f);
-	gaugeV 		= new Chart(document.getElementById("gauge-v"), TrendV);
+  createDashboardGauges();
+  
             
 	handle_menu_click();
 	FrontendConfig();
