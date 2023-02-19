@@ -364,31 +364,35 @@ function SetOnSettings(json){
 // 		document.getElementById("gasChart").style.height = "250px";
 	}
 }
-  
-//============================================================================  
-  
-function ReadVersionManifest(){
-	console.log("ReadVersionManifest");
-	Spinner(true);
-	 fetch('http://ota.smart-stuff.nl/v5/version-manifest.json?dummy='+Date.now(), {"setTimeout": 5000}).then(function (response) {
-		 return response.json();
-	 }).then(function (json) {
-	 	console.log("version manifest: " + JSON.stringify(json) );
-	 	
-	 	LastVersion = json.version;
-	 	LastVersionMajor = json.major;
-	 	LastVersionMinor = json.minor;
-	 	LastVersionFix = json.fix;
-	 	LastVersionBuid = json.build;
-	 	LastVersionNotes = json.notes;
-	 	LastVersionOTA = json.ota_url;
-	}
-	 );	// function(json)
-	 	Spinner(false);
 
+function parseVersionManifest(json)
+{
+  console.log("parseVersionManifest() - ", json);
+  LastVersion = json.version;
+  LastVersionMajor = json.major;
+  LastVersionMinor = json.minor;
+  LastVersionFix = json.fix;
+  LastVersionBuid = json.build;
+  LastVersionNotes = json.notes;
+  LastVersionOTA = json.ota_url;
 }
-//============================================================================  
   
+//============================================================================  
+function ReadVersionManifest() {
+  console.log("ReadVersionManifest");
+  Spinner(true);
+  fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
+    .then(function (response) {
+      return response.json();})
+    .then(function (json) {
+      console.log("version manifest: " + JSON.stringify(json));
+      parseVersionManifest(json);
+      Spinner(false);
+    }
+  );	// function(json)  
+}
+
+//============================================================================   
 function UpdateDash()
 {	
 	// if (PauseAPI) return;
@@ -987,17 +991,10 @@ function show_hide_column2(table, col_no, do_show) {
 			}
 	 });	
   }
-  
-  //============================================================================  
-  function refreshDevInfo()
-  { Spinner(true);
-    fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-        console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
-		Spinner(false);
-        obj = json;
-        var tableRef = document.getElementById('tb_info');
+
+  function parseDeviceInfo(obj)
+  {
+    var tableRef = document.getElementById('tb_info');
         //clear table
 		while (tableRef.hasChildNodes()) { tableRef.removeChild(tableRef.lastChild);}
 
@@ -1061,6 +1058,17 @@ function show_hide_column2(table, col_no, do_show) {
 		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' href='/remote-update?version=" + LastVersion + "'>Klik voor update</a>";
 		  else VerCel3.innerHTML = "laatste versie";
 	  }
+  }
+  
+  //============================================================================  
+  function refreshDevInfo()
+  { Spinner(true);
+    fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
+      .then(response => response.json())
+      .then(json => {
+        console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
+        parseDeviceInfo(json);
+		    Spinner(false);
       })
       .catch(function(error) {
         var p = document.createElement('p');
