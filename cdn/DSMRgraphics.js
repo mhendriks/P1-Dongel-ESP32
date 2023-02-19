@@ -264,23 +264,23 @@ function ensureChartsReady()
     gasData = createChartDataContainerWithStack();
 	  waterData = createChartDataContainerWithStack();
     
-    // idx 0 => ED
-    var dsE1 = createDatasetBAR('false', 'red', "Gebruikt", "STACK");
+    //create datasets ED & ER
+    var dsED1 = createDatasetBAR('false', 'red',    "Gebruikt T1", "STACK");
+    var dsED2 = createDatasetBAR('false', 'orange', "Gebruikt T2", "STACK");
+    var dsER1 = createDatasetBAR('false', 'green',  "Opgewekt T1", "STACK");
+    var dsER2 = createDatasetBAR('false', 'lightgreen', "Opgewekt T2", "STACK");
     
-    // idx 0 => ER
-    var dsE2 = createDatasetBAR('false', 'green', "Opgewekt", "STACK");
-    
-    // idx 0 => GAS
+    // GAS
     var dsG1 = createDatasetLINE('false', 'blue', "Gas Gebruikt");
     if ( Dongle_Config == "p1-q") dsG1.label = "Warmte Gebruikt";
    
-    // idx 0 => WATER
-    var dsW1 = createDatasetLINE('false', 'blue', "Water Gebruikt");    
-    
-  //      console.log("data.actSlot "+data.actSlot);
-  //      console.log("data.data.length "+data.data.length);
+    // WATER
+    var dsW1 = createDatasetLINE('false', 'blue', "Water Gebruikt");
   
-    var p = 0;                
+    var p = 0;
+    var fTarif1 = false;
+    var fTarif2 = false;
+    //copy all data from entries to correct dataset
     for (let y=data.data.length + data.actSlot; y > data.actSlot+1; y--)
     {	
       var i = y % data.data.length;
@@ -291,24 +291,33 @@ function ensureChartsReady()
 	    waterData.labels.push( formatGraphDate(type, data.data[i].date));
 
       //add data to the sets
-      if (type == "Hours")
-      {
-        if (data.data[i].p_edw >= 0) dsE1.data[p] = (data.data[i].p_edw *  1.0);
-        if (data.data[i].p_erw >= 0) dsE2.data[p] = (data.data[i].p_erw * -1.0);
-      }
-      else
-      {
-        if (data.data[i].p_ed >= 0) dsE1.data[p] = (data.data[i].p_ed *  1.0).toFixed(3);
-        if (data.data[i].p_er >= 0) dsE2.data[p] = (data.data[i].p_er * -1.0).toFixed(3);
-      }
-      if (data.data[i].p_gd  >= 0)  dsG1.data[p] = (data.data[i].p_gd * 1000.0).toFixed(0);
-      if (data.data[i].water  >= 0) dsW1.data[p] = (data.data[i].water * 1000.0).toFixed(0);
+      var nFactor = 1.0;
+      if (type == "Hours") nFactor = 1000.0;
+      if (data.data[i].p_edt1 >= 0){dsED1.data[p] = (data.data[i].p_edt1 * nFactor); fTarif1 = true;}
+      if (data.data[i].p_edt2 >= 0){dsED2.data[p] = (data.data[i].p_edt2 * nFactor); fTarif2 = true;}
+      if (data.data[i].p_ert1 >= 0) dsER1.data[p] = (data.data[i].p_ert1 * nFactor * -1.0);
+      if (data.data[i].p_ert2 >= 0) dsER2.data[p] = (data.data[i].p_ert2 * nFactor * -1.0);
+      if (data.data[i].p_gd   >= 0)  dsG1.data[p] = (data.data[i].p_gd   * 1000.0);
+      if (data.data[i].water  >= 0)  dsW1.data[p] = (data.data[i].water  * 1000.0);
 	    p++;
     } // for i ..
 
+    //limit all numbers in array to 3 decimals
+    applyArrayFixedDecimals(dsED1.data, 3);
+    applyArrayFixedDecimals(dsED2.data, 3);
+    applyArrayFixedDecimals(dsER1.data, 3);
+    applyArrayFixedDecimals(dsER2.data, 3);
+    applyArrayFixedDecimals(dsG1.data, 0);
+    applyArrayFixedDecimals(dsW1.data, 0);
+
     //push all the datasets to the container
-    electrData.datasets.push(dsE1);
-    electrData.datasets.push(dsE2);
+    electrData.datasets.push(dsED1);
+    if( Injection) electrData.datasets.push(dsER1);
+    if( fTarif1 && fTarif2)
+    {
+      electrData.datasets.push(dsED2);
+      if( Injection) electrData.datasets.push(dsER2);
+    }
     gasData.datasets.push(dsG1);
     waterData.datasets.push(dsW1);
 
@@ -318,37 +327,42 @@ function ensureChartsReady()
   //============================================================================  
   function copyMonthsToChart(data)
   {
+    var fDoubleTarif = true;
     console.log("Now in copyMonthsToChart()..");
 
     electrData= createChartDataContainerWithStack();    
     gasData   = createChartDataContainerWithStack();    
 	  waterData = createChartDataContainerWithStack();
+
+    listPeriods = ["Gebruikt deze periode", "Gebruikt vorige periode", "Opgewekt T1 deze periode", "Opgewekt T1 vorige periode"];
     
-    // idx 0 => ED
-    var dsED1 = createDatasetBAR('false', 'red', "Gebruikt deze periode", "DP");    
+    // ED this & prev
+    var dsED1 = createDatasetBAR('false', 'rgba(255,0,  0, 1)', "Gebruikt T1 deze periode",   "DP");    
+    var dsED2 = createDatasetBAR('false', 'rgba(255,0,  0,.5)', "Gebruikt T1 vorige periode", "RP");
+    var dsED3 = createDatasetBAR('false', 'rgba(255,165,0, 1)', "Gebruikt T2 deze periode",   "DP");
+    var dsED4 = createDatasetBAR('false', 'rgba(255,165,0,.5)', "Gebruikt T2 vorige periode", "RP");
 
-    // idx 1 => ER
-    var dsER1 = createDatasetBAR('false', 'green', "Opgewekt deze periode", "DP");    
-    
-    // idx 2 => ED -1
-    var dsED2 = createDatasetBAR('false', 'orange', "Gebruikt vorige periode", "RP");    
+    // ER this & prev
+    var dsER1 = createDatasetBAR('false', 'rgba(0, 255,0, 1)', "Opgewekt T1 deze periode",  "DP");
+    var dsER2 = createDatasetBAR('false', 'rgba(0, 255,0,.5)', "Opgewekt T1 vorige periode","RP");
+    var dsER3 = createDatasetBAR('false', 'rgba(74,240,0, 1)', "Opgewekt T2 deze periode",  "DP");
+    var dsER4 = createDatasetBAR('false', 'rgba(74,240,0,.5)', "Opgewekt T2 vorige periode","RP");
 
-    // idx 3 => ER -1
-    var dsER2 = createDatasetBAR('false', 'lightgreen', "Opgewekt vorige periode", "RP");
+    // GD this & prev
+    var dsGD1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", "Gas deze periode");
+    var dsGD2 =  createDatasetLINE('false', "rgba(0,128,255, 1)", "Gas vorige periode");
+    if(Dongle_Config == "p1-q"){ 
+      dsGD1.label = "Warmte deze periode";
+      dsGD2.label = "Warmte vorige periode";
+    }
 
-    // idx 0 => GD
-    var dsGD1 =  createDatasetLINE('false', "blue", "Gas deze periode");
-    if(Dongle_Config == "p1-q") dsGD1.label = "Warmte deze periode";    
-    
-    // idx 0 => GD -1
-    var dsGD2 =  createDatasetLINE('false', "blue", "Gas vorige periode");
-    if(Dongle_Config == "p1-q") dsGD2.label = "Warmte vorige periode";
-
-    var dsW1 =  createDatasetLINE('false', "blue", "Water deze periode");
-    var dsW2 =  createDatasetLINE('false', "lightblue", "Water vorige periode");
-       
-    //console.log("there are ["+data.data.length+"] rows");
+    // WD
+    var dsW1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", "Water deze periode");
+    var dsW2 =  createDatasetLINE('false', "rgba(0,128,255, 1)", "Water vorige periode");
   
+    //
+    // fill datasets
+    //
 	  var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
     var stop = start - 12;
     var i;
@@ -365,32 +379,60 @@ function ensureChartsReady()
       waterData.labels.push( formatGraphDate("Months", data.data[i].date));
       
       //add data to the datatsets
-      if (data.data[i].p_ed >= 0) {
-      	dsED1.data[p]  = (data.data[i].p_ed *  1.0).toFixed(3);
-		    dsED2.data[p]  = (data.data[slotyearbefore].p_ed *  1.0).toFixed(3);
+      if (data.data[i].p_edt1 >= 0) {
+      	dsED1.data[p] = (data.data[i].p_edt1 *  1.0);
+		    dsED2.data[p] = (data.data[slotyearbefore].p_edt1 *  1.0);
+	    }
+      if (data.data[i].p_edt2 >= 0) {
+      	dsED3.data[p] = (data.data[i].p_edt2 *  1.0);
+		    dsED4.data[p] = (data.data[slotyearbefore].p_edt2 *  1.0);
 	    }
       
-	    if (data.data[i].p_er >= 0) {
-	  	  dsER1.data[p]  = (data.data[i].p_er * -1.0).toFixed(3);
-      	dsER2.data[p]  = (data.data[slotyearbefore].p_er * -1.0).toFixed(3);
+	    if (data.data[i].p_ert1 >= 0) {
+	  	  dsER1.data[p] = (data.data[i].p_ert1 * -1.0);
+      	dsER2.data[p] = (data.data[slotyearbefore].p_ert1 * -1.0);
+      }
+      if (data.data[i].p_ert2 >= 0) {
+	  	  dsER3.data[p] = (data.data[i].p_ert2 * -1.0);
+      	dsER4.data[p] = (data.data[slotyearbefore].p_ert2 * -1.0);
       }
       
       if (data.data[i].p_gd >= 0) {
-		    dsGD1.data[p]     = data.data[i].p_gd;
-		    dsGD2.data[p]     = data.data[slotyearbefore].p_gd;
+		    dsGD1.data[p] = data.data[i].p_gd;
+		    dsGD2.data[p] = data.data[slotyearbefore].p_gd;
 	    }
 	    if (data.data[i].water >= 0) {
-		    dsW1.data[p]     = data.data[i].water;
-		    dsW2.data[p]     = data.data[slotyearbefore].water;
+		    dsW1.data[p] = data.data[i].water;
+		    dsW2.data[p] = data.data[slotyearbefore].water;
 	    }
       p++;
     }//endfor
 
-    //add datasets to the container
+    //limit all numbers in the arrays to 3 decimals
+    applyArrayFixedDecimals( dsED1, 3);
+    applyArrayFixedDecimals( dsED2, 3);
+    applyArrayFixedDecimals( dsED3, 3);
+    applyArrayFixedDecimals( dsED4, 3);
+    applyArrayFixedDecimals( dsER1, 3);
+    applyArrayFixedDecimals( dsER2, 3);
+    applyArrayFixedDecimals( dsER3, 3);
+    applyArrayFixedDecimals( dsER4, 3);
+
+    //add datasets to the container, order is also display order
     electrData.datasets.push(dsED1);
-    electrData.datasets.push(dsER1);
     electrData.datasets.push(dsED2);
-    electrData.datasets.push(dsER2);
+    if(fDoubleTarif) {
+      electrData.datasets.push(dsED3);
+      electrData.datasets.push(dsED4);
+    }
+    if(Injection){
+      electrData.datasets.push(dsER1);
+      electrData.datasets.push(dsER2);
+      if(fDoubleTarif) {
+        electrData.datasets.push(dsER3);
+        electrData.datasets.push(dsER4);
+      }
+    }
     gasData.datasets.push(dsGD1);
     gasData.datasets.push(dsGD2);
     waterData.datasets.push(dsW1);
