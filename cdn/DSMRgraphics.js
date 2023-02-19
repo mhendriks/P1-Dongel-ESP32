@@ -9,6 +9,9 @@
 ***************************************************************************      
 */
 
+//store last 90 TELEGRAM objects
+const MAX_TELEGRAM_HISTORY = 15 * 6;
+var listTELEGRAMS = [];
 let TimerActual;
 let actPoint        = 0;
 let maxPoints       = 100;
@@ -400,107 +403,17 @@ function ensureChartsReady()
 
   } // copyMonthsToChart()
     
-  
   //============================================================================  
-  function copyActualToChart(data)
+  function copyActualToChart(data) 
   {
-    //console.log("Now in copyActualToChart()..");
-    
-    for (i in data)
-    {
-      //console.log("i ="+i+"] value["+data[i].value+"]");
-      if (i == "timestamp")  
-      {
-        //console.log("i["+i+"] label["+data[i].value+"]");
-        if (data[i].value == actLabel)
-        {
-          console.log("actLabel["+actLabel+"] == value["+data[i].value+"] =>break!");
-          return;
-        }
-        actElectrData.labels.push(formatGraphDate("Actual", data[i].value)); // adds x axis labels (timestamp)
-        actGasData.labels.push(formatGraphDate("Actual", data[i].value)); // adds x axis labels (timestamp)
-        actLabel = data[i].value;
-      }
-      
-      if (i == "power_delivered_l1") 
-        actElectrData.datasets[0].data[actPoint]  = (data[i].value).toFixed(3);
-      if (i == "power_delivered_l2") 
-        actElectrData.datasets[1].data[actPoint]  = (data[i].value).toFixed(3);
-      if (i == "power_delivered_l3") 
-        actElectrData.datasets[2].data[actPoint]  = (data[i].value).toFixed(3);
-      if (i == "power_returned_l1")  
-        actElectrData.datasets[3].data[actPoint]  = (data[i].value * -1.0).toFixed(3);
-      if (i == "power_returned_l2")  
-        actElectrData.datasets[4].data[actPoint]  = (data[i].value * -1.0).toFixed(3);
-      if (i == "power_returned_l3")  
-        actElectrData.datasets[5].data[actPoint]  = (data[i].value * -1.0).toFixed(3);
-      if (i == "gas_delivered") 
-      {
-        if (actPoint > 0)
-              actGasData.datasets[0].data[actPoint] = ((data[i].value - gasDelivered) * 1000.0).toFixed(0);
-        else  actGasData.datasets[0].data[actPoint] = 0.0;
-        gasDelivered = data[i].value;
-      }
-    } // for i in data ..
-    actPoint++;    
-    
-    if (actPoint > maxPoints) 
-    {
-      for (let s=0; s<6; s++)
-      {
-        actElectrData.labels.shift();
-        actElectrData.datasets[0].data.shift();
-        actElectrData.datasets[1].data.shift();
-        actElectrData.datasets[2].data.shift();
-        actElectrData.datasets[3].data.shift();
-        actElectrData.datasets[4].data.shift();
-        actElectrData.datasets[5].data.shift();
-        actGasData.labels.shift();
-        actGasData.datasets[0].data.shift();
-        actWaterData.labels.shift();
-        actWaterData.datasets[0].data.shift();
-        actPoint--;
-      } // for s ..
-    } 
-    
-  } // copyActualToChart()
+    //convert telegram
+    var objTelegram = parseTelegramData(data);
 
-  //============================================================================  
-  {
-    //console.log("Now in initActualGraph()..");
-
-    actElectrData = createChartDataContainerWithStack();
-    actGasData = createChartDataContainerWithStack();
-
-    // idx 0 => EDL1
-    var dsE1 = createDatasetBAR('false', 'red', "Gebruikt L1", "A");
-    actElectrData.datasets.push(dsE1);
-    
-    // idx 1 => EDL2
-    var dsE2 = createDatasetBAR('false', 'tomato', "Gebruikt L2", "A");
-    actElectrData.datasets.push(dsE2);
-    
-    // idx 2 => EDL3
-    var dsE3 = createDatasetBAR('false', 'salmon', "Gebruikt L3", "A");
-    actElectrData.datasets.push(dsE3);
-
-    // idx 3 ERL1
-    var dsER1 = createDatasetBAR('false', 'yellowgreen', "Opgewekt L1", "A");
-    actElectrData.datasets.push(dsER1);
-    
-    // idx 4 => ERL2
-    var dsER2 = createDatasetBAR('false', 'springgreen', "Opgewekt L2", "A");
-    actElectrData.datasets.push(dsER2);
-    
-    // idx 5 => ERL3
-    var dsER3 = createDatasetBAR('false', 'green', "Opgewekt L3", "A");
-    actElectrData.datasets.push(dsER3);
-    
-    // idx 0 => GDT
-    var dsG1 = createDatasetLINE('false', 'blue', "Gas verbruikt");
-    if(Dongle_Config == "p1-q") dsG1.label = "Warmte verbruikt";
-    actGasData.datasets.push(dsG1);
-
+    //add to telegramhistory
+    if(listTELEGRAMS.length >= MAX_ACTUAL_HISTORY) listTELEGRAMS.shift();
+    listTELEGRAMS.push(objTelegram);
+  }
+ 
   //============================================================================  
   function initActualGraph()
   {
@@ -565,7 +478,148 @@ function ensureChartsReady()
     
     return dateOut;
   }
-  
+
+  //format timestamp
+  //input: 230215223319W
+  //output: "22:33:19"
+  function formatHHMMSS(itemvalue)
+  {
+    //230215 223319 W
+    var time = itemvalue.slice(6,12);
+    var nHH = time.slice(0,2);
+    var nMM = time.slice(2,4);
+    var nSS = time.slice(4,6);
+    return ""+nHH+":"+nMM+":"+nSS;
+  }
+
+  function parseTelegramData( data )
+  {
+    var telegram = new Map();
+    for (key in data) 
+    {
+      item = data[key];
+      // key: {value:0, unit:""}
+      switch( key )
+      {
+        case "timestamp": telegram.set('timestamp', formatHHMMSS(item.value) ); break;
+
+        case "power_delivered_l1": telegram.set('pdl1', (item.value).toFixed(3) ); break;
+        case "power_delivered_l2": telegram.set('pdl2', (item.value).toFixed(3) ); break;
+        case "power_delivered_l3": telegram.set('pdl3', (item.value).toFixed(3) ); break;
+        case "power_delivered":    telegram.set('pd',   (item.value).toFixed(3) ); break;
+        
+        case "power_returned_l1": telegram.set('prl1', (item.value).toFixed(3) ); break;
+        case "power_returned_l2": telegram.set('prl2', (item.value).toFixed(3) ); break;
+        case "power_returned_l3": telegram.set('prl3', (item.value).toFixed(3) ); break;
+        case "power_returned":    telegram.set('pr',   (item.value).toFixed(3) ); break;
+
+        case "gas_delivered_timestamp": 
+          telegram.set('gas_timestamp', formatHHMMSS(item.value) );
+          break;
+
+        case "gas_delivered": 
+          telegram.set("gd", item.value ); 
+          break;
+
+        default:
+          //nothing
+
+      }//endswitch
+    }//endfor
+
+    return telegram;
+  }
+
+  function copyActualHistoryToChart(histdata) 
+  {
+    listTELEGRAMS = [];
+    for(var i=0; i<histdata.length; i++)
+    {
+      //convert telegram
+      var objTelegram = parseTelegramData( histdata[i] );
+    
+      //add to telegramhistory
+      listTELEGRAMS.push(objTelegram);
+    }
+  }
+
+  //convert the telegram list to datasets
+  function createDataContainersACTUAL( listTELEGRAMS )
+  {
+    var dcEX = createChartDataContainerWithStack();
+    var dcGX = createChartDataContainerWithStack();
+
+    //ED L1..3
+    var dsED1 = createDatasetBAR('false', 'red', "Gebruikt L1", "A");    
+    var dsED2 = createDatasetBAR('false', 'tomato', "Gebruikt L2", "A");    
+    var dsED3 = createDatasetBAR('false', 'salmon', "Gebruikt L3", "A");
+
+    //ER L1..3
+    var dsER1 = createDatasetBAR('false', 'yellowgreen', "Opgewekt L1", "A");
+    var dsER2 = createDatasetBAR('false', 'springgreen', "Opgewekt L2", "A");
+    var dsER3 = createDatasetBAR('false', 'green',       "Opgewekt L3", "A");
+    
+    //GD
+    var dsG1 = createDatasetLINE('false', 'blue', "Gas verbruikt");
+    if(Dongle_Config == "p1-q") dsG1.label = "Warmte verbruikt";
+    dsG1.spanGaps = true;
+
+    // Fill datasets
+    var gd_prev = "";
+    var ts_prev = "";
+    for( var i=0; i<listTELEGRAMS.length; i++)
+    {
+      telegram = listTELEGRAMS[i];
+
+      dcEX.labels.push(telegram.get("timestamp"));
+
+      dsED1.data.push( telegram.get("pdl1") );
+      dsED2.data.push( telegram.get("pdl2") );
+      dsED3.data.push( telegram.get("pdl3") );
+
+      dsER1.data.push( telegram.get("prl1") );
+      dsER2.data.push( telegram.get("prl2") );
+      dsER3.data.push( telegram.get("prl3") );
+      
+      if(i==0){        
+        gd_prev = telegram.get("gd");
+        ts_prev = telegram.get("gas_timestamp");
+        dsG1.data.push(0);
+        dsG1.data.push(null);
+        dcGX.labels.push( ts_prev);
+        dcGX.labels.push( telegram.get("timestamp") );
+      }
+      else
+      {
+        gd_ts = telegram.get("gas_timestamp");        
+        if( gd_ts != ts_prev)
+        {
+          var gd = telegram.get("gd");
+          dsG1.data.push( gd - gd_prev );
+          ts_prev = gd_ts;
+          gd_prev = gd;
+        }
+        else{
+          dsG1.data.push( null );
+        }
+        dcGX.labels.push( telegram.get("timestamp") );
+      }
+    }
+
+    //add datasets
+    dcEX.datasets.push(dsED1);
+    if( Phases > 1) dcEX.datasets.push(dsED2);
+    if( Phases > 2) dcEX.datasets.push(dsED3);
+    if (Injection) {
+      dcEX.datasets.push(dsER1);
+      if( Phases > 1) dcEX.datasets.push(dsER2);
+      if( Phases > 2) dcEX.datasets.push(dsER3);
+    }
+    dcGX.datasets.push(dsG1);
+
+    return [dcEX, dcGX];
+  }
+
   
 /*
 ***************************************************************************

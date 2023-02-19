@@ -733,6 +733,11 @@ function bootsTrapMain()
   getDevSettings();
 
   createDashboardGauges();
+
+  //init DAL
+  objDAL = new dsmr_dal_main();
+  objDAL.setCallback(updateFromDAL);
+  objDAL.init();
   
             
 	handle_menu_click();
@@ -1138,26 +1143,20 @@ function show_hide_column2(table, col_no, do_show) {
   } // refreshDevTime()
     
   //============================================================================  
-  function refreshSmActual()
-  { 
-  	Spinner(true);
-    fetch(APIGW+"v2/sm/actual", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-          console.log("actual parsed .., fields is ["+ JSON.stringify(json)+"]");
-          data = json;
-          copyActualToChart(data);
-          if (presentationType == "TAB")
-                showActualTable(data);
-          else  showActualGraph(data);
-        //console.log("-->done..");
-         Spinner(false);
-      }) //json
-      .catch(function(error) {
-        var p = document.createElement('p');
-        p.appendChild( document.createTextNode('Error: ' + error.message) );
-      }); //catch
-  };  // refreshSmActual()
+  function refreshSmActual() {
+    document.getElementById("actualTable").classList.remove("afterglow");
+    Spinner(true);
+    var data = objDAL.getActual();
+    //copyActualToChart(data);
+    if (presentationType == "TAB")
+      showActualTable(data);
+    else{
+      var hist = objDAL.getActualHistory();  
+      copyActualHistoryToChart(hist);
+      showActualGraph();
+    }
+    Spinner(false);
+  }
   
 // format a identifier
 // input = "4530303433303036393938313736353137"
