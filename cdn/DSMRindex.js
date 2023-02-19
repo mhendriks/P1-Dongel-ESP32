@@ -1126,6 +1126,7 @@ function show_hide_column2(table, col_no, do_show) {
   function refreshDevTime()
   {
 	alert_message("");
+  document.getElementById('theTime').classList.remove("afterglow");
     console.log("Refresh api/v2/dev/time ..");
     
 	let controller = new AbortController();
@@ -1138,7 +1139,9 @@ function show_hide_column2(table, col_no, do_show) {
 
 	  //after reboot checks of the server is up and running and redirects to home
       if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
-      })
+      document.getElementById('theTime').classList.add("afterglow");
+      
+    })
       .catch(function(error) {    
 		if (error.name === "AbortError") {console.log("time abort error")}
 //         var p = document.createElement('p');
