@@ -10,6 +10,7 @@ const URL_HISTORY_DAYS = APIGW + "../RNGdays.json";
 const URL_HISTORY_MONTHS = APIGW + "../RNGmonths.json";
 const URL_HISTORY_ACTUAL = APIGW + "v2/sm/actual";
 const MAX_ACTUAL_HISTORY = 15*6;	//store last 15 minutes (with a call per 10 sec)
+const listMONTHS_SHORT = ["JAN", "FEB", "MRT", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
 //Deze data is gebaseerd op een gemiddeld gebruikprofiel. 
 // zie o.a.
@@ -23,9 +24,12 @@ let timerRefresh = 0;
 let sCurrentChart = "YEAR"; //YEAR
 var objStorage;
 var fLoadedBurnup = false;
+var objChart1;
+var objChart2;
 
 //DSMR DataAccessLayer
-class dsmr_dal{
+//TODO: merge with DAL from index.js
+class dsmr_dal_burnup{
 	constructor() {
         this.months=[];
         this.days=[];
@@ -105,7 +109,7 @@ class dsmr_dal{
 	}
 	addActualHistory(json)
 	{
-		if( this.actual_history.length >= MAX_ACTUAL_HISTORY) this.actual_history.pop();
+		if( this.actual_history.length >= MAX_ACTUAL_HISTORY) this.actual_history.shift();
 		this.actual_history.push(json);
 	}
 
@@ -172,9 +176,6 @@ class dsmr_dal{
 		return this.actual_history;
 	}
 }
-
-var objChart1;
-var objChart2;
 
 function createCharts() {
 	const ctx1 = document.getElementById('myChart1').getContext('2d');
@@ -327,7 +328,7 @@ function BurnupBootstrap()
 	createCharts();
 
 	//create storage
-	objStorage = new dsmr_dal();
+	objStorage = new dsmr_dal_burnup();
 
 	//set a flag that we are ready
 	fLoadedBurnup = true;
@@ -413,20 +414,31 @@ function expandData_v2(dataIN) {
 			if (AvoidSpikes && (data.data[slotbefore].values[0] == 0))
 				data.data[slotbefore].values = data.data[i].values;//avoid gaps and spikes
 
-			data.data[i].p_ed = ((data.data[i].values[0] + data.data[i].values[1]) - (data.data[slotbefore].values[0] + data.data[slotbefore].values[1])).toFixed(3);
-			data.data[i].p_edw = (data.data[i].p_ed * 1000).toFixed(0);
-			data.data[i].p_er = ((data.data[i].values[2] + data.data[i].values[3]) - (data.data[slotbefore].values[2] + data.data[slotbefore].values[3])).toFixed(3);
-			data.data[i].p_erw = (data.data[i].p_er * 1000).toFixed(0);
-			data.data[i].p_gd = (data.data[i].values[4] - data.data[slotbefore].values[4]).toFixed(3);
-			data.data[i].water = (data.data[i].values[5] - data.data[slotbefore].values[5]).toFixed(3);
+			//values			
+			data.data[i].p_edt1 = (data.data[i].values[0] - data.data[slotbefore].values[0]);
+			data.data[i].p_edt2 = (data.data[i].values[1] - data.data[slotbefore].values[1]);
+			data.data[i].p_ert1 = (data.data[i].values[2] - data.data[slotbefore].values[2]);
+			data.data[i].p_ert2 = (data.data[i].values[3] - data.data[slotbefore].values[3]);
+			data.data[i].p_gd 	= (data.data[i].values[4] - data.data[slotbefore].values[4]);
+			data.data[i].water 	= (data.data[i].values[5] - data.data[slotbefore].values[5]);
+			//sums
+			data.data[i].p_ed 	= (data.data[i].p_edt1 + data.data[i].p_edt2);			
+			data.data[i].p_er 	= (data.data[i].p_ert1 + data.data[i].p_ert2);
+			data.data[i].p_edw  = (data.data[i].p_ed * 1000);
+			data.data[i].p_erw 	= (data.data[i].p_er * 1000);
 		}
 		else {
-			data.data[i].p_ed = (data.data[i].values[0] + data.data[i].values[1]).toFixed(3);
-			data.data[i].p_edw = (data.data[i].p_ed * 1000).toFixed(0);
-			data.data[i].p_er = (data.data[i].values[2] + data.data[i].values[3]).toFixed(3);
-			data.data[i].p_erw = (data.data[i].p_er * 1000).toFixed(0);
-			data.data[i].p_gd = (data.data[i].values[4]).toFixed(3);
-			data.data[i].water = (data.data[i].values[5]).toFixed(3);
+			data.data[i].p_edt1 = (data.data[i].values[0]);
+			data.data[i].p_edt2 = (data.data[i].values[1]);
+			data.data[i].p_ert1 = (data.data[i].values[2]);
+			data.data[i].p_ert2 = (data.data[i].values[3]);
+			data.data[i].p_gd 	= (data.data[i].values[4]);
+			data.data[i].water 	= (data.data[i].values[5]);
+			data.data[i].p_ed 	= (data.data[i].p_edt1 + data.data[i].p_edt2);
+			data.data[i].p_er 	= (data.data[i].p_ert1 + data.data[i].p_ert2);
+			data.data[i].p_edw 	= (data.data[i].p_ed * 1000);
+			data.data[i].p_erw 	= (data.data[i].p_er * 1000);
+			
 		}
 	} //endfor
 	console.log(data);
@@ -558,6 +570,10 @@ function createDatasetsForBURNUP_DAYS(listLABELS, hcBURNUP, listCeiling) {
 	dsE1.data = hcBURNUP.current.data;
 	dsE2.data = hcBURNUP.previous.data;
 
+	//fix decimals in array
+	formatArrayDecimals(dsE1.data, 3);
+	formatArrayDecimals(dsE2.data, 3);
+
 	//set additional config
 	dsE1.spanGaps = true;
 	dsE2.spanGaps = true;		//this dataset is not complete, so straighten line from 0 to first datapoint
@@ -584,7 +600,7 @@ function createDatasetsForBURNUP_DAYS(listLABELS, hcBURNUP, listCeiling) {
 function prepareDataBURNUP_MONTHSINYEAR(data) 
 {
 	//labels for a year
-	var listLABELS = ["0", "JAN", "FEB", "MRT", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+	var listLABELS = ["0"].concat( listMONTHS_SHORT );
 	//calculate chart data
 	const [hcED, hcGD, hcWD] = convertRingBufferToStaticHistoryContainerMIY(data);
 	//create datasets for ELEKTRA
@@ -698,7 +714,7 @@ function convertRingBufferToStaticHistoryContainerDIM(data)
 	//TODO: fix for month JAN
 
 	//list with months
-	var listLABELS = ["JAN", "FEB", "MRT", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+	var listLABELS = listMONTHS_SHORT;
 
 	var listLEGEND = [];
 	listLEGEND.push( listLABELS[nCurrentMM] );
@@ -792,6 +808,11 @@ function createDatasetsForBURNUP_MONTHS(listLABELS, hcBURNUP, listCeiling)
 	dsE2.data = hcBURNUP.previous.data;
 	dsE3.data = hcBURNUP.preprevious.data;
 
+	//fix decimals in array
+	formatArrayDecimals(dsE1.data, 3);
+	formatArrayDecimals(dsE2.data, 3);
+	formatArrayDecimals(dsE3.data, 3);
+
 	//set additional config
 	dsE3.spanGaps = true;		//this dataset is not complete, so straighten line from 0 to first datapoint
 	
@@ -812,4 +833,12 @@ function createDatasetsForBURNUP_MONTHS(listLABELS, hcBURNUP, listCeiling)
 
 	//return chartdata
 	return cdcBurnup;
+}
+
+//limit every value in the array to n decimals
+//toFixed() will convert all into strings, so also add  convertion back to Number
+function formatArrayDecimals(data, decimals){
+	for( var i=0; i<data.length; i++){
+		if( !isNaN(data[i]) ) data[i] = Number(data[i].toFixed(decimals));
+	}
 }
