@@ -730,6 +730,22 @@ function createDashboardGauges()
   gauge3f 	= new Chart(document.getElementById("gauge3f"),     cfgGauge3F);
   gaugeV 		= new Chart(document.getElementById("gauge-v"),     cfgGaugeVOLTAGE);
 }
+
+function updateFromDAL(source, json)
+{
+  console.log("updateFromDAL(); source="+source);
+  console.log(json);
+  /*
+  switch(source)
+  {
+    case "devinfo": parseDeviceInfo(json); break;
+    case "versionmanifest": parseVersionManifest(json); break;
+    default:
+      console.log("missing handler; source="+source);
+      break;
+  }*/
+}
+
 function bootsTrapMain() 
 {
   console.log("bootsTrapMain()");
