@@ -14,6 +14,7 @@ const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
 const URL_DEVICE_INFO   = APIGW + "v2/dev/info";
 const URL_DEVICE_TIME   = APIGW + "v2/dev/time";
 const MAX_SM_ACTUAL     = 15*6; //store the last 15 minutes (each interval is 10sec)
+const MAX_FILECOUNT     = 30;   //maximum filecount on the device is 30
 
 const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
 
@@ -954,8 +955,10 @@ function show_hide_column2(table, col_no, do_show) {
 	 let span = document.querySelector('span');
 	 let main = document.querySelector('main');
 	 let fileSize = document.querySelector('fileSize');
+   let nFilecount=0;
 
 	 Spinner(true);
+   //get filelist
 	 fetch('api/listfiles', {"setTimeout": 5000}).then(function (response) {
 		 return response.json();
 	 }).then(function (json) {
@@ -965,8 +968,9 @@ function show_hide_column2(table, col_no, do_show) {
 	 while (list.hasChildNodes()) {  
 	   list.removeChild(list.firstChild);
 	 }
-
-	   let dir = '<table id="FSTable" width=90%>';
+    
+	   nFilecount = json.length;
+     let dir = '<table id="FSTable" width=90%>';
 	   for (var i = 0; i < json.length - 1; i++) {
 		 dir += "<tr>";
 		 dir += `<td width=250px nowrap><a href ="${json[i].name}" target="_blank">${json[i].name}</a></td>`;
@@ -983,27 +987,45 @@ function show_hide_column2(table, col_no, do_show) {
 			 });
 	   });
 	   main.insertAdjacentHTML('beforeend', '</table>');
+     main.insertAdjacentHTML('beforeend', `<div id='filecount'>Aantal bestanden: ${nFilecount} </div>`);
 	   main.insertAdjacentHTML('beforeend', `<p id="FSFree">Opslag: <b>${json[i].usedBytes} gebruikt</b> | ${json[i].totalBytes} totaal`);
 	   free = json[i].freeBytes;
 	   fileSize.innerHTML = "<b> &nbsp; </b><p>";    // spacer                
 	   Spinner(false);
 	 });	// function(json)
 	 
-	 document.getElementById('Ifile').addEventListener('change', () => {
-		 let nBytes = document.getElementById('Ifile').files[0].size, output = `${nBytes} Byte`;
-		 for (var aMultiples = [
+    //view selected filesize
+	  document.getElementById('Ifile').addEventListener('change', () => {
+      //format filesize
+		  let nBytes = document.getElementById('Ifile').files[0].size;
+      let output = `${nBytes} Byte`;
+		  for (var aMultiples = [
 			 ' KB',
 			 ' MB'
 			], i = 0, nApprox = nBytes / 1024; nApprox > 1; nApprox /= 1024, i++) {
 			  output = nApprox.toFixed(2) + aMultiples[i];
 			}
+
+      var fUpload = true;
+      //check freespace
 			if (nBytes > free) {
-			  fileSize.innerHTML = `<p><small> Bestand Grootte: ${output}</small><strong style="color: red;"> niet genoeg ruimte! </strong><p>`;
-			  document.getElementById('Iupload').setAttribute('disabled', 'disabled');
-			} 
-			else {
-			  fileSize.innerHTML = `<b>Bestand grootte:</b> ${output}<p>`;
+			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> niet genoeg ruimte! </strong><p>`;
+        fUpload = false;
+			}
+      //check filecount
+      //TODO: 
+      //  Although uploading a new file is blocked, REPLACING a file when the count is 30 must still be possible.
+      //  check if filename is already on the list, if so, allow this upload.
+			if ( nFilecount >= MAX_FILECOUNT) {
+			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> Maximaal aantal bestanden (${MAX_FILECOUNT}) bereikt! </strong><p>`;
+        fUpload = false;
+			}
+      if( fUpload ){
+        fileSize.innerHTML = `<b>Bestand grootte:</b> ${output}<p>`;
 			  document.getElementById('Iupload').removeAttribute('disabled');
+      }
+			else {			  
+        document.getElementById('Iupload').setAttribute('disabled', 'disabled');
 			}
 	 });	
   }
