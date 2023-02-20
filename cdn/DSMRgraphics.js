@@ -126,56 +126,7 @@ function ensureChartsReady()
   if( !fGraphsReady) createChartsGRAPH();
 }
 
-  //============================================================================  
-  function renderElectrChart(dataSet, options) {
-    //console.log("Now in renderElectrChart() ..");
-    
-    if (myElectrChart) {
-      myElectrChart.destroy();
-    }
 
-    var ctxElectr = document.getElementById("dataChart").getContext("2d");
-    myElectrChart = new Chart(ctxElectr, {
-      type: 'bar',
-      data: dataSet,
-      options: options,
-    });
-    
-  } // renderElectrChart()
-
-  //============================================================================  
-  function renderWaterChart(dataSet) {
-    //console.log("Now in renderGasChart() ..");
-    
-    if (myWaterChart) {
-      myWaterChart.destroy();
-    }
-
-    var ctxWater = document.getElementById("waterChart").getContext("2d");
-    myWaterChart = new Chart(ctxWater, {
-      type: 'line',
-      data: dataSet,
-      options: optionsWATER
-    });
-    
-  } // renderWaterChart()
-  
-  //============================================================================  
-  function renderGasChart(dataSet) {
-    //console.log("Now in renderGasChart() ..");
-    
-    if (myGasChart) {
-      myGasChart.destroy();
-    }
-
-    var ctxGas = document.getElementById("gasChart").getContext("2d");
-    myGasChart = new Chart(ctxGas, {
-      type: 'line',
-      data: dataSet,
-      options: optionsGAS
-    });
-    
-  } // renderGasChart()
   
   
   //============================================================================  
@@ -409,14 +360,14 @@ function ensureChartsReady()
     }//endfor
 
     //limit all numbers in the arrays to 3 decimals
-    applyArrayFixedDecimals( dsED1, 3);
-    applyArrayFixedDecimals( dsED2, 3);
-    applyArrayFixedDecimals( dsED3, 3);
-    applyArrayFixedDecimals( dsED4, 3);
-    applyArrayFixedDecimals( dsER1, 3);
-    applyArrayFixedDecimals( dsER2, 3);
-    applyArrayFixedDecimals( dsER3, 3);
-    applyArrayFixedDecimals( dsER4, 3);
+    applyArrayFixedDecimals( dsED1.data, 3);
+    applyArrayFixedDecimals( dsED2.data, 3);
+    applyArrayFixedDecimals( dsED3.data, 3);
+    applyArrayFixedDecimals( dsED4.data, 3);
+    applyArrayFixedDecimals( dsER1.data, 3);
+    applyArrayFixedDecimals( dsER2.data, 3);
+    applyArrayFixedDecimals( dsER3.data, 3);
+    applyArrayFixedDecimals( dsER4.data, 3);
 
     //add datasets to the container, order is also display order
     electrData.datasets.push(dsED1);
