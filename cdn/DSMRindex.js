@@ -380,6 +380,52 @@ let dataPa = {
       ]
     };
 
+function loadIcons(){
+Iconify.addCollection({
+   icons: {
+       "mdi-folder-outline": {
+           body: '<path d="M20 18H4V8h16m0-2h-8l-2-2H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z" fill="currentColor"/>',
+       },
+       "mdi-information-outline": {
+           body: '<path d="M11 9h2V7h-2m1 13c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8m0-18A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m-1 15h2v-6h-2v6Z" fill="currentColor"/>',
+       },
+       "mdi-cog": {
+           body: '<path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" fill="currentColor"/>',
+              },
+       "mdi-gauge": {
+           body: '<path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 2a8 8 0 0 1 8 8c0 2.4-1 4.5-2.7 6c-1.4-1.3-3.3-2-5.3-2s-3.8.7-5.3 2C5 16.5 4 14.4 4 12a8 8 0 0 1 8-8m2 1.89c-.38.01-.74.26-.9.65l-1.29 3.23l-.1.23c-.71.13-1.3.6-1.57 1.26c-.41 1.03.09 2.19 1.12 2.6c1.03.41 2.19-.09 2.6-1.12c.26-.66.14-1.42-.29-1.98l.1-.26l1.29-3.21l.01-.03c.2-.51-.05-1.09-.56-1.3c-.13-.05-.26-.07-.41-.07M10 6a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1M7 9a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1m10 0a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1Z" fill="currentColor"/>',
+       },
+       "mdi-lightning-bolt": {
+           body: '<path d="M11 15H6l7-14v8h5l-7 14v-8Z" fill="currentColor"/>',
+       },       
+       "mdi-home-import-outline": {
+           body: '<path d="m15 13l-4 4v-3H2v-2h9V9l4 4M5 20v-4h2v2h10v-7.81l-5-4.5L7.21 10H4.22L12 3l10 9h-3v8H5Z" fill="currentColor"/>',
+       },       
+       "mdi-home-export-outline": {
+           body: '<path d="m24 13l-4 4v-3h-9v-2h9V9l4 4M4 20v-8H1l10-9l7 6.3v.7h-2.21L11 5.69l-5 4.5V18h10v-2h2v4H4Z" fill="currentColor"/>',
+       },  
+       "mdi-fire": {
+           body: '<path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82c-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32c-2.59 2.08-3.61 5.75-2.39 8.9c.04.1.08.2.08.33c0 .22-.15.42-.35.5c-.23.1-.47.04-.66-.12a.58.58 0 0 1-.14-.17c-1.13-1.43-1.31-3.48-.55-5.12C5.78 10 4.87 12.3 5 14.47c.06.5.12 1 .29 1.5c.14.6.41 1.2.71 1.73c1.08 1.73 2.95 2.97 4.96 3.22c2.14.27 4.43-.12 6.07-1.6c1.83-1.66 2.47-4.32 1.53-6.6l-.13-.26c-.21-.46-.77-1.26-.77-1.26m-3.16 6.3c-.28.24-.74.5-1.1.6c-1.12.4-2.24-.16-2.9-.82c1.19-.28 1.9-1.16 2.11-2.05c.17-.8-.15-1.46-.28-2.23c-.12-.74-.1-1.37.17-2.06c.19.38.39.76.63 1.06c.77 1 1.98 1.44 2.24 2.8c.04.14.06.28.06.43c.03.82-.33 1.72-.93 2.27Z" fill="currentColor"/>',
+       },         
+       "mdi-water": {
+           body: '<path d="M12 20a6 6 0 0 1-6-6c0-4 6-10.75 6-10.75S18 10 18 14a6 6 0 0 1-6 6Z" fill="currentColor"/>',
+       },         
+       "mdi-sine-wave": {
+           body: '<path d="M16.5 21c-3 0-4.19-4.24-5.45-8.72C10.14 9.04 9 5 7.5 5C4.11 5 4 11.93 4 12H2c0-.37.06-9 5.5-9c3 0 4.21 4.25 5.47 8.74C13.83 14.8 15 19 16.5 19c3.44 0 3.53-6.93 3.53-7h2c0 .37-.06 9-5.53 9Z" fill="currentColor"/>',
+       },        
+       "mdi-heat-wave": {
+           body: '<path d="m8.5 4.5l-3.1 5l3.1 5.2l-3.3 5.8l-1.8-.9l2.7-4.9L3 9.5l3.7-5.9l1.8.9m6.2-.1l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9m6.3 0l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9" fill="currentColor"/>',
+       }, 
+       "mdi-chart-box-outline": {
+           body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
+       },        
+        
+    },
+   width: 24,
+   height: 24,
+});
+}
+
 window.onload=bootsTrapMain;
 
 //============================================================================  
@@ -827,7 +873,7 @@ function handle_menu_click()
 
 			activeTab = this.id;
 			//console.log("ActiveID - " + activeTab );
-// 			openTab();  		
+//  			openTab();  		
   		});
 	}
 }
@@ -836,6 +882,7 @@ function handle_menu_click()
   
   function bootsTrapMain() {
     console.log("bootsTrapMain()");
+    loadIcons();
 	getDevSettings(); //first of all ... get the device settings
 // 	console.log("hash:"+ location.hash);
 
@@ -867,7 +914,7 @@ function handle_menu_click()
 // 	console.log("location-msg: " + location.hash.split('msg=')[1]);
 // 	console.log("location-hash-split: " + location.hash.split('#')[1].split('?')[0]);
 	//goto tab after reload 
-	if (location.hash == "#FileExplorer") { document.getElementById('bFSexplorer').click(); }
+// 	if (location.hash == "#FSExplorer") { document.getElementById('bFSExplorer').click(); }
 	if (location.hash.split('#')[1].split('?')[0] == "Redirect") { handleRedirect(); }
 
 	//reselect Dash when Home icon has been clicked
@@ -957,85 +1004,165 @@ function show_hide_column2(table, col_no, do_show) {
     document.getElementById("gasChart").style.display  = "none";
 	document.getElementById("waterChart").style.display  = "none";
 
-	if (!EnableHist) {
-	}
-    
-    if (activeTab != "bActualTab") {
+	if (activeTab != "bActualTab") {
       actualTimer = setInterval(refreshSmActual, 60 * 1000);                  // repeat every 60s
     }
-    if (activeTab == "bActualTab") {
-      refreshSmActual();
-      if (tlgrmInterval < 10)
-            actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
-      else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
 
-    } else if (activeTab == "bPlafondTab") {
-      refreshData();
-    } else if (activeTab == "bHoursTab") {
-      refreshHours();
-      clearInterval(tabTimer);
-      tabTimer = setInterval(refreshHours, 58 * 1000); // repeat every 58s
-
-    } else if (activeTab == "bDaysTab") {
-      refreshDays();
-      clearInterval(tabTimer);
-      tabTimer = setInterval(refreshDays, 58 * 1000); // repeat every 58s
-
-    } else if (activeTab == "bMonthsTab") {
-      refreshMonths();
-      clearInterval(tabTimer);
-      tabTimer = setInterval(refreshMonths, 118 * 1000); // repeat every 118s
+	switch (activeTab) {
+		case "bActualTab" : 
+			refreshSmActual();
+		    if (tlgrmInterval < 10)
+            	actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
+      		else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
+      		break;
+		case "bPlafondTab":
+			refreshData();
+			break;
+		case "bHoursTab":
+			refreshHours();
+      		clearInterval(tabTimer);
+     		tabTimer = setInterval(refreshHours, 58 * 1000); // repeat every 58s
+     		break;
+     	case "bDaysTab":
+     		refreshDays();
+      		clearInterval(tabTimer);
+      		tabTimer = setInterval(refreshDays, 58 * 1000); // repeat every 58s
+      		break;
+      	case "bMonthsTab":
+      		refreshMonths();
+      		clearInterval(tabTimer);
+      		tabTimer = setInterval(refreshMonths, 118 * 1000); // repeat every 118s
+      		break;
+      	case "bSysInfoTab":
+	      	refreshDevInfo();
+      		clearInterval(tabTimer);
+      		tabTimer = setInterval(refreshDevInfo, 58 * 1000); // repeat every 58s
+      		break;
+      	case "bFieldsTab":
+      		refreshSmFields();
+      		clearInterval(tabTimer);
+      		tabTimer = setInterval(refreshSmFields, 58 * 1000); // repeat every 58s
+      		break;
+      	case "bTelegramTab":
+      		refreshSmTelegram();
+      		clearInterval(tabTimer); // do not repeat!
+      		break;
+      	case "bInfo_APIdoc": // no action
+      		break;
+      	case "bDashTab":
+      		readGitHubVersion();
+			UpdateDash();
+			clearInterval(tabTimer);
+			clearInterval(actualTimer);  
+			tabTimer = setInterval(UpdateDash, 10 * 1000); // repeat every 10s
+			break;
+		case "bFSExplorer":
+		    FSExplorer();
+		    break;
+		case "bEditMonths":
+			document.getElementById('tabEditMonths').style.display = "block";
+			document.getElementById('tabEditSettings').style.display = "none";
+			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+			EditMonths();
+			break;
+		case "bSettings":
+		case "bEditSettings":
+			refreshDevTime();
+			//refreshDevInfo();
+			data = {};
+			document.getElementById('tabEditSettings').style.display = 'block';
+			document.getElementById('tabEditMonths').style.display = "none";
+			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+			refreshSettings();
+			getDevSettings();
+			activeTab = "bEditSettings";
+			break;
+		case "bSysInfoTab":
+			data = {};
+			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+			refreshDevInfo();
+			tabTimer = setInterval(refreshDevInfo, 10 * 1000); // repeat every 10s
+			break;
+		case "bInfo_frontend":
+			data = {};
+			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+			FrontendConfig();
+			break;
+    }
     
-    } else if (activeTab == "bInfo_SysInfo") {
-      refreshDevInfo();
-      clearInterval(tabTimer);
-      tabTimer = setInterval(refreshDevInfo, 58 * 1000); // repeat every 58s
-
-    } else if (activeTab == "bInfo_Fields") {
-      refreshSmFields();
-      clearInterval(tabTimer);
-      tabTimer = setInterval(refreshSmFields, 58 * 1000); // repeat every 58s
-
-    } else if (activeTab == "bInfo_Telegram") {
-      refreshSmTelegram();
-      clearInterval(tabTimer); // do not repeat!
-
-    } else if (activeTab == "bInfo_APIdoc") {
-      //do nothing = static html
-    } else if (activeTab == "bDashTab") {
-       readGitHubVersion();
-       UpdateDash();
-       clearInterval(tabTimer);
-       clearInterval(actualTimer);  
-       tabTimer = setInterval(UpdateDash, 10 * 1000); // repeat every 10s
-    } else if (activeTab == "bFSexplorer") {
-      FSExplorer();
-    } else if (activeTab == "bEditMonths") {
-      document.getElementById('tabEditMonths').style.display = "block";
-      document.getElementById('tabEditSettings').style.display = "none";
-      clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-      getMonths();
-
-    } else if (activeTab == "bSettings" || activeTab == "bEditSettings") {
-	  refreshDevTime();
-	  //refreshDevInfo();
-	  data = {};
-      document.getElementById('tabEditSettings').style.display = 'block';
-      document.getElementById('tabEditMonths').style.display = "none";
-	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-      refreshSettings();
-      getDevSettings();
-      activeTab = "bEditSettings";
-    } else if (activeTab == "bSysInfoTab") {
-	  data = {};
-	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-      refreshDevInfo();
-	  tabTimer = setInterval(refreshDevInfo, 10 * 1000); // repeat every 10s
-    } else if (activeTab == "bInfo_frontend") {
-	  data = {};
-	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-      FrontendConfig();
-    } 
+ //    if (activeTab == "bActualTab") {
+//       refreshSmActual();
+//       if (tlgrmInterval < 10)
+//             actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
+//       else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
+// 
+//     } else if (activeTab == "bPlafondTab") {
+//       refreshData();
+//     } else if (activeTab == "bHoursTab") {
+//       refreshHours();
+//       clearInterval(tabTimer);
+//       tabTimer = setInterval(refreshHours, 58 * 1000); // repeat every 58s
+// 
+//     } else if (activeTab == "bDaysTab") {
+//       refreshDays();
+//       clearInterval(tabTimer);
+//       tabTimer = setInterval(refreshDays, 58 * 1000); // repeat every 58s
+// 
+//     } else if (activeTab == "bMonthsTab") {
+//       refreshMonths();
+//       clearInterval(tabTimer);
+//       tabTimer = setInterval(refreshMonths, 118 * 1000); // repeat every 118s
+//     
+//     } else if (activeTab == "bSysInfoTab") {
+//       refreshDevInfo();
+//       clearInterval(tabTimer);
+//       tabTimer = setInterval(refreshDevInfo, 58 * 1000); // repeat every 58s
+// 
+//     } else if (activeTab == "bFieldsTab") {
+//       refreshSmFields();
+//       clearInterval(tabTimer);
+//       tabTimer = setInterval(refreshSmFields, 58 * 1000); // repeat every 58s
+// 
+//     } else if (activeTab == "bTelegramTab") {
+//       refreshSmTelegram();
+//       clearInterval(tabTimer); // do not repeat!
+// 
+//     } else if (activeTab == "bInfo_APIdoc") {
+//       //do nothing = static html
+//     } else if (activeTab == "bDashTab") {
+//        readGitHubVersion();
+//        UpdateDash();
+//        clearInterval(tabTimer);
+//        clearInterval(actualTimer);  
+//        tabTimer = setInterval(UpdateDash, 10 * 1000); // repeat every 10s
+//     } else if (activeTab == "bFSExplorer") {
+//       FSExplorer();
+//     } else if (activeTab == "bEditMonths") {
+//       document.getElementById('tabEditMonths').style.display = "block";
+//       document.getElementById('tabEditSettings').style.display = "none";
+//       clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+//       EditMonths();
+// 
+//     } else if (activeTab == "bSettings" || activeTab == "bEditSettings") {
+// 	  refreshDevTime();
+// 	  //refreshDevInfo();
+// 	  data = {};
+//       document.getElementById('tabEditSettings').style.display = 'block';
+//       document.getElementById('tabEditMonths').style.display = "none";
+// 	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+//       refreshSettings();
+//       getDevSettings();
+//       activeTab = "bEditSettings";
+//     } else if (activeTab == "bSysInfoTab") {
+// 	  data = {};
+// 	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+//       refreshDevInfo();
+// 	  tabTimer = setInterval(refreshDevInfo, 10 * 1000); // repeat every 10s
+//     } else if (activeTab == "bInfo_frontend") {
+// 	  data = {};
+// 	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+//       FrontendConfig();
+//     } 
   } // openTab()
   
 
@@ -1049,7 +1176,7 @@ function show_hide_column2(table, col_no, do_show) {
 	 fetch('api/listfiles', {"setTimeout": 5000}).then(function (response) {
 		 return response.json();
 	 }).then(function (json) {
-	
+
 	//clear previous content	 
 	 var list = document.getElementById("FSmain");
 	 while (list.hasChildNodes()) {  
@@ -2282,7 +2409,7 @@ function parseSmFields(data)
   
   
   //============================================================================  
-  function getMonths()
+  function EditMonths()
   {	Spinner(true);
     console.log("fetch("+APIGW+"v2/hist/months)");
     fetch(APIGW+"v2/hist/months", {"setTimeout": 5000})
@@ -2291,7 +2418,7 @@ function parseSmFields(data)
         //console.log(response);
         data = json;
         expandDataSettings(data);
-        showMonths(data, monthType);
+        showMonthsV1(data, monthType);
         Spinner(false);
       })
       .catch(function(error) {
@@ -2302,13 +2429,13 @@ function parseSmFields(data)
       });
 
       document.getElementById('message').innerHTML = newVersionMsg;
-  } // getMonths()
+  } // EditMonths()
 
   
   //============================================================================  
-  function showMonths(data, type)
+  function showMonthsV1(data, type)
   { 
-    console.log("showMonths("+type+")");
+    console.log("showMonthsV1("+type+")");
     //--- first remove all Children ----
     var allChildren = document.getElementById('editMonths');
     while (allChildren.firstChild) {
@@ -2464,7 +2591,7 @@ function parseSmFields(data)
 
     } // sequence EEYY and MM
 
-  } // showMonths()
+  } // showMonthsV1()
 
   
   //============================================================================  
@@ -2487,8 +2614,8 @@ function parseSmFields(data)
   function undoReload()
   {
     if (activeTab == "bEditMonths") {
-      console.log("getMonths");
-      getMonths();
+      console.log("EditMonths");
+      EditMonths();
     } else if (activeTab == "bEditSettings") {
       console.log("undoReload(): reload Settings..");
       data = {};
@@ -2823,18 +2950,18 @@ function parseSmFields(data)
     if (eType == "ED") {
       console.log("Edit Energy Delivered!");
       monthType = eType;
-      getMonths()
-      showMonths(data, monthType);
+      EditMonths()
+      showMonthsV1(data, monthType);
     } else if (eType == "ER") {
       console.log("Edit Energy Returned!");
       monthType = eType;
-      getMonths()
-      showMonths(data, monthType);
+      EditMonths()
+      showMonthsV1(data, monthType);
     } else if (eType == "GD") {
       console.log("Edit Gas Delivered!");
       monthType = eType;
-      getMonths()
-      showMonths(data, monthType);
+      EditMonths()
+      showMonthsV1(data, monthType);
     } else {
       console.log("setEditType to ["+eType+"] is quit shitty!");
       monthType = "";
