@@ -7,9 +7,6 @@
 ***************************************************************************      
 *      
 TODO
-- keuze om voor lokale frontend assets of uit het cdn
--- message bij drempelwaardes 
--- verbruiksrapport einde dag/week/maandstartWiFi
 - C3: logging via usb poort mogelijk maken
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
 - feature: nieuwe meter = beginstand op 0
@@ -33,11 +30,14 @@ TODO
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - Roberto: P1 H2O watersensor gegevens apart versturen (MQTT) van P1 
 - Sluipverbruik bijhouden
-- localisation + 3 decimals frontend tables (R Wiegers)
 - issue: wegvallen wifi geen reconnect / reconnect mqtt
-- ringbuffer naar 31 dagen
+- RNGDays 31 days
+- Modbus TCP (a3) Vrij slave adres. Sommige systemen kennen alleen uniek slave adres/id. Maken geen onderscheid in IP adres omdat soms meer RS485/RTU devices achter 1 TCP naar RTU converter (bijvoorbeeld Moxa M-gate) zitten.
+- Modbus Registers van de "Actueel" pagina lijkt me in eerste instantie voldoende. Wel mis ik zo iets als m3 (of liters) gas per uur. Belangrijk bij hybride warmteopwekking (ketel en warmtepomp), waarbij elke liter gas er één te veel is :-). Is natuurlijk ook softwarematig te maken.
 
 WiP
+√ boundary check ListFS  
+√ boundary check APIlistFiles 
 
 
 ************************************************************************************
@@ -57,8 +57,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define USE_NTP_TIME              
 //#define ETHERNET
 //#define STUB                      //test only : first draft
-//#define HEATLINK                  //first draft
-//#define INSIGHT            
+//#define HEATLINK        //first draft
+//#define INSIGHT         
+ #define AP_ONLY         
 
 #define ALL_OPTIONS "[CORE]"
   
@@ -117,19 +118,24 @@ void setup()
   
 //=============start Networkstuff ==================================
 #ifndef ETHERNET
-  startWiFi(settingHostname, 240);  // timeout 4 minuten
+  #ifndef AP_ONLY
+    startWiFi(settingHostname, 240);  // timeout 4 minuten
+  #else 
+    startAP();
+  #endif
 #else
   startETH();
 #endif
   delay(100);
   startTelnet();
+#ifndef  AP_ONLY 
   startMDNS(settingHostname);
   startNTP();
-  MQTTclient.setBufferSize(800);
+    MQTTclient.setBufferSize(800);
 
 //================ Start MQTT  ======================================
 if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT();
-
+#endif
 //================ Check necessary files ============================
   if (!DSMRfileExist(settingIndexPage, false) ) {
     DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
