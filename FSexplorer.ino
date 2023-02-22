@@ -140,7 +140,7 @@ void APIlistFiles()             // Senden aller Daten an den Client
   while ( file && ( fileNr < 30 ) )  
   {
     dirMap[fileNr].Name[0] = '\0';
-    strncpy( dirMap[fileNr].Name, file.name(), 20 );
+    strncpy( dirMap[fileNr].Name, file.name(), 30 );
     dirMap[fileNr].Size = file.size();
     fileNr++;
     file = root.openNextFile();

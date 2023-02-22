@@ -324,7 +324,12 @@ ul ul ul {
 #Home {margin-right:50px}
 
 ul:after { clear: both; }
-nav ul li .mdi{font-size:138%;}
+#myTopnav .iconify{font-size:130%;}
+
+#DashTab h1 svg.iconify , #DashTab h1 svg.iconify path  {
+    background-color: rgb(49, 75, 119);
+	color: white!important;
+	}
 nav {
 	position: fixed;
     left: 0;

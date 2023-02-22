@@ -82,7 +82,11 @@
   #define GREEN 2
   byte R_value = 0, B_value = 0, G_value = 0;
 
-#define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
+#ifdef AP_ONLY  
+  #define _DEFAULT_HOMEPAGE  "/DSMRindexLOCAL.html"
+#else
+  #define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
+#endif
 #define SETTINGS_FILE      "/DSMRsettings.json"
 #define HOST_DATA_FILES    "cdn.jsdelivr.net"
 #define PATH_DATA_FILES    "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/data"
