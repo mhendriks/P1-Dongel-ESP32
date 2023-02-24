@@ -9,20 +9,9 @@
 ***************************************************************************      
 */
 const APIGW=window.location.protocol+'//'+window.location.host+'/api/';
-
-const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
-const URL_DEVICE_INFO   = APIGW + "v2/dev/info";
-const URL_DEVICE_TIME   = APIGW + "v2/dev/time";
-const MAX_SM_ACTUAL     = 15*6; //store the last 15 minutes (each interval is 10sec)
-const MAX_FILECOUNT     = 30;   //maximum filecount on the device is 30
-
-const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
-
-const jsversie			= 221201;
-
-const SQUARE_M_CUBED = "\u33A5";
+const jsversie			= 221201
   
-"use strict";
+  "use strict";
 
   let activeTab             = "bDashTab";
   let PauseAPI				= false; //pause api call when browser is inactive
@@ -49,95 +38,7 @@ const SQUARE_M_CUBED = "\u33A5";
   var data       			= [];
   var DayEpoch				= 0;
   let monthType        		= "ED";
-  let settingFontColor 		= 'white';
-  var objDAL = null;
-
-  //The Data Access Layer for the DSMR
-  // - acts as an cache between frontend and server
-  // - schedules refresh to keep data fresh
-  // - stores data for the history functions
-  class dsmr_dal_main{
-    constructor() {
-      this.devinfo=[];
-			this.version_manifest = [];
-      this.actual=[];
-      this.actual_history = [];
-      this.timerREFRESH_ACTUAL = 0;      
-      this.callback=null;
-      }
-  
-    fetchDataJSON(url, fnHandleData) {
-      console.log("DAL::fetchDataJSON( "+url+" )");
-      fetch(url)
-      .then(response => response.json())
-      .then(json => { fnHandleData(json); })
-      .catch(function (error) {
-        var p = document.createElement('p');
-        p.appendChild( document.createTextNode('Error: ' + error.message) );
-      });
-    }
-
-    //use a callback when you want to know if the data is updated
-    setCallback(fnCB){
-      this.callback = fnCB;
-    }
-  
-    init(){
-      this.refreshDeviceInformation();
-      this.refreshActual();
-    } 	
-
-    //single call; no timer
-    refreshDeviceInformation(){
-      console.log("DAL::refreshDeviceInformation");
-			this.fetchDataJSON( URL_VERSION_MANIFEST, this.parseVersionManifest.bind(this));
-      this.fetchDataJSON( URL_DEVICE_INFO, this.parseDeviceInfo.bind(this));
-    }
-    //store result and call callback if set
-    parseDeviceInfo(json){
-      this.devinfo = json;
-      if(this.callback) this.callback('devinfo', json);
-    }
-    //store result and call callback if set
-		parseVersionManifest(json){
-			this.version_manifest = json;
-      if(this.callback) this.callback('versionmanifest', json);
-		}
-
-    // refresh and parse actual data, store and add to history
-    //refresh every 10 sec
-    refreshActual(){
-      console.log("DAL::refreshActual");
-      clearInterval(this.timerREFRESH_ACTUAL);      
-      this.fetchDataJSON( URL_SM_ACTUAL, this.parseActual.bind(this));
-      this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), 10 * 1000);
-    }
-    parseActual(json){
-      this.actual = json;
-      this.#addActualHistory( json );
-    }
-    #addActualHistory(json){
-      if( this.actual_history.length >= MAX_SM_ACTUAL) this.actual_history.shift();
-      this.actual_history.push(json);
-    }
-  
-    //
-    // getters
-    //
-    getDeviceInfo(){
-      return this.devinfo;
-    }
-		getVersionManifest(){
-			return this.version_manifest;
-		}
-    getActual(){
-      return this.actual;
-    }    
-    //the last (MAX_ACTUAL_HISTORY) actuals
-    getActualHistory(){
-      return this.actual_history;
-    }
-  }
+  let settingFontColor 		= 'white'
                     
   var monthNames 			= [ "indxNul","Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December","\0"];
   const spinner 			= document.getElementById("loader");
@@ -172,96 +73,312 @@ var TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wm
 var hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
 var day = 0;
 
-//default struct for the gauge element
-// ! structuredClone can NOT copy a struct with functions
-let cfgDefaultGAUGE = {
-  type: 'doughnut',
-  data: {
-    datasets: [
-      {
-        label: "l1",
-        backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-      },
-      {
-        label: "l2",
-        backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-      },
-      {
-        label: "l3",
-        backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-      }
-    ]
-  },
-  options: {
+let TrendV = {
+    type: 'doughnut',
+    data: {
+      datasets: [
+        {
+          label: "l1",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "l2",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "l3",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    },
+    options: {
     events: [],
     title: {
-      display: true,
-      text: 'Voltage',
-      position: "bottom",
-      padding: -18,
-      fontSize: 17,
-      fontColor: "#000",
-      fontFamily: "Dosis",
-    },
-    responsive: true,
-    circumference: Math.PI,
-    rotation: -Math.PI,
-    plugins: {
-      labels: {
-        render: {},   //structuredClone will fail if there is a function
+            display: true,
+            text: 'Voltage',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+	  rotation: -Math.PI,
+      plugins: {
+      	labels: {
+			render: function (args) {
+				return args.value + 207 + " V";
+			},//render
         arc: true,
-        fontColor: ["#fff", "rgba(0,0,0,0)"],
+        fontColor: ["#fff","rgba(0,0,0,0)"],
       },//labels      
     }, //plugins
-    legend: { display: false },
-  }, //options
+    legend: {display: false},
+    }, //options
 };
 
-//copy for phases based gauges
-let cfgDefaultPHASES = structuredClone(cfgDefaultGAUGE);
-cfgDefaultPHASES.data.datasets[0].label = "L1";
-cfgDefaultPHASES.data.datasets[1].label = "L2";
-cfgDefaultPHASES.data.datasets[2].label = "L3";
+let TrendG = {
+    type: 'doughnut',
+    data: {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    },
+    options: {
+    title: {
+            display: true,
+            text: 'm3',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+			rotation: -Math.PI,
+      plugins: {
+      labels: {
+        render: function (args) {
+          return args.value + " \u33A5";
+        },//render
+        arc: true,
+        fontColor: ["#fff","rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+    legend: {display: false},
+    }, //options
+};
 
-//copy for trend based gauges
-let cfgDefaultTREND = structuredClone(cfgDefaultGAUGE);
-cfgDefaultTREND.data.datasets[0].label = "vandaag";
-cfgDefaultTREND.data.datasets[1].label = "gister";
-cfgDefaultTREND.data.datasets[2].label = "eergisteren";
+
+let TrendQ = {
+    type: 'doughnut',
+    data: {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    },
+    options: {
+    title: {
+            display: true,
+            text: 'kJ',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+			rotation: -Math.PI,
+      plugins: {
+      labels: {
+        render: function (args) {
+          return args.value;
+        },//render
+        arc: true,
+        fontColor: ["#fff","rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+    legend: {display: false},
+    }, //options
+};
 
 
-//phases based gauges
-function renderLabelVoltage(args){return args.value + 207 + " V";}
-let cfgGaugeVOLTAGE = structuredClone(cfgDefaultPHASES);
-cfgGaugeVOLTAGE.options.title.text = "Voltage";
-cfgGaugeVOLTAGE.options.plugins.labels.render = renderLabelVoltage;
+let Trend3f = {
+    type: 'doughnut',
+    data: {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "l1",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "l2",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "l3",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    },
+    options: {
+    title: {
+            display: true,
+            text: 'Ampere',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+			rotation: -Math.PI,
+      plugins: {
+      labels: {
+        render: function (args) {
+          return args.value + " A";
+        },//render
+        arc: true,
+        fontColor: ["#fff","rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+    legend: {display: false},
+    }, //options
+};
 
-function renderLabel3F(args){return args.value + " A";}
-let cfgGauge3F = structuredClone(cfgDefaultPHASES);
-cfgGauge3F.options.title.text = "Ampere";
-cfgGauge3F.options.plugins.labels.render = renderLabel3F;
 
+let TrendW = {
+    type: 'doughnut',
+    data: {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    },
+    options: {
+    title: {
+            display: true,
+            text: 'liter',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+			rotation: -Math.PI,
+      plugins: {
+      labels: {
+        render: function (args) {
+          return args.value + " ltr";
+        },//render
+        arc: true,
+        fontColor: ["#fff","rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+    legend: {display: false},
+    }, //options
+};
 
-//trend based gauges
-function renderLabelElektra(args){return args.value + " kWh";}
-let cfgGaugeELEKTRA = structuredClone(cfgDefaultTREND);
-cfgGaugeELEKTRA.options.title.text = "kWh";
-cfgGaugeELEKTRA.options.plugins.labels.render = renderLabelElektra;
+let optionsP = {
+title: {
+            display: true,
+            text: 'kWh',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+		rotation:  - Math.PI,
+      plugins: {
+      labels: {
+        render: function (args) {
+          return args.value + " kWh";
+        },//render
+        arc: true,
+        fontColor: ["#fff","rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+      legend: {display: false},
+}; 
+    
+let dataP = {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+};
 
-function renderLabelGas(args){return args.value + " " + SQUARE_M_CUBED;}
-let cfgGaugeGAS = structuredClone(cfgDefaultTREND);
-cfgGaugeGAS.options.title.text = SQUARE_M_CUBED;
-cfgGaugeGAS.options.plugins.labels.render = renderLabelGas;
+let dataPi = {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+	};
 
-function renderLabelWarmte(args){return args.value;}
-let cfgGaugeWARMTE = structuredClone(cfgDefaultTREND);
-cfgGaugeWARMTE.options.title.text = "kJ";
-cfgGaugeWARMTE.options.plugins.labels.render = renderLabelWarmte;
-
-function renderLabelWater(args){return args.value + " ltr";}
-let cfgGaugeWATER = structuredClone(cfgDefaultTREND);
-cfgGaugeWATER.options.title.text = "Liter";
-cfgGaugeWATER.options.plugins.labels.render = renderLabelWater;
+let dataPa = {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    };
 
 function loadIcons(){
 Iconify.addCollection({
@@ -301,8 +418,7 @@ Iconify.addCollection({
        }, 
        "mdi-chart-box-outline": {
            body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
-       },        
-        
+       },   
     },
    width: 24,
    height: 24,
@@ -411,35 +527,31 @@ function SetOnSettings(json){
 // 		document.getElementById("gasChart").style.height = "250px";
 	}
 }
-
-function parseVersionManifest(json)
-{
-  console.log("parseVersionManifest() - ", json);
-  LastVersion = json.version;
-  LastVersionMajor = json.major;
-  LastVersionMinor = json.minor;
-  LastVersionFix = json.fix;
-  LastVersionBuid = json.build;
-  LastVersionNotes = json.notes;
-  LastVersionOTA = json.ota_url;
-}
   
 //============================================================================  
-function ReadVersionManifest() {
-  console.log("ReadVersionManifest");
-  Spinner(true);
-  fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
-    .then(function (response) {
-      return response.json();})
-    .then(function (json) {
-      console.log("version manifest: " + JSON.stringify(json));
-      parseVersionManifest(json);
-      Spinner(false);
-    }
-  );	// function(json)  
-}
+  
+function ReadVersionManifest(){
+	console.log("ReadVersionManifest");
+	Spinner(true);
+	 fetch('http://ota.smart-stuff.nl/v5/version-manifest.json?dummy='+Date.now(), {"setTimeout": 5000}).then(function (response) {
+		 return response.json();
+	 }).then(function (json) {
+	 	console.log("version manifest: " + JSON.stringify(json) );
+	 	
+	 	LastVersion = json.version;
+	 	LastVersionMajor = json.major;
+	 	LastVersionMinor = json.minor;
+	 	LastVersionFix = json.fix;
+	 	LastVersionBuid = json.build;
+	 	LastVersionNotes = json.notes;
+	 	LastVersionOTA = json.ota_url;
+	}
+	 );	// function(json)
+	 	Spinner(false);
 
-//============================================================================   
+}
+//============================================================================  
+  
 function UpdateDash()
 {	
 	// if (PauseAPI) return;
@@ -766,48 +878,7 @@ function handle_menu_click()
 }
 
   //============================================================================  
-function createDashboardGauges()
-{
-  trend_p 	= new Chart(document.getElementById("container-3"), cfgGaugeELEKTRA);
-	trend_pi 	= new Chart(document.getElementById("container-5"), cfgGaugeELEKTRA);
-	trend_pa 	= new Chart(document.getElementById("container-6"), cfgGaugeELEKTRA);
-  trend_g 	= new Chart(document.getElementById("container-4"), cfgGaugeGAS);
-	trend_q 	= new Chart(document.getElementById("container-q"), cfgGaugeWARMTE);
-  trend_w 	= new Chart(document.getElementById("container-7"), cfgGaugeWATER);
-  gauge3f 	= new Chart(document.getElementById("gauge3f"),     cfgGauge3F);
-  gaugeV 		= new Chart(document.getElementById("gauge-v"),     cfgGaugeVOLTAGE);
-}
-
-function updateFromDAL(source, json)
-{
-  console.log("updateFromDAL(); source="+source);
-  console.log(json);
-  /*
-  switch(source)
-  {
-    case "devinfo": parseDeviceInfo(json); break;
-    case "versionmanifest": parseVersionManifest(json); break;
-    default:
-      console.log("missing handler; source="+source);
-      break;
-  }*/
-}
-
-function bootsTrapMain() 
-{
-  console.log("bootsTrapMain()");
   
-  getDevSettings();
-
-  createDashboardGauges();
-
-  //init DAL
-  objDAL = new dsmr_dal_main();
-  objDAL.setCallback(updateFromDAL);
-  objDAL.init();
-  
-<<<<<<< HEAD
-=======
   function bootsTrapMain() {
     console.log("bootsTrapMain()");
     loadIcons();
@@ -824,7 +895,6 @@ function bootsTrapMain()
 	trend_w 	= new Chart(document.getElementById("container-7"), TrendW);
 	gauge3f 	= new Chart(document.getElementById("gauge3f"), Trend3f);
 	gaugeV 		= new Chart(document.getElementById("gauge-v"), TrendV);
->>>>>>> befc3cf47973042b05196791330ae95d5c98a6be
             
 	handle_menu_click();
 	FrontendConfig();
@@ -1100,10 +1170,8 @@ function show_hide_column2(table, col_no, do_show) {
 	 let span = document.querySelector('span');
 	 let main = document.querySelector('main');
 	 let fileSize = document.querySelector('fileSize');
-   let nFilecount=0;
 
 	 Spinner(true);
-   //get filelist
 	 fetch('api/listfiles', {"setTimeout": 5000}).then(function (response) {
 		 return response.json();
 	 }).then(function (json) {
@@ -1113,9 +1181,8 @@ function show_hide_column2(table, col_no, do_show) {
 	 while (list.hasChildNodes()) {  
 	   list.removeChild(list.firstChild);
 	 }
-    
-	   nFilecount = json.length;
-     let dir = '<table id="FSTable" width=90%>';
+
+	   let dir = '<table id="FSTable" width=90%>';
 	   for (var i = 0; i < json.length - 1; i++) {
 		 dir += "<tr>";
 		 dir += `<td width=250px nowrap><a href ="${json[i].name}" target="_blank">${json[i].name}</a></td>`;
@@ -1132,52 +1199,41 @@ function show_hide_column2(table, col_no, do_show) {
 			 });
 	   });
 	   main.insertAdjacentHTML('beforeend', '</table>');
-     main.insertAdjacentHTML('beforeend', `<div id='filecount'>Aantal bestanden: ${nFilecount} </div>`);
 	   main.insertAdjacentHTML('beforeend', `<p id="FSFree">Opslag: <b>${json[i].usedBytes} gebruikt</b> | ${json[i].totalBytes} totaal`);
 	   free = json[i].freeBytes;
 	   fileSize.innerHTML = "<b> &nbsp; </b><p>";    // spacer                
 	   Spinner(false);
 	 });	// function(json)
 	 
-    //view selected filesize
-	  document.getElementById('Ifile').addEventListener('change', () => {
-      //format filesize
-		  let nBytes = document.getElementById('Ifile').files[0].size;
-      let output = `${nBytes} Byte`;
-		  for (var aMultiples = [
+	 document.getElementById('Ifile').addEventListener('change', () => {
+		 let nBytes = document.getElementById('Ifile').files[0].size, output = `${nBytes} Byte`;
+		 for (var aMultiples = [
 			 ' KB',
 			 ' MB'
 			], i = 0, nApprox = nBytes / 1024; nApprox > 1; nApprox /= 1024, i++) {
 			  output = nApprox.toFixed(2) + aMultiples[i];
 			}
-
-      var fUpload = true;
-      //check freespace
 			if (nBytes > free) {
-			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> niet genoeg ruimte! </strong><p>`;
-        fUpload = false;
-			}
-      //check filecount
-      //TODO: 
-      //  Although uploading a new file is blocked, REPLACING a file when the count is 30 must still be possible.
-      //  check if filename is already on the list, if so, allow this upload.
-			if ( nFilecount >= MAX_FILECOUNT) {
-			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> Maximaal aantal bestanden (${MAX_FILECOUNT}) bereikt! </strong><p>`;
-        fUpload = false;
-			}
-      if( fUpload ){
-        fileSize.innerHTML = `<b>Bestand grootte:</b> ${output}<p>`;
+			  fileSize.innerHTML = `<p><small> Bestand Grootte: ${output}</small><strong style="color: red;"> niet genoeg ruimte! </strong><p>`;
+			  document.getElementById('Iupload').setAttribute('disabled', 'disabled');
+			} 
+			else {
+			  fileSize.innerHTML = `<b>Bestand grootte:</b> ${output}<p>`;
 			  document.getElementById('Iupload').removeAttribute('disabled');
-      }
-			else {			  
-        document.getElementById('Iupload').setAttribute('disabled', 'disabled');
 			}
 	 });	
   }
-
-  function parseDeviceInfo(obj)
-  {
-    var tableRef = document.getElementById('tb_info');
+  
+  //============================================================================  
+  function refreshDevInfo()
+  { Spinner(true);
+    fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
+      .then(response => response.json())
+      .then(json => {
+        console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
+		Spinner(false);
+        obj = json;
+        var tableRef = document.getElementById('tb_info');
         //clear table
 		while (tableRef.hasChildNodes()) { tableRef.removeChild(tableRef.lastChild);}
 
@@ -1241,17 +1297,6 @@ function show_hide_column2(table, col_no, do_show) {
 		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' href='/remote-update?version=" + LastVersion + "'>Klik voor update</a>";
 		  else VerCel3.innerHTML = "laatste versie";
 	  }
-  }
-  
-  //============================================================================  
-  function refreshDevInfo()
-  { Spinner(true);
-    fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-        console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
-        parseDeviceInfo(json);
-		    Spinner(false);
       })
       .catch(function(error) {
         var p = document.createElement('p');
@@ -1309,7 +1354,6 @@ function show_hide_column2(table, col_no, do_show) {
   function refreshDevTime()
   {
 	alert_message("");
-  document.getElementById('theTime').classList.remove("afterglow");
     console.log("Refresh api/v2/dev/time ..");
     
 	let controller = new AbortController();
@@ -1322,9 +1366,7 @@ function show_hide_column2(table, col_no, do_show) {
 
 	  //after reboot checks of the server is up and running and redirects to home
       if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
-      document.getElementById('theTime').classList.add("afterglow");
-      
-    })
+      })
       .catch(function(error) {    
 		if (error.name === "AbortError") {console.log("time abort error")}
 //         var p = document.createElement('p');
@@ -1337,20 +1379,26 @@ function show_hide_column2(table, col_no, do_show) {
   } // refreshDevTime()
     
   //============================================================================  
-  function refreshSmActual() {
-    document.getElementById("actualTable").classList.remove("afterglow");
-    Spinner(true);
-    var data = objDAL.getActual();
-    //copyActualToChart(data);
-    if (presentationType == "TAB")
-      showActualTable(data);
-    else{
-      var hist = objDAL.getActualHistory();  
-      copyActualHistoryToChart(hist);
-      showActualGraph();
-    }
-    Spinner(false);
-  }
+  function refreshSmActual()
+  { 
+  	Spinner(true);
+    fetch(APIGW+"v2/sm/actual", {"setTimeout": 5000})
+      .then(response => response.json())
+      .then(json => {
+          console.log("actual parsed .., fields is ["+ JSON.stringify(json)+"]");
+          data = json;
+          copyActualToChart(data);
+          if (presentationType == "TAB")
+                showActualTable(data);
+          else  showActualGraph(data);
+        //console.log("-->done..");
+         Spinner(false);
+      }) //json
+      .catch(function(error) {
+        var p = document.createElement('p');
+        p.appendChild( document.createTextNode('Error: ' + error.message) );
+      }); //catch
+  };  // refreshSmActual()
   
 // format a identifier
 // input = "4530303433303036393938313736353137"
@@ -1512,77 +1560,84 @@ function parseSmFields(data)
   //============================================================================  
   function expandData(data)
   {
+	//console.log("expandData2: data length:"+ data.data.length );
+	//console.log("expandData2: actslot:"+ data.actSlot );
     var i;
     var slotbefore;
+    	
+    //--- first check op volgordelijkheid ------    
+// 	if (activeTab == "HoursTab") {  
+//     for (let i=0; i<(data.length -1); i++)
+//     {
+//       slotbefore = math.mod(i-1, data.data.length);
+// 	  if (data[i].edt1 < data[i+1].edt1 || data[i].edt2 < data[i+1].edt2)
+//       {
+//         console.log("["+(i)+"] ["+data[i].recid+"] := ["+(i+1)+"]["+data[i+1].recid+"]"); 
+//         data[i].edt1 = data[i+1].edt1 * 1.0;
+//         data[i].edt2 = data[i+1].edt2 * 1.0;
+//         data[i].ert1 = data[i+1].ert1 * 1.0;
+//         data[i].ert2 = data[i+1].ert2 * 1.0;
+//         data[i].gdt  = data[i+1].gdt  * 1.0;
+//       }
+//     } // for ...
+//     }
     for (let x=data.data.length + data.actSlot; x > data.actSlot; x--)
-    {
-      i = x % data.data.length;
-      slotbefore = math.mod(i-1, data.data.length);
-      var costsED = 0;
-      var costsER = 0;
+    {	i = x % data.data.length;
+        slotbefore = math.mod(i-1, data.data.length);
+		//console.log("ExpandData2 - x: "+x); 
+		//console.log("ExpandData2 - i: "+i);
+		//console.log("ExpandData2 - slotbefore: "+slotbefore); 
+		//console.log("gd_tariff: "+gd_tariff); 
+		//console.log("ed_tariff: "+ed_tariff1); 
+      var     costs     = 0;
       if (x != data.actSlot 	)
-      {
-        //avoid gaps and spikes
-        if ( AvoidSpikes && ( data.data[slotbefore].values[0] == 0 ) ) data.data[slotbefore].values = data.data[i].values;
-        
-        //simple differences
-        data.data[i].p_edt1= (data.data[i].values[0] - data.data[slotbefore].values[0]);
-        data.data[i].p_edt2= (data.data[i].values[1] - data.data[slotbefore].values[1]);
-        data.data[i].p_ert1= (data.data[i].values[2] - data.data[slotbefore].values[2]);
-        data.data[i].p_ert2= (data.data[i].values[3] - data.data[slotbefore].values[3]);
-		    data.data[i].p_gd  = (data.data[i].values[4] - data.data[slotbefore].values[4]);
-        data.data[i].water = (data.data[i].values[5] - data.data[slotbefore].values[5]);
+      { 
+        if ( AvoidSpikes && ( data.data[slotbefore].values[0] == 0 ) ) data.data[slotbefore].values = data.data[i].values;//avoid gaps and spikes
+		data.data[i].p_ed  = ((data.data[i].values[0] + data.data[i].values[1])-(data.data[slotbefore].values[0] +data.data[slotbefore].values[1])).toFixed(3);
+        data.data[i].p_edw = (data.data[i].p_ed * 1000).toFixed(0);
+        data.data[i].p_er  = ((data.data[i].values[2] + data.data[i].values[3])-(data.data[slotbefore].values[2] +data.data[slotbefore].values[3])).toFixed(3);
+        data.data[i].p_erw = (data.data[i].p_er * 1000).toFixed(0);
+        data.data[i].p_gd  = (data.data[i].values[4]  - data.data[slotbefore].values[4]).toFixed(3);
+		data.data[i].water  = (data.data[i].values[5]  - data.data[slotbefore].values[5]).toFixed(3);
 
-        //sums of T1 & T2
-		    data.data[i].p_ed  = (data.data[i].p_edt1 + data.data[i].p_edt2);
-        data.data[i].p_er  = (data.data[i].p_ert1 + data.data[i].p_ert2);
-        
-        //sums in watts
-        data.data[i].p_edw = (data.data[i].p_ed * 1000);
-        data.data[i].p_erw = (data.data[i].p_er * 1000);        
-
-        //-- calculate costs
-        costsED  = ( data.data[i].p_edt1 * ed_tariff1 ) + ( data.data[i].p_edt2 * ed_tariff2 );
-        costsER  = ( data.data[i].p_ert1 * er_tariff1 ) + ( data.data[i].p_ert2 * er_tariff2 );
-        data.data[i].costs_e = costsED - costsER;
-        
+        //-- calculate Energy Delivered costs
+        costs = ( (data.data[i].values[0] - data.data[slotbefore].values[0]) * ed_tariff1 );
+        costs = costs + ( (data.data[i].values[1] - data.data[slotbefore].values[1]) * ed_tariff2 );
+        //-- subtract Energy Returned costs
+        costs = costs - ( (data.data[i].values[2] - data.data[slotbefore].values[2]) * er_tariff1 );
+        costs = costs - ( (data.data[i].values[3] - data.data[slotbefore].values[3]) * er_tariff2 );
+        data.data[i].costs_e = costs;
         //-- add Gas Delivered costs
-        data.data[i].costs_g = HeeftGas ? ( data.data[i].p_gd  * gd_tariff ) : 0;
-
+        data.data[i].costs_g = HeeftGas?( (data.data[i].values[4]  - data.data[slotbefore].values[4])  * gd_tariff ):0;
         //-- compute network costs
-        data.data[i].costs_nw = (electr_netw_costs + (HeeftGas ? gas_netw_costs : 0)) * 1.0;
-
+        data.data[i].costs_nw = (electr_netw_costs + (HeeftGas?gas_netw_costs:0)) * 1.0;
+		
+// 		console.log("costs_nw: "+data.data[i].costs_nw); 
+// 		console.log("gas_netw_costs: "+gas_netw_costs); 
+// 		console.log("electr_netw_costs: "+electr_netw_costs); 
+// 		console.log("HeeftGas: "+HeeftGas?"yes":"no"); 
+		
         //-- compute total costs
         data.data[i].costs_tt = ( (data.data[i].costs_e + data.data[i].costs_g + data.data[i].costs_nw) * 1.0);
       }
       else
       {
-        costs = 0;
-        data.data[i].p_edt1    = data.data[i].values[0];
-        data.data[i].p_edt2    = data.data[i].values[1];
-        data.data[i].p_ert1    = data.data[i].values[2];        
-        data.data[i].p_ert2    = data.data[i].values[3];        
-        data.data[i].p_gd      = data.data[i].values[4];
-		    data.data[i].water     = data.data[i].values[5];
-        data.data[i].p_ed      = (data.data[i].p_edt1 + data.data[i].p_edt2);
-        data.data[i].p_er      = (data.data[i].p_ert1 + data.data[i].p_ert2);        
-        data.data[i].p_edw     = (data.data[i].p_ed * 1000);
-        data.data[i].p_erw     = (data.data[i].p_er * 1000);
+        costs             = 0;
+        data.data[i].p_ed      = (data.data[i].values[0] +data.data[i].values[1]).toFixed(3);
+        data.data[i].p_edw     = (data.data[i].p_ed * 1000).toFixed(0);
+        data.data[i].p_er      = (data.data[i].values[2] +data.data[i].values[3]).toFixed(3);
+        data.data[i].p_erw     = (data.data[i].p_er * 1000).toFixed(0);
+        data.data[i].p_gd      = (data.data[i].values[4]).toFixed(3);
+		data.data[i].water     = (data.data[i].values[5]).toFixed(3);
         data.data[i].costs_e   = 0.0;
         data.data[i].costs_g   = 0.0;
         data.data[i].costs_nw  = 0.0;
         data.data[i].costs_tt  = 0.0;
       }
     } // for i ..
+    //console.log("leaving expandData() ..");
+	//console.log("expandData2: eind data "+ JSON.stringify(data));
   } // expandData()
-
-  //limit every value in the array to n decimals
-  //toFixed() will convert all into strings, so also add  convertion back to Number
-  function applyArrayFixedDecimals(data, decimals){
-    for( var i=0; i<data.length; i++){
-      if( !isNaN(data[i]) ) data[i] = Number(data[i].toFixed(decimals));
-    }
-  }
   
   //============================================================================  
   function alert_message(msg) {

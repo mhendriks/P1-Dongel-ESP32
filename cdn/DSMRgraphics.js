@@ -9,15 +9,11 @@
 ***************************************************************************      
 */
 
-//store last 90 TELEGRAM objects
-const MAX_TELEGRAM_HISTORY = 15 * 6;
-var listTELEGRAMS = [];
 let TimerActual;
 let actPoint        = 0;
 let maxPoints       = 100;
 var actLabel        = "-";
 var gasDelivered    = 0;
-var fGraphsReady = false;
 
 var electrData = createChartDataContainer();
 var actElectrData = createChartDataContainer();
@@ -83,9 +79,6 @@ var optionsGLOBAL = {
   } // scales
 }; // optionsGLOBAL
 
-var optionsELEKTRA = structuredClone(optionsGLOBAL);
-optionsELEKTRA.scales.yAxes[0].scaleLabel.labelString = "kWh";
-
 var actElectrOptions = structuredClone(optionsGLOBAL);
 actElectrOptions.scales.yAxes[0].scaleLabel.labelString = "kilo Watt";
 
@@ -110,53 +103,82 @@ var myElectrChart;
 var myGasChart;
 var myWaterChart;
 
-function createChartsGRAPH()
-{
-  var ctx = null;
-  ctx = document.getElementById("dataChart").getContext("2d");
-  myElectrChart = new Chart(ctx, { type: 'bar', data: [], options: optionsELEKTRA});
-  ctx = document.getElementById("gasChart").getContext("2d");
-  myGasChart = new Chart(ctx, { type: 'line', data: [], options: optionsGAS });
-  ctx = document.getElementById("waterChart").getContext("2d");
-  myWaterChart = new Chart(ctx, { type: 'line', data: [], options: optionsWATER });
-  fGraphsReady = true;
-}
-function ensureChartsReady()
-{
-  if( !fGraphsReady) createChartsGRAPH();
-}
+  //============================================================================  
+  function renderElectrChart(dataSet, options) {
+    //console.log("Now in renderElectrChart() ..");
+    
+    if (myElectrChart) {
+      myElectrChart.destroy();
+    }
 
+    var ctxElectr = document.getElementById("dataChart").getContext("2d");
+    myElectrChart = new Chart(ctxElectr, {
+      type: 'bar',
+      data: dataSet,
+      options: options,
+    });
+    
+  } // renderElectrChart()
 
+  //============================================================================  
+  function renderWaterChart(dataSet) {
+    //console.log("Now in renderGasChart() ..");
+    
+    if (myWaterChart) {
+      myWaterChart.destroy();
+    }
+
+    var ctxWater = document.getElementById("waterChart").getContext("2d");
+    myWaterChart = new Chart(ctxWater, {
+      type: 'line',
+      data: dataSet,
+      options: optionsWATER
+    });
+    
+  } // renderWaterChart()
+  
+  //============================================================================  
+  function renderGasChart(dataSet) {
+    //console.log("Now in renderGasChart() ..");
+    
+    if (myGasChart) {
+      myGasChart.destroy();
+    }
+
+    var ctxGas = document.getElementById("gasChart").getContext("2d");
+    myGasChart = new Chart(ctxGas, {
+      type: 'line',
+      data: dataSet,
+      options: optionsGAS
+    });
+    
+  } // renderGasChart()
   
   
   //============================================================================  
   function showHistGraph(data, type)
   {
-    ensureChartsReady();
-
+    //console.log("Now in showHistGraph()..");
     copyDataToChart(data, type);
-
-    var labelString = "kWh";
-    if( type == "Hours") labelString = "Watt";
-    myElectrChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
-    myElectrChart.data = electrData;
+    if (type == "Hours")
+          renderElectrChart(electrData, hourOptions);
+    else  renderElectrChart(electrData, dayOptions);
     myElectrChart.update();
     
-    if (HeeftGas) {           
-      myGasChart.data = gasData;
-      labelString = "m3";
-      if( type == "Hours") labelString = "dm3";
+    //renderGasChart(gasData, actGasOptions);
+    if (HeeftGas) {       
+      renderGasChart(gasData);
+      var labelString = "dm3";
       if ( Dongle_Config == "p1-q") labelString = "kJ";
       myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
       myGasChart.update();
       document.getElementById("gasChart").style.display   = "block";
     }
 
+    //renderWaterChart(gasData, actGasOptions);
     if (HeeftWater) {
-      myWaterChart.data = waterData;
-      labelString = "m3";
-      if( type == "Hours") labelString = "dm3";
-      myWaterChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
+      renderWaterChart(waterData);
+      myGasChart.options.scales.yAxes[0].scaleLabel.labelString = "dm3";
     	myWaterChart.update();
 		  document.getElementById("waterChart").style.display = "block";
     }
@@ -169,29 +191,28 @@ function ensureChartsReady()
 	  document.getElementById("dataChart").style.display  = Dongle_Config == "p1-q" ? "none" : "block";
 
   } // showHistGraph()
-    
+  
+  
   //============================================================================  
   function showMonthsGraph(data, type)
   {
-    ensureChartsReady();
-    
     //console.log("Now in showMonthsGraph()..");
     copyMonthsToChart(data, type);
-    myElectrChart.data = electrData;
+    renderElectrChart(electrData, monthOptions);
     myElectrChart.update();
 
+    //renderGasChart(gasData, actGasOptions);
     if (HeeftGas) {
-      myGasChart.data = gasData;
-      var labelString = SQUARE_M_CUBED;
+      renderGasChart(gasData);
+      var labelString = "m3";
       if ( Dongle_Config == "p1-q") labelString = "kJ";
       myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
       myGasChart.update();
       document.getElementById("gasChart").style.display = "block";
-    }
-
+    }  
     if (HeeftWater) {
-      myWaterChart.data = waterData;
-      myWaterChart.options.scales.yAxes[0].scaleLabel.labelString = SQUARE_M_CUBED;
+      renderWaterChart(waterData);
+      myWaterChart.options.scales.yAxes[0].scaleLabel.labelString = "m3";
       myWaterChart.update();
       document.getElementById("waterChart").style.display = "block";
     }
@@ -211,64 +232,61 @@ function ensureChartsReady()
   //============================================================================  
   function copyDataToChart(data, type)
   {
+//    console.log("Now in copyDataToChart()..");
     electrData = createChartDataContainerWithStack();
     gasData = createChartDataContainerWithStack();
 	  waterData = createChartDataContainerWithStack();
     
-    //create datasets ED & ER
-    var dsED1 = createDatasetBAR('false', 'red',    "Gebruikt T1", "STACK");
-    var dsED2 = createDatasetBAR('false', 'orange', "Gebruikt T2", "STACK");
-    var dsER1 = createDatasetBAR('false', 'green',  "Opgewekt T1", "STACK");
-    var dsER2 = createDatasetBAR('false', 'lightgreen', "Opgewekt T2", "STACK");
+    // idx 0 => ED
+    var dsE1 = createDatasetBAR('false', 'red', "Gebruikt", "STACK");
     
-    // GAS
+    // idx 0 => ER
+    var dsE2 = createDatasetBAR('false', 'green', "Opgewekt", "STACK");
+    
+    // idx 0 => GAS
     var dsG1 = createDatasetLINE('false', 'blue', "Gas Gebruikt");
     if ( Dongle_Config == "p1-q") dsG1.label = "Warmte Gebruikt";
    
-    // WATER
-    var dsW1 = createDatasetLINE('false', 'blue', "Water Gebruikt");
+    // idx 0 => WATER
+    var dsW1 = createDatasetLINE('false', 'blue', "Water Gebruikt");    
+    
+  //      console.log("data.actSlot "+data.actSlot);
+  //      console.log("data.data.length "+data.data.length);
   
-    var p = 0;
-    var fTarif1 = false;
-    var fTarif2 = false;
-    //copy all data from entries to correct dataset
+    var p = 0;                
     for (let y=data.data.length + data.actSlot; y > data.actSlot+1; y--)
     {	
       var i = y % data.data.length;
+
+      //console.log("i: "+i);            
+      //console.log("y: "+y);
+      //console.log("slotbefore: "+slotbefore);
     
+      //console.log("["+i+"] label["+data.data[i].date+"] => slotbefore["+slotbefore+"]");
       // adds x axis labels (timestamp)
       electrData.labels.push(formatGraphDate(type, data.data[i].date)); 
-      gasData.labels.push(   formatGraphDate(type, data.data[i].date)); 
-	    waterData.labels.push( formatGraphDate(type, data.data[i].date));
+      gasData.labels.push(formatGraphDate(type, data.data[i].date)); 
+	    waterData.labels.push(formatGraphDate(type, data.data[i].date));
 
       //add data to the sets
-      var nFactor = 1.0;
-      if (type == "Hours") nFactor = 1000.0;
-      if (data.data[i].p_edt1 >= 0){dsED1.data[p] = (data.data[i].p_edt1 * nFactor); fTarif1 = true;}
-      if (data.data[i].p_edt2 >= 0){dsED2.data[p] = (data.data[i].p_edt2 * nFactor); fTarif2 = true;}
-      if (data.data[i].p_ert1 >= 0) dsER1.data[p] = (data.data[i].p_ert1 * nFactor * -1.0);
-      if (data.data[i].p_ert2 >= 0) dsER2.data[p] = (data.data[i].p_ert2 * nFactor * -1.0);
-      if (data.data[i].p_gd   >= 0)  dsG1.data[p] = (data.data[i].p_gd   * 1000.0);
-      if (data.data[i].water  >= 0)  dsW1.data[p] = (data.data[i].water  * 1000.0);
+      if (type == "Hours")
+      {
+        if (data.data[i].p_edw >= 0) dsE1.data[p] = (data.data[i].p_edw *  1.0);
+        if (data.data[i].p_erw >= 0) dsE2.data[p] = (data.data[i].p_erw * -1.0);
+      }
+      else
+      {
+        if (data.data[i].p_ed >= 0) dsE1.data[p] = (data.data[i].p_ed *  1.0).toFixed(3);
+        if (data.data[i].p_er >= 0) dsE2.data[p] = (data.data[i].p_er * -1.0).toFixed(3);
+      }
+      if (data.data[i].p_gd  >= 0)  dsG1.data[p] = (data.data[i].p_gd * 1000.0).toFixed(0);
+      if (data.data[i].water  >= 0) dsW1.data[p] = (data.data[i].water * 1000.0).toFixed(0);
 	    p++;
     } // for i ..
 
-    //limit all numbers in array to 3 decimals
-    applyArrayFixedDecimals(dsED1.data, 3);
-    applyArrayFixedDecimals(dsED2.data, 3);
-    applyArrayFixedDecimals(dsER1.data, 3);
-    applyArrayFixedDecimals(dsER2.data, 3);
-    applyArrayFixedDecimals(dsG1.data, 0);
-    applyArrayFixedDecimals(dsW1.data, 0);
-
     //push all the datasets to the container
-    electrData.datasets.push(dsED1);
-    if( Injection) electrData.datasets.push(dsER1);
-    if( fTarif1 && fTarif2)
-    {
-      electrData.datasets.push(dsED2);
-      if( Injection) electrData.datasets.push(dsER2);
-    }
+    electrData.datasets.push(dsE1);
+    electrData.datasets.push(dsE2);
     gasData.datasets.push(dsG1);
     waterData.datasets.push(dsW1);
 
@@ -278,42 +296,37 @@ function ensureChartsReady()
   //============================================================================  
   function copyMonthsToChart(data)
   {
-    var fDoubleTarif = true;
     console.log("Now in copyMonthsToChart()..");
 
     electrData= createChartDataContainerWithStack();    
     gasData   = createChartDataContainerWithStack();    
 	  waterData = createChartDataContainerWithStack();
-
-    listPeriods = ["Gebruikt deze periode", "Gebruikt vorige periode", "Opgewekt T1 deze periode", "Opgewekt T1 vorige periode"];
     
-    // ED this & prev
-    var dsED1 = createDatasetBAR('false', 'rgba(255,0,  0, 1)', "Gebruikt T1 deze periode",   "DP");    
-    var dsED2 = createDatasetBAR('false', 'rgba(255,0,  0,.5)', "Gebruikt T1 vorige periode", "RP");
-    var dsED3 = createDatasetBAR('false', 'rgba(255,165,0, 1)', "Gebruikt T2 deze periode",   "DP");
-    var dsED4 = createDatasetBAR('false', 'rgba(255,165,0,.5)', "Gebruikt T2 vorige periode", "RP");
+    // idx 0 => ED
+    var dsED1 = createDatasetBAR('false', 'red', "Gebruikt deze periode", "DP");    
 
-    // ER this & prev
-    var dsER1 = createDatasetBAR('false', 'rgba(0, 255,0, 1)', "Opgewekt T1 deze periode",  "DP");
-    var dsER2 = createDatasetBAR('false', 'rgba(0, 255,0,.5)', "Opgewekt T1 vorige periode","RP");
-    var dsER3 = createDatasetBAR('false', 'rgba(74,240,0, 1)', "Opgewekt T2 deze periode",  "DP");
-    var dsER4 = createDatasetBAR('false', 'rgba(74,240,0,.5)', "Opgewekt T2 vorige periode","RP");
+    // idx 1 => ER
+    var dsER1 = createDatasetBAR('false', 'green', "Opgewekt deze periode", "DP");    
+    
+    // idx 2 => ED -1
+    var dsED2 = createDatasetBAR('false', 'orange', "Gebruikt vorige periode", "RP");    
 
-    // GD this & prev
-    var dsGD1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", "Gas deze periode");
-    var dsGD2 =  createDatasetLINE('false', "rgba(0,128,255, 1)", "Gas vorige periode");
-    if(Dongle_Config == "p1-q"){ 
-      dsGD1.label = "Warmte deze periode";
-      dsGD2.label = "Warmte vorige periode";
-    }
+    // idx 3 => ER -1
+    var dsER2 = createDatasetBAR('false', 'lightgreen', "Opgewekt vorige periode", "RP");
 
-    // WD
-    var dsW1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", "Water deze periode");
-    var dsW2 =  createDatasetLINE('false', "rgba(0,128,255, 1)", "Water vorige periode");
+    // idx 0 => GD
+    var dsGD1 =  createDatasetLINE('false', "blue", "Gas deze periode");
+    if(Dongle_Config == "p1-q") dsGD1.label = "Warmte deze periode";    
+    
+    // idx 0 => GD -1
+    var dsGD2 =  createDatasetLINE('false', "blue", "Gas vorige periode");
+    if(Dongle_Config == "p1-q") dsGD2.label = "Warmte vorige periode";
+
+    var dsW1 =  createDatasetLINE('false', "blue", "Water deze periode");
+    var dsW2 =  createDatasetLINE('false', "lightblue", "Water vorige periode");
+       
+    //console.log("there are ["+data.data.length+"] rows");
   
-    //
-    // fill datasets
-    //
 	  var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
     var stop = start - 12;
     var i;
@@ -325,65 +338,38 @@ function ensureChartsReady()
       slotyearbefore = math.mod(i-12,data.data.length);
 
       //add labels
-      electrData.labels.push(formatGraphDate("Months", data.data[i].date));
-      gasData.labels.push(   formatGraphDate("Months", data.data[i].date));
-      waterData.labels.push( formatGraphDate("Months", data.data[i].date));
-      
+      electrData.labels.push(formatGraphDate("Months", data.data[i].date)); // adds x axis labels (timestamp)
+      gasData.labels.push(formatGraphDate("Months", data.data[i].date)); // adds x axis labels (timestamp)
+      waterData.labels.push(formatGraphDate("Months", data.data[i].date)); // adds x axis labels (timestamp)
+      //electrData.labels.push(p); // adds x axis labels (timestamp)
+
       //add data to the datatsets
-      if (data.data[i].p_edt1 >= 0) {
-      	dsED1.data[p] = (data.data[i].p_edt1 *  1.0);
-		    dsED2.data[p] = (data.data[slotyearbefore].p_edt1 *  1.0);
-	    }
-      if (data.data[i].p_edt2 >= 0) {
-      	dsED3.data[p] = (data.data[i].p_edt2 *  1.0);
-		    dsED4.data[p] = (data.data[slotyearbefore].p_edt2 *  1.0);
+      if (data.data[i].p_ed >= 0) {
+      	dsED1.data[p]  = (data.data[i].p_ed *  1.0).toFixed(3);
+		    dsED2.data[p]  = (data.data[slotyearbefore].p_ed *  1.0).toFixed(3);
 	    }
       
-	    if (data.data[i].p_ert1 >= 0) {
-	  	  dsER1.data[p] = (data.data[i].p_ert1 * -1.0);
-      	dsER2.data[p] = (data.data[slotyearbefore].p_ert1 * -1.0);
-      }
-      if (data.data[i].p_ert2 >= 0) {
-	  	  dsER3.data[p] = (data.data[i].p_ert2 * -1.0);
-      	dsER4.data[p] = (data.data[slotyearbefore].p_ert2 * -1.0);
+	    if (data.data[i].p_er >= 0) {
+	  	  dsER1.data[p]  = (data.data[i].p_er * -1.0).toFixed(3);
+      	dsER2.data[p]  = (data.data[slotyearbefore].p_er * -1.0).toFixed(3);
       }
       
       if (data.data[i].p_gd >= 0) {
-		    dsGD1.data[p] = data.data[i].p_gd;
-		    dsGD2.data[p] = data.data[slotyearbefore].p_gd;
+		    dsGD1.data[p]     = data.data[i].p_gd;
+		    dsGD2.data[p]     = data.data[slotyearbefore].p_gd;
 	    }
 	    if (data.data[i].water >= 0) {
-		    dsW1.data[p] = data.data[i].water;
-		    dsW2.data[p] = data.data[slotyearbefore].water;
+		    dsW1.data[p]     = data.data[i].water;
+		    dsW2.data[p]     = data.data[slotyearbefore].water;
 	    }
       p++;
     }//endfor
 
-    //limit all numbers in the arrays to 3 decimals
-    applyArrayFixedDecimals( dsED1.data, 3);
-    applyArrayFixedDecimals( dsED2.data, 3);
-    applyArrayFixedDecimals( dsED3.data, 3);
-    applyArrayFixedDecimals( dsED4.data, 3);
-    applyArrayFixedDecimals( dsER1.data, 3);
-    applyArrayFixedDecimals( dsER2.data, 3);
-    applyArrayFixedDecimals( dsER3.data, 3);
-    applyArrayFixedDecimals( dsER4.data, 3);
-
-    //add datasets to the container, order is also display order
+    //add datasets to the container
     electrData.datasets.push(dsED1);
+    electrData.datasets.push(dsER1);
     electrData.datasets.push(dsED2);
-    if(fDoubleTarif) {
-      electrData.datasets.push(dsED3);
-      electrData.datasets.push(dsED4);
-    }
-    if(Injection){
-      electrData.datasets.push(dsER1);
-      electrData.datasets.push(dsER2);
-      if(fDoubleTarif) {
-        electrData.datasets.push(dsER3);
-        electrData.datasets.push(dsER4);
-      }
-    }
+    electrData.datasets.push(dsER2);
     gasData.datasets.push(dsGD1);
     gasData.datasets.push(dsGD2);
     waterData.datasets.push(dsW1);
@@ -393,56 +379,140 @@ function ensureChartsReady()
     document.getElementById("lastMonths").style.display = "none";
     //--- show canvas
     document.getElementById("dataChart").style.display  = "block";
-
+//     document.getElementById("gasChart").style.display   = "block";
+// 	document.getElementById("waterChart").style.display   = "block";
   } // copyMonthsToChart()
     
+  
   //============================================================================  
-  function copyActualToChart(data) 
+  function copyActualToChart(data)
   {
-    //convert telegram
-    var objTelegram = parseTelegramData(data);
+    //console.log("Now in copyActualToChart()..");
+    
+    for (i in data)
+    {
+      //console.log("i ="+i+"] value["+data[i].value+"]");
+      if (i == "timestamp")  
+      {
+        //console.log("i["+i+"] label["+data[i].value+"]");
+        if (data[i].value == actLabel)
+        {
+          console.log("actLabel["+actLabel+"] == value["+data[i].value+"] =>break!");
+          return;
+        }
+        actElectrData.labels.push(formatGraphDate("Actual", data[i].value)); // adds x axis labels (timestamp)
+        actGasData.labels.push(formatGraphDate("Actual", data[i].value)); // adds x axis labels (timestamp)
+        actLabel = data[i].value;
+      }
+      
+      if (i == "power_delivered_l1") 
+        actElectrData.datasets[0].data[actPoint]  = (data[i].value).toFixed(3);
+      if (i == "power_delivered_l2") 
+        actElectrData.datasets[1].data[actPoint]  = (data[i].value).toFixed(3);
+      if (i == "power_delivered_l3") 
+        actElectrData.datasets[2].data[actPoint]  = (data[i].value).toFixed(3);
+      if (i == "power_returned_l1")  
+        actElectrData.datasets[3].data[actPoint]  = (data[i].value * -1.0).toFixed(3);
+      if (i == "power_returned_l2")  
+        actElectrData.datasets[4].data[actPoint]  = (data[i].value * -1.0).toFixed(3);
+      if (i == "power_returned_l3")  
+        actElectrData.datasets[5].data[actPoint]  = (data[i].value * -1.0).toFixed(3);
+      if (i == "gas_delivered") 
+      {
+        if (actPoint > 0)
+              actGasData.datasets[0].data[actPoint] = ((data[i].value - gasDelivered) * 1000.0).toFixed(0);
+        else  actGasData.datasets[0].data[actPoint] = 0.0;
+        gasDelivered = data[i].value;
+      }
+    } // for i in data ..
+    actPoint++;    
+    
+    if (actPoint > maxPoints) 
+    {
+      for (let s=0; s<6; s++)
+      {
+        actElectrData.labels.shift();
+        actElectrData.datasets[0].data.shift();
+        actElectrData.datasets[1].data.shift();
+        actElectrData.datasets[2].data.shift();
+        actElectrData.datasets[3].data.shift();
+        actElectrData.datasets[4].data.shift();
+        actElectrData.datasets[5].data.shift();
+        actGasData.labels.shift();
+        actGasData.datasets[0].data.shift();
+        actWaterData.labels.shift();
+        actWaterData.datasets[0].data.shift();
+        actPoint--;
+      } // for s ..
+    } 
+    
+  } // copyActualToChart()
 
-    //add to telegramhistory
-    if(listTELEGRAMS.length >= MAX_ACTUAL_HISTORY) listTELEGRAMS.shift();
-    listTELEGRAMS.push(objTelegram);
-  }
- 
+  
   //============================================================================  
   function initActualGraph()
   {
-    //reset pos
+    //console.log("Now in initActualGraph()..");
+
+    actElectrData = createChartDataContainerWithStack();
+    actGasData = createChartDataContainerWithStack();
+
+    // idx 0 => EDL1
+    var dsE1 = createDatasetBAR('false', 'red', "Gebruikt L1", "A");
+    actElectrData.datasets.push(dsE1);
+    
+    // idx 1 => EDL2
+    var dsE2 = createDatasetBAR('false', 'tomato', "Gebruikt L2", "A");
+    actElectrData.datasets.push(dsE2);
+    
+    // idx 2 => EDL3
+    var dsE3 = createDatasetBAR('false', 'salmon', "Gebruikt L3", "A");
+    actElectrData.datasets.push(dsE3);
+
+    // idx 3 ERL1
+    var dsER1 = createDatasetBAR('false', 'yellowgreen', "Opgewekt L1", "A");
+    actElectrData.datasets.push(dsER1);
+    
+    // idx 4 => ERL2
+    var dsER2 = createDatasetBAR('false', 'springgreen', "Opgewekt L2", "A");
+    actElectrData.datasets.push(dsER2);
+    
+    // idx 5 => ERL3
+    var dsER3 = createDatasetBAR('false', 'green', "Opgewekt L3", "A");
+    actElectrData.datasets.push(dsER3);
+    
+    // idx 0 => GDT
+    var dsG1 = createDatasetLINE('false', 'blue', "Gas verbruikt");
+    if(Dongle_Config == "p1-q") dsG1.label = "Warmte verbruikt";
+    actGasData.datasets.push(dsG1);
+
     actPoint = 0;
-    if(!fGraphsReady) createChartsGRAPH();
   
   } // initActualGraph()
-
+  
+  
   //============================================================================  
   function showActualGraph()
   {
     if (activeTab != "bActualTab") return;
+
+    //console.log("Now in showActualGraph()..");
 
     //--- hide Table
     document.getElementById("actual").style.display    = "none";
     //--- show canvas
     document.getElementById("dataChart").style.display = "block";
     document.getElementById("gasChart").style.display  = "block";
-
-    //display current listTELEGRAMS
-    const [dcEX, dcGX] = createDataContainersACTUAL( listTELEGRAMS );
     
-    //update Elektra
-    myElectrChart.data = dcEX;
-    myElectrChart.update(0);
+    renderElectrChart(actElectrData, actElectrOptions);
+    myElectrChart.update();
     
-    //update Gas
-    myGasChart.data = dcGX;
+    //renderGasChart(actGasData, actGasOptions);
+    renderGasChart(actGasData);
     var labelString = "dm3";
     if( Dongle_Config == "p1-q") labelString = "GJ * 1000";
     myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;    
-    myGasChart.update(0);
-
-    //update water???
-    //TODO
+    myGasChart.update();
 
   } // showActualGraph()
   
@@ -471,148 +541,7 @@ function ensureChartsReady()
     
     return dateOut;
   }
-
-  //format timestamp
-  //input: 230215223319W
-  //output: "22:33:19"
-  function formatHHMMSS(itemvalue)
-  {
-    //230215 223319 W
-    var time = itemvalue.slice(6,12);
-    var nHH = time.slice(0,2);
-    var nMM = time.slice(2,4);
-    var nSS = time.slice(4,6);
-    return ""+nHH+":"+nMM+":"+nSS;
-  }
-
-  function parseTelegramData( data )
-  {
-    var telegram = new Map();
-    for (key in data) 
-    {
-      item = data[key];
-      // key: {value:0, unit:""}
-      switch( key )
-      {
-        case "timestamp": telegram.set('timestamp', formatHHMMSS(item.value) ); break;
-
-        case "power_delivered_l1": telegram.set('pdl1', (item.value).toFixed(3) ); break;
-        case "power_delivered_l2": telegram.set('pdl2', (item.value).toFixed(3) ); break;
-        case "power_delivered_l3": telegram.set('pdl3', (item.value).toFixed(3) ); break;
-        case "power_delivered":    telegram.set('pd',   (item.value).toFixed(3) ); break;
-        
-        case "power_returned_l1": telegram.set('prl1', (item.value).toFixed(3) ); break;
-        case "power_returned_l2": telegram.set('prl2', (item.value).toFixed(3) ); break;
-        case "power_returned_l3": telegram.set('prl3', (item.value).toFixed(3) ); break;
-        case "power_returned":    telegram.set('pr',   (item.value).toFixed(3) ); break;
-
-        case "gas_delivered_timestamp": 
-          telegram.set('gas_timestamp', formatHHMMSS(item.value) );
-          break;
-
-        case "gas_delivered": 
-          telegram.set("gd", item.value ); 
-          break;
-
-        default:
-          //nothing
-
-      }//endswitch
-    }//endfor
-
-    return telegram;
-  }
-
-  function copyActualHistoryToChart(histdata) 
-  {
-    listTELEGRAMS = [];
-    for(var i=0; i<histdata.length; i++)
-    {
-      //convert telegram
-      var objTelegram = parseTelegramData( histdata[i] );
-    
-      //add to telegramhistory
-      listTELEGRAMS.push(objTelegram);
-    }
-  }
-
-  //convert the telegram list to datasets
-  function createDataContainersACTUAL( listTELEGRAMS )
-  {
-    var dcEX = createChartDataContainerWithStack();
-    var dcGX = createChartDataContainerWithStack();
-
-    //ED L1..3
-    var dsED1 = createDatasetBAR('false', 'red', "Gebruikt L1", "A");    
-    var dsED2 = createDatasetBAR('false', 'tomato', "Gebruikt L2", "A");    
-    var dsED3 = createDatasetBAR('false', 'salmon', "Gebruikt L3", "A");
-
-    //ER L1..3
-    var dsER1 = createDatasetBAR('false', 'yellowgreen', "Opgewekt L1", "A");
-    var dsER2 = createDatasetBAR('false', 'springgreen', "Opgewekt L2", "A");
-    var dsER3 = createDatasetBAR('false', 'green',       "Opgewekt L3", "A");
-    
-    //GD
-    var dsG1 = createDatasetLINE('false', 'blue', "Gas verbruikt");
-    if(Dongle_Config == "p1-q") dsG1.label = "Warmte verbruikt";
-    dsG1.spanGaps = true;
-
-    // Fill datasets
-    var gd_prev = "";
-    var ts_prev = "";
-    for( var i=0; i<listTELEGRAMS.length; i++)
-    {
-      telegram = listTELEGRAMS[i];
-
-      dcEX.labels.push(telegram.get("timestamp"));
-
-      dsED1.data.push( telegram.get("pdl1") );
-      dsED2.data.push( telegram.get("pdl2") );
-      dsED3.data.push( telegram.get("pdl3") );
-
-      dsER1.data.push( telegram.get("prl1") );
-      dsER2.data.push( telegram.get("prl2") );
-      dsER3.data.push( telegram.get("prl3") );
-      
-      if(i==0){        
-        gd_prev = telegram.get("gd");
-        ts_prev = telegram.get("gas_timestamp");
-        dsG1.data.push(0);
-        dsG1.data.push(null);
-        dcGX.labels.push( ts_prev);
-        dcGX.labels.push( telegram.get("timestamp") );
-      }
-      else
-      {
-        gd_ts = telegram.get("gas_timestamp");        
-        if( gd_ts != ts_prev)
-        {
-          var gd = telegram.get("gd");
-          dsG1.data.push( gd - gd_prev );
-          ts_prev = gd_ts;
-          gd_prev = gd;
-        }
-        else{
-          dsG1.data.push( null );
-        }
-        dcGX.labels.push( telegram.get("timestamp") );
-      }
-    }
-
-    //add datasets
-    dcEX.datasets.push(dsED1);
-    if( Phases > 1) dcEX.datasets.push(dsED2);
-    if( Phases > 2) dcEX.datasets.push(dsED3);
-    if (Injection) {
-      dcEX.datasets.push(dsER1);
-      if( Phases > 1) dcEX.datasets.push(dsER2);
-      if( Phases > 2) dcEX.datasets.push(dsER3);
-    }
-    dcGX.datasets.push(dsG1);
-
-    return [dcEX, dcGX];
-  }
-
+  
   
 /*
 ***************************************************************************
