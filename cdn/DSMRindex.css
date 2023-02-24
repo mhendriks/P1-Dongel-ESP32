@@ -3,7 +3,8 @@
 **  Program  : DSMRindex.css, part of DSMRfirmwareAPI
 **  Version  : v2.3.0
 **
-**  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2023 Smartstuff
+**  Authors  : Martijn Hendriks / Mar10us
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -272,6 +273,16 @@ ul:after {
 	font-size: 80%;
 	text-align: right;
 } 
+@keyframes flash1 {
+  from {
+    text-shadow: 0 0 6px #fc0303, 0 0 12px #fc0303, 0 0 25px #fc0303, 0 0 50px #fc0303;
+    color: red;
+  }
+  to {
+    color: white;
+  }
+}
+.afterglow { animation: flash1 1s ease alternate; }
 
 ul {
   list-style: none;

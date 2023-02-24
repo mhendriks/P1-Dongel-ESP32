@@ -3,15 +3,27 @@
 **  Program  : DSMRindex.js, part of DSMRfirmwareAPI
 **  Version  : v4.3.0
 **
-**  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2023 Smartstuff
+**  Authors  : Martijn Hendriks / Mar10us
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
 const APIGW=window.location.protocol+'//'+window.location.host+'/api/';
-const jsversie			= 221201
+
+const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
+const URL_DEVICE_INFO   = APIGW + "v2/dev/info";
+const URL_DEVICE_TIME   = APIGW + "v2/dev/time";
+const MAX_SM_ACTUAL     = 15*6; //store the last 15 minutes (each interval is 10sec)
+const MAX_FILECOUNT     = 30;   //maximum filecount on the device is 30
+
+const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
+
+const jsversie			= 221201;
+
+const SQUARE_M_CUBED = "\u33A5";
   
-  "use strict";
+"use strict";
 
   let activeTab             = "bDashTab";
   let PauseAPI				= false; //pause api call when browser is inactive
@@ -38,7 +50,95 @@ const jsversie			= 221201
   var data       			= [];
   var DayEpoch				= 0;
   let monthType        		= "ED";
-  let settingFontColor 		= 'white'
+  let settingFontColor 		= 'white';
+  var objDAL = null;
+
+  //The Data Access Layer for the DSMR
+  // - acts as an cache between frontend and server
+  // - schedules refresh to keep data fresh
+  // - stores data for the history functions
+  class dsmr_dal_main{
+    constructor() {
+      this.devinfo=[];
+			this.version_manifest = [];
+      this.actual=[];
+      this.actual_history = [];
+      this.timerREFRESH_ACTUAL = 0;      
+      this.callback=null;
+      }
+  
+    fetchDataJSON(url, fnHandleData) {
+      console.log("DAL::fetchDataJSON( "+url+" )");
+      fetch(url)
+      .then(response => response.json())
+      .then(json => { fnHandleData(json); })
+      .catch(function (error) {
+        var p = document.createElement('p');
+        p.appendChild( document.createTextNode('Error: ' + error.message) );
+      });
+    }
+
+    //use a callback when you want to know if the data is updated
+    setCallback(fnCB){
+      this.callback = fnCB;
+    }
+  
+    init(){
+      this.refreshDeviceInformation();
+      this.refreshActual();
+    } 	
+
+    //single call; no timer
+    refreshDeviceInformation(){
+      console.log("DAL::refreshDeviceInformation");
+			this.fetchDataJSON( URL_VERSION_MANIFEST, this.parseVersionManifest.bind(this));
+      this.fetchDataJSON( URL_DEVICE_INFO, this.parseDeviceInfo.bind(this));
+    }
+    //store result and call callback if set
+    parseDeviceInfo(json){
+      this.devinfo = json;
+      if(this.callback) this.callback('devinfo', json);
+    }
+    //store result and call callback if set
+		parseVersionManifest(json){
+			this.version_manifest = json;
+      if(this.callback) this.callback('versionmanifest', json);
+		}
+
+    // refresh and parse actual data, store and add to history
+    //refresh every 10 sec
+    refreshActual(){
+      console.log("DAL::refreshActual");
+      clearInterval(this.timerREFRESH_ACTUAL);      
+      this.fetchDataJSON( URL_SM_ACTUAL, this.parseActual.bind(this));
+      this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), 10 * 1000);
+    }
+    parseActual(json){
+      this.actual = json;
+      this.#addActualHistory( json );
+    }
+    #addActualHistory(json){
+      if( this.actual_history.length >= MAX_SM_ACTUAL) this.actual_history.shift();
+      this.actual_history.push(json);
+    }
+  
+    //
+    // getters
+    //
+    getDeviceInfo(){
+      return this.devinfo;
+    }
+		getVersionManifest(){
+			return this.version_manifest;
+		}
+    getActual(){
+      return this.actual;
+    }    
+    //the last (MAX_ACTUAL_HISTORY) actuals
+    getActualHistory(){
+      return this.actual_history;
+    }
+  }
                     
   var monthNames 			= [ "indxNul","Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December","\0"];
   const spinner 			= document.getElementById("loader");
@@ -73,357 +173,95 @@ var TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wm
 var hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
 var day = 0;
 
-let TrendV = {
-    type: 'doughnut',
-    data: {
-      datasets: [
-        {
-          label: "l1",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "l2",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "l3",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-    },
-    options: {
+//default struct for the gauge element
+// ! structuredClone can NOT copy a struct with functions
+let cfgDefaultGAUGE = {
+  type: 'doughnut',
+  data: {
+    datasets: [
+      {
+        label: "l1",
+        backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+      },
+      {
+        label: "l2",
+        backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+      },
+      {
+        label: "l3",
+        backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+      }
+    ]
+  },
+  options: {
     events: [],
     title: {
-            display: true,
-            text: 'Voltage',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-	  rotation: -Math.PI,
-      plugins: {
-      	labels: {
-			render: function (args) {
-				return args.value + 207 + " V";
-			},//render
-        arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
-      },//labels      
-    }, //plugins
-    legend: {display: false},
-    }, //options
-};
-
-let TrendG = {
-    type: 'doughnut',
-    data: {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
+      display: true,
+      text: 'Voltage',
+      position: "bottom",
+      padding: -18,
+      fontSize: 17,
+      fontColor: "#000",
+      fontFamily: "Dosis",
     },
-    options: {
-    title: {
-            display: true,
-            text: 'm3',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-			rotation: -Math.PI,
-      plugins: {
+    responsive: true,
+    circumference: Math.PI,
+    rotation: -Math.PI,
+    plugins: {
       labels: {
-        render: function (args) {
-          return args.value + " \u33A5";
-        },//render
+        render: {},   //structuredClone will fail if there is a function
         arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
+        fontColor: ["#fff", "rgba(0,0,0,0)"],
       },//labels      
     }, //plugins
-    legend: {display: false},
-    }, //options
+    legend: { display: false },
+  }, //options
 };
 
+//copy for phases based gauges
+let cfgDefaultPHASES = structuredClone(cfgDefaultGAUGE);
+cfgDefaultPHASES.data.datasets[0].label = "L1";
+cfgDefaultPHASES.data.datasets[1].label = "L2";
+cfgDefaultPHASES.data.datasets[2].label = "L3";
 
-let TrendQ = {
-    type: 'doughnut',
-    data: {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-    },
-    options: {
-    title: {
-            display: true,
-            text: 'kJ',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-			rotation: -Math.PI,
-      plugins: {
-      labels: {
-        render: function (args) {
-          return args.value;
-        },//render
-        arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
-      },//labels      
-    }, //plugins
-    legend: {display: false},
-    }, //options
-};
+//copy for trend based gauges
+let cfgDefaultTREND = structuredClone(cfgDefaultGAUGE);
+cfgDefaultTREND.data.datasets[0].label = "vandaag";
+cfgDefaultTREND.data.datasets[1].label = "gister";
+cfgDefaultTREND.data.datasets[2].label = "eergisteren";
 
 
-let Trend3f = {
-    type: 'doughnut',
-    data: {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "l1",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "l2",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "l3",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-    },
-    options: {
-    title: {
-            display: true,
-            text: 'Ampere',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-			rotation: -Math.PI,
-      plugins: {
-      labels: {
-        render: function (args) {
-          return args.value + " A";
-        },//render
-        arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
-      },//labels      
-    }, //plugins
-    legend: {display: false},
-    }, //options
-};
+//phases based gauges
+function renderLabelVoltage(args){return args.value + 207 + " V";}
+let cfgGaugeVOLTAGE = structuredClone(cfgDefaultPHASES);
+cfgGaugeVOLTAGE.options.title.text = "Voltage";
+cfgGaugeVOLTAGE.options.plugins.labels.render = renderLabelVoltage;
 
+function renderLabel3F(args){return args.value + " A";}
+let cfgGauge3F = structuredClone(cfgDefaultPHASES);
+cfgGauge3F.options.title.text = "Ampere";
+cfgGauge3F.options.plugins.labels.render = renderLabel3F;
 
-let TrendW = {
-    type: 'doughnut',
-    data: {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-    },
-    options: {
-    title: {
-            display: true,
-            text: 'liter',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-			rotation: -Math.PI,
-      plugins: {
-      labels: {
-        render: function (args) {
-          return args.value + " ltr";
-        },//render
-        arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
-      },//labels      
-    }, //plugins
-    legend: {display: false},
-    }, //options
-};
+//trend based gauges
+function renderLabelElektra(args){return args.value + " kWh";}
+let cfgGaugeELEKTRA = structuredClone(cfgDefaultTREND);
+cfgGaugeELEKTRA.options.title.text = "kWh";
+cfgGaugeELEKTRA.options.plugins.labels.render = renderLabelElektra;
 
-let optionsP = {
-title: {
-            display: true,
-            text: 'kWh',
-            position: "bottom",
-            padding: -18,
-            fontSize: 17,
-            fontColor: "#000",
-            fontFamily:"Dosis",
-        },
-      responsive:true,
-      circumference: Math.PI,
-		rotation:  - Math.PI,
-      plugins: {
-      labels: {
-        render: function (args) {
-          return args.value + " kWh";
-        },//render
-        arc: true,
-        fontColor: ["#fff","rgba(0,0,0,0)"],
-      },//labels      
-    }, //plugins
-      legend: {display: false},
-}; 
-    
-let dataP = {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-};
+function renderLabelGas(args){return args.value + " " + SQUARE_M_CUBED;}
+let cfgGaugeGAS = structuredClone(cfgDefaultTREND);
+cfgGaugeGAS.options.title.text = SQUARE_M_CUBED;
+cfgGaugeGAS.options.plugins.labels.render = renderLabelGas;
 
-let dataPi = {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-	};
+function renderLabelWarmte(args){return args.value;}
+let cfgGaugeWARMTE = structuredClone(cfgDefaultTREND);
+cfgGaugeWARMTE.options.title.text = "kJ";
+cfgGaugeWARMTE.options.plugins.labels.render = renderLabelWarmte;
 
-let dataPa = {
-      labels: ["verbruik", "verschil met hoogste"],
-      datasets: [
-        {
-          label: "vandaag",
-          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "gisteren",
-          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-        },
-        {
-          label: "eergisteren",
-          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-        }
-      ]
-    };
-
-function loadIcons(){
-Iconify.addCollection({
-   icons: {
-       "mdi-folder-outline": {
-           body: '<path d="M20 18H4V8h16m0-2h-8l-2-2H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z" fill="currentColor"/>',
-       },
-       "mdi-information-outline": {
-           body: '<path d="M11 9h2V7h-2m1 13c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8m0-18A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m-1 15h2v-6h-2v6Z" fill="currentColor"/>',
-       },
-       "mdi-cog": {
-           body: '<path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" fill="currentColor"/>',
-              },
-       "mdi-gauge": {
-           body: '<path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 2a8 8 0 0 1 8 8c0 2.4-1 4.5-2.7 6c-1.4-1.3-3.3-2-5.3-2s-3.8.7-5.3 2C5 16.5 4 14.4 4 12a8 8 0 0 1 8-8m2 1.89c-.38.01-.74.26-.9.65l-1.29 3.23l-.1.23c-.71.13-1.3.6-1.57 1.26c-.41 1.03.09 2.19 1.12 2.6c1.03.41 2.19-.09 2.6-1.12c.26-.66.14-1.42-.29-1.98l.1-.26l1.29-3.21l.01-.03c.2-.51-.05-1.09-.56-1.3c-.13-.05-.26-.07-.41-.07M10 6a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1M7 9a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1m10 0a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1Z" fill="currentColor"/>',
-       },
-       "mdi-lightning-bolt": {
-           body: '<path d="M11 15H6l7-14v8h5l-7 14v-8Z" fill="currentColor"/>',
-       },       
-       "mdi-home-import-outline": {
-           body: '<path d="m15 13l-4 4v-3H2v-2h9V9l4 4M5 20v-4h2v2h10v-7.81l-5-4.5L7.21 10H4.22L12 3l10 9h-3v8H5Z" fill="currentColor"/>',
-       },       
-       "mdi-home-export-outline": {
-           body: '<path d="m24 13l-4 4v-3h-9v-2h9V9l4 4M4 20v-8H1l10-9l7 6.3v.7h-2.21L11 5.69l-5 4.5V18h10v-2h2v4H4Z" fill="currentColor"/>',
-       },  
-       "mdi-fire": {
-           body: '<path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82c-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32c-2.59 2.08-3.61 5.75-2.39 8.9c.04.1.08.2.08.33c0 .22-.15.42-.35.5c-.23.1-.47.04-.66-.12a.58.58 0 0 1-.14-.17c-1.13-1.43-1.31-3.48-.55-5.12C5.78 10 4.87 12.3 5 14.47c.06.5.12 1 .29 1.5c.14.6.41 1.2.71 1.73c1.08 1.73 2.95 2.97 4.96 3.22c2.14.27 4.43-.12 6.07-1.6c1.83-1.66 2.47-4.32 1.53-6.6l-.13-.26c-.21-.46-.77-1.26-.77-1.26m-3.16 6.3c-.28.24-.74.5-1.1.6c-1.12.4-2.24-.16-2.9-.82c1.19-.28 1.9-1.16 2.11-2.05c.17-.8-.15-1.46-.28-2.23c-.12-.74-.1-1.37.17-2.06c.19.38.39.76.63 1.06c.77 1 1.98 1.44 2.24 2.8c.04.14.06.28.06.43c.03.82-.33 1.72-.93 2.27Z" fill="currentColor"/>',
-       },         
-       "mdi-water": {
-           body: '<path d="M12 20a6 6 0 0 1-6-6c0-4 6-10.75 6-10.75S18 10 18 14a6 6 0 0 1-6 6Z" fill="currentColor"/>',
-       },         
-       "mdi-sine-wave": {
-           body: '<path d="M16.5 21c-3 0-4.19-4.24-5.45-8.72C10.14 9.04 9 5 7.5 5C4.11 5 4 11.93 4 12H2c0-.37.06-9 5.5-9c3 0 4.21 4.25 5.47 8.74C13.83 14.8 15 19 16.5 19c3.44 0 3.53-6.93 3.53-7h2c0 .37-.06 9-5.53 9Z" fill="currentColor"/>',
-       },        
-       "mdi-heat-wave": {
-           body: '<path d="m8.5 4.5l-3.1 5l3.1 5.2l-3.3 5.8l-1.8-.9l2.7-4.9L3 9.5l3.7-5.9l1.8.9m6.2-.1l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9m6.3 0l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9" fill="currentColor"/>',
-       }, 
-       "mdi-chart-box-outline": {
-           body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
-       },   
-    },
-   width: 24,
-   height: 24,
-});
-}
+function renderLabelWater(args){return args.value + " ltr";}
+let cfgGaugeWATER = structuredClone(cfgDefaultTREND);
+cfgGaugeWATER.options.title.text = "Liter";
+cfgGaugeWATER.options.plugins.labels.render = renderLabelWater;
 
 window.onload=bootsTrapMain;
 
@@ -527,31 +365,35 @@ function SetOnSettings(json){
 // 		document.getElementById("gasChart").style.height = "250px";
 	}
 }
-  
-//============================================================================  
-  
-function ReadVersionManifest(){
-	console.log("ReadVersionManifest");
-	Spinner(true);
-	 fetch('http://ota.smart-stuff.nl/v5/version-manifest.json?dummy='+Date.now(), {"setTimeout": 5000}).then(function (response) {
-		 return response.json();
-	 }).then(function (json) {
-	 	console.log("version manifest: " + JSON.stringify(json) );
-	 	
-	 	LastVersion = json.version;
-	 	LastVersionMajor = json.major;
-	 	LastVersionMinor = json.minor;
-	 	LastVersionFix = json.fix;
-	 	LastVersionBuid = json.build;
-	 	LastVersionNotes = json.notes;
-	 	LastVersionOTA = json.ota_url;
-	}
-	 );	// function(json)
-	 	Spinner(false);
 
+function parseVersionManifest(json)
+{
+  console.log("parseVersionManifest() - ", json);
+  LastVersion = json.version;
+  LastVersionMajor = json.major;
+  LastVersionMinor = json.minor;
+  LastVersionFix = json.fix;
+  LastVersionBuid = json.build;
+  LastVersionNotes = json.notes;
+  LastVersionOTA = json.ota_url;
 }
-//============================================================================  
   
+//============================================================================  
+function ReadVersionManifest() {
+  console.log("ReadVersionManifest");
+  Spinner(true);
+  fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
+    .then(function (response) {
+      return response.json();})
+    .then(function (json) {
+      console.log("version manifest: " + JSON.stringify(json));
+      parseVersionManifest(json);
+      Spinner(false);
+    }
+  );	// function(json)  
+}
+
+//============================================================================   
 function UpdateDash()
 {	
 	// if (PauseAPI) return;
@@ -872,29 +714,52 @@ function handle_menu_click()
 
 			activeTab = this.id;
 			//console.log("ActiveID - " + activeTab );
-//  			openTab();  		
+// 			openTab();  		
   		});
 	}
 }
 
   //============================================================================  
-  
-  function bootsTrapMain() {
-    console.log("bootsTrapMain()");
-    loadIcons();
-	getDevSettings(); //first of all ... get the device settings
-// 	console.log("hash:"+ location.hash);
+function createDashboardGauges()
+{
+  trend_p 	= new Chart(document.getElementById("container-3"), cfgGaugeELEKTRA);
+	trend_pi 	= new Chart(document.getElementById("container-5"), cfgGaugeELEKTRA);
+	trend_pa 	= new Chart(document.getElementById("container-6"), cfgGaugeELEKTRA);
+  trend_g 	= new Chart(document.getElementById("container-4"), cfgGaugeGAS);
+	trend_q 	= new Chart(document.getElementById("container-q"), cfgGaugeWARMTE);
+  trend_w 	= new Chart(document.getElementById("container-7"), cfgGaugeWATER);
+  gauge3f 	= new Chart(document.getElementById("gauge3f"),     cfgGauge3F);
+  gaugeV 		= new Chart(document.getElementById("gauge-v"),     cfgGaugeVOLTAGE);
+}
 
-// 	gauge = new JustGage(GaugeOptions); // initialize gauge
-// 	gauge_v = new JustGage(GaugeOptionsV); // initialize gauge
-	trend_g 	= new Chart(document.getElementById("container-4"), TrendG);
-	trend_q 	= new Chart(document.getElementById("container-q"), TrendQ);
-	trend_p 	= new Chart(document.getElementById("container-3"), {type: 'doughnut', data:dataP, options: optionsP});
-	trend_pi 	= new Chart(document.getElementById("container-5"), {type: 'doughnut', data:dataPi, options: optionsP});
-	trend_pa 	= new Chart(document.getElementById("container-6"), {type: 'doughnut', data:dataPa, options: optionsP} );
-	trend_w 	= new Chart(document.getElementById("container-7"), TrendW);
-	gauge3f 	= new Chart(document.getElementById("gauge3f"), Trend3f);
-	gaugeV 		= new Chart(document.getElementById("gauge-v"), TrendV);
+function updateFromDAL(source, json)
+{
+  console.log("updateFromDAL(); source="+source);
+  console.log(json);
+  /*
+  switch(source)
+  {
+    case "devinfo": parseDeviceInfo(json); break;
+    case "versionmanifest": parseVersionManifest(json); break;
+    default:
+      console.log("missing handler; source="+source);
+      break;
+  }*/
+}
+
+function bootsTrapMain() 
+{
+  console.log("bootsTrapMain()");
+  
+  getDevSettings();
+
+  createDashboardGauges();
+
+  //init DAL
+  objDAL = new dsmr_dal_main();
+  objDAL.setCallback(updateFromDAL);
+  objDAL.init();
+  
             
 	handle_menu_click();
 	FrontendConfig();
@@ -913,7 +778,7 @@ function handle_menu_click()
 // 	console.log("location-msg: " + location.hash.split('msg=')[1]);
 // 	console.log("location-hash-split: " + location.hash.split('#')[1].split('?')[0]);
 	//goto tab after reload 
-// 	if (location.hash == "#FSExplorer") { document.getElementById('bFSExplorer').click(); }
+	if (location.hash == "#FileExplorer") { document.getElementById('bFSexplorer').click(); }
 	if (location.hash.split('#')[1].split('?')[0] == "Redirect") { handleRedirect(); }
 
 	//reselect Dash when Home icon has been clicked
@@ -1003,7 +868,10 @@ function show_hide_column2(table, col_no, do_show) {
     document.getElementById("gasChart").style.display  = "none";
 	document.getElementById("waterChart").style.display  = "none";
 
-	if (activeTab != "bActualTab") {
+	if (!EnableHist) {
+	}
+    
+    if (activeTab != "bActualTab") {
       actualTimer = setInterval(refreshSmActual, 60 * 1000);                  // repeat every 60s
     }
 
@@ -1172,17 +1040,19 @@ function show_hide_column2(table, col_no, do_show) {
 	 let fileSize = document.querySelector('fileSize');
 
 	 Spinner(true);
+   //get filelist
 	 fetch('api/listfiles', {"setTimeout": 5000}).then(function (response) {
 		 return response.json();
 	 }).then(function (json) {
-
+	
 	//clear previous content	 
 	 var list = document.getElementById("FSmain");
 	 while (list.hasChildNodes()) {  
 	   list.removeChild(list.firstChild);
 	 }
-
-	   let dir = '<table id="FSTable" width=90%>';
+    
+	   nFilecount = json.length;
+     let dir = '<table id="FSTable" width=90%>';
 	   for (var i = 0; i < json.length - 1; i++) {
 		 dir += "<tr>";
 		 dir += `<td width=250px nowrap><a href ="${json[i].name}" target="_blank">${json[i].name}</a></td>`;
@@ -1199,41 +1069,52 @@ function show_hide_column2(table, col_no, do_show) {
 			 });
 	   });
 	   main.insertAdjacentHTML('beforeend', '</table>');
+     main.insertAdjacentHTML('beforeend', `<div id='filecount'>Aantal bestanden: ${nFilecount} </div>`);
 	   main.insertAdjacentHTML('beforeend', `<p id="FSFree">Opslag: <b>${json[i].usedBytes} gebruikt</b> | ${json[i].totalBytes} totaal`);
 	   free = json[i].freeBytes;
 	   fileSize.innerHTML = "<b> &nbsp; </b><p>";    // spacer                
 	   Spinner(false);
 	 });	// function(json)
 	 
-	 document.getElementById('Ifile').addEventListener('change', () => {
-		 let nBytes = document.getElementById('Ifile').files[0].size, output = `${nBytes} Byte`;
-		 for (var aMultiples = [
+    //view selected filesize
+	  document.getElementById('Ifile').addEventListener('change', () => {
+      //format filesize
+		  let nBytes = document.getElementById('Ifile').files[0].size;
+      let output = `${nBytes} Byte`;
+		  for (var aMultiples = [
 			 ' KB',
 			 ' MB'
 			], i = 0, nApprox = nBytes / 1024; nApprox > 1; nApprox /= 1024, i++) {
 			  output = nApprox.toFixed(2) + aMultiples[i];
 			}
+
+      var fUpload = true;
+      //check freespace
 			if (nBytes > free) {
-			  fileSize.innerHTML = `<p><small> Bestand Grootte: ${output}</small><strong style="color: red;"> niet genoeg ruimte! </strong><p>`;
-			  document.getElementById('Iupload').setAttribute('disabled', 'disabled');
-			} 
-			else {
-			  fileSize.innerHTML = `<b>Bestand grootte:</b> ${output}<p>`;
+			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> niet genoeg ruimte! </strong><p>`;
+        fUpload = false;
+			}
+      //check filecount
+      //TODO: 
+      //  Although uploading a new file is blocked, REPLACING a file when the count is 30 must still be possible.
+      //  check if filename is already on the list, if so, allow this upload.
+			if ( nFilecount >= MAX_FILECOUNT) {
+			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> Maximaal aantal bestanden (${MAX_FILECOUNT}) bereikt! </strong><p>`;
+        fUpload = false;
+			}
+      if( fUpload ){
+        fileSize.innerHTML = `<b>Bestand grootte:</b> ${output}<p>`;
 			  document.getElementById('Iupload').removeAttribute('disabled');
+      }
+			else {			  
+        document.getElementById('Iupload').setAttribute('disabled', 'disabled');
 			}
 	 });	
   }
-  
-  //============================================================================  
-  function refreshDevInfo()
-  { Spinner(true);
-    fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-        console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
-		Spinner(false);
-        obj = json;
-        var tableRef = document.getElementById('tb_info');
+
+  function parseDeviceInfo(obj)
+  {
+    var tableRef = document.getElementById('tb_info');
         //clear table
 		while (tableRef.hasChildNodes()) { tableRef.removeChild(tableRef.lastChild);}
 
@@ -1297,6 +1178,17 @@ function show_hide_column2(table, col_no, do_show) {
 		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' href='/remote-update?version=" + LastVersion + "'>Klik voor update</a>";
 		  else VerCel3.innerHTML = "laatste versie";
 	  }
+  }
+  
+  //============================================================================  
+  function refreshDevInfo()
+  { Spinner(true);
+    fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
+      .then(response => response.json())
+      .then(json => {
+        console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
+        parseDeviceInfo(json);
+		    Spinner(false);
       })
       .catch(function(error) {
         var p = document.createElement('p');
@@ -1354,6 +1246,7 @@ function show_hide_column2(table, col_no, do_show) {
   function refreshDevTime()
   {
 	alert_message("");
+  document.getElementById('theTime').classList.remove("afterglow");
     console.log("Refresh api/v2/dev/time ..");
     
 	let controller = new AbortController();
@@ -1366,7 +1259,9 @@ function show_hide_column2(table, col_no, do_show) {
 
 	  //after reboot checks of the server is up and running and redirects to home
       if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
-      })
+      document.getElementById('theTime').classList.add("afterglow");
+      
+    })
       .catch(function(error) {    
 		if (error.name === "AbortError") {console.log("time abort error")}
 //         var p = document.createElement('p');
@@ -1379,26 +1274,20 @@ function show_hide_column2(table, col_no, do_show) {
   } // refreshDevTime()
     
   //============================================================================  
-  function refreshSmActual()
-  { 
-  	Spinner(true);
-    fetch(APIGW+"v2/sm/actual", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-          console.log("actual parsed .., fields is ["+ JSON.stringify(json)+"]");
-          data = json;
-          copyActualToChart(data);
-          if (presentationType == "TAB")
-                showActualTable(data);
-          else  showActualGraph(data);
-        //console.log("-->done..");
-         Spinner(false);
-      }) //json
-      .catch(function(error) {
-        var p = document.createElement('p');
-        p.appendChild( document.createTextNode('Error: ' + error.message) );
-      }); //catch
-  };  // refreshSmActual()
+  function refreshSmActual() {
+    document.getElementById("actualTable").classList.remove("afterglow");
+    Spinner(true);
+    var data = objDAL.getActual();
+    //copyActualToChart(data);
+    if (presentationType == "TAB")
+      showActualTable(data);
+    else{
+      var hist = objDAL.getActualHistory();  
+      copyActualHistoryToChart(hist);
+      showActualGraph();
+    }
+    Spinner(false);
+  }
   
 // format a identifier
 // input = "4530303433303036393938313736353137"
@@ -1560,84 +1449,77 @@ function parseSmFields(data)
   //============================================================================  
   function expandData(data)
   {
-	//console.log("expandData2: data length:"+ data.data.length );
-	//console.log("expandData2: actslot:"+ data.actSlot );
     var i;
     var slotbefore;
-    	
-    //--- first check op volgordelijkheid ------    
-// 	if (activeTab == "HoursTab") {  
-//     for (let i=0; i<(data.length -1); i++)
-//     {
-//       slotbefore = math.mod(i-1, data.data.length);
-// 	  if (data[i].edt1 < data[i+1].edt1 || data[i].edt2 < data[i+1].edt2)
-//       {
-//         console.log("["+(i)+"] ["+data[i].recid+"] := ["+(i+1)+"]["+data[i+1].recid+"]"); 
-//         data[i].edt1 = data[i+1].edt1 * 1.0;
-//         data[i].edt2 = data[i+1].edt2 * 1.0;
-//         data[i].ert1 = data[i+1].ert1 * 1.0;
-//         data[i].ert2 = data[i+1].ert2 * 1.0;
-//         data[i].gdt  = data[i+1].gdt  * 1.0;
-//       }
-//     } // for ...
-//     }
     for (let x=data.data.length + data.actSlot; x > data.actSlot; x--)
-    {	i = x % data.data.length;
-        slotbefore = math.mod(i-1, data.data.length);
-		//console.log("ExpandData2 - x: "+x); 
-		//console.log("ExpandData2 - i: "+i);
-		//console.log("ExpandData2 - slotbefore: "+slotbefore); 
-		//console.log("gd_tariff: "+gd_tariff); 
-		//console.log("ed_tariff: "+ed_tariff1); 
-      var     costs     = 0;
+    {
+      i = x % data.data.length;
+      slotbefore = math.mod(i-1, data.data.length);
+      var costsED = 0;
+      var costsER = 0;
       if (x != data.actSlot 	)
-      { 
-        if ( AvoidSpikes && ( data.data[slotbefore].values[0] == 0 ) ) data.data[slotbefore].values = data.data[i].values;//avoid gaps and spikes
-		data.data[i].p_ed  = ((data.data[i].values[0] + data.data[i].values[1])-(data.data[slotbefore].values[0] +data.data[slotbefore].values[1])).toFixed(3);
-        data.data[i].p_edw = (data.data[i].p_ed * 1000).toFixed(0);
-        data.data[i].p_er  = ((data.data[i].values[2] + data.data[i].values[3])-(data.data[slotbefore].values[2] +data.data[slotbefore].values[3])).toFixed(3);
-        data.data[i].p_erw = (data.data[i].p_er * 1000).toFixed(0);
-        data.data[i].p_gd  = (data.data[i].values[4]  - data.data[slotbefore].values[4]).toFixed(3);
-		data.data[i].water  = (data.data[i].values[5]  - data.data[slotbefore].values[5]).toFixed(3);
+      {
+        //avoid gaps and spikes
+        if ( AvoidSpikes && ( data.data[slotbefore].values[0] == 0 ) ) data.data[slotbefore].values = data.data[i].values;
+        
+        //simple differences
+        data.data[i].p_edt1= (data.data[i].values[0] - data.data[slotbefore].values[0]);
+        data.data[i].p_edt2= (data.data[i].values[1] - data.data[slotbefore].values[1]);
+        data.data[i].p_ert1= (data.data[i].values[2] - data.data[slotbefore].values[2]);
+        data.data[i].p_ert2= (data.data[i].values[3] - data.data[slotbefore].values[3]);
+		    data.data[i].p_gd  = (data.data[i].values[4] - data.data[slotbefore].values[4]);
+        data.data[i].water = (data.data[i].values[5] - data.data[slotbefore].values[5]);
 
-        //-- calculate Energy Delivered costs
-        costs = ( (data.data[i].values[0] - data.data[slotbefore].values[0]) * ed_tariff1 );
-        costs = costs + ( (data.data[i].values[1] - data.data[slotbefore].values[1]) * ed_tariff2 );
-        //-- subtract Energy Returned costs
-        costs = costs - ( (data.data[i].values[2] - data.data[slotbefore].values[2]) * er_tariff1 );
-        costs = costs - ( (data.data[i].values[3] - data.data[slotbefore].values[3]) * er_tariff2 );
-        data.data[i].costs_e = costs;
+        //sums of T1 & T2
+		    data.data[i].p_ed  = (data.data[i].p_edt1 + data.data[i].p_edt2);
+        data.data[i].p_er  = (data.data[i].p_ert1 + data.data[i].p_ert2);
+        
+        //sums in watts
+        data.data[i].p_edw = (data.data[i].p_ed * 1000);
+        data.data[i].p_erw = (data.data[i].p_er * 1000);        
+
+        //-- calculate costs
+        costsED  = ( data.data[i].p_edt1 * ed_tariff1 ) + ( data.data[i].p_edt2 * ed_tariff2 );
+        costsER  = ( data.data[i].p_ert1 * er_tariff1 ) + ( data.data[i].p_ert2 * er_tariff2 );
+        data.data[i].costs_e = costsED - costsER;
+        
         //-- add Gas Delivered costs
-        data.data[i].costs_g = HeeftGas?( (data.data[i].values[4]  - data.data[slotbefore].values[4])  * gd_tariff ):0;
+        data.data[i].costs_g = HeeftGas ? ( data.data[i].p_gd  * gd_tariff ) : 0;
+
         //-- compute network costs
-        data.data[i].costs_nw = (electr_netw_costs + (HeeftGas?gas_netw_costs:0)) * 1.0;
-		
-// 		console.log("costs_nw: "+data.data[i].costs_nw); 
-// 		console.log("gas_netw_costs: "+gas_netw_costs); 
-// 		console.log("electr_netw_costs: "+electr_netw_costs); 
-// 		console.log("HeeftGas: "+HeeftGas?"yes":"no"); 
-		
+        data.data[i].costs_nw = (electr_netw_costs + (HeeftGas ? gas_netw_costs : 0)) * 1.0;
+
         //-- compute total costs
         data.data[i].costs_tt = ( (data.data[i].costs_e + data.data[i].costs_g + data.data[i].costs_nw) * 1.0);
       }
       else
       {
-        costs             = 0;
-        data.data[i].p_ed      = (data.data[i].values[0] +data.data[i].values[1]).toFixed(3);
-        data.data[i].p_edw     = (data.data[i].p_ed * 1000).toFixed(0);
-        data.data[i].p_er      = (data.data[i].values[2] +data.data[i].values[3]).toFixed(3);
-        data.data[i].p_erw     = (data.data[i].p_er * 1000).toFixed(0);
-        data.data[i].p_gd      = (data.data[i].values[4]).toFixed(3);
-		data.data[i].water     = (data.data[i].values[5]).toFixed(3);
+        costs = 0;
+        data.data[i].p_edt1    = data.data[i].values[0];
+        data.data[i].p_edt2    = data.data[i].values[1];
+        data.data[i].p_ert1    = data.data[i].values[2];        
+        data.data[i].p_ert2    = data.data[i].values[3];        
+        data.data[i].p_gd      = data.data[i].values[4];
+		    data.data[i].water     = data.data[i].values[5];
+        data.data[i].p_ed      = (data.data[i].p_edt1 + data.data[i].p_edt2);
+        data.data[i].p_er      = (data.data[i].p_ert1 + data.data[i].p_ert2);        
+        data.data[i].p_edw     = (data.data[i].p_ed * 1000);
+        data.data[i].p_erw     = (data.data[i].p_er * 1000);
         data.data[i].costs_e   = 0.0;
         data.data[i].costs_g   = 0.0;
         data.data[i].costs_nw  = 0.0;
         data.data[i].costs_tt  = 0.0;
       }
     } // for i ..
-    //console.log("leaving expandData() ..");
-	//console.log("expandData2: eind data "+ JSON.stringify(data));
   } // expandData()
+
+  //limit every value in the array to n decimals
+  //toFixed() will convert all into strings, so also add  convertion back to Number
+  function applyArrayFixedDecimals(data, decimals){
+    for( var i=0; i<data.length; i++){
+      if( !isNaN(data[i]) ) data[i] = Number(data[i].toFixed(decimals));
+    }
+  }
   
   //============================================================================  
   function alert_message(msg) {
@@ -2408,7 +2290,7 @@ function parseSmFields(data)
   
   
   //============================================================================  
-  function EditMonths()
+  function getMonths()
   {	Spinner(true);
     console.log("fetch("+APIGW+"v2/hist/months)");
     fetch(APIGW+"v2/hist/months", {"setTimeout": 5000})
@@ -2417,7 +2299,7 @@ function parseSmFields(data)
         //console.log(response);
         data = json;
         expandDataSettings(data);
-        showMonthsV1(data, monthType);
+        showMonths(data, monthType);
         Spinner(false);
       })
       .catch(function(error) {
@@ -2428,13 +2310,13 @@ function parseSmFields(data)
       });
 
       document.getElementById('message').innerHTML = newVersionMsg;
-  } // EditMonths()
+  } // getMonths()
 
   
   //============================================================================  
-  function showMonthsV1(data, type)
+  function showMonths(data, type)
   { 
-    console.log("showMonthsV1("+type+")");
+    console.log("showMonths("+type+")");
     //--- first remove all Children ----
     var allChildren = document.getElementById('editMonths');
     while (allChildren.firstChild) {
@@ -2590,7 +2472,7 @@ function parseSmFields(data)
 
     } // sequence EEYY and MM
 
-  } // showMonthsV1()
+  } // showMonths()
 
   
   //============================================================================  
@@ -2613,8 +2495,8 @@ function parseSmFields(data)
   function undoReload()
   {
     if (activeTab == "bEditMonths") {
-      console.log("EditMonths");
-      EditMonths();
+      console.log("getMonths");
+      getMonths();
     } else if (activeTab == "bEditSettings") {
       console.log("undoReload(): reload Settings..");
       data = {};
@@ -2949,18 +2831,18 @@ function parseSmFields(data)
     if (eType == "ED") {
       console.log("Edit Energy Delivered!");
       monthType = eType;
-      EditMonths()
-      showMonthsV1(data, monthType);
+      getMonths()
+      showMonths(data, monthType);
     } else if (eType == "ER") {
       console.log("Edit Energy Returned!");
       monthType = eType;
-      EditMonths()
-      showMonthsV1(data, monthType);
+      getMonths()
+      showMonths(data, monthType);
     } else if (eType == "GD") {
       console.log("Edit Gas Delivered!");
       monthType = eType;
-      EditMonths()
-      showMonthsV1(data, monthType);
+      getMonths()
+      showMonths(data, monthType);
     } else {
       console.log("setEditType to ["+eType+"] is quit shitty!");
       monthType = "";

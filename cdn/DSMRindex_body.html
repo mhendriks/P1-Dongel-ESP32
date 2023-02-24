@@ -11,18 +11,17 @@
 <!-- <div class="dev-header"> -->
 <div class="header">
   <nav>
-  	<div id=messages></div>
-   	<div class="nav-clock topcorner"><span id="theTime">2023-01-01 00:31:49</span></div>
+  	<div id=messages class="mdi mdi-alert"></div>
+   	<div class="nav-clock topcorner"><span id="theTime">2021-07-08 22:31:49</span></div>
     <ul class="main-navigation" id="myTopnav">
-      <li><a id='Home'   		class='nav-img' href="#DashTab" onclick="activeTab='bDashTab';openTab()"><span class="iconify" data-icon="mdi-chart-box-outline"></span></a></li>
+      <li><a id='Home'   		class='nav-img' href="#DashTab" onclick="activeTab='bDashTab';openTab()"><span class="mdi mdi-chart-box-outline"></span></a></li>
 	  <li><a id='bDashTab'    	class='tabButton nav-item active' href="#DashTab">Dash</a></li>
 	  <li><a id='bActualTab'    class='tabButton nav-item' href="#ActualTab" >Actueel</a></li>
       <li><a id='bHoursTab'     class='tabButton nav-item' href="#HoursTab" >Uur</a></li>
       <li><a id='bDaysTab'      class='tabButton nav-item' href="#DaysTab" >Dag</a></li>
       <li><a id='bMonthsTab'    class='tabButton nav-item' href="#MonthsTab" >Maand</a></li>
-      <li><a id='bPlafondTab'   class='tabButton nav-item' href="#PlafondTab" >PrijsPlafond</a></li>
 	  <li>
-	  	<a id='bSysInfoTab' class='nav-img nav-item' href="#SysInfoTab" ><span class="iconify" data-icon="mdi-information-outline"></span></a>
+	  	<a id='bSysInfoTab' class='nav-img nav-item' href="#SysInfoTab" ><span class="mdi mdi-information-outline"></span></a>
 		<ul>
 			<li><a id='bInfo_SysInfo'   class='tabButton nav-item' href="#SysInfoTab" >Systeeminformatie</a></li>
 			<li><a id='bInfo_frontend'  class='tabButton nav-item' href="#FrontendTab" >Webpagina</a></li>
@@ -30,15 +29,15 @@
 			<li><a id='bInfo_Fields'    class='tabButton nav-item' href="#FieldsTab" >Alle Velden</a></li>
 			<li><a id='bInfo_APIdoc'    class='tabButton nav-item' href="#APIdocTab" >API Docs</a></li>
 		</ul></li>
-      <li><a id='bFSExplorer'    class='nav-img nav-item' href="#FSExplorer" ><span class="iconify" data-icon="mdi-folder-outline"></span></a></li>
-      <li><a id='bSettings'      class='nav-img nav-item' href="#Settings" ><span class="iconify" data-icon="mdi-cog"></span></a>    
+      <li><a id='bFSexplorer'    class='nav-img nav-item' href="#FileExplorer" ><span class="mdi mdi-folder-outline"></span></a></li>
+      <li><a id='bSettings'      class='nav-img nav-item' href="#Settings" ><span class="mdi mdi-cog"></span></a>
 		<ul>
 			<li><a id='bEditSettings' class='tabButton nav-item' href="#Settings" >Settings</a></li>
 			<li><a id='bEditMonths'   class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
 			<li><a id='bReset'   	  class='tabButton nav-item' href="#Reset" >Reset & Update</a></li>
 <!-- 			<li><a id='bAbout'   	  class='tabButton nav-item' href="#About" >About</a></li> -->
 		</ul></li>
-	  <li><a href="javascript:void(0);" class="icon" onclick="menu()"><i id="menuid" class="iconify" data-icon="mdi-menu"></i></a></li>
+	  <li><a href="javascript:void(0);" class="icon" onclick="menu()"><i id="menuid" class="mdi mdi-menu"></i></a></li>
    </ul>
    </nav> <!-- end nav-main -->  
 </div> <!-- end header -->    
@@ -65,17 +64,14 @@
 		<col class="col4"/>
 		<col class="col5"/>
 		</colgroup>
-		<thead>
           <tr>
             <th>Datum/Tijd</th>
-            <th class=th-energy>Energie<br>Verbruik<br>(Wh)</th>
-            <th class=th-energy-r>Energie<br>Teruglevering<br>(Wh)</th>
-            <th class=mbus-name>Gas-<br>verbruik<br>(m3)</th>
-			<th class=water>Water-<br>verbruik<br>(m3)</th>
+            <th>Energie<br>Verbruik<br>(Wh)</th>
+            <th>Energie<br>Teruglevering<br>(Wh)</th>
+            <th>Gas-<br>verbruik<br>(m3)</th>
+			<th>Water-<br>verbruik<br>(m3)</th>
+        <!--<th style="text-align: right;  border-bottom: 2px solid #ddd;">Kosten</th>-->
           </tr>
-          </thead>
-      <tbody>
-      </tbody>
       </table>
     </div>
   </section> <!-- END HoursTab -->
@@ -106,7 +102,7 @@
             <th>Datum/Tijd</th>
             <th>Energie<br>Verbruik<br>(Wh)</th>
             <th>Energie<br>Teruglevering<br>(Wh)</th>
-            <th class=mbus-name>Gas-<br>verbruik<br>(m3)</th>
+            <th>Gas-<br>verbruik<br>(m3)</th>
 			<th>Water-<br>verbruik<br>(m3)</th>
             <th>Kosten</th>
         </tr>
@@ -133,7 +129,7 @@
       &nbsp;&nbsp;
     </div>
     <div id='lastMonths'>
-      <table id="lastMonthsTable" style="display:none">
+      <table id="lastMonthsTable" style="display:block">
 		<colgroup>
 		<col class="col1"/>
 		<col class="col2"/>
@@ -158,7 +154,7 @@
             <th></th>
             <th colspan=4>Afgenomen</th>
             <th style="text-align:center" colspan=4>Teruggeleverd</th>
-            <th colspan=4 class=mbus-name>Gasverbruik</th>
+            <th colspan=4>Gasverbruik</th>
 			<th style="text-align:center" colspan=4>Waterverbruik</th>
         </tr>
         <tr>
@@ -174,14 +170,14 @@
             <th>(kWh)</th>
             
             <th>Jaar</th>
-            <th class=mbus-unit>(m3)</th>
+            <th>(m3)</th>
             <th>Jaar</th>
-            <th class=mbus-unit>(m3)</th>
+            <th>(m3)</th>
             
             <th>Jaar</th>
             <th>(m3)</th>
             <th>Jaar</th>
-            <th class=mbus-unit>(m3)</th></tr>
+            <th>(m3)</th>        </tr>
       </thead>
       <tbody>
 	  </tbody>
@@ -206,13 +202,13 @@
             <th style="text-align: right;" width='80px'>Maand</th>
             <th>Jaar</th>
             <th style="text-align: right;" width='70px'>Electra</th>
-            <th class=mbus-name>Gas</th>
+            <th>Gas</th>
             <th>Netw.</th>
             <th style="text-align: right;" width='70px'>Totaal</th>
 
             <th>Jaar</th>
             <th style="text-align: right;" width='70px'>Electra</th>
-            <th class=mbus-name>Gas</th>
+            <th>Gas</th>
             <th>Netw.</th>
             <th style="text-align: right;" width='70px'>Totaal</th>
         </tr>
@@ -222,25 +218,6 @@
       </table>
     </div>
   </section> <!-- END MonthsTab -->
-  
-  <section id="PlafondTab" class="tabName">
-	<h2>Prijsplafond (NL)</h2>
-	<p>Deze grafiek laat verbruik zien t.o.v. prijsplafond om een idee te geven hoe het verbruik zich ontwikkeld.<br>
-	In de jaar grafieken is de seizoensinvloed meegenomen. In de maand grafieken is de verdeling linear.<br>
-	Het is een hulpmiddel om een beeld te krijgen van het gebruik ten opzichte van het prijsplafond.</p>
-    <div>
-      <b>Grafiek per:</b>
-      <input type="radio" id="btnYear" name=burnup onchange="setViewYEAR()"/>
-      <label for="btnYear">Jaar</label>
-      <input type="radio" id="btnMonth" name=burnup onchange="setViewMONTH()" checked/>
-      <label for="btnMonth">Maand</label>
-    </div>
-    
-    <div class="chart-container" style="position: relative; height:40vh; width:80vw">
-		<canvas id="myChart1" ></canvas>
-		<canvas id="myChart2" ></canvas>
-	</div>
-  </section> <!-- END PLAFOND -->
 
   <!-- START SysInfo Tab -->
   <section id="SysInfoTab" class="tabName subTab">
@@ -258,7 +235,7 @@
       </tbody>
       <tfoot>
         <tr>
-            <td colspan=3>Data uit de Dongle</td>
+            <td colspan=3>Data uit de DSMR-logger</td>
         </tr>
       </tfoot>
       </table>
@@ -430,7 +407,7 @@
   </section> <!-- end tabEditMonths Page -->
   
   <!-- START FileExplorer Tab -->
-  <section id="FSExplorer" class="tabName"><h2>Bestandsbeheer</h2>
+  <section id="FileExplorer" class="tabName"><h2>Bestandsbeheer</h2>
       <div>
          <main id="FSmain"></main>
       </div>
@@ -532,7 +509,7 @@
 
         <a href="#ActualTab" style="display:flex">
         <div class=card id=l1 style="display:block">
-			<h1 id=power_delivered_l1h i18n-key="Actueel"><span class="iconify" data-icon="mdi-gauge"></span>Actueel</h1>
+			<h1 id=power_delivered_l1h class="mdi mdi-gauge">Actueel</h1>
 <!-- 	        <div class="chart-container" id="gauge"></div> -->
 	        <canvas class="chart-container" id="gauge3f"></canvas>
 	        <div id=legenda>
@@ -549,7 +526,7 @@
 		</a>
 		<a href="#HoursTab" style="display:flex">
         <div class=card id=l3 style="display:block">
-            <h1 id=Ph ><span class="iconify" data-icon="mdi-lightning-bolt"></span>Electra</h1>
+            <h1 id=Ph class="mdi mdi-lightning-bolt">Electra</h1>
             <canvas class="chart-container" id="container-3"></canvas>
 <!--             <div class="label">ELECTRA</div>         -->
 			<div id=legenda>
@@ -564,23 +541,8 @@
             <h3>min: <span id="Pmin">0.0</span></h3-->
         </div>
     	</a>
-    	<div class=card id=l6 style="display:none">
-            <h1 id=Ph ><span class="iconify" data-icon="mdi-home-import-outline"></span>Afname</h1>
-            <canvas class="chart-container" id="container-6"></canvas>
-<!--             <div class="label">ELECTRA</div>         -->
-			<div id=legenda>
-				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
-				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
-				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
-			</div>
-    		<hr/>
-            <div style="text-align:center">Vandaag [kWh]</div>
-            <h2 id=Pa>0.0</h2>
-            <!--h3>max: <span id="Pamax">0.0</span></h3>
-            <h3>min: <span id="Pamin">0.0</span></h3-->
-        </div>
         <div class=card id=l5 style="display:none">
-            <h1 id=Ph ><span class="iconify" data-icon="mdi-home-export-outline"></span>Teruglevering</h1>
+            <h1 id=Ph class="mdi mdi-home-export-outline">Teruglevering</h1>
             <canvas class="chart-container" id="container-5"></canvas>
 <!--             <div class="label">ELECTRA</div>         -->
 			<div id=legenda>
@@ -594,8 +556,23 @@
             <!--h3>max: <span id="Pimax">0.0</span></h3>
             <h3>min: <span id="Pimin">0.0</span></h3-->
         </div>
+        <div class=card id=l6 style="display:none">
+            <h1 id=Ph class="mdi mdi-home-import-outline">Afname</h1>
+            <canvas class="chart-container" id="container-6"></canvas>
+<!--             <div class="label">ELECTRA</div>         -->
+			<div id=legenda>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+			</div>
+    		<hr/>
+            <div style="text-align:center">Vandaag [kWh]</div>
+            <h2 id=Pa>0.0</h2>
+            <!--h3>max: <span id="Pamax">0.0</span></h3>
+            <h3>min: <span id="Pamin">0.0</span></h3-->
+        </div>
         <div class=card id=l4 style="display:none">
-            <h1 id=Gh ><span class="iconify" data-icon="mdi-fire"></span>Gas</h1>
+            <h1 id=Gh class="mdi mdi-fire">Gas</h1>
             <canvas class="chart-container" id="container-4"></canvas>
 <!-- 			<div class="label stroom">GAS</div> -->
 			<div id=legenda>
@@ -608,7 +585,7 @@
             <h2 id="G">0.0</h2>
         </div>
                 <div class=card id=l7 style="display:none">
-            <h1 id=Gh ><span class="iconify" data-icon="mdi-water"></span>Water</h1>
+            <h1 id=Gh class="mdi mdi-water">Water</h1>
             <canvas class="chart-container" id="container-7"></canvas>
 			<div id=legenda>
 				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
@@ -620,7 +597,7 @@
             <h2 id="W">0.0</h2>
         </div>
         <div class=card id=l2 style="display:none">
-            <h1 id=power_delivered_l2h ><span class="iconify" data-icon="mdi-sine-wave"></span>Spanning</h1>
+            <h1 id=power_delivered_l2h class="mdi mdi-sine-wave">Spanning</h1>
 	        <canvas class="chart-container" id="gauge-v"></canvas>
 	        <div id=legenda>
 				<div id=v1 class="lblVerbuik vandaag">1<span class="tooltiptext">fase 1</span></div>
@@ -633,19 +610,6 @@
             <h3>max: <span id="power_delivered_2max">0.0</span> Volt</h3>
             <h3>min: <span id="power_delivered_2min">0.0</span> Volt</h3>
         </div>
-         <div class=card id=l8 style="display:none">
-            <h1 id=Qh ><span class="iconify" data-icon="mdi-heat-wave"></span>Warmte</h1>
-            <canvas class="chart-container" id="container-q"></canvas>
-			<div id=legenda>
-				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
-				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
-				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
-			</div>
-            <hr/>
-            <div style="text-align:center">Vandaag [kJ]</div>
-            <h2 id="Q">0.0</h2>
-        </div>
-
 
     </div> <!-- outer -->  
   </section>  <!-- END Dash Tab --> 
