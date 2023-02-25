@@ -9,6 +9,7 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
+
 const APIGW=window.location.protocol+'//'+window.location.host+'/api/';
 
 const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
@@ -60,7 +61,7 @@ const SQUARE_M_CUBED = "\u33A5";
   class dsmr_dal_main{
     constructor() {
       this.devinfo=[];
-			this.version_manifest = [];
+	  this.version_manifest = [];
       this.actual=[];
       this.actual_history = [];
       this.timerREFRESH_ACTUAL = 0;      
@@ -234,7 +235,7 @@ cfgDefaultTREND.data.datasets[2].label = "eergisteren";
 //phases based gauges
 function renderLabelVoltage(args){return args.value + 207 + " V";}
 let cfgGaugeVOLTAGE = structuredClone(cfgDefaultPHASES);
-cfgGaugeVOLTAGE.options.title.text = "Voltage";
+cfgGaugeVOLTAGE.options.title.text = "V";
 cfgGaugeVOLTAGE.options.plugins.labels.render = renderLabelVoltage;
 
 function renderLabel3F(args){return args.value + " A";}
@@ -796,7 +797,7 @@ function updateFromDAL(source, json)
 function bootsTrapMain() 
 {
   console.log("bootsTrapMain()");
-  loadIcons();
+//   loadIcons();
   getDevSettings();
 
   createDashboardGauges();
