@@ -19,10 +19,12 @@ const MAX_SM_ACTUAL     = 15*6; //store the last 15 minutes (each interval is 10
 const MAX_FILECOUNT     = 30;   //maximum filecount on the device is 30
 
 const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
+const URL_GITHUB_VERSION   = "https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat";
 
 const jsversie			= 221201;
 
 const SQUARE_M_CUBED = "\u33A5";
+const MONTHS_IN_YEAR_NL = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
   
 "use strict";
 
@@ -141,7 +143,7 @@ const SQUARE_M_CUBED = "\u33A5";
     }
   }
                     
-  var monthNames 			= [ "indxNul","Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December","\0"];
+  var monthNames 			= ["indxNul"].concat(MONTHS_IN_YEAR_NL).concat(["\0"]);
   const spinner 			= document.getElementById("loader");
 
 //---- frontend settings
@@ -310,6 +312,7 @@ Iconify.addCollection({
 });
 }
 
+//entry point 
 window.onload=bootsTrapMain;
 
 //============================================================================  
@@ -336,8 +339,9 @@ function visibilityListener() {
 
 document.addEventListener("visibilitychange", visibilityListener);
 
+//============================================================================  
+// if the user uses the backbutton in the browser
 window.addEventListener('popstate', function (event) {
-// 	console.log("location: " + document.location + ", hash: " +location.hash);
 	activeTab = "b" + location.hash.slice(1, location.hash.length);
 	openTab();
 });
@@ -580,8 +584,6 @@ function UpdateDash()
 		} else {
 			// current is missing = calc current based on actual power		
 			TotalAmps = Number(Math.abs(TotalKW)*1000/230).toFixed(0);
-			
-// 			console.log("current : " + current);
 			gauge3f.data.datasets[0].data=[TotalAmps,AMPS-TotalAmps];
 		};	
 		
@@ -609,115 +611,98 @@ function UpdateDash()
 			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );                        
 		}
 		
-
+    // stop here if there is no history enabled
 		if (!EnableHist) {Spinner(false);return;}
 		
+
+    //-------VERBRUIK METER	
 		if (Dongle_Config != "p1-q") {
-		//-------VERBRUIK METER	
-		//bereken verschillen afname, teruglevering en totaal
-		for(let i=0;i<3;i++){
-			if (i==0) {
-				Parra[0]=Number(json.energy_delivered_tariff1.value + json.energy_delivered_tariff2.value - hist_arrPa[1]).toFixed(3);
-				Parri[0]=Number(json.energy_returned_tariff1.value + json.energy_returned_tariff2.value - hist_arrPi[1]).toFixed(3);
 
-			} else {
-				Parra[i]=Number(hist_arrPa[i] - hist_arrPa[i+1]).toFixed(3);
-				Parri[i]=Number(hist_arrPi[i] - hist_arrPi[i+1]).toFixed(3);
-			}
-			Parr[i]=Number(Parra[i] - Parri[i]).toFixed(3);
-// 			if (Parr[i] < 0) Parr[i] = 0;
-		}
+      //bereken verschillen afname, teruglevering en totaal
+      for(let i=0;i<3;i++){
+        if (i==0) {
+          Parra[0]=Number(json.energy_delivered_tariff1.value + json.energy_delivered_tariff2.value - hist_arrPa[1]).toFixed(3);
+          Parri[0]=Number(json.energy_returned_tariff1.value + json.energy_returned_tariff2.value - hist_arrPi[1]).toFixed(3);
 
-		//dataset berekenen voor Ptotaal
-		Pmax = math.max(Parr);		// maximale waarde bepalen voor de meters
-		for(let i=0;i<3;i++){
-			trend_p.data.datasets[i].data=[Number(Parr[i]).toFixed(1),Number(Pmax-Parr[i]).toFixed(1)];
-		};
-		trend_p.update();
+        } else {
+          Parra[i]=Number(hist_arrPa[i] - hist_arrPa[i+1]).toFixed(3);
+          Parri[i]=Number(hist_arrPi[i] - hist_arrPi[i+1]).toFixed(3);
+        }
+        Parr[i]=Number(Parra[i] - Parri[i]).toFixed(3);
+  // 			if (Parr[i] < 0) Parr[i] = 0;
+      }
 
-		//vermogen vandaag, min - max bepalen
-		document.getElementById("P").innerHTML = Number(Parr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
-		
-		if (Injection) 
-		{
-			//-------INTJECTIE METER	
-			//data sets berekenen voor de gauges
-			var Pmaxi = math.max(Parri);
-			for(let i=0;i<3;i++){
-				trend_pi.data.datasets[i].data=[Number(Parri[i]).toFixed(1),Number(Pmaxi-Parri[i]).toFixed(1)];
-			};
-			trend_pi.update();
-			//vermogen vandaag, min - max bepalen
-			document.getElementById("Pi").innerHTML = Number(Parri[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
+      //dataset berekenen voor Ptotaal
+      updateGaugeTrend(trend_p, Parr);
+      document.getElementById("P").innerHTML = formatValue( Parr[0] );
+      
+      if (Injection) 
+      {
+        //-------INJECTIE METER
+        updateGaugeTrend(trend_pi, Parri);
+        document.getElementById("Pi").innerHTML = formatValue( Parri[0] );
 
-			//-------AFNAME METER	
-			//data sets berekenen voor de gauges
-			var Pmaxa = math.max(Parra);
-			for(let i=0;i<3;i++){
-				trend_pa.data.datasets[i].data=[Number(Parra[i]).toFixed(1),Number(Pmaxa-Parra[i]).toFixed(1)];
-			};
-			trend_pa.update();
-			//vermogen vandaag, min - max bepalen
-			document.getElementById("Pa").innerHTML = Number(Parra[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
-		}
+        //-------AFNAME METER	
+        updateGaugeTrend(trend_pa, Pmaxa);
+        document.getElementById("Pa").innerHTML = formatValue( Parra[0] );
+      }
 		} //!= p1-q
-		//-------GAS METER	
+		
+    //-------GAS METER	
 		if ( HeeftGas && (Dongle_Config != "p1-q") ) 
 		{
-			//bereken verschillen gas, afname, teruglevering en totaal
-			for(let i=0;i<3;i++){
-				if (i==0) Garr[0]=Number(json.gas_delivered.value - hist_arrG[1]).toFixed(3) ;
-				else Garr[i]=Number(hist_arrG[i] - hist_arrG[i+1]).toFixed(3);
-				if (Garr[i] < 0) Garr[i] = 0;
-			}
-
-			Gmax = math.max(Garr);
-			for(let i=0;i<3;i++) trend_g.data.datasets[i].data=[Number(Garr[i]).toFixed(1),Number(Gmax-Garr[i]).toFixed(1)];
-			trend_g.update();
+      Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1);
+      updateGaugeTrend(trend_g, Garr);
 			document.getElementById("G").innerHTML = Number(Garr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
 		}
 		
 		//-------WATER METER	
 		if (HeeftWater) 
 		{
-			//bereken verschillen gas, afname, teruglevering en totaal
-			for(let i=0;i<3;i++){
-				if (i==0) Warr[0]=Number(json.water.value - hist_arrW[1])*1000 ;
-				else Warr[i]=Number(hist_arrW[i] - hist_arrW[i+1])*1000;
-				if (Warr[i] < 0) Warr[i] = 0;
-			}
-
-			Wmax = math.max(Warr);
-			for(let i=0;i<3;i++){
-				trend_w.data.datasets[i].data=[Number(Warr[i]).toFixed(),Number(Wmax-Warr[i]).toFixed()];
-			};
-			trend_w.update();
+      Warr = calculateDifferences(json.water.value, hist_arrW, 1000);
+      updateGaugeTrend(trend_w, Warr);
 			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString();
 		}
-		
-		
+				
 		//-------Warmte METER	
 		if (Dongle_Config == "p1-q") 
 		{
-			for(let i=0;i<3;i++){
-				if (i==0) Garr[0]=Number(json.gas_delivered.value - hist_arrG[1]).toFixed(3)*1000 ;
-				else Garr[i]=Number(hist_arrG[i] - hist_arrG[i+1]).toFixed(3)*1000;
-				if (Garr[i] < 0) Garr[i] = 0;
-			}
-
-			Gmax = math.max(Garr);
-			for(let i=0;i<3;i++) trend_q.data.datasets[i].data=[Number(Garr[i]).toFixed(0),Number(Gmax-Garr[i]).toFixed(0)];
-			trend_q.update();
+      Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1000);
+      updateGaugeTrend(trend_q, Garr);
 			document.getElementById("Q").innerHTML = Number(Garr[0]);
 		}
-		
 								
 		Spinner(false);
-		}); //end fetch fields
+	}); //end fetch fields
+}
+
+//bereken verschillen gas, afname, teruglevering en totaal
+function calculateDifferences(curval, hist_arr, factor)
+{
+  var out = []  
+  for(let i=0; i<3; i++)
+  {
+    if (i==0) 
+      out[0] = Number(curval - hist_arr[1]) * factor;
+    else 
+      out[i] = Number(hist_arr[i] - hist_arr[i+1]) * factor;
+
+    if (out[i] < 0) out[i] = 0;
+  }
+  return out;
+}
+
+//update dataset and update gauge 
+function updateGaugeTrend(objGauge, arr)
+{
+  var nMax = math.max(arr);
+  for(let i=0; i<3; i++){
+    objGauge.data.datasets[i].data = [ Number(arr[i]).toFixed(1), Number(nMax-arr[i]).toFixed(1) ];
+  }
+  objGauge.update();
 }
 	
-  //============================================================================  
-    
+//============================================================================      
 function menu() {
   var x = document.getElementById("myTopnav");
   if (x.className === "main-navigation") {
@@ -766,7 +751,7 @@ function handle_menu_click()
 	}
 }
 
-  //============================================================================  
+//create all chart-based gauges
 function createDashboardGauges()
 {
   trend_p 	= new Chart(document.getElementById("container-3"), cfgGaugeELEKTRA);
@@ -779,6 +764,7 @@ function createDashboardGauges()
   gaugeV 		= new Chart(document.getElementById("gauge-v"),     cfgGaugeVOLTAGE);
 }
 
+//callback function for the DAL
 function updateFromDAL(source, json)
 {
   console.log("updateFromDAL(); source="+source);
@@ -794,6 +780,7 @@ function updateFromDAL(source, json)
   }*/
 }
 
+//main entry point from DSMRindex.html or window.onload
 function bootsTrapMain() 
 {
   console.log("bootsTrapMain()");
@@ -835,7 +822,7 @@ function bootsTrapMain()
   } // bootsTrapMain()
   
   
-  //============================================================================  
+  //handles all redirects
   function handleRedirect(){
 	console.log("location-handle: " + location.hash.split('msg=')[1]);
 	//close all sections
@@ -861,9 +848,9 @@ function bootsTrapMain()
 	}, 1000);
 }
 
-  //============================================================================  
-  
-function Spinner(show) {
+  //============================================================================ 
+  //shows or hide spinner   
+  function Spinner(show) {
 	if (show) {
 		document.getElementById("loader").removeAttribute('hidden');
 		setTimeout(() => { document.getElementById("loader").setAttribute('hidden', '');}, 5000);
@@ -871,8 +858,8 @@ function Spinner(show) {
   }
   
   //============================================================================  
-  
-function show_hide_column(table, col_no, do_show) {
+  // shows or hide table column v1
+  function show_hide_column(table, col_no, do_show) {
    var tbl = document.getElementById(table);
    var col = tbl.getElementsByTagName('col')[col_no];
    if (col) {
@@ -881,7 +868,7 @@ function show_hide_column(table, col_no, do_show) {
 }
 
 //============================================================================  
-
+// show or hides table column v2
 function show_hide_column2(table, col_no, do_show) {
 
     var tbl  = document.getElementById(table);
@@ -903,6 +890,7 @@ function show_hide_column2(table, col_no, do_show) {
   }
   
   //============================================================================  
+  // handle opening the current selected tab (from onclick menuitems)
   function openTab() {
 
     console.log("openTab : " + activeTab );
@@ -910,10 +898,7 @@ function show_hide_column2(table, col_no, do_show) {
     clearInterval(tabTimer);  
     clearInterval(actualTimer);  
 
-	//--- hide canvas -------
-    document.getElementById("dataChart").style.display = "none";
-    document.getElementById("gasChart").style.display  = "none";
-	document.getElementById("waterChart").style.display  = "none";
+    hideAllCharts();
 
 	if (!EnableHist) {
 	}
@@ -1159,6 +1144,7 @@ function show_hide_column2(table, col_no, do_show) {
 	 });	
   }
 
+  //parse all json devinfo 
   function parseDeviceInfo(obj)
   {
     var tableRef = document.getElementById('tb_info');
@@ -1226,8 +1212,8 @@ function show_hide_column2(table, col_no, do_show) {
 		  else VerCel3.innerHTML = "laatste versie";
 	  }
   }
-  
-  //============================================================================  
+    
+  //get new devinfo==============================================================  
   function refreshDevInfo()
   { Spinner(true);
     fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
@@ -1382,6 +1368,9 @@ function parseFailureLog(value) {
   return failures;
 };
 
+//format duration (in sec)
+//input: 3600
+//output: 1 hours
 function formatDuration(value) {
   var t = "";
   var sMIN = value / 60;
@@ -1398,6 +1387,15 @@ function formatDuration(value) {
   return t;
 }
 
+//format the complete failure log
+//input:   
+/*  
+  restored on 2017-11-07 01:35:57 (dst=off) after 8.55 min downtime.
+  restored on 2018-08-06 15:54:35 (dst=on) after 1.24 hours downtime.
+  restored on 2018-11-17 12:55:23 (dst=off) after 23.57 min downtime.
+  restored on 2021-06-02 10:03:32 (dst=on) after 50.12 min downtime.
+  restored on 2022-12-24 03:36:26 (dst=off) after 4.46 hours downtime.
+*/
 function formatFailureLog(svalue) {
   var t = "";
   failures = parseFailureLog(svalue);
@@ -1411,7 +1409,8 @@ function formatFailureLog(svalue) {
   return t;
 }
 
-function parseSmFields(data)
+  //parse the fields of the SM
+  function parseSmFields(data)
   {
     //console.log("parsed .., fields is ["+ JSON.stringify(data)+"]");
     for (var item in data) 
@@ -1476,6 +1475,7 @@ function parseSmFields(data)
   }
   
   //============================================================================  
+  //refresh the fields of the SM
   function refreshSmFields()
   { 
     Spinner(true);
@@ -1494,6 +1494,7 @@ function parseSmFields(data)
   };  // refreshSmFields()
   
   //============================================================================  
+  //calculate the diffs, sums and costs per entry
   function expandData(data)
   {
     var i;
@@ -1569,6 +1570,7 @@ function parseSmFields(data)
   }
   
   //============================================================================  
+  //display an alert message at the top
   function alert_message(msg) {
   	if (msg==""){
   		document.getElementById('messages').style="display:none";
@@ -1719,7 +1721,7 @@ function parseSmFields(data)
       });     
   } // refreshSmTelegram()
 
-  //
+  //format a value based on the locale of the client
   function formatValue(value)
   {
     var t="";
@@ -1739,11 +1741,10 @@ function parseSmFields(data)
 
     for (var item in data) 
     {
+      //skip if dongle=Q
      	if ( (item == "gas_delivered_timestamp") && (Dongle_Config == "p1-q") ) continue;
-       	//console.log("showActualTableV2 i: "+item);
-    	//console.log("showActualTableV2 data[i]: "+data[item]);
-    	//console.log("showActualTableV2 data[i].value: "+data[item].value);
     	
+      //ensure tablerow exists
       data[item].humanName = translateToHuman(item);
       var tableRef = document.getElementById('actualTable').getElementsByTagName('tbody')[0];
       if( ( document.getElementById("actualTable_"+item)) == null )
@@ -1789,9 +1790,7 @@ function parseSmFields(data)
     }
 
     //--- hide canvas
-    document.getElementById("dataChart").style.display = "none";
-    document.getElementById("gasChart").style.display  = "none";
-	  document.getElementById("waterChart").style.display  = "none";
+    hideAllCharts();
     //--- show table
     document.getElementById("actual").style.display    = "block";
 
@@ -1860,10 +1859,7 @@ function parseSmFields(data)
     };
 
     //--- hide canvas
-    document.getElementById("dataChart").style.display = "none";
-    document.getElementById("gasChart").style.display  = "none";
-	document.getElementById("waterChart").style.display  = "none";
-	
+    hideAllCharts();
 
 
 	if ( Dongle_Config == "p1-q" ) 	{
@@ -1977,9 +1973,7 @@ function parseSmFields(data)
     };
     
     //--- hide canvas
-    document.getElementById("dataChart").style.display  = "none";
-    document.getElementById("gasChart").style.display   = "none";
-	document.getElementById("waterChart").style.display   = "none";
+    hideAllCharts();
     //--- show table
 	if (Dongle_Config == "p1-q") {
   		show_hide_column2('lastMonthsTable', 1,false);
@@ -2120,9 +2114,7 @@ function parseSmFields(data)
 
     
     //--- hide canvas
-    document.getElementById("dataChart").style.display  = "none";
-    document.getElementById("gasChart").style.display   = "none";
-	document.getElementById("waterChart").style.display   = "none";
+    hideAllCharts();
     //--- show table
     if ( Dongle_Config == "p1-q" ){
 		show_hide_column2('lastMonthsTableCosts', 2,false);
@@ -2224,6 +2216,7 @@ function parseSmFields(data)
     console.log("Set Month Table Type");
     if (presentationType == 'GRAPH') 
     {
+      //reset checkbox when you select a graph
       document.getElementById('mCOST').checked = false;
       return;
     }
@@ -2560,14 +2553,13 @@ function parseSmFields(data)
   function saveData() 
   {
     document.getElementById('message').innerHTML = "Gegevens worden opgeslagen ..";
-
-    if (activeTab == "bEditSettings")
-    {
-      saveSettings();
-    } 
-    else if (activeTab == "bEditMonths")
-    {
-      saveMeterReadings();
+    switch(activeTab){
+      case "bEditSettings":
+        saveSettings();
+        break;
+      case "bEditMonths":
+        saveMeterReadings();
+        break;
     }
     
   } // saveData()
@@ -2872,6 +2864,15 @@ function parseSmFields(data)
 
   } // readGitHubVersion()
 
+  /*
+  ****************************** UTILS *******************************************
+  */
+
+  function hideAllCharts(){//--- hide canvas -------
+    document.getElementById("dataChart" ).style.display = "none";
+    document.getElementById("gasChart"  ).style.display = "none";
+    document.getElementById("waterChart").style.display = "none";
+  }
     
   //============================================================================  
   function setEditType(eType) {
@@ -3022,7 +3023,8 @@ function parseSmFields(data)
     var multiplier = Math.pow(10, precision || 0);
     return Math.round(value * multiplier) / multiplier;
   }
-    
+  
+  //translation array
   var translateFields = [
            [ "author",                    "Auteur" ]
           ,[ "identification",            "Slimme Meter ID" ]
