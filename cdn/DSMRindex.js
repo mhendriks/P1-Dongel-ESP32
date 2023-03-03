@@ -528,9 +528,13 @@ function UpdateDash()
 		if (v1 && (!Injection || ShowVoltage) ) {
 			document.getElementById("l2").style.display = "block"
 			document.getElementById("fases").innerHTML = Phases;
-				
-			let Vmin_now = math.min(v1, v2, v3);
-			let Vmax_now= math.max(v1, v2, v3);
+			
+      let Vmin_now = v1;
+      let Vmax_now = v1;
+      if( Phases != 1){
+			  Vmin_now = math.min(v1, v2, v3);
+			  Vmax_now = math.max(v1, v2, v3);
+      }
 			
 			//min - max waarde
 			if (minV == 0.0 || Vmin_now < minV) { minV = Vmin_now; }
@@ -719,8 +723,7 @@ function menu() {
 	menu.classList.toggle("mdi-menu");
 }
    
-  //============================================================================  
-
+// attach an onclick handler for all menuitems
 function handle_menu_click()
 {	
 	var btns = document.getElementsByClassName("nav-item");
@@ -1749,21 +1752,14 @@ function formatFailureLog(svalue) {
       //ensure tablerow exists
       data[item].humanName = translateToHuman(item);
       var tableRef = document.getElementById('actualTable').getElementsByTagName('tbody')[0];
-      if( ( document.getElementById("actualTable_"+item)) == null )
+      var itemid = "actualTable_"+item;
+      if( ( document.getElementById(itemid)) == null )
       {
-        var newRow   = tableRef.insertRow();
-        newRow.setAttribute("id", "actualTable_"+item, 0);
-        // Insert a cell in the row at index 0
-        var newCell  = newRow.insertCell(0);            // (short)name
-        var newText  = document.createTextNode('');
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(1);                // value
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(2);                // unit
-        newCell.appendChild(newText);
+        createTableRowWithCells(tableRef, itemid, 3, '');
       }
       //get ref to tablecells
-      tableCells = document.getElementById("actualTable_"+item).cells;
+      tableCells = document.getElementById(itemid).cells;
+      
       //fill cells
       switch(item)
       {
@@ -1814,17 +1810,16 @@ function formatFailureLog(svalue) {
 
     
     for (let i=start; i>stop; i--)
-    {  index = i % data.data.length;
-		//console.log("showHistTable index: "+index);
-		//console.log("showHistTable("+type+"): data["+i+"] => data["+i+"]name["+data[i].recid+"]");
+    {  
+      index = i % data.data.length;
+      var tref = tableRef.getElementsByTagName('tbody')[0];
+      var itemid = type+"Table_"+type+"_R"+index;
+      var nCells = 5;
+      if (type == "Days") nCells += 1;
+      createTableRowWithCells( tref, itemid, nCells, '-');
 
-//       var tableRef = document.getElementById('last'+type+'Table');
-//       if( ( document.getElementById(type +"Table_"+type+"_R"+index)) == null )
-//       {
-        var newRow   = tableRef.getElementsByTagName('tbody')[0].insertRow();
-        //newRow.setAttribute("id", type+"Table_"+data[i].recid, 0);
-        newRow.setAttribute("id", type+"Table_"+type+"_R"+index, 0);
-        // Insert a cell in the row at index 0
+        /*
+        newRow.setAttribute("id", itemid, 0);
         var newCell  = newRow.insertCell(0);
         var newText  = document.createTextNode('-');
         newCell.appendChild(newText);
@@ -1840,9 +1835,9 @@ function formatFailureLog(svalue) {
           newCell  = newRow.insertCell(5);
           newCell.appendChild(newText);
         }
-//       }
-      	
-      tableCells = document.getElementById(type+"Table_"+type+"_R"+index).cells;
+        }
+      	*/
+      tableCells = document.getElementById(itemid).cells;
       tableCells[0].innerHTML = formatDate(type, data.data[index].date);
       
       if (data.data[index].p_edw >= 0) tableCells[1].innerHTML = Number(data.data[index].p_edw).toLocaleString( 'nl-NL' );
@@ -1896,47 +1891,7 @@ function formatFailureLog(svalue) {
       var tableRef = document.getElementById('lastMonthsTable').getElementsByTagName('tbody')[0];
       if( ( document.getElementById("lastMonthsTable_R"+i)) == null )
       {
-        var newRow   = tableRef.insertRow();
-        newRow.setAttribute("id", "lastMonthsTable_R"+i, 0);
-        // Insert a cell in the row at index 0
-        var newCell  = newRow.insertCell(0);          // maand
-        var newText  = document.createTextNode('-');
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(1);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(2);              // verbruik
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(3);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(4);              // verbruik
-        newCell.appendChild(newText);
-
-        newCell  = newRow.insertCell(5);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(6);              // opgewekt
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(7);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(8);             // opgewekt
-        newCell.appendChild(newText);
-        
-        newCell  = newRow.insertCell(9);             // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(10);             // gas
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(11);             // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(12);             // gas
-        newCell.appendChild(newText);
-
-        newCell  = newRow.insertCell(13);             // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(14);             // gas
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(15);             // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(16);             // gas
-        newCell.appendChild(newText);
+        createTableRowWithCells(tableRef, "lastMonthsTable_R"+i, 17, '-' );
       }
       var mmNr = parseInt(data.data[i].date.substring(2,4), 10);
 
@@ -1998,6 +1953,23 @@ function formatFailureLog(svalue) {
     document.getElementById("lastMonths").style.display = "block";
 
   } // showMonthsHist()
+
+  function createTableRowWithCells(tableRef, itemid, cellcount, content)
+  {
+    var newText  = document.createTextNode(content);
+    var newRow   = tableRef.insertRow();
+    newRow.setAttribute("id", itemid, 0);
+    for( var i=0; i<cellcount; i++)
+    {
+      var newCell  = newRow.insertCell(i);
+      newCell.appendChild(newText);
+    }
+  }
+  
+  function formatValueLocale(val, minf, maxf)
+  {
+    return Number(val).toLocaleString('nl-NL', {minimumFractionDigits: minf, maximumFractionDigits: maxf} );
+  }
   
   //============================================================================  
   function showMonthsCosts(data)
@@ -2015,39 +1987,19 @@ function formatFailureLog(svalue) {
       	slotyearbefore = math.mod(i-12,data.data.length);
       //console.log("showMonthsHist(): data["+i+"] => data["+i+"].name["+data[i].recid+"]");
       var tableRef = document.getElementById('lastMonthsTableCosts').getElementsByTagName('tbody')[0];
-      if( ( document.getElementById("lastMonthsTableCosts_R"+i)) == null )
-      {
-        var newRow   = tableRef.insertRow();
-        newRow.setAttribute("id", "lastMonthsTableCosts_R"+i, 0);
-        // Insert a cell in the row at index 0
-        var newCell  = newRow.insertCell(0);          // maand
-        var newText  = document.createTextNode('-');
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(1);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(2);              // kosten electra
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(3);              // kosten gas
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(4);              // vast recht
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(5);              // kosten totaal
-        newCell.appendChild(newText);
 
-        newCell  = newRow.insertCell(6);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(7);              // kosten electra
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(8);              // kosten gas
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(9);              // vast recht
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(10);              // kosten totaal
-        newCell.appendChild(newText);
+      //ensure tablerow exists
+      var itemid = "lastMonthsTableCosts_R"+i;
+      if( ( document.getElementById(itemid)) == null )
+      {
+        createTableRowWithCells(tableRef, itemid, 11, '-');       
       }
       var mmNr = parseInt(data.data[i].date.substring(2,4), 10);
 
-      tableCells = document.getElementById("lastMonthsTableCosts_R"+i).cells;
+      //get ref to cells
+      tableCells = document.getElementById(itemid).cells;
+
+      //fill table
       tableCells[0].style.textAlign = "right";
       tableCells[0].innerHTML = monthNames[mmNr];                           // maand
       
