@@ -2780,12 +2780,28 @@ function formatFailureLog(svalue) {
       
   } // sendPostReading()
 
-  
+  function parseGitHubVersion(text){
+    var tmpGHF = text.replace(/(\r\n|\n|\r)/gm, "");
+    GitHubVersion_dspl = tmpGHF;
+    //console.log("parsed: GitHubVersion is ["+GitHubVersion_dspl+"]");
+    tmpX = tmpGHF.substring(1, tmpGHF.indexOf(' '));
+    tmpN = tmpX.split(".");
+    GitHubVersion = tmpN[0]*10000 + tmpN[1]*100 + tmpN[2]*1;    
+    //console.log("firmwareVersion["+firmwareVersion+"] >= GitHubVersion["+GitHubVersion+"]");
+    if (firmwareVersion == 0 || firmwareVersion >= GitHubVersion)
+          newVersionMsg = "";
+    else  newVersionMsg = firmwareVersion_dspl + " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
+    //set
+    document.getElementById('message').innerHTML = newVersionMsg;
+    //console.log(newVersionMsg);
+  }
+
   //============================================================================  
   function readGitHubVersion()
   {
     if (GitHubVersion != 0) return;
-    fetch("https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat")
+
+    fetch(URL_GITHUB_VERSION)
       .then(response => {
         if (response.ok) {
           return response.text();
@@ -2795,27 +2811,13 @@ function formatFailureLog(svalue) {
         }
       })
       .then(text => {
-        var tmpGHF     = text.replace(/(\r\n|\n|\r)/gm, "");
-        GitHubVersion_dspl = tmpGHF;
-        console.log("parsed: GitHubVersion is ["+GitHubVersion_dspl+"]");
-        tmpX = tmpGHF.substring(1, tmpGHF.indexOf(' '));
-        tmpN = tmpX.split(".");
-        GitHubVersion = tmpN[0]*10000 + tmpN[1]*100 + tmpN[2]*1;
-        
-        console.log("firmwareVersion["+firmwareVersion+"] >= GitHubVersion["+GitHubVersion+"]");
-        if (firmwareVersion == 0 || firmwareVersion >= GitHubVersion)
-              newVersionMsg = "";
-        else  newVersionMsg = firmwareVersion_dspl + " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
-        document.getElementById('message').innerHTML = newVersionMsg;
-        console.log(newVersionMsg);
-
+        parseGitHubVersion(text);
       })
       .catch(function(error) {
         console.log(error);
         GitHubVersion_dspl   = "";
         GitHubVersion        = 0;
-      });     
-
+      });
   } // readGitHubVersion()
 
   /*
