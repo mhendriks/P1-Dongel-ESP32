@@ -333,6 +333,8 @@ function visibilityListener() {
 	  refreshDevTime();
 	  openTab();
       break;
+    default:
+      console.log("visibilityListener() - unknown visibiltyState");
   }
 	//alert_message("Connectie met Dongle stond op pauze...nieuwe data ophalen");
 }
