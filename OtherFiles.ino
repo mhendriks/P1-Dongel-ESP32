@@ -3,7 +3,7 @@
 **  Program  : settings_status_files, part of DSMRloggerAPI
 **  Version  : v4.2.1
 **
-**  Copyright (c) 2022 Martijn Hendriks
+**  Copyright (c) 2023 Martijn Hendriks
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
