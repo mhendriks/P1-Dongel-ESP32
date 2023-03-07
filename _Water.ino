@@ -25,6 +25,11 @@ void IRAM_ATTR iWater() {
 }
 
 void setupWater() {
+  if ( IO_WATER_SENSOR == -1 ) {
+    DebugTln(F("Water sensor : N/A"));
+//    USBSerial.println(F("Water sensor : N/A"));
+    return; // water sensor n/a
+  }
 #ifdef ARDUINO_ESP32C3_DEV
     pinMode(IO_WATER_SENSOR, INPUT_PULLUP);
 #else
