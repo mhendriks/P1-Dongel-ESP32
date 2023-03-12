@@ -2,7 +2,7 @@
 ***************************************************************************  
 **  Program  : Debug.h, part of DSMRloggerAPI
 **
-**  Copyright (c) 2022 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **  Met dank aan Erik
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            

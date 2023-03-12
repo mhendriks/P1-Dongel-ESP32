@@ -2,7 +2,7 @@
 ***************************************************************************  
 **  Program  : JsonCalls, part of DSMRloggerAPI
 **
-**  Copyright (c) 2022 Martijn Hendriks
+**  Copyright (c) 2023 Martijn Hendriks
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -143,9 +143,9 @@ void sendDeviceInfo()
 #endif
   
   doc["hostname"] = settingHostname;
-  doc["ipaddress"] = WiFi.localIP().toString();
+  doc["ipaddress"] = IP_Address();
   doc["indexfile"] = settingIndexPage;
-  doc["macaddress"] = WiFi.macAddress();
+  doc["macaddress"] = MAC_Address();
   doc["freeheap"] ["value"] = ESP.getFreeHeap();
   doc["freeheap"]["unit"] = "bytes";
   doc["maxfreeblock"] ["value"] = ESP.getMaxAllocHeap(); 
@@ -175,12 +175,14 @@ void sendDeviceInfo()
   doc["flashchipmode"] = flashMode[ideMode];
   doc["boardtype"] = ARDUINO_BOARD;
   doc["compileoptions"] = ALL_OPTIONS;
-  doc["ssid"] = WiFi.SSID();
 
+#ifndef ETHERNET
+  doc["ssid"] = WiFi.SSID();
 #ifdef SHOW_PASSWRDS
   doc["pskkey"] = WiFi.psk();
 #endif
   doc["wifirssi"] = WiFi.RSSI();
+#endif
   doc["uptime"] = upTime();
 #ifndef HEATLINK
   doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;

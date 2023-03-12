@@ -1,13 +1,12 @@
 /*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
-**  Copyright (c) 2022 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 *      
 TODO
-- C3: logging via usb poort mogelijk maken
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
 - feature: nieuwe meter = beginstand op 0
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
@@ -21,7 +20,6 @@ TODO
 - auto switch 3 - 1 fase max fuse
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - issue met basic auth afscherming rng bestanden
-- scheiding tussen T1 en T2 willen zien
 - temparatuur ook opnemen in grafieken (A van Dijken)
 - websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
@@ -37,8 +35,15 @@ TODO
 
 WiP
 √ boundary check ListFS  
-√ boundary check APIlistFiles 
+√ boundary check APIlistFiles
+√ Index naar 4.8 + iconify
+√ ETH dongle merge
 
+ETHERNET
+√ Wifi in settings
+√ nette define file in Arduino
+√ compiler options [CORE][ETHERNET]
+√ dns hostname ethernet adapter = eth-dongle-pro
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -52,26 +57,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-//#define SHOW_PASSWRDS             // well .. show the PSK key and MQTT password, what else?     
+//#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
 //#define USE_NTP_TIME              
 //#define ETHERNET
-//#define STUB                      //test only : first draft
+//#define STUB            //test only : first draft
 //#define HEATLINK        //first draft
 //#define INSIGHT         
- #define AP_ONLY         
-
-#define ALL_OPTIONS "[CORE]"
-  
-#ifdef SE_VERSION
-  #undef ALL_OPTIONS
-  #define ALL_OPTIONS "[CORE][SE]"
-#endif
-
-#ifdef HEATLINK
-  #undef ALL_OPTIONS
-  #define ALL_OPTIONS "[CORE][Q]"
-#endif
+//#define AP_ONLY      
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
@@ -80,14 +73,19 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 void setup() 
 {
   SerialOut.begin(115200); //debug stream
+  USBSerial.begin(115200); //cdc stream
+
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
 
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
-
-  if ( P1Status.dev_type == PRO_BRIDGE ){
+  
+  if ( P1Status.dev_type == PRO_BRIDGE ) {
     pinMode(PRT_LED, OUTPUT);
     digitalWrite(PRT_LED, true); //default on
+  }
+
+  if ( (P1Status.dev_type == PRO_BRIDGE) || (P1Status.dev_type == PRO_ETH) ){
     RGBLED.begin();           
     RGBLED.clear();
     RGBLED.show();            
@@ -131,7 +129,7 @@ void setup()
 #ifndef  AP_ONLY 
   startMDNS(settingHostname);
   startNTP();
-    MQTTclient.setBufferSize(800);
+  MQTTclient.setBufferSize(800);
 
 //================ Start MQTT  ======================================
 if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT();

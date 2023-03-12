@@ -42,5 +42,6 @@ void setupAuxButton() {
   pinMode(AUX_BUTTON, INPUT_PULLUP);
   attachInterrupt(AUX_BUTTON, iButton_pressed, FALLING);
   DebugTln(F("BUTTON setup completed"));
+//  USBSerial.println(F("BUTTON setup completed"));
 #endif
 }
