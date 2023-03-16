@@ -1,7 +1,6 @@
 {
-  "name": " : P1 Pro DSMR-API",
-  "version": "4.7.0",
-  "home_assistant_domain": "Test",
+  "name": " : P1 Pro DSMR-API ACCESS POINT (No network)",
+  "version": "4.8.0AP",
   "funding_url": "https://esphome.io/guides/supporters.html",
   "new_install_prompt_erase": true,
   "builds": [
