@@ -1,0 +1,17 @@
+{
+  "name": " : P1 Pro DSMR-API Sweden",
+  "version": "4.7.0SE",
+  "funding_url": "https://esphome.io/guides/supporters.html",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C3",
+      "parts": [
+    	{ "path": "firmware/P1-Installer.ino.bootloader.bin", "offset": 0 },
+        { "path": "firmware/P1-Installer.ino.partitions.bin", "offset": 32768 },
+        { "path": "firmware/boot_app0.bin", "offset": 57344 },
+        { "path": "firmware/DSMR-API-V4.7.0SE_4Mb.bin", "offset": 65536 }        
+      ]
+    }
+  ]
+}

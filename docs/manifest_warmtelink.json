@@ -1,0 +1,14 @@
+{
+  "name": " : P1 Pro Warmtelink",
+  "version": "4.7.0",
+  "funding_url": "https://esphome.io/guides/supporters.html",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C3",
+      "parts": [
+        { "path": "firmware/merged-dsmr-api.bin", "offset": 0 }
+      ]
+    }
+  ]
+}
