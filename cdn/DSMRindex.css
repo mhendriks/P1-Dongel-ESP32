@@ -523,13 +523,12 @@ body > div.bottom.right-0 {
 	transform: translate3D(0, -2px, 0);
 }
 
-section#DashTab .chart-container {
-    height: 90px!important;
-    width: 180px!important;
- }
-
 .chart-container {
 	display: block;
+ /* 
+   height: 90px!important;
+    width: 180px!important;
+ */
     position: relative;
     margin: auto;
     margin-top: 10px;
