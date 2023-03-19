@@ -39,7 +39,7 @@
 			if (response.ok) {
 			  return response.text();
 			} else {
-			  console.log('Something went wrong');
+			  console.warning('Something went wrong');
 			  return "";
 			}
 		  })
@@ -48,7 +48,7 @@
 			bootsTrapMain();
 		  })
 		  .catch(function(error) {
-			console.log("readPageBody: "+error);
+			console.error("html::readPageBody: "+error);
 		  });     
 
 	  } // readPageBody() 

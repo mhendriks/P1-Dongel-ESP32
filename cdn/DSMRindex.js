@@ -76,6 +76,7 @@ const MONTHS_IN_YEAR_NL = ["Januari","Februari","Maart","April","Mei","Juni","Ju
       .then(response => response.json())
       .then(json => { fnHandleData(json); })
       .catch(function (error) {
+        console.error("dal::fetchDataJSON() - " + error.message);
         var p = document.createElement('p');
         p.appendChild( document.createTextNode('Error: ' + error.message) );
       });
@@ -1229,6 +1230,7 @@ function show_hide_column2(table, col_no, do_show) {
 		    Spinner(false);
       })
       .catch(function(error) {
+        console.error("main::refreshDevInfo() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(   document.createTextNode('Error: ' + error.message)  );
       });
@@ -1301,7 +1303,7 @@ function show_hide_column2(table, col_no, do_show) {
       
     })
       .catch(function(error) {    
-		if (error.name === "AbortError") {console.log("time abort error")}
+		if (error.name === "AbortError") {console.error("time abort error")}
 //         var p = document.createElement('p');
 //         p.appendChild( document.createTextNode('Error: ' + error.message) );
 //         alert_message("Datum/tijd kan niet opgehaald worden");
@@ -1491,6 +1493,7 @@ function formatFailureLog(svalue) {
         Spinner(false);
       })
       .catch(function(error) {
+        console.error("main::refreshSmFields() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -1609,6 +1612,7 @@ function formatFailureLog(svalue) {
 
       })
       .catch(function(error) {
+        console.error("main::refreshHours() - " + error.message);
         var p = document.createElement('p');
         p.appendChild( document.createTextNode('Error: ' + error.message) );
     	alert_message("Fout bij ophalen van de historische uurgegevens");
@@ -1653,7 +1657,7 @@ function formatFailureLog(svalue) {
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
         );
-    	console.log(error);
+    	console.error("main::refreshDays() - " + error);
     	alert_message("Fout bij ophalen van de historische daggegevens");
       });
   } // resfreshDays()
@@ -1686,6 +1690,7 @@ function formatFailureLog(svalue) {
         Spinner(false);
       })
       .catch(function(error) {
+        console.error("main::refreshMonths() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -1719,6 +1724,7 @@ function formatFailureLog(svalue) {
         Spinner(false);
       })
       .catch(function(error) {
+        console.error("main::refreshSmTelegram() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -2111,6 +2117,7 @@ function formatFailureLog(svalue) {
         SettingsRead = true;
       })
       .catch(function(error) {
+        console.error("main::getDevSettings() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -2273,6 +2280,7 @@ function formatFailureLog(svalue) {
 
       })
       .catch(function(error) {
+        console.error("main::refreshSettings() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -2297,6 +2305,7 @@ function formatFailureLog(svalue) {
         Spinner(false);
       })
       .catch(function(error) {
+        console.error("main::EditMonths() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -2814,7 +2823,7 @@ function formatFailureLog(svalue) {
         parseGitHubVersion(text);
       })
       .catch(function(error) {
-        console.log(error);
+        console.error("main::readGitHubVersion() - " + error.message);
         GitHubVersion_dspl   = "";
         GitHubVersion        = 0;
       });
