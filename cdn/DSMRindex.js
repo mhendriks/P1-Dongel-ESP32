@@ -817,8 +817,11 @@ function bootsTrapMain()
 // 	console.log("location-pathname: " + location.pathname );
 // 	console.log("location-msg: " + location.hash.split('msg=')[1]);
 // 	console.log("location-hash-split: " + location.hash.split('#')[1].split('?')[0]);
-	//goto tab after reload 
-	if (location.hash == "#FileExplorer") { document.getElementById('bFSexplorer').click(); }
+	
+  //goto tab after reload FSExplorer
+	if (location.hash == "#FileExplorer") { document.getElementById('bFSExplorer').click(); }
+
+  //handle the redirect after REBOOT / RESET / UPDATE
 	if (location.hash.split('#')[1].split('?')[0] == "Redirect") { handleRedirect(); }
 
 	//reselect Dash when Home icon has been clicked
