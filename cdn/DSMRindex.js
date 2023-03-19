@@ -626,20 +626,13 @@ function UpdateDash()
 		if (Dongle_Config != "p1-q") {
 
       //bereken verschillen afname, teruglevering en totaal
-      for(let i=0;i<3;i++){
-        if (i==0) {
-          Parra[0]=Number(json.energy_delivered_tariff1.value + json.energy_delivered_tariff2.value - hist_arrPa[1]).toFixed(3);
-          Parri[0]=Number(json.energy_returned_tariff1.value + json.energy_returned_tariff2.value - hist_arrPi[1]).toFixed(3);
+      let nPA = json.energy_delivered_tariff1.value + json.energy_delivered_tariff2.value;
+      let nPI = json.energy_returned_tariff1.value  + json.energy_returned_tariff2.value;
+      Parra = calculateDifferences( nPA, hist_arrPa, 1);
+      Parri = calculateDifferences( nPI, hist_arrPi, 1);
+      for(let i=0;i<3;i++){ Parr[i]=Parra[i] - Parri[i]; }
 
-        } else {
-          Parra[i]=Number(hist_arrPa[i] - hist_arrPa[i+1]).toFixed(3);
-          Parri[i]=Number(hist_arrPi[i] - hist_arrPi[i+1]).toFixed(3);
-        }
-        Parr[i]=Number(Parra[i] - Parri[i]).toFixed(3);
-  // 			if (Parr[i] < 0) Parr[i] = 0;
-      }
-
-      //dataset berekenen voor Ptotaal
+      //dataset berekenen voor Ptotaal      
       updateGaugeTrend(trend_p, Parr);
       document.getElementById("P").innerHTML = formatValue( Parr[0] );
       
@@ -690,9 +683,9 @@ function calculateDifferences(curval, hist_arr, factor)
   for(let i=0; i<3; i++)
   {
     if (i==0) 
-      out[0] = Number(curval - hist_arr[1]) * factor;
+      out[0] = (curval - hist_arr[1]) * factor;
     else 
-      out[i] = Number(hist_arr[i] - hist_arr[i+1]) * factor;
+      out[i] = (hist_arr[i] - hist_arr[i+1]) * factor;
 
     if (out[i] < 0) out[i] = 0;
   }
