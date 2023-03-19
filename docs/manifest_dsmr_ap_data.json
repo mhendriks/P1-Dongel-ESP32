@@ -1,0 +1,18 @@
+{
+  "name": " : P1 Pro DSMR-API AP with data",
+  "version": "4.8.0AP",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32-C3",
+      "improv": true,
+      "parts": [
+    	{ "path": "firmware/P1-Installer.ino.bootloader.bin", "offset": 0 },
+        { "path": "firmware/P1-Installer.ino.partitions.bin", "offset": 32768 },
+        { "path": "firmware/boot_app0.bin", "offset": 57344 },
+        { "path": "firmware/DSMR-API-V4.8.0AP_4Mb.bin", "offset": 65536 },  
+        { "path": "firmware/fs_ap.bin", "offset": 2686976 }	
+        ]
+    }
+  ]
+}

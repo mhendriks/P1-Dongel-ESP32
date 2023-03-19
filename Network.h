@@ -1,7 +1,7 @@
 
 /*
 ***************************************************************************  
-**  Program  : networkStuff.h, part of DSMRloggerAPI
+**  Program  : network.h, part of DSMRloggerAPI
 **
 **  Copyright (c) 2021 Willem Aandewiel / Martijn Hendriks
 **
@@ -35,6 +35,23 @@ DECLARE_TIMER_SEC(WifiReconnect, 5); //try after x sec
 void LogFile(const char*, bool);
 void P1Reboot();
 void SwitchLED( byte mode, byte color);
+
+/***===========================================================================================
+    POST MAC + IP
+    https://www.allphptricks.com/create-and-consume-simple-rest-api-in-php/
+    http://g2pc1.bu.edu/~qzpeng/manual/MySQL%20Commands.htm
+**/
+void PostMacIP() {
+  HTTPClient http;
+  http.begin(wifiClient, APIurl);
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  String httpRequestData = "mac=" + WiFi.macAddress() + "&ip=" + IPAddress()+ "&version=" + _VERSION_ONLY;           
+  int httpResponseCode = http.POST(httpRequestData);
+  DebugT(F("HTTP Response code: "));Debugln(httpResponseCode);
+  http.end();  
+}
+
+#ifndef ETHERNET
 
 static void onWifiEvent (WiFiEvent_t event) {
     switch (event) {
@@ -78,21 +95,6 @@ void configModeCallback (WiFiManager *myWiFiManager)
   DebugTln(myWiFiManager->getConfigPortalSSID());
 } // configModeCallback()
 
-/***===========================================================================================
-    POST MAC + IP
-    https://www.allphptricks.com/create-and-consume-simple-rest-api-in-php/
-    http://g2pc1.bu.edu/~qzpeng/manual/MySQL%20Commands.htm
-**/
-void PostMacIP() {
-  HTTPClient http;
-  http.begin(wifiClient, APIurl);
-  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-  String httpRequestData = "mac=" + WiFi.macAddress() + "&ip=" + WiFi.localIP().toString()+ "&version=" + _VERSION_ONLY;           
-  int httpResponseCode = http.POST(httpRequestData);
-  DebugT(F("HTTP Response code: "));Debugln(httpResponseCode);
-  http.end();  
-}
-
 //===========================================================================================
 void startWiFi(const char* hostname, int timeOut) 
 {
@@ -133,6 +135,8 @@ void startWiFi(const char* hostname, int timeOut)
   PostMacIP(); //post mac en ip 
 
 } // startWiFi()
+
+#endif //ifndef ETHERNET
 
 //===========================================================================================
 void startTelnet() 

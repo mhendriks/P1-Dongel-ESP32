@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang=nl>
+  <head>
+	<title>Slimme Meter</title>
+
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="msapplication-TileImage" content="ms-icon-310x310.png">
+	<link rel="stylesheet" type="text/css" href="DSMRindex.css">
+    <link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-icon-180x180.png">
+
+ 	<script src="iconify.without-api.min.js"></script>
+	<script type="text/javascript" src="Chart.min.js"></script>
+	<script type="text/javascript" src="chartjs-plugin-labels.min.js"></script>
+	<script type="text/javascript" src="math.min.js" ></script>
+  </head>
+  <body>
+  	<noscript><strong>Please enable JavaScript to continue.</strong></noscript>
+	<script src="DSMRgraphics.min.js"></script>
+	<script src="DSMRindex.js"></script>
+	<script src="burnup.js"></script>
+
+  	<script>
+	  //============================================================================  
+		  window.onload= function() {
+			console.log("window.onload .. ");
+			readPageBody();
+		  }
+	  //============================================================================  
+	  function readPageBody()
+	  {
+		console.log("readPageBody() ..");
+		fetch("DSMRindex_body.html")
+		  .then(response => {
+			if (response.ok) {
+			  return response.text();
+			} else {
+			  console.log('Something went wrong');
+			  return "";
+			}
+		  })
+		  .then(text => {
+			document.body.innerHTML = text + document.body.innerHTML;
+			bootsTrapMain();
+		  })
+		  .catch(function(error) {
+			console.log("readPageBody: "+error);
+		  });     
+
+	  } // readPageBody() 
+	  </script>
+  </body>
+</html>

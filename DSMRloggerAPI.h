@@ -2,94 +2,12 @@
 ***************************************************************************  
 **  Program  : DSMRloggerAPI.h - definitions for DSMRloggerAPI
 **
-**  Copyright (c) 2022 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */  
-#ifdef ESP32
-//https://www.esp32.com/viewtopic.php?t=24280#
-//https://www.upesy.com/blogs/tutorials/esp32-pinout-reference-gpio-pins-ultimate-guide
-
-  #ifdef ARDUINO_ESP32C3_DEV
-    #warning Using ESP32C3
-    #define LED                 7
-    #define DTR_IO              4 // nr = IO pulse = N/A
-    #define RXP1               10
-    #define TXP1               -1 //disable
-    #define LED_ON              LOW
-    #define LED_OFF             HIGH
-    #define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
-//    #define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
-    #define IO_WATER_SENSOR     5
-    #define AUX_BUTTON          9 //download knop bij startup - multifunctional tijdens runtime
-    volatile unsigned long      Tpressed = 0;
-    volatile byte               pressed = 0;
-  #else//v4.2
-    #warning Using ESP32
-    #define LED                14 
-    #define DTR_IO             18 
-    #define RXP1               16
-    #define TXP1                0
-    #define LED_ON              LOW
-    #define LED_OFF             HIGH
-    #define SerialOut           Serial
-    #define IO_WATER_SENSOR    26  
-    #define OTAURL              "http://ota.smart-stuff.nl/"
-  #endif
-#else
-  #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.
-#endif
-
-#ifdef ETHERNET
-    #warning Using ESP32-ETHERNET
-//    #define LED                 0 //no led 
-//    #define DTR_IO              0 //no dtr
-    #define RXP1                15
-    #define TXP1                0 //no txp1
-    #define LED_ON              LOW
-    #define LED_OFF             HIGH
-    #define SerialOut           Serial
-    #define IO_WATER_SENSOR     14  
-    #define OTAURL              "http://ota.smart-stuff.nl/v6/"
-#endif
-
-#ifdef HEATLINK
-  #define MBUS_TYPE 4
-  #define _DEFAULT_HOSTNAME   "Q-Dongle-Pro" 
-  #define _DEFAULT_MQTT_TOPIC "Q-Dongle-Pro/" 
-  #define OTAURL              "http://ota.smart-stuff.nl/v5-q/"
-#else
-  #define MBUS_TYPE 3
-  #define _DEFAULT_HOSTNAME   "P1-Dongle-Pro"
-  #define _DEFAULT_MQTT_TOPIC "P1-Dongle-Pro/" 
-  #define OTAURL              "http://ota.smart-stuff.nl/v5/"
-#endif  
-
-
-// Device Types
-#define PRO         0
-#define PRO_BRIDGE  1
-
-  #define RGBLED_PIN        8
-  #define PRT_LED           0
-  #include <Adafruit_NeoPixel.h>
-  Adafruit_NeoPixel RGBLED(1, RGBLED_PIN, NEO_GRB + NEO_KHZ800);
-  #define BRIGHTNESS 50 // Set BRIGHTNESS to about 1/5 (max = 255)
-  //LED COLORS
-  #define BLUE  3
-  #define RED   1
-  #define GREEN 2
-  byte R_value = 0, B_value = 0, G_value = 0;
-
-#ifdef AP_ONLY  
-  #define _DEFAULT_HOMEPAGE  "/DSMRindexLOCAL.html"
-#else
-  #define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
-#endif
-#define SETTINGS_FILE      "/DSMRsettings.json"
-#define HOST_DATA_FILES    "cdn.jsdelivr.net"
-#define PATH_DATA_FILES    "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/data"
+#include "Config.h"
 
 // water sensor
   volatile byte        WtrFactor      = 1;

@@ -96,7 +96,7 @@ void displayBoardInfo()
 #else
   Debug(F("]\r\n               PSK key [**********"));
 #endif
-  Debug(F("]\r\n            IP Address ["));  Debug( WiFi.localIP().toString() );
+  Debug(F("]\r\n            IP Address ["));  Debug( IP_Address() );
   Debug(F("]\r\n              Hostname ["));  Debug( settingHostname );
   Debug(F("]\r\n     Last reset reason ["));  Debug( getResetReason() );
   Debug(F("]\r\n                upTime ["));  Debug( upTime() );
@@ -188,7 +188,7 @@ void handleKeyInput()
                     break;
                     
       case 'Q':     ResetDataFiles();
-                    P1StatusReset();
+                    P1StatusClear();
                     resetWifi();  
                     break;                      
                     
@@ -230,7 +230,7 @@ void handleKeyInput()
       case 'Z':     P1StatusClear();
                     break;
                     
-      default:      Debugf("Dongle version %s | mac address %s\n\r",_VERSION, WiFi.macAddress().c_str());
+      default:      Debugf("Dongle version %s | mac address %s\n\r",_VERSION, MAC_Address().c_str() );
                     Debugln(F("\r\nCommands are:"));
                     Debugln(F("   A  - P1 Status info a=available|r=read|w=write|p=print|z=erase\r"));
                     Debugln(F("  *E  - erase file from FS\r"));

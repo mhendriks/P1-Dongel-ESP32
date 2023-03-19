@@ -3,30 +3,15 @@
 **  Program  : DSMRindex.js, part of DSMRfirmwareAPI
 **  Version  : v4.3.0
 **
-**  Copyright (c) 2023 Smartstuff
-**  Authors  : Martijn Hendriks / Mar10us
+**  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-
 const APIGW=window.location.protocol+'//'+window.location.host+'/api/';
-
-const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
-const URL_DEVICE_INFO   = APIGW + "v2/dev/info";
-const URL_DEVICE_TIME   = APIGW + "v2/dev/time";
-const MAX_SM_ACTUAL     = 15*6; //store the last 15 minutes (each interval is 10sec)
-const MAX_FILECOUNT     = 30;   //maximum filecount on the device is 30
-
-const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
-const URL_GITHUB_VERSION   = "https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat";
-
-const jsversie			= 221201;
-
-const SQUARE_M_CUBED = "\u33A5";
-const MONTHS_IN_YEAR_NL = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
+const jsversie			= 221201
   
-"use strict";
+  "use strict";
 
   let activeTab             = "bDashTab";
   let PauseAPI				= false; //pause api call when browser is inactive
@@ -53,98 +38,9 @@ const MONTHS_IN_YEAR_NL = ["Januari","Februari","Maart","April","Mei","Juni","Ju
   var data       			= [];
   var DayEpoch				= 0;
   let monthType        		= "ED";
-  let settingFontColor 		= 'white';
-  var objDAL = null;
-
-  //The Data Access Layer for the DSMR
-  // - acts as an cache between frontend and server
-  // - schedules refresh to keep data fresh
-  // - stores data for the history functions
-  class dsmr_dal_main{
-    constructor() {
-      this.devinfo=[];
-	  this.version_manifest = [];
-      this.actual=[];
-      this.actual_history = [];
-      this.timerREFRESH_ACTUAL = 0;      
-      this.callback=null;
-      }
-  
-    fetchDataJSON(url, fnHandleData) {
-      console.log("DAL::fetchDataJSON( "+url+" )");
-      fetch(url)
-      .then(response => response.json())
-      .then(json => { fnHandleData(json); })
-      .catch(function (error) {
-        console.error("dal::fetchDataJSON() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild( document.createTextNode('Error: ' + error.message) );
-      });
-    }
-
-    //use a callback when you want to know if the data is updated
-    setCallback(fnCB){
-      this.callback = fnCB;
-    }
-  
-    init(){
-      this.refreshDeviceInformation();
-      this.refreshActual();
-    } 	
-
-    //single call; no timer
-    refreshDeviceInformation(){
-      console.log("DAL::refreshDeviceInformation");
-	  this.fetchDataJSON( URL_VERSION_MANIFEST, this.parseVersionManifest.bind(this));
-      this.fetchDataJSON( URL_DEVICE_INFO, this.parseDeviceInfo.bind(this));
-    }
-    //store result and call callback if set
-    parseDeviceInfo(json){
-      this.devinfo = json;
-      if(this.callback) this.callback('devinfo', json);
-    }
-    //store result and call callback if set
-		parseVersionManifest(json){
-			this.version_manifest = json;
-      if(this.callback) this.callback('versionmanifest', json);
-		}
-
-    // refresh and parse actual data, store and add to history
-    //refresh every 10 sec
-    refreshActual(){
-      console.log("DAL::refreshActual");
-      clearInterval(this.timerREFRESH_ACTUAL);      
-      this.fetchDataJSON( URL_SM_ACTUAL, this.parseActual.bind(this));
-      this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), 10 * 1000);
-    }
-    parseActual(json){
-      this.actual = json;
-      this.#addActualHistory( json );
-    }
-    #addActualHistory(json){
-      if( this.actual_history.length >= MAX_SM_ACTUAL) this.actual_history.shift();
-      this.actual_history.push(json);
-    }
-  
-    //
-    // getters
-    //
-    getDeviceInfo(){
-      return this.devinfo;
-    }
-	getVersionManifest(){
-		return this.version_manifest;
-	}
-    getActual(){
-      return this.actual;
-    }    
-    //the last (MAX_ACTUAL_HISTORY) actuals
-    getActualHistory(){
-      return this.actual_history;
-    }
-  }
+  let settingFontColor 		= 'white'
                     
-  var monthNames 			= ["indxNul"].concat(MONTHS_IN_YEAR_NL).concat(["\0"]);
+  var monthNames 			= [ "indxNul","Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December","\0"];
   const spinner 			= document.getElementById("loader");
 
 //---- frontend settings
@@ -177,104 +73,312 @@ var TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wm
 var hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
 var day = 0;
 
-//default struct for the gauge element
-// ! structuredClone can NOT copy a struct with functions
-let cfgDefaultGAUGE = {
-  type: 'doughnut',
-  data: {
-    datasets: [
-      {
-        label: "l1",
-        backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
-      },
-      {
-        label: "l2",
-        backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
-      },
-      {
-        label: "l3",
-        backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
-      }
-    ]
-  },
-  options: {
+let TrendV = {
+    type: 'doughnut',
+    data: {
+      datasets: [
+        {
+          label: "l1",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "l2",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "l3",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    },
+    options: {
     events: [],
     title: {
-      display: true,
-      text: 'Voltage',
-      position: "bottom",
-      padding: -18,
-      fontSize: 17,
-      fontColor: "#000",
-      fontFamily: "Dosis",
-    },
-    responsive: true,
-    circumference: Math.PI,
-    rotation: -Math.PI,
-    plugins: {
-      labels: {
-        render: {},   //structuredClone will fail if there is a function
+            display: true,
+            text: 'Voltage',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+	  rotation: -Math.PI,
+      plugins: {
+      	labels: {
+			render: function (args) {
+				return args.value + 207 + " V";
+			},//render
         arc: true,
-        fontColor: ["#fff", "rgba(0,0,0,0)"],
+        fontColor: ["#fff","rgba(0,0,0,0)"],
       },//labels      
     }, //plugins
-    legend: { display: false },
-  }, //options
+    legend: {display: false},
+    }, //options
 };
 
-//copy for phases based gauges
-let cfgDefaultPHASES = structuredClone(cfgDefaultGAUGE);
-cfgDefaultPHASES.data.datasets[0].label = "L1";
-cfgDefaultPHASES.data.datasets[1].label = "L2";
-cfgDefaultPHASES.data.datasets[2].label = "L3";
+let TrendG = {
+    type: 'doughnut',
+    data: {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    },
+    options: {
+    title: {
+            display: true,
+            text: 'm3',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+			rotation: -Math.PI,
+      plugins: {
+      labels: {
+        render: function (args) {
+          return args.value + " \u33A5";
+        },//render
+        arc: true,
+        fontColor: ["#fff","rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+    legend: {display: false},
+    }, //options
+};
 
-//copy for trend based gauges
-let cfgDefaultTREND = structuredClone(cfgDefaultGAUGE);
-cfgDefaultTREND.data.datasets[0].label = "vandaag";
-cfgDefaultTREND.data.datasets[1].label = "gister";
-cfgDefaultTREND.data.datasets[2].label = "eergisteren";
+
+let TrendQ = {
+    type: 'doughnut',
+    data: {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    },
+    options: {
+    title: {
+            display: true,
+            text: 'kJ',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+			rotation: -Math.PI,
+      plugins: {
+      labels: {
+        render: function (args) {
+          return args.value;
+        },//render
+        arc: true,
+        fontColor: ["#fff","rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+    legend: {display: false},
+    }, //options
+};
 
 
-//phases based gauges
-function renderLabelVoltage(args){return args.value + 207 + " V";}
-let cfgGaugeVOLTAGE = structuredClone(cfgDefaultPHASES);
-cfgGaugeVOLTAGE.options.title.text = "V";
-cfgGaugeVOLTAGE.options.plugins.labels.render = renderLabelVoltage;
+let Trend3f = {
+    type: 'doughnut',
+    data: {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "l1",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "l2",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "l3",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    },
+    options: {
+    title: {
+            display: true,
+            text: 'Ampere',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+			rotation: -Math.PI,
+      plugins: {
+      labels: {
+        render: function (args) {
+          return args.value + " A";
+        },//render
+        arc: true,
+        fontColor: ["#fff","rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+    legend: {display: false},
+    }, //options
+};
 
-function renderLabel3F(args){return args.value + " A";}
-let cfgGauge3F = structuredClone(cfgDefaultPHASES);
-cfgGauge3F.options.title.text = "Ampere";
-cfgGauge3F.options.plugins.labels.render = renderLabel3F;
 
-//trend based gauges
-function renderLabelElektra(args){return args.value + " kWh";}
-let cfgGaugeELEKTRA = structuredClone(cfgDefaultTREND);
-cfgGaugeELEKTRA.options.title.text = "kWh";
-cfgGaugeELEKTRA.options.plugins.labels.render = renderLabelElektra;
+let TrendW = {
+    type: 'doughnut',
+    data: {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    },
+    options: {
+    title: {
+            display: true,
+            text: 'liter',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+			rotation: -Math.PI,
+      plugins: {
+      labels: {
+        render: function (args) {
+          return args.value + " ltr";
+        },//render
+        arc: true,
+        fontColor: ["#fff","rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+    legend: {display: false},
+    }, //options
+};
 
-let cfgGaugeELEKTRA2 = structuredClone(cfgDefaultTREND);
-cfgGaugeELEKTRA2.options.title.text = "kWh";
-cfgGaugeELEKTRA2.options.plugins.labels.render = renderLabelElektra;
+let optionsP = {
+title: {
+            display: true,
+            text: 'kWh',
+            position: "bottom",
+            padding: -18,
+            fontSize: 17,
+            fontColor: "#000",
+            fontFamily:"Dosis",
+        },
+      responsive:true,
+      circumference: Math.PI,
+		rotation:  - Math.PI,
+      plugins: {
+      labels: {
+        render: function (args) {
+          return args.value + " kWh";
+        },//render
+        arc: true,
+        fontColor: ["#fff","rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+      legend: {display: false},
+}; 
+    
+let dataP = {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+};
 
-let cfgGaugeELEKTRA3 = structuredClone(cfgDefaultTREND);
-cfgGaugeELEKTRA3.options.title.text = "kWh";
-cfgGaugeELEKTRA3.options.plugins.labels.render = renderLabelElektra;
+let dataPi = {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+	};
 
-function renderLabelGas(args){return args.value + " " + SQUARE_M_CUBED;}
-let cfgGaugeGAS = structuredClone(cfgDefaultTREND);
-cfgGaugeGAS.options.title.text = SQUARE_M_CUBED;
-cfgGaugeGAS.options.plugins.labels.render = renderLabelGas;
-
-function renderLabelWarmte(args){return args.value;}
-let cfgGaugeWARMTE = structuredClone(cfgDefaultTREND);
-cfgGaugeWARMTE.options.title.text = "kJ";
-cfgGaugeWARMTE.options.plugins.labels.render = renderLabelWarmte;
-
-function renderLabelWater(args){return args.value + " ltr";}
-let cfgGaugeWATER = structuredClone(cfgDefaultTREND);
-cfgGaugeWATER.options.title.text = "Liter";
-cfgGaugeWATER.options.plugins.labels.render = renderLabelWater;
-
+let dataPa = {
+      labels: ["verbruik", "verschil met hoogste"],
+      datasets: [
+        {
+          label: "vandaag",
+          backgroundColor: ["#314b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "gisteren",
+          backgroundColor: ["#316b77", "rgba(0,0,0,0.1)"],
+        },
+        {
+          label: "eergisteren",
+          backgroundColor: ["#318b77", "rgba(0,0,0,0.1)"],
+        }
+      ]
+    };
 
 function loadIcons(){
 Iconify.addCollection({
@@ -314,14 +418,14 @@ Iconify.addCollection({
        }, 
        "mdi-chart-box-outline": {
            body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
-       },   
+       },        
+        
     },
    width: 24,
    height: 24,
 });
 }
 
-//entry point 
 window.onload=bootsTrapMain;
 
 //============================================================================  
@@ -342,17 +446,14 @@ function visibilityListener() {
 	  refreshDevTime();
 	  openTab();
       break;
-    default:
-      console.log("visibilityListener() - unknown visibiltyState");
   }
 	//alert_message("Connectie met Dongle stond op pauze...nieuwe data ophalen");
 }
 
 document.addEventListener("visibilitychange", visibilityListener);
 
-//============================================================================  
-// if the user uses the backbutton in the browser
 window.addEventListener('popstate', function (event) {
+// 	console.log("location: " + document.location + ", hash: " +location.hash);
 	activeTab = "b" + location.hash.slice(1, location.hash.length);
 	openTab();
 });
@@ -427,35 +528,31 @@ function SetOnSettings(json){
 // 		document.getElementById("gasChart").style.height = "250px";
 	}
 }
-
-function parseVersionManifest(json)
-{
-  console.log("parseVersionManifest() - ", json);
-  LastVersion = json.version;
-  LastVersionMajor = json.major;
-  LastVersionMinor = json.minor;
-  LastVersionFix = json.fix;
-  LastVersionBuid = json.build;
-  LastVersionNotes = json.notes;
-  LastVersionOTA = json.ota_url;
-}
   
 //============================================================================  
-function ReadVersionManifest() {
-  console.log("ReadVersionManifest");
-  Spinner(true);
-  fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
-    .then(function (response) {
-      return response.json();})
-    .then(function (json) {
-      console.log("version manifest: " + JSON.stringify(json));
-      parseVersionManifest(json);
-      Spinner(false);
-    }
-  );	// function(json)  
-}
+  
+function ReadVersionManifest(){
+	console.log("ReadVersionManifest");
+	Spinner(true);
+	 fetch('http://ota.smart-stuff.nl/v5/version-manifest.json?dummy='+Date.now(), {"setTimeout": 5000}).then(function (response) {
+		 return response.json();
+	 }).then(function (json) {
+	 	console.log("version manifest: " + JSON.stringify(json) );
+	 	
+	 	LastVersion = json.version;
+	 	LastVersionMajor = json.major;
+	 	LastVersionMinor = json.minor;
+	 	LastVersionFix = json.fix;
+	 	LastVersionBuid = json.build;
+	 	LastVersionNotes = json.notes;
+	 	LastVersionOTA = json.ota_url;
+	}
+	 );	// function(json)
+	 	Spinner(false);
 
-//============================================================================   
+}
+//============================================================================  
+  
 function UpdateDash()
 {	
 	// if (PauseAPI) return;
@@ -494,7 +591,7 @@ function UpdateDash()
 // 	   	  json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"221231161038W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.613,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.613,"unit":"m3"},"gas_delivered_timestamp":{"value":"221231161038W"}}');
 
 //others
-//    	  json = JSON.parse('{"timestamp":{"value":"220606085610S"},"energy_delivered_tariff1":{"value":55.026,"unit":"kWh"},"energy_delivered_tariff2":{"value":53.923,"unit":"kWh"},"energy_returned_tariff1":{"value":1,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0.398,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"voltage_l1":{"value":232.5,"unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":0,"unit":"A"},"power_delivered_l1":{"value":0.114,"unit":"kW"},"power_delivered_l2":{"value":0.284,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":5471.227,"unit":"m3"},"gas_delivered_timestamp":{"value":"220606085510S"},"water":{"value":379.782,"unit":"m3"}}');	   	  
+//	   	  json = JSON.parse('{"timestamp":{"value":"220606085610S"},"energy_delivered_tariff1":{"value":55.026,"unit":"kWh"},"energy_delivered_tariff2":{"value":53.923,"unit":"kWh"},"energy_returned_tariff1":{"value":1,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0.398,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"voltage_l1":{"value":232.5,"unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":0,"unit":"A"},"power_delivered_l1":{"value":0.114,"unit":"kW"},"power_delivered_l2":{"value":0.284,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":5471.227,"unit":"m3"},"gas_delivered_timestamp":{"value":"220606085510S"},"water":{"value":379.782,"unit":"m3"}}');	   	  
 //  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.102,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
 //  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.123,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
 //no voltage
@@ -519,7 +616,7 @@ function UpdateDash()
 		if (Injection) {		
 			document.getElementById("l5").style.display = "block";
 			document.getElementById("l6").style.display = "block";
-			document.getElementById("Ph").innerHTML = "<span class='iconify' data-icon='mdi-lightning-bolt'></span>Afname-Terug";
+			document.getElementById("Ph").innerHTML = "Afname-Terug";
 		}
 		if (HeeftGas && EnableHist && (Dongle_Config != "p1-q") && !IgnoreGas) document.getElementById("l4").style.display = "block";
 		if (HeeftWater && EnableHist) { 
@@ -537,13 +634,9 @@ function UpdateDash()
 		if (v1 && (!Injection || ShowVoltage) ) {
 			document.getElementById("l2").style.display = "block"
 			document.getElementById("fases").innerHTML = Phases;
-			
-      let Vmin_now = v1;
-      let Vmax_now = v1;
-      if( Phases != 1){
-			  Vmin_now = math.min(v1, v2, v3);
-			  Vmax_now = math.max(v1, v2, v3);
-      }
+				
+			let Vmin_now = math.min(v1, v2, v3);
+			let Vmax_now= math.max(v1, v2, v3);
 			
 			//min - max waarde
 			if (minV == 0.0 || Vmin_now < minV) { minV = Vmin_now; }
@@ -599,6 +692,8 @@ function UpdateDash()
 		} else {
 			// current is missing = calc current based on actual power		
 			TotalAmps = Number(Math.abs(TotalKW)*1000/230).toFixed(0);
+			
+// 			console.log("current : " + current);
 			gauge3f.data.datasets[0].data=[TotalAmps,AMPS-TotalAmps];
 		};	
 		
@@ -626,91 +721,115 @@ function UpdateDash()
 			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );                        
 		}
 		
-    // stop here if there is no history enabled
+
 		if (!EnableHist) {Spinner(false);return;}
 		
-
-    //-------VERBRUIK METER	
 		if (Dongle_Config != "p1-q") {
+		//-------VERBRUIK METER	
+		//bereken verschillen afname, teruglevering en totaal
+		for(let i=0;i<3;i++){
+			if (i==0) {
+				Parra[0]=Number(json.energy_delivered_tariff1.value + json.energy_delivered_tariff2.value - hist_arrPa[1]).toFixed(3);
+				Parri[0]=Number(json.energy_returned_tariff1.value + json.energy_returned_tariff2.value - hist_arrPi[1]).toFixed(3);
 
-      //bereken verschillen afname, teruglevering en totaal
-      let nPA = json.energy_delivered_tariff1.value + json.energy_delivered_tariff2.value;
-      let nPI = json.energy_returned_tariff1.value  + json.energy_returned_tariff2.value;
-      Parra = calculateDifferences( nPA, hist_arrPa, 1);
-      Parri = calculateDifferences( nPI, hist_arrPi, 1);
-      for(let i=0;i<3;i++){ Parr[i]=Parra[i] - Parri[i]; }
+			} else {
+				Parra[i]=Number(hist_arrPa[i] - hist_arrPa[i+1]).toFixed(3);
+				Parri[i]=Number(hist_arrPi[i] - hist_arrPi[i+1]).toFixed(3);
+			}
+			Parr[i]=Number(Parra[i] - Parri[i]).toFixed(3);
+// 			if (Parr[i] < 0) Parr[i] = 0;
+		}
 
-      //dataset berekenen voor Ptotaal      
-      updateGaugeTrend(trend_p, Parr);
-      document.getElementById("P").innerHTML = formatValue( Parr[0] );
-      
-      if (Injection) 
-      {
-        //-------INJECTIE METER
-        updateGaugeTrend(trend_pi, Parri);
-        document.getElementById("Pi").innerHTML = formatValue( Parri[0] );
+		//dataset berekenen voor Ptotaal
+		Pmax = math.max(Parr);		// maximale waarde bepalen voor de meters
+		for(let i=0;i<3;i++){
+			trend_p.data.datasets[i].data=[Number(Parr[i]).toFixed(1),Number(Pmax-Parr[i]).toFixed(1)];
+		};
+		trend_p.update();
 
-        //-------AFNAME METER	
-        updateGaugeTrend(trend_pa, Parra);
-        document.getElementById("Pa").innerHTML = formatValue( Parra[0] );
-      }
-		} //!= p1-q
+		//vermogen vandaag, min - max bepalen
+		document.getElementById("P").innerHTML = Number(Parr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
 		
-    //-------GAS METER	
+		if (Injection) 
+		{
+			//-------INTJECTIE METER	
+			//data sets berekenen voor de gauges
+			var Pmaxi = math.max(Parri);
+			for(let i=0;i<3;i++){
+				trend_pi.data.datasets[i].data=[Number(Parri[i]).toFixed(1),Number(Pmaxi-Parri[i]).toFixed(1)];
+			};
+			trend_pi.update();
+			//vermogen vandaag, min - max bepalen
+			document.getElementById("Pi").innerHTML = Number(Parri[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
+
+			//-------AFNAME METER	
+			//data sets berekenen voor de gauges
+			var Pmaxa = math.max(Parra);
+			for(let i=0;i<3;i++){
+				trend_pa.data.datasets[i].data=[Number(Parra[i]).toFixed(1),Number(Pmaxa-Parra[i]).toFixed(1)];
+			};
+			trend_pa.update();
+			//vermogen vandaag, min - max bepalen
+			document.getElementById("Pa").innerHTML = Number(Parra[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
+		}
+		} //!= p1-q
+		//-------GAS METER	
 		if ( HeeftGas && (Dongle_Config != "p1-q") ) 
 		{
-      Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1);
-      updateGaugeTrend(trend_g, Garr);
+			//bereken verschillen gas, afname, teruglevering en totaal
+			for(let i=0;i<3;i++){
+				if (i==0) Garr[0]=Number(json.gas_delivered.value - hist_arrG[1]).toFixed(3) ;
+				else Garr[i]=Number(hist_arrG[i] - hist_arrG[i+1]).toFixed(3);
+				if (Garr[i] < 0) Garr[i] = 0;
+			}
+
+			Gmax = math.max(Garr);
+			for(let i=0;i<3;i++) trend_g.data.datasets[i].data=[Number(Garr[i]).toFixed(1),Number(Gmax-Garr[i]).toFixed(1)];
+			trend_g.update();
 			document.getElementById("G").innerHTML = Number(Garr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
 		}
 		
 		//-------WATER METER	
 		if (HeeftWater) 
 		{
-      Warr = calculateDifferences(json.water.value, hist_arrW, 1000);
-      updateGaugeTrend(trend_w, Warr);
+			//bereken verschillen gas, afname, teruglevering en totaal
+			for(let i=0;i<3;i++){
+				if (i==0) Warr[0]=Number(json.water.value - hist_arrW[1])*1000 ;
+				else Warr[i]=Number(hist_arrW[i] - hist_arrW[i+1])*1000;
+				if (Warr[i] < 0) Warr[i] = 0;
+			}
+
+			Wmax = math.max(Warr);
+			for(let i=0;i<3;i++){
+				trend_w.data.datasets[i].data=[Number(Warr[i]).toFixed(),Number(Wmax-Warr[i]).toFixed()];
+			};
+			trend_w.update();
 			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString();
 		}
-				
+		
+		
 		//-------Warmte METER	
 		if (Dongle_Config == "p1-q") 
 		{
-      Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1000);
-      updateGaugeTrend(trend_q, Garr);
+			for(let i=0;i<3;i++){
+				if (i==0) Garr[0]=Number(json.gas_delivered.value - hist_arrG[1]).toFixed(3)*1000 ;
+				else Garr[i]=Number(hist_arrG[i] - hist_arrG[i+1]).toFixed(3)*1000;
+				if (Garr[i] < 0) Garr[i] = 0;
+			}
+
+			Gmax = math.max(Garr);
+			for(let i=0;i<3;i++) trend_q.data.datasets[i].data=[Number(Garr[i]).toFixed(0),Number(Gmax-Garr[i]).toFixed(0)];
+			trend_q.update();
 			document.getElementById("Q").innerHTML = Number(Garr[0]);
 		}
+		
 								
 		Spinner(false);
-	}); //end fetch fields
-}
-
-//bereken verschillen gas, afname, teruglevering en totaal
-function calculateDifferences(curval, hist_arr, factor)
-{
-  var out = []  
-  for(let i=0; i<3; i++)
-  {
-    if (i==0) 
-      out[0] = (curval - hist_arr[1]) * factor;
-    else 
-      out[i] = (hist_arr[i] - hist_arr[i+1]) * factor;
-
-    if (out[i] < 0) out[i] = 0;
-  }
-  return out;
-}
-
-//update dataset and update gauge 
-function updateGaugeTrend(objGauge, arr)
-{
-  var nMax = math.max(arr);
-  for(let i=0; i<3; i++){
-    objGauge.data.datasets[i].data = [ Number(arr[i]).toFixed(1), Number(nMax-arr[i]).toFixed(1) ];
-  }
-  objGauge.update();
+		}); //end fetch fields
 }
 	
-//============================================================================      
+  //============================================================================  
+    
 function menu() {
   var x = document.getElementById("myTopnav");
   if (x.className === "main-navigation") {
@@ -725,7 +844,8 @@ function menu() {
 	menu.classList.toggle("mdi-menu");
 }
    
-// attach an onclick handler for all menuitems
+  //============================================================================  
+
 function handle_menu_click()
 {	
 	var btns = document.getElementsByClassName("nav-item");
@@ -753,54 +873,29 @@ function handle_menu_click()
 
 			activeTab = this.id;
 			//console.log("ActiveID - " + activeTab );
-// 			openTab();  		
+//  			openTab();  		
   		});
 	}
 }
 
-//create all chart-based gauges
-function createDashboardGauges()
-{
-	trend_p 	= new Chart(document.getElementById("container-3"), cfgGaugeELEKTRA);
-	trend_pi 	= new Chart(document.getElementById("container-5"), cfgGaugeELEKTRA2);
-	trend_pa 	= new Chart(document.getElementById("container-6"), cfgGaugeELEKTRA3);
-	trend_g 	= new Chart(document.getElementById("container-4"), cfgGaugeGAS);
-	trend_q 	= new Chart(document.getElementById("container-q"), cfgGaugeWARMTE);
-	trend_w 	= new Chart(document.getElementById("container-7"), cfgGaugeWATER);
-	gauge3f 	= new Chart(document.getElementById("gauge3f"),     cfgGauge3F);
-	gaugeV 		= new Chart(document.getElementById("gauge-v"),     cfgGaugeVOLTAGE);
-}
-
-//callback function for the DAL
-function updateFromDAL(source, json)
-{
-  console.log("updateFromDAL(); source="+source);
-  console.log(json);
-  /*
-  switch(source)
-  {
-    case "devinfo": parseDeviceInfo(json); break;
-    case "versionmanifest": parseVersionManifest(json); break;
-    default:
-      console.log("missing handler; source="+source);
-      break;
-  }*/
-}
-
-//main entry point from DSMRindex.html or window.onload
-function bootsTrapMain() 
-{
-  console.log("bootsTrapMain()");
-//   loadIcons();
-  getDevSettings();
-
-  createDashboardGauges();
-
-  //init DAL
-  objDAL = new dsmr_dal_main();
-  objDAL.setCallback(updateFromDAL);
-  objDAL.init();
+  //============================================================================  
   
+  function bootsTrapMain() {
+    console.log("bootsTrapMain()");
+    loadIcons();
+	getDevSettings(); //first of all ... get the device settings
+// 	console.log("hash:"+ location.hash);
+
+// 	gauge = new JustGage(GaugeOptions); // initialize gauge
+// 	gauge_v = new JustGage(GaugeOptionsV); // initialize gauge
+	trend_g 	= new Chart(document.getElementById("container-4"), TrendG);
+	trend_q 	= new Chart(document.getElementById("container-q"), TrendQ);
+	trend_p 	= new Chart(document.getElementById("container-3"), {type: 'doughnut', data:dataP, options: optionsP});
+	trend_pi 	= new Chart(document.getElementById("container-5"), {type: 'doughnut', data:dataPi, options: optionsP});
+	trend_pa 	= new Chart(document.getElementById("container-6"), {type: 'doughnut', data:dataPa, options: optionsP} );
+	trend_w 	= new Chart(document.getElementById("container-7"), TrendW);
+	gauge3f 	= new Chart(document.getElementById("gauge3f"), Trend3f);
+	gaugeV 		= new Chart(document.getElementById("gauge-v"), TrendV);
             
 	handle_menu_click();
 	FrontendConfig();
@@ -818,11 +913,8 @@ function bootsTrapMain()
 // 	console.log("location-pathname: " + location.pathname );
 // 	console.log("location-msg: " + location.hash.split('msg=')[1]);
 // 	console.log("location-hash-split: " + location.hash.split('#')[1].split('?')[0]);
-	
-  //goto tab after reload FSExplorer
-	if (location.hash == "#FileExplorer") { document.getElementById('bFSExplorer').click(); }
-
-  //handle the redirect after REBOOT / RESET / UPDATE
+	//goto tab after reload 
+// 	if (location.hash == "#FSExplorer") { document.getElementById('bFSExplorer').click(); }
 	if (location.hash.split('#')[1].split('?')[0] == "Redirect") { handleRedirect(); }
 
 	//reselect Dash when Home icon has been clicked
@@ -832,7 +924,7 @@ function bootsTrapMain()
   } // bootsTrapMain()
   
   
-  //handles all redirects
+  //============================================================================  
   function handleRedirect(){
 	console.log("location-handle: " + location.hash.split('msg=')[1]);
 	//close all sections
@@ -858,9 +950,9 @@ function bootsTrapMain()
 	}, 1000);
 }
 
-  //============================================================================ 
-  //shows or hide spinner   
-  function Spinner(show) {
+  //============================================================================  
+  
+function Spinner(show) {
 	if (show) {
 		document.getElementById("loader").removeAttribute('hidden');
 		setTimeout(() => { document.getElementById("loader").setAttribute('hidden', '');}, 5000);
@@ -868,8 +960,8 @@ function bootsTrapMain()
   }
   
   //============================================================================  
-  // shows or hide table column v1
-  function show_hide_column(table, col_no, do_show) {
+  
+function show_hide_column(table, col_no, do_show) {
    var tbl = document.getElementById(table);
    var col = tbl.getElementsByTagName('col')[col_no];
    if (col) {
@@ -878,7 +970,7 @@ function bootsTrapMain()
 }
 
 //============================================================================  
-// show or hides table column v2
+
 function show_hide_column2(table, col_no, do_show) {
 
     var tbl  = document.getElementById(table);
@@ -900,7 +992,6 @@ function show_hide_column2(table, col_no, do_show) {
   }
   
   //============================================================================  
-  // handle opening the current selected tab (from onclick menuitems)
   function openTab() {
 
     console.log("openTab : " + activeTab );
@@ -908,7 +999,10 @@ function show_hide_column2(table, col_no, do_show) {
     clearInterval(tabTimer);  
     clearInterval(actualTimer);  
 
-    hideAllCharts();
+	//--- hide canvas -------
+    document.getElementById("dataChart").style.display = "none";
+    document.getElementById("gasChart").style.display  = "none";
+	document.getElementById("waterChart").style.display  = "none";
 
 	if (!EnableHist) {
 	}
@@ -916,162 +1010,79 @@ function show_hide_column2(table, col_no, do_show) {
     if (activeTab != "bActualTab") {
       actualTimer = setInterval(refreshSmActual, 60 * 1000);                  // repeat every 60s
     }
+    if (activeTab == "bActualTab") {
+      refreshSmActual();
+      if (tlgrmInterval < 10)
+            actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
+      else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
 
-	switch (activeTab) {
-		case "bActualTab" : 
-			refreshSmActual();
-		    if (tlgrmInterval < 10)
-            	actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
-      		else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
-      		break;
-		case "bPlafondTab":
-			refreshData();
-			break;
-		case "bHoursTab":
-			refreshHours();
-      		clearInterval(tabTimer);
-     		tabTimer = setInterval(refreshHours, 58 * 1000); // repeat every 58s
-     		break;
-     	case "bDaysTab":
-     		refreshDays();
-      		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshDays, 58 * 1000); // repeat every 58s
-      		break;
-      	case "bMonthsTab":
-      		refreshMonths();
-      		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshMonths, 118 * 1000); // repeat every 118s
-      		break;
-      	case "bSysInfoTab":
-	      	refreshDevInfo();
-      		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshDevInfo, 58 * 1000); // repeat every 58s
-      		break;
-      	case "bFieldsTab":
-      		refreshSmFields();
-      		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshSmFields, 58 * 1000); // repeat every 58s
-      		break;
-      	case "bTelegramTab":
-      		refreshSmTelegram();
-      		clearInterval(tabTimer); // do not repeat!
-      		break;
-      	case "bInfo_APIdoc": // no action
-      		break;
-      	case "bDashTab":
-      		readGitHubVersion();
-			UpdateDash();
-			clearInterval(tabTimer);
-			clearInterval(actualTimer);  
-			tabTimer = setInterval(UpdateDash, 10 * 1000); // repeat every 10s
-			break;
-		case "bFSExplorer":
-		    FSExplorer();
-		    break;
-		case "bEditMonths":
-			document.getElementById('tabEditMonths').style.display = "block";
-			document.getElementById('tabEditSettings').style.display = "none";
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-			EditMonths();
-			break;
-		case "bSettings":
-		case "bEditSettings":
-			refreshDevTime();
-			//refreshDevInfo();
-			data = {};
-			document.getElementById('tabEditSettings').style.display = 'block';
-			document.getElementById('tabEditMonths').style.display = "none";
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-			refreshSettings();
-			getDevSettings();
-			activeTab = "bEditSettings";
-			break;
-		case "bSysInfoTab":
-			data = {};
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-			refreshDevInfo();
-			tabTimer = setInterval(refreshDevInfo, 10 * 1000); // repeat every 10s
-			break;
-		case "bInfo_frontend":
-			data = {};
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-			FrontendConfig();
-			break;
-    }
+    } else if (activeTab == "bPlafondTab") {
+      refreshData();
+    } else if (activeTab == "bHoursTab") {
+      refreshHours();
+      clearInterval(tabTimer);
+      tabTimer = setInterval(refreshHours, 58 * 1000); // repeat every 58s
+
+    } else if (activeTab == "bDaysTab") {
+      refreshDays();
+      clearInterval(tabTimer);
+      tabTimer = setInterval(refreshDays, 58 * 1000); // repeat every 58s
+
+    } else if (activeTab == "bMonthsTab") {
+      refreshMonths();
+      clearInterval(tabTimer);
+      tabTimer = setInterval(refreshMonths, 118 * 1000); // repeat every 118s
     
- //    if (activeTab == "bActualTab") {
-//       refreshSmActual();
-//       if (tlgrmInterval < 10)
-//             actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
-//       else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
-// 
-//     } else if (activeTab == "bPlafondTab") {
-//       refreshData();
-//     } else if (activeTab == "bHoursTab") {
-//       refreshHours();
-//       clearInterval(tabTimer);
-//       tabTimer = setInterval(refreshHours, 58 * 1000); // repeat every 58s
-// 
-//     } else if (activeTab == "bDaysTab") {
-//       refreshDays();
-//       clearInterval(tabTimer);
-//       tabTimer = setInterval(refreshDays, 58 * 1000); // repeat every 58s
-// 
-//     } else if (activeTab == "bMonthsTab") {
-//       refreshMonths();
-//       clearInterval(tabTimer);
-//       tabTimer = setInterval(refreshMonths, 118 * 1000); // repeat every 118s
-//     
-//     } else if (activeTab == "bSysInfoTab") {
-//       refreshDevInfo();
-//       clearInterval(tabTimer);
-//       tabTimer = setInterval(refreshDevInfo, 58 * 1000); // repeat every 58s
-// 
-//     } else if (activeTab == "bFieldsTab") {
-//       refreshSmFields();
-//       clearInterval(tabTimer);
-//       tabTimer = setInterval(refreshSmFields, 58 * 1000); // repeat every 58s
-// 
-//     } else if (activeTab == "bTelegramTab") {
-//       refreshSmTelegram();
-//       clearInterval(tabTimer); // do not repeat!
-// 
-//     } else if (activeTab == "bInfo_APIdoc") {
-//       //do nothing = static html
-//     } else if (activeTab == "bDashTab") {
-//        readGitHubVersion();
-//        UpdateDash();
-//        clearInterval(tabTimer);
-//        clearInterval(actualTimer);  
-//        tabTimer = setInterval(UpdateDash, 10 * 1000); // repeat every 10s
-//     } else if (activeTab == "bFSExplorer") {
-//       FSExplorer();
-//     } else if (activeTab == "bEditMonths") {
-//       document.getElementById('tabEditMonths').style.display = "block";
-//       document.getElementById('tabEditSettings').style.display = "none";
-//       clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-//       EditMonths();
-// 
-//     } else if (activeTab == "bSettings" || activeTab == "bEditSettings") {
-// 	  refreshDevTime();
-// 	  //refreshDevInfo();
-// 	  data = {};
-//       document.getElementById('tabEditSettings').style.display = 'block';
-//       document.getElementById('tabEditMonths').style.display = "none";
-// 	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-//       refreshSettings();
-//       getDevSettings();
-//       activeTab = "bEditSettings";
-//     } else if (activeTab == "bSysInfoTab") {
-// 	  data = {};
-// 	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-//       refreshDevInfo();
-// 	  tabTimer = setInterval(refreshDevInfo, 10 * 1000); // repeat every 10s
-//     } else if (activeTab == "bInfo_frontend") {
-// 	  data = {};
-// 	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-//       FrontendConfig();
-//     } 
+    } else if (activeTab == "bInfo_SysInfo") {
+      refreshDevInfo();
+      clearInterval(tabTimer);
+      tabTimer = setInterval(refreshDevInfo, 58 * 1000); // repeat every 58s
+
+    } else if (activeTab == "bInfo_Fields") {
+      refreshSmFields();
+      clearInterval(tabTimer);
+      tabTimer = setInterval(refreshSmFields, 58 * 1000); // repeat every 58s
+
+    } else if (activeTab == "bInfo_Telegram") {
+      refreshSmTelegram();
+      clearInterval(tabTimer); // do not repeat!
+
+    } else if (activeTab == "bInfo_APIdoc") {
+      //do nothing = static html
+    } else if (activeTab == "bDashTab") {
+       // readGitHubVersion();
+       UpdateDash();
+       clearInterval(tabTimer);
+       clearInterval(actualTimer);  
+       tabTimer = setInterval(UpdateDash, 10 * 1000); // repeat every 10s
+    } else if (activeTab == "bFSExplorer") {
+      FSExplorer();
+    } else if (activeTab == "bEditMonths") {
+      document.getElementById('tabEditMonths').style.display = "block";
+      document.getElementById('tabEditSettings').style.display = "none";
+      clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+      getMonths();
+
+    } else if (activeTab == "bSettings" || activeTab == "bEditSettings") {
+	  refreshDevTime();
+	  //refreshDevInfo();
+	  data = {};
+      document.getElementById('tabEditSettings').style.display = 'block';
+      document.getElementById('tabEditMonths').style.display = "none";
+	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+      refreshSettings();
+      getDevSettings();
+      activeTab = "bEditSettings";
+    } else if (activeTab == "bSysInfoTab") {
+	  data = {};
+	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+      refreshDevInfo();
+	  tabTimer = setInterval(refreshDevInfo, 10 * 1000); // repeat every 10s
+    } else if (activeTab == "bInfo_frontend") {
+	  data = {};
+	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
+      FrontendConfig();
+    } 
   } // openTab()
   
 
@@ -1082,19 +1093,17 @@ function show_hide_column2(table, col_no, do_show) {
 	 let fileSize = document.querySelector('fileSize');
 
 	 Spinner(true);
-   //get filelist
 	 fetch('api/listfiles', {"setTimeout": 5000}).then(function (response) {
 		 return response.json();
 	 }).then(function (json) {
-	
+
 	//clear previous content	 
 	 var list = document.getElementById("FSmain");
 	 while (list.hasChildNodes()) {  
 	   list.removeChild(list.firstChild);
 	 }
-    
-	   nFilecount = json.length;
-     let dir = '<table id="FSTable" width=90%>';
+
+	   let dir = '<table id="FSTable" width=90%>';
 	   for (var i = 0; i < json.length - 1; i++) {
 		 dir += "<tr>";
 		 dir += `<td width=250px nowrap><a href ="${json[i].name}" target="_blank">${json[i].name}</a></td>`;
@@ -1111,58 +1120,46 @@ function show_hide_column2(table, col_no, do_show) {
 			 });
 	   });
 	   main.insertAdjacentHTML('beforeend', '</table>');
-     main.insertAdjacentHTML('beforeend', `<div id='filecount'>Aantal bestanden: ${nFilecount} </div>`);
 	   main.insertAdjacentHTML('beforeend', `<p id="FSFree">Opslag: <b>${json[i].usedBytes} gebruikt</b> | ${json[i].totalBytes} totaal`);
 	   free = json[i].freeBytes;
 	   fileSize.innerHTML = "<b> &nbsp; </b><p>";    // spacer                
 	   Spinner(false);
 	 });	// function(json)
 	 
-    //view selected filesize
-	  document.getElementById('Ifile').addEventListener('change', () => {
-      //format filesize
-		  let nBytes = document.getElementById('Ifile').files[0].size;
-      let output = `${nBytes} Byte`;
-		  for (var aMultiples = [
+	 document.getElementById('Ifile').addEventListener('change', () => {
+		 let nBytes = document.getElementById('Ifile').files[0].size, output = `${nBytes} Byte`;
+		 for (var aMultiples = [
 			 ' KB',
 			 ' MB'
 			], i = 0, nApprox = nBytes / 1024; nApprox > 1; nApprox /= 1024, i++) {
 			  output = nApprox.toFixed(2) + aMultiples[i];
 			}
-
-      var fUpload = true;
-      //check freespace
 			if (nBytes > free) {
-			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> niet genoeg ruimte! </strong><p>`;
-        fUpload = false;
-			}
-      //check filecount
-      //TODO: 
-      //  Although uploading a new file is blocked, REPLACING a file when the count is 30 must still be possible.
-      //  check if filename is already on the list, if so, allow this upload.
-			if ( nFilecount >= MAX_FILECOUNT) {
-			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> Maximaal aantal bestanden (${MAX_FILECOUNT}) bereikt! </strong><p>`;
-        fUpload = false;
-			}
-      if( fUpload ){
-        fileSize.innerHTML = `<b>Bestand grootte:</b> ${output}<p>`;
+			  fileSize.innerHTML = `<p><small> Bestand Grootte: ${output}</small><strong style="color: red;"> niet genoeg ruimte! </strong><p>`;
+			  document.getElementById('Iupload').setAttribute('disabled', 'disabled');
+			} 
+			else {
+			  fileSize.innerHTML = `<b>Bestand grootte:</b> ${output}<p>`;
 			  document.getElementById('Iupload').removeAttribute('disabled');
-      }
-			else {			  
-        document.getElementById('Iupload').setAttribute('disabled', 'disabled');
 			}
 	 });	
   }
-
-  //parse all json devinfo 
-  function parseDeviceInfo(obj)
-  {
-    var tableRef = document.getElementById('tb_info');
+  
+  //============================================================================  
+  function refreshDevInfo()
+  { Spinner(true);
+    fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
+      .then(response => response.json())
+      .then(json => {
+        console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
+		Spinner(false);
+        obj = json;
+        var tableRef = document.getElementById('tb_info');
         //clear table
 		while (tableRef.hasChildNodes()) { tableRef.removeChild(tableRef.lastChild);}
 
 		//add latest software version
-		ReadVersionManifest();
+		//ReadVersionManifest();
 		if (LastVersion != "") {
 			var newRow=tableRef.insertRow(-1);
 			var VerCel1 = newRow.insertCell(0);
@@ -1221,20 +1218,8 @@ function show_hide_column2(table, col_no, do_show) {
 		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' href='/remote-update?version=" + LastVersion + "'>Klik voor update</a>";
 		  else VerCel3.innerHTML = "laatste versie";
 	  }
-  }
-    
-  //get new devinfo==============================================================  
-  function refreshDevInfo()
-  { Spinner(true);
-    fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-        console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
-        parseDeviceInfo(json);
-		    Spinner(false);
       })
       .catch(function(error) {
-        console.error("main::refreshDevInfo() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(   document.createTextNode('Error: ' + error.message)  );
       });
@@ -1290,7 +1275,6 @@ function show_hide_column2(table, col_no, do_show) {
   function refreshDevTime()
   {
 	alert_message("");
-  document.getElementById('theTime').classList.remove("afterglow");
     console.log("Refresh api/v2/dev/time ..");
     
 	let controller = new AbortController();
@@ -1303,11 +1287,9 @@ function show_hide_column2(table, col_no, do_show) {
 
 	  //after reboot checks of the server is up and running and redirects to home
       if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
-      document.getElementById('theTime').classList.add("afterglow");
-      
-    })
+      })
       .catch(function(error) {    
-		if (error.name === "AbortError") {console.error("time abort error")}
+		if (error.name === "AbortError") {console.log("time abort error")}
 //         var p = document.createElement('p');
 //         p.appendChild( document.createTextNode('Error: ' + error.message) );
 //         alert_message("Datum/tijd kan niet opgehaald worden");
@@ -1318,20 +1300,26 @@ function show_hide_column2(table, col_no, do_show) {
   } // refreshDevTime()
     
   //============================================================================  
-  function refreshSmActual() {
-    document.getElementById("actualTable").classList.remove("afterglow");
-    Spinner(true);
-    var data = objDAL.getActual();
-    //copyActualToChart(data);
-    if (presentationType == "TAB")
-      showActualTable(data);
-    else{
-      var hist = objDAL.getActualHistory();  
-      copyActualHistoryToChart(hist);
-      showActualGraph();
-    }
-    Spinner(false);
-  }
+  function refreshSmActual()
+  { 
+  	Spinner(true);
+    fetch(APIGW+"v2/sm/actual", {"setTimeout": 5000})
+      .then(response => response.json())
+      .then(json => {
+          console.log("actual parsed .., fields is ["+ JSON.stringify(json)+"]");
+          data = json;
+          copyActualToChart(data);
+          if (presentationType == "TAB")
+                showActualTable(data);
+          else  showActualGraph(data);
+        //console.log("-->done..");
+         Spinner(false);
+      }) //json
+      .catch(function(error) {
+        var p = document.createElement('p');
+        p.appendChild( document.createTextNode('Error: ' + error.message) );
+      }); //catch
+  };  // refreshSmActual()
   
 // format a identifier
 // input = "4530303433303036393938313736353137"
@@ -1379,9 +1367,6 @@ function parseFailureLog(value) {
   return failures;
 };
 
-//format duration (in sec)
-//input: 3600
-//output: 1 hours
 function formatDuration(value) {
   var t = "";
   var sMIN = value / 60;
@@ -1398,15 +1383,6 @@ function formatDuration(value) {
   return t;
 }
 
-//format the complete failure log
-//input:   
-/*  
-  restored on 2017-11-07 01:35:57 (dst=off) after 8.55 min downtime.
-  restored on 2018-08-06 15:54:35 (dst=on) after 1.24 hours downtime.
-  restored on 2018-11-17 12:55:23 (dst=off) after 23.57 min downtime.
-  restored on 2021-06-02 10:03:32 (dst=on) after 50.12 min downtime.
-  restored on 2022-12-24 03:36:26 (dst=off) after 4.46 hours downtime.
-*/
 function formatFailureLog(svalue) {
   var t = "";
   failures = parseFailureLog(svalue);
@@ -1420,8 +1396,7 @@ function formatFailureLog(svalue) {
   return t;
 }
 
-  //parse the fields of the SM
-  function parseSmFields(data)
+function parseSmFields(data)
   {
     //console.log("parsed .., fields is ["+ JSON.stringify(data)+"]");
     for (var item in data) 
@@ -1486,7 +1461,6 @@ function formatFailureLog(svalue) {
   }
   
   //============================================================================  
-  //refresh the fields of the SM
   function refreshSmFields()
   { 
     Spinner(true);
@@ -1497,7 +1471,6 @@ function formatFailureLog(svalue) {
         Spinner(false);
       })
       .catch(function(error) {
-        console.error("main::refreshSmFields() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -1506,83 +1479,88 @@ function formatFailureLog(svalue) {
   };  // refreshSmFields()
   
   //============================================================================  
-  //calculate the diffs, sums and costs per entry
   function expandData(data)
   {
+	//console.log("expandData2: data length:"+ data.data.length );
+	//console.log("expandData2: actslot:"+ data.actSlot );
     var i;
     var slotbefore;
+    	
+    //--- first check op volgordelijkheid ------    
+// 	if (activeTab == "HoursTab") {  
+//     for (let i=0; i<(data.length -1); i++)
+//     {
+//       slotbefore = math.mod(i-1, data.data.length);
+// 	  if (data[i].edt1 < data[i+1].edt1 || data[i].edt2 < data[i+1].edt2)
+//       {
+//         console.log("["+(i)+"] ["+data[i].recid+"] := ["+(i+1)+"]["+data[i+1].recid+"]"); 
+//         data[i].edt1 = data[i+1].edt1 * 1.0;
+//         data[i].edt2 = data[i+1].edt2 * 1.0;
+//         data[i].ert1 = data[i+1].ert1 * 1.0;
+//         data[i].ert2 = data[i+1].ert2 * 1.0;
+//         data[i].gdt  = data[i+1].gdt  * 1.0;
+//       }
+//     } // for ...
+//     }
     for (let x=data.data.length + data.actSlot; x > data.actSlot; x--)
-    {
-      i = x % data.data.length;
-      slotbefore = math.mod(i-1, data.data.length);
-      var costsED = 0;
-      var costsER = 0;
+    {	i = x % data.data.length;
+        slotbefore = math.mod(i-1, data.data.length);
+		//console.log("ExpandData2 - x: "+x); 
+		//console.log("ExpandData2 - i: "+i);
+		//console.log("ExpandData2 - slotbefore: "+slotbefore); 
+		//console.log("gd_tariff: "+gd_tariff); 
+		//console.log("ed_tariff: "+ed_tariff1); 
+      var     costs     = 0;
       if (x != data.actSlot 	)
-      {
-        //avoid gaps and spikes
-        if ( AvoidSpikes && ( data.data[slotbefore].values[0] == 0 ) ) data.data[slotbefore].values = data.data[i].values;
-        
-        //simple differences
-        data.data[i].p_edt1= (data.data[i].values[0] - data.data[slotbefore].values[0]);
-        data.data[i].p_edt2= (data.data[i].values[1] - data.data[slotbefore].values[1]);
-        data.data[i].p_ert1= (data.data[i].values[2] - data.data[slotbefore].values[2]);
-        data.data[i].p_ert2= (data.data[i].values[3] - data.data[slotbefore].values[3]);
-		    data.data[i].p_gd  = (data.data[i].values[4] - data.data[slotbefore].values[4]);
-        data.data[i].water = (data.data[i].values[5] - data.data[slotbefore].values[5]);
+      { 
+        if ( AvoidSpikes && ( data.data[slotbefore].values[0] == 0 ) ) data.data[slotbefore].values = data.data[i].values;//avoid gaps and spikes
+		data.data[i].p_ed  = ((data.data[i].values[0] + data.data[i].values[1])-(data.data[slotbefore].values[0] +data.data[slotbefore].values[1])).toFixed(3);
+        data.data[i].p_edw = (data.data[i].p_ed * 1000).toFixed(0);
+        data.data[i].p_er  = ((data.data[i].values[2] + data.data[i].values[3])-(data.data[slotbefore].values[2] +data.data[slotbefore].values[3])).toFixed(3);
+        data.data[i].p_erw = (data.data[i].p_er * 1000).toFixed(0);
+        data.data[i].p_gd  = (data.data[i].values[4]  - data.data[slotbefore].values[4]).toFixed(3);
+		data.data[i].water  = (data.data[i].values[5]  - data.data[slotbefore].values[5]).toFixed(3);
 
-        //sums of T1 & T2
-		    data.data[i].p_ed  = (data.data[i].p_edt1 + data.data[i].p_edt2);
-        data.data[i].p_er  = (data.data[i].p_ert1 + data.data[i].p_ert2);
-        
-        //sums in watts
-        data.data[i].p_edw = (data.data[i].p_ed * 1000);
-        data.data[i].p_erw = (data.data[i].p_er * 1000);        
-
-        //-- calculate costs
-        costsED  = ( data.data[i].p_edt1 * ed_tariff1 ) + ( data.data[i].p_edt2 * ed_tariff2 );
-        costsER  = ( data.data[i].p_ert1 * er_tariff1 ) + ( data.data[i].p_ert2 * er_tariff2 );
-        data.data[i].costs_e = costsED - costsER;
-        
+        //-- calculate Energy Delivered costs
+        costs = ( (data.data[i].values[0] - data.data[slotbefore].values[0]) * ed_tariff1 );
+        costs = costs + ( (data.data[i].values[1] - data.data[slotbefore].values[1]) * ed_tariff2 );
+        //-- subtract Energy Returned costs
+        costs = costs - ( (data.data[i].values[2] - data.data[slotbefore].values[2]) * er_tariff1 );
+        costs = costs - ( (data.data[i].values[3] - data.data[slotbefore].values[3]) * er_tariff2 );
+        data.data[i].costs_e = costs;
         //-- add Gas Delivered costs
-        data.data[i].costs_g = HeeftGas ? ( data.data[i].p_gd  * gd_tariff ) : 0;
-
+        data.data[i].costs_g = HeeftGas?( (data.data[i].values[4]  - data.data[slotbefore].values[4])  * gd_tariff ):0;
         //-- compute network costs
-        data.data[i].costs_nw = (electr_netw_costs + (HeeftGas ? gas_netw_costs : 0)) * 1.0;
-
+        data.data[i].costs_nw = (electr_netw_costs + (HeeftGas?gas_netw_costs:0)) * 1.0;
+		
+// 		console.log("costs_nw: "+data.data[i].costs_nw); 
+// 		console.log("gas_netw_costs: "+gas_netw_costs); 
+// 		console.log("electr_netw_costs: "+electr_netw_costs); 
+// 		console.log("HeeftGas: "+HeeftGas?"yes":"no"); 
+		
         //-- compute total costs
         data.data[i].costs_tt = ( (data.data[i].costs_e + data.data[i].costs_g + data.data[i].costs_nw) * 1.0);
       }
       else
       {
-        costs = 0;
-        data.data[i].p_edt1    = data.data[i].values[0];
-        data.data[i].p_edt2    = data.data[i].values[1];
-        data.data[i].p_ert1    = data.data[i].values[2];        
-        data.data[i].p_ert2    = data.data[i].values[3];        
-        data.data[i].p_gd      = data.data[i].values[4];
-		    data.data[i].water     = data.data[i].values[5];
-        data.data[i].p_ed      = (data.data[i].p_edt1 + data.data[i].p_edt2);
-        data.data[i].p_er      = (data.data[i].p_ert1 + data.data[i].p_ert2);        
-        data.data[i].p_edw     = (data.data[i].p_ed * 1000);
-        data.data[i].p_erw     = (data.data[i].p_er * 1000);
+        costs             = 0;
+        data.data[i].p_ed      = (data.data[i].values[0] +data.data[i].values[1]).toFixed(3);
+        data.data[i].p_edw     = (data.data[i].p_ed * 1000).toFixed(0);
+        data.data[i].p_er      = (data.data[i].values[2] +data.data[i].values[3]).toFixed(3);
+        data.data[i].p_erw     = (data.data[i].p_er * 1000).toFixed(0);
+        data.data[i].p_gd      = (data.data[i].values[4]).toFixed(3);
+		data.data[i].water     = (data.data[i].values[5]).toFixed(3);
         data.data[i].costs_e   = 0.0;
         data.data[i].costs_g   = 0.0;
         data.data[i].costs_nw  = 0.0;
         data.data[i].costs_tt  = 0.0;
       }
     } // for i ..
+    //console.log("leaving expandData() ..");
+	//console.log("expandData2: eind data "+ JSON.stringify(data));
   } // expandData()
-
-  //limit every value in the array to n decimals
-  //toFixed() will convert all into strings, so also add  convertion back to Number
-  function applyArrayFixedDecimals(data, decimals){
-    for( var i=0; i<data.length; i++){
-      if( !isNaN(data[i]) ) data[i] = Number(data[i].toFixed(decimals));
-    }
-  }
   
   //============================================================================  
-  //display an alert message at the top
   function alert_message(msg) {
   	if (msg==""){
   		document.getElementById('messages').style="display:none";
@@ -1616,7 +1594,6 @@ function formatFailureLog(svalue) {
 
       })
       .catch(function(error) {
-        console.error("main::refreshHours() - " + error.message);
         var p = document.createElement('p');
         p.appendChild( document.createTextNode('Error: ' + error.message) );
     	alert_message("Fout bij ophalen van de historische uurgegevens");
@@ -1661,7 +1638,7 @@ function formatFailureLog(svalue) {
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
         );
-    	console.error("main::refreshDays() - " + error);
+    	console.log(error);
     	alert_message("Fout bij ophalen van de historische daggegevens");
       });
   } // resfreshDays()
@@ -1694,7 +1671,6 @@ function formatFailureLog(svalue) {
         Spinner(false);
       })
       .catch(function(error) {
-        console.error("main::refreshMonths() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -1728,7 +1704,6 @@ function formatFailureLog(svalue) {
         Spinner(false);
       })
       .catch(function(error) {
-        console.error("main::refreshSmTelegram() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -1736,7 +1711,7 @@ function formatFailureLog(svalue) {
       });     
   } // refreshSmTelegram()
 
-  //format a value based on the locale of the client
+  //
   function formatValue(value)
   {
     var t="";
@@ -1756,20 +1731,28 @@ function formatFailureLog(svalue) {
 
     for (var item in data) 
     {
-      //skip if dongle=Q
      	if ( (item == "gas_delivered_timestamp") && (Dongle_Config == "p1-q") ) continue;
+       	//console.log("showActualTableV2 i: "+item);
+    	//console.log("showActualTableV2 data[i]: "+data[item]);
+    	//console.log("showActualTableV2 data[i].value: "+data[item].value);
     	
-      //ensure tablerow exists
       data[item].humanName = translateToHuman(item);
       var tableRef = document.getElementById('actualTable').getElementsByTagName('tbody')[0];
-      var itemid = "actualTable_"+item;
-      if( ( document.getElementById(itemid)) == null )
+      if( ( document.getElementById("actualTable_"+item)) == null )
       {
-        createTableRowWithCells(tableRef, itemid, 3, '');
+        var newRow   = tableRef.insertRow();
+        newRow.setAttribute("id", "actualTable_"+item, 0);
+        // Insert a cell in the row at index 0
+        var newCell  = newRow.insertCell(0);            // (short)name
+        var newText  = document.createTextNode('');
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(1);                // value
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(2);                // unit
+        newCell.appendChild(newText);
       }
       //get ref to tablecells
-      tableCells = document.getElementById(itemid).cells;
-      
+      tableCells = document.getElementById("actualTable_"+item).cells;
       //fill cells
       switch(item)
       {
@@ -1798,7 +1781,9 @@ function formatFailureLog(svalue) {
     }
 
     //--- hide canvas
-    hideAllCharts();
+    document.getElementById("dataChart").style.display = "none";
+    document.getElementById("gasChart").style.display  = "none";
+	  document.getElementById("waterChart").style.display  = "none";
     //--- show table
     document.getElementById("actual").style.display    = "block";
 
@@ -1820,16 +1805,17 @@ function formatFailureLog(svalue) {
 
     
     for (let i=start; i>stop; i--)
-    {  
-      index = i % data.data.length;
-      var tref = tableRef.getElementsByTagName('tbody')[0];
-      var itemid = type+"Table_"+type+"_R"+index;
-      var nCells = 5;
-      if (type == "Days") nCells += 1;
-      createTableRowWithCells( tref, itemid, nCells, '-');
+    {  index = i % data.data.length;
+		//console.log("showHistTable index: "+index);
+		//console.log("showHistTable("+type+"): data["+i+"] => data["+i+"]name["+data[i].recid+"]");
 
-        /*
-        newRow.setAttribute("id", itemid, 0);
+//       var tableRef = document.getElementById('last'+type+'Table');
+//       if( ( document.getElementById(type +"Table_"+type+"_R"+index)) == null )
+//       {
+        var newRow   = tableRef.getElementsByTagName('tbody')[0].insertRow();
+        //newRow.setAttribute("id", type+"Table_"+data[i].recid, 0);
+        newRow.setAttribute("id", type+"Table_"+type+"_R"+index, 0);
+        // Insert a cell in the row at index 0
         var newCell  = newRow.insertCell(0);
         var newText  = document.createTextNode('-');
         newCell.appendChild(newText);
@@ -1845,9 +1831,9 @@ function formatFailureLog(svalue) {
           newCell  = newRow.insertCell(5);
           newCell.appendChild(newText);
         }
-        }
-      	*/
-      tableCells = document.getElementById(itemid).cells;
+//       }
+      	
+      tableCells = document.getElementById(type+"Table_"+type+"_R"+index).cells;
       tableCells[0].innerHTML = formatDate(type, data.data[index].date);
       
       if (data.data[index].p_edw >= 0) tableCells[1].innerHTML = Number(data.data[index].p_edw).toLocaleString( 'nl-NL' );
@@ -1866,7 +1852,10 @@ function formatFailureLog(svalue) {
     };
 
     //--- hide canvas
-    hideAllCharts();
+    document.getElementById("dataChart").style.display = "none";
+    document.getElementById("gasChart").style.display  = "none";
+	document.getElementById("waterChart").style.display  = "none";
+	
 
 
 	if ( Dongle_Config == "p1-q" ) 	{
@@ -1901,7 +1890,47 @@ function formatFailureLog(svalue) {
       var tableRef = document.getElementById('lastMonthsTable').getElementsByTagName('tbody')[0];
       if( ( document.getElementById("lastMonthsTable_R"+i)) == null )
       {
-        createTableRowWithCells(tableRef, "lastMonthsTable_R"+i, 17, '-' );
+        var newRow   = tableRef.insertRow();
+        newRow.setAttribute("id", "lastMonthsTable_R"+i, 0);
+        // Insert a cell in the row at index 0
+        var newCell  = newRow.insertCell(0);          // maand
+        var newText  = document.createTextNode('-');
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(1);              // jaar
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(2);              // verbruik
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(3);              // jaar
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(4);              // verbruik
+        newCell.appendChild(newText);
+
+        newCell  = newRow.insertCell(5);              // jaar
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(6);              // opgewekt
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(7);              // jaar
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(8);             // opgewekt
+        newCell.appendChild(newText);
+        
+        newCell  = newRow.insertCell(9);             // jaar
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(10);             // gas
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(11);             // jaar
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(12);             // gas
+        newCell.appendChild(newText);
+
+        newCell  = newRow.insertCell(13);             // jaar
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(14);             // gas
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(15);             // jaar
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(16);             // gas
+        newCell.appendChild(newText);
       }
       var mmNr = parseInt(data.data[i].date.substring(2,4), 10);
 
@@ -1940,7 +1969,9 @@ function formatFailureLog(svalue) {
     };
     
     //--- hide canvas
-    hideAllCharts();
+    document.getElementById("dataChart").style.display  = "none";
+    document.getElementById("gasChart").style.display   = "none";
+	document.getElementById("waterChart").style.display   = "none";
     //--- show table
 	if (Dongle_Config == "p1-q") {
   		show_hide_column2('lastMonthsTable', 1,false);
@@ -1963,23 +1994,6 @@ function formatFailureLog(svalue) {
     document.getElementById("lastMonths").style.display = "block";
 
   } // showMonthsHist()
-
-  function createTableRowWithCells(tableRef, itemid, cellcount, content)
-  {
-    var newText  = document.createTextNode(content);
-    var newRow   = tableRef.insertRow();
-    newRow.setAttribute("id", itemid, 0);
-    for( var i=0; i<cellcount; i++)
-    {
-      var newCell  = newRow.insertCell(i);
-      newCell.appendChild(newText);
-    }
-  }
-  
-  function formatValueLocale(val, minf, maxf)
-  {
-    return Number(val).toLocaleString('nl-NL', {minimumFractionDigits: minf, maximumFractionDigits: maxf} );
-  }
   
   //============================================================================  
   function showMonthsCosts(data)
@@ -1997,19 +2011,39 @@ function formatFailureLog(svalue) {
       	slotyearbefore = math.mod(i-12,data.data.length);
       //console.log("showMonthsHist(): data["+i+"] => data["+i+"].name["+data[i].recid+"]");
       var tableRef = document.getElementById('lastMonthsTableCosts').getElementsByTagName('tbody')[0];
-
-      //ensure tablerow exists
-      var itemid = "lastMonthsTableCosts_R"+i;
-      if( ( document.getElementById(itemid)) == null )
+      if( ( document.getElementById("lastMonthsTableCosts_R"+i)) == null )
       {
-        createTableRowWithCells(tableRef, itemid, 11, '-');       
+        var newRow   = tableRef.insertRow();
+        newRow.setAttribute("id", "lastMonthsTableCosts_R"+i, 0);
+        // Insert a cell in the row at index 0
+        var newCell  = newRow.insertCell(0);          // maand
+        var newText  = document.createTextNode('-');
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(1);              // jaar
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(2);              // kosten electra
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(3);              // kosten gas
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(4);              // vast recht
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(5);              // kosten totaal
+        newCell.appendChild(newText);
+
+        newCell  = newRow.insertCell(6);              // jaar
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(7);              // kosten electra
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(8);              // kosten gas
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(9);              // vast recht
+        newCell.appendChild(newText);
+        newCell  = newRow.insertCell(10);              // kosten totaal
+        newCell.appendChild(newText);
       }
       var mmNr = parseInt(data.data[i].date.substring(2,4), 10);
 
-      //get ref to cells
-      tableCells = document.getElementById(itemid).cells;
-
-      //fill table
+      tableCells = document.getElementById("lastMonthsTableCosts_R"+i).cells;
       tableCells[0].style.textAlign = "right";
       tableCells[0].innerHTML = monthNames[mmNr];                           // maand
       
@@ -2078,7 +2112,9 @@ function formatFailureLog(svalue) {
 
     
     //--- hide canvas
-    hideAllCharts();
+    document.getElementById("dataChart").style.display  = "none";
+    document.getElementById("gasChart").style.display   = "none";
+	document.getElementById("waterChart").style.display   = "none";
     //--- show table
     if ( Dongle_Config == "p1-q" ){
 		show_hide_column2('lastMonthsTableCosts', 2,false);
@@ -2121,7 +2157,6 @@ function formatFailureLog(svalue) {
         SettingsRead = true;
       })
       .catch(function(error) {
-        console.error("main::getDevSettings() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -2181,7 +2216,6 @@ function formatFailureLog(svalue) {
     console.log("Set Month Table Type");
     if (presentationType == 'GRAPH') 
     {
-      //reset checkbox when you select a graph
       document.getElementById('mCOST').checked = false;
       return;
     }
@@ -2284,7 +2318,6 @@ function formatFailureLog(svalue) {
 
       })
       .catch(function(error) {
-        console.error("main::refreshSettings() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -2296,7 +2329,7 @@ function formatFailureLog(svalue) {
   
   
   //============================================================================  
-  function EditMonths()
+  function getMonths()
   {	Spinner(true);
     console.log("fetch("+APIGW+"v2/hist/months)");
     fetch(APIGW+"v2/hist/months", {"setTimeout": 5000})
@@ -2305,11 +2338,10 @@ function formatFailureLog(svalue) {
         //console.log(response);
         data = json;
         expandDataSettings(data);
-        showMonthsV2(data, monthType);
+        showMonths(data, monthType);
         Spinner(false);
       })
       .catch(function(error) {
-        console.error("main::EditMonths() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -2317,13 +2349,13 @@ function formatFailureLog(svalue) {
       });
 
       document.getElementById('message').innerHTML = newVersionMsg;
-  } // EditMonths()
+  } // getMonths()
 
   
   //============================================================================  
-  function showMonthsV2(data, type)
+  function showMonths(data, type)
   { 
-    console.log("showMonthsV2("+type+")");
+    console.log("showMonths("+type+")");
     //--- first remove all Children ----
     var allChildren = document.getElementById('editMonths');
     while (allChildren.firstChild) {
@@ -2479,7 +2511,7 @@ function formatFailureLog(svalue) {
 
     } // sequence EEYY and MM
 
-  } // showMonthsV2()
+  } // showMonths()
 
   
   //============================================================================  
@@ -2502,8 +2534,8 @@ function formatFailureLog(svalue) {
   function undoReload()
   {
     if (activeTab == "bEditMonths") {
-      console.log("EditMonths");
-      EditMonths();
+      console.log("getMonths");
+      getMonths();
     } else if (activeTab == "bEditSettings") {
       console.log("undoReload(): reload Settings..");
       data = {};
@@ -2520,13 +2552,14 @@ function formatFailureLog(svalue) {
   function saveData() 
   {
     document.getElementById('message').innerHTML = "Gegevens worden opgeslagen ..";
-    switch(activeTab){
-      case "bEditSettings":
-        saveSettings();
-        break;
-      case "bEditMonths":
-        saveMeterReadings();
-        break;
+
+    if (activeTab == "bEditSettings")
+    {
+      saveSettings();
+    } 
+    else if (activeTab == "bEditMonths")
+    {
+      saveMeterReadings();
     }
     
   } // saveData()
@@ -2793,28 +2826,12 @@ function formatFailureLog(svalue) {
       
   } // sendPostReading()
 
-  function parseGitHubVersion(text){
-    var tmpGHF = text.replace(/(\r\n|\n|\r)/gm, "");
-    GitHubVersion_dspl = tmpGHF;
-    //console.log("parsed: GitHubVersion is ["+GitHubVersion_dspl+"]");
-    tmpX = tmpGHF.substring(1, tmpGHF.indexOf(' '));
-    tmpN = tmpX.split(".");
-    GitHubVersion = tmpN[0]*10000 + tmpN[1]*100 + tmpN[2]*1;    
-    //console.log("firmwareVersion["+firmwareVersion+"] >= GitHubVersion["+GitHubVersion+"]");
-    if (firmwareVersion == 0 || firmwareVersion >= GitHubVersion)
-          newVersionMsg = "";
-    else  newVersionMsg = firmwareVersion_dspl + " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
-    //set
-    document.getElementById('message').innerHTML = newVersionMsg;
-    //console.log(newVersionMsg);
-  }
-
+  
   //============================================================================  
   function readGitHubVersion()
   {
     if (GitHubVersion != 0) return;
-
-    fetch(URL_GITHUB_VERSION)
+    fetch("https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat")
       .then(response => {
         if (response.ok) {
           return response.text();
@@ -2824,42 +2841,47 @@ function formatFailureLog(svalue) {
         }
       })
       .then(text => {
-        parseGitHubVersion(text);
+        var tmpGHF     = text.replace(/(\r\n|\n|\r)/gm, "");
+        GitHubVersion_dspl = tmpGHF;
+        console.log("parsed: GitHubVersion is ["+GitHubVersion_dspl+"]");
+        tmpX = tmpGHF.substring(1, tmpGHF.indexOf(' '));
+        tmpN = tmpX.split(".");
+        GitHubVersion = tmpN[0]*10000 + tmpN[1]*100 + tmpN[2]*1;
+        
+        console.log("firmwareVersion["+firmwareVersion+"] >= GitHubVersion["+GitHubVersion+"]");
+        if (firmwareVersion == 0 || firmwareVersion >= GitHubVersion)
+              newVersionMsg = "";
+        else  newVersionMsg = firmwareVersion_dspl + " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
+        document.getElementById('message').innerHTML = newVersionMsg;
+        console.log(newVersionMsg);
+
       })
       .catch(function(error) {
-        console.error("main::readGitHubVersion() - " + error.message);
+        console.log(error);
         GitHubVersion_dspl   = "";
         GitHubVersion        = 0;
-      });
+      });     
+
   } // readGitHubVersion()
 
-  /*
-  ****************************** UTILS *******************************************
-  */
-
-  function hideAllCharts(){//--- hide canvas -------
-    document.getElementById("dataChart" ).style.display = "none";
-    document.getElementById("gasChart"  ).style.display = "none";
-    document.getElementById("waterChart").style.display = "none";
-  }
     
   //============================================================================  
   function setEditType(eType) {
     if (eType == "ED") {
       console.log("Edit Energy Delivered!");
       monthType = eType;
-      EditMonths()
-      showMonthsV2(data, monthType);
+      getMonths()
+      showMonths(data, monthType);
     } else if (eType == "ER") {
       console.log("Edit Energy Returned!");
       monthType = eType;
-      EditMonths()
-      showMonthsV2(data, monthType);
+      getMonths()
+      showMonths(data, monthType);
     } else if (eType == "GD") {
       console.log("Edit Gas Delivered!");
       monthType = eType;
-      EditMonths()
-      showMonthsV2(data, monthType);
+      getMonths()
+      showMonths(data, monthType);
     } else {
       console.log("setEditType to ["+eType+"] is quit shitty!");
       monthType = "";
@@ -2992,8 +3014,7 @@ function formatFailureLog(svalue) {
     var multiplier = Math.pow(10, precision || 0);
     return Math.round(value * multiplier) / multiplier;
   }
-  
-  //translation array
+    
   var translateFields = [
            [ "author",                    "Auteur" ]
           ,[ "identification",            "Slimme Meter ID" ]

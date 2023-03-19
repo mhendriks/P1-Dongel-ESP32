@@ -28,7 +28,7 @@ void FacReset() {
 
 void ToggleLED(byte mode) {
 
-  if ( P1Status.dev_type == PRO_BRIDGE ) { 
+  if ( P1Status.dev_type == PRO_BRIDGE || P1Status.dev_type == PRO_ETH ) { 
     if ( LEDenabled ) SwitchLED( mode, GREEN ); 
     else { RGBLED.setPixelColor(0,0,0,0);RGBLED.show(); }; 
   } // PRO_BRIDGE
@@ -37,7 +37,7 @@ void ToggleLED(byte mode) {
 }
 
 void SwitchLED( byte mode, byte color) {
-if ( P1Status.dev_type == PRO_BRIDGE ) {
+if ( (P1Status.dev_type == PRO_BRIDGE) || (P1Status.dev_type == PRO_ETH) ) {
     if ( LEDenabled ) {
       byte value = 0;
       if ( mode == LED_ON ) value = 255;
