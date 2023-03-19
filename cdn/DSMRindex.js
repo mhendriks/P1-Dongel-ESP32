@@ -650,7 +650,7 @@ function UpdateDash()
         document.getElementById("Pi").innerHTML = formatValue( Parri[0] );
 
         //-------AFNAME METER	
-        updateGaugeTrend(trend_pa, Pmaxa);
+        updateGaugeTrend(trend_pa, Parra);
         document.getElementById("Pa").innerHTML = formatValue( Parra[0] );
       }
 		} //!= p1-q
