@@ -3,7 +3,7 @@
 void startAP(){
   Debugln("startAP");
   WiFi.mode(WIFI_AP);
-  WiFi.softAP(_DEFAULT_HOSTNAME, bAuthPW);
+  WiFi.softAP(settingHostname, bAuthPW);
 
   IPAddress IP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
