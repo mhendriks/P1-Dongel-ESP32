@@ -43,7 +43,7 @@
     #warning Using ESP32C3
     #define LED                 7
     #define DTR_IO              4 // nr = IO pulse = N/A
-    #define RXP1               10
+    #define RXP1                10
     #define TXP1               -1 //disable
     #define IO_WATER_SENSOR     5
 #endif
@@ -65,7 +65,7 @@
 
 #ifdef HEATLINK
   #undef MBUS_TYPE
-  #define MBUS_TYPE 4
+  #define MBUS_TYPE 12
   
   #undef _DEFAULT_HOSTNAME
   #define _DEFAULT_HOSTNAME   "Q-Dongle-Pro" 
