@@ -34,16 +34,7 @@ TODO
 - Modbus Registers van de "Actueel" pagina lijkt me in eerste instantie voldoende. Wel mis ik zo iets als m3 (of liters) gas per uur. Belangrijk bij hybride warmteopwekking (ketel en warmtepomp), waarbij elke liter gas er één te veel is :-). Is natuurlijk ook softwarematig te maken.
 
 WiP
-√ boundary check ListFS  
-√ boundary check APIlistFiles
-√ Index naar 4.8 + iconify
-√ ETH dongle merge
 
-ETHERNET
-√ Wifi in settings
-√ nette define file in Arduino
-√ compiler options [CORE][ETHERNET]
-√ dns hostname ethernet adapter = eth-dongle-pro
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -62,9 +53,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define USE_NTP_TIME              
 //#define ETHERNET
 //#define STUB            //test only : first draft
-//#define HEATLINK        //first draft
+#define HEATLINK        //first draft
 //#define INSIGHT         
-//#define AP_ONLY      
+//#define AP_ONLY
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
@@ -73,7 +64,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 void setup() 
 {
   SerialOut.begin(115200); //debug stream
+  
+#ifdef ARDUINO_ESP32C3_DEV
   USBSerial.begin(115200); //cdc stream
+#endif
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
 
@@ -126,7 +120,7 @@ void setup()
 #endif
   delay(100);
   startTelnet();
-#ifndef  AP_ONLY 
+#ifndef AP_ONLY
   startMDNS(settingHostname);
   startNTP();
   MQTTclient.setBufferSize(800);

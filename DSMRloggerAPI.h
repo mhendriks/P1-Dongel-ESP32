@@ -23,8 +23,7 @@
 #include "version.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
-#include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git  
-
+#include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git
 
 #define JSON_BUFF_MAX     255
 #define MQTT_BUFF_MAX     200
