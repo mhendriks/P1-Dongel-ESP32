@@ -26,7 +26,7 @@
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git
 
 #define JSON_BUFF_MAX     255
-#define MQTT_BUFF_MAX     200
+#define MQTT_BUFF_MAX     800
 #define LED_BLINK_MS       80
 #define MIN_TELEGR_INTV     1
 #define MIN_T_INTV_PRE40   10
@@ -167,9 +167,17 @@ int strcicmp(const char *a, const char *b);
 void delayms(unsigned long);
 
 //===========================GLOBAL VAR'S======================================
-WiFiClient  wifiClient;
 #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
-static PubSubClient MQTTclient(wifiClient);
+
+
+#ifdef EVERGI
+  #include "WiFiClientSecure.h"
+  WiFiClientSecure wifiClient;
+  static PubSubClient MQTTclient(wifiClient);
+#else
+  WiFiClient  wifiClient;
+  static PubSubClient MQTTclient(wifiClient);
+#endif
 
 #include "Network.h"
 
@@ -206,10 +214,10 @@ String      CapTelegram;
 uint16_t    CRCTelegram;
 char        cMsg[150];
 String      lastReset           = "";
-bool      FSNotPopulated      = false;
-bool      mqttIsConnected     = false;
-bool      Verbose1 = false, Verbose2 = false;
-uint32_t  unixTimestamp;
+bool        FSNotPopulated      = false;
+bool        mqttIsConnected     = false;
+bool        Verbose1 = false, Verbose2 = false;
+uint32_t    unixTimestamp;
 
 IPAddress ipDNS, ipGateWay, ipSubnet;
 float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5;
@@ -225,7 +233,7 @@ bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;
 
 //MQTT
-char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[26] = _DEFAULT_MQTT_TOPIC;
+char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[45] = _DEFAULT_MQTT_TOPIC;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;
