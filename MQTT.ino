@@ -118,7 +118,7 @@ bool connectMQTT_FSM()
           {
         LogFile("MQTT Starting",true);
 #ifdef EVERGI
-          #include "/Users/martijn/Documents/Arduino/evergi.h"
+          #include "development/evergi.h"
           DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbroker, settingMQTTbrokerPort);
           MQTTclient.setServer(EVERGI_HOST, EVERGI_PORT);
 #else
