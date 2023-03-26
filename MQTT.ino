@@ -36,6 +36,7 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
 }
 
 void AutoDiscoverHA(){
+#ifndef EVERGI  
   if (!EnableHAdiscovery) return;
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/power_delivered/config" -m '{"dev_cla": "gas", "name": "Power Delivered", "stat_t": "DSMR-API/power_delivered", "unit_of_meas": "Wh", "val_tpl": "{{ value_json.power_delivered[0].value | round(3) }}" }'
 
@@ -68,7 +69,7 @@ void AutoDiscoverHA(){
   SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(2) }}","total_increasing","");
   
   SendAutoDiscoverHA("water", "water", "Waterverbruik", "m³", "{{ value | round(3) }}","total_increasing",",\"icon\": \"mdi:water\"");
-
+#endif
 }
 
 //===========================================================================================
@@ -116,6 +117,11 @@ bool connectMQTT_FSM()
     case MQTT_STATE_INIT:  
           {
         LogFile("MQTT Starting",true);
+#ifdef EVERGI
+          #include "/Users/martijn/Documents/Arduino/evergi.h"
+          DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbroker, settingMQTTbrokerPort);
+          MQTTclient.setServer(EVERGI_HOST, EVERGI_PORT);
+#else
 //        DebugTln(F("MQTT State: MQTT Initializing"));
         MQTTbrokerIP = MDNS.queryHost(settingMQTTbroker);
         if (isValidIP(MQTTbrokerIP)) {
@@ -140,6 +146,7 @@ bool connectMQTT_FSM()
           //DebugTf("disconnect -> MQTT status, rc=%d \r\n", MQTTclient.state());
           DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, MQTTbrokerIPchar, settingMQTTbrokerPort);
           MQTTclient.setServer(MQTTbrokerIPchar, settingMQTTbrokerPort);
+#endif
           DebugTf("setServer  -> MQTT status, rc=%d \r\n", MQTTclient.state());
           MQTTclientId  = String(settingHostname) + "-" + WiFi.macAddress();
           stateMQTT = MQTT_STATE_TRY_TO_CONNECT;
@@ -154,6 +161,19 @@ bool connectMQTT_FSM()
           reconnectAttempts++;
 
           //--- If no username, then anonymous connection to broker, otherwise assume username/password.
+#ifdef EVERGI
+          DebugTf("connect USER [%s] TOKEN [%s]\r\n", EVERGI_USER, EVERGI_TOKEN);
+          MQTTclient.connect("P1-Dongle-Pro",EVERGI_USER, EVERGI_TOKEN);
+          if (MQTTclient.connected())
+          {
+            reconnectAttempts = 0;  
+            Debugf(" .. connected -> MQTT status, rc=%d\r\n", MQTTclient.state());
+            
+            snprintf( cMsg, 150, "%s/LWT", settingMQTTtopTopic );
+//            DebugTln("publish: " + String(cMsg));
+            MQTTclient.publish(cMsg,"Online", true);
+
+#else          
           sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
           if (String(settingMQTTuser).length() == 0) 
           {
@@ -165,6 +185,7 @@ bool connectMQTT_FSM()
             DebugTf("with Username [%s] and password ", settingMQTTuser);
             MQTTclient.connect(MQTTclientId.c_str(), settingMQTTuser, settingMQTTpasswd,cMsg,1,true,"Offline");
           }
+       
           //--- If connection was made succesful, move on to next state...
           if (MQTTclient.connected())
           {
@@ -180,12 +201,13 @@ bool connectMQTT_FSM()
             MQTTclient.subscribe(cMsg); //subscribe mqtt update
             sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
             MQTTclient.subscribe(cMsg); //subscribe mqtt update
-
+#endif  
             LogFile("MQTT connected",false);
             MQTTclient.loop();
             stateMQTT = MQTT_STATE_IS_CONNECTED;
             return true;
           }
+ 
           Debugf(" -> MQTT status, rc=%d \r\n", MQTTclient.state());
       
           //--- After 3 attempts... go wait for a while.
@@ -236,12 +258,16 @@ struct buildJsonMQTT {
      char Name[25];
      strncpy(Name,String(Item::name).c_str(),25);
     if ( isInFieldsArray(Name) && i.present() ) {
+#ifndef EVERGI      
+          jsonDoc[Name] = value_to_json_mqtt(i.val());
+#else 
           if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
           else {
           sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
           MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
 //        if ( !MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() ) ) DebugTf("Error publish(%s)\r\n", String(value_to_json(i.val())), strlen(cMsg) );
           }
+#endif          
     } // if isInFieldsArray && present
   } //apply
 
@@ -353,6 +379,10 @@ void sendMQTTData()
     if ( !mqttIsConnected ) 
     {
       DebugTln(F("no connection with a MQTT broker .."));
+     Debug("WiFiClientSecure client state:");
+    char lastError[100];
+    wifiClient.lastError(lastError,100);  //Get the last error for WiFiClientSecure
+    Debugln(lastError);
       return;
     }
   }

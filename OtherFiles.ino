@@ -86,13 +86,14 @@ void writeSettings()
 //  doc["TelegramInterval"] = settingTelegramInterval;
   doc["IndexPage"] = settingIndexPage;
   yield();
+#ifndef EVERGI  
   doc["MQTTbroker"] = settingMQTTbroker;
   doc["MQTTbrokerPort"] = settingMQTTbrokerPort;
   doc["MQTTUser"] = settingMQTTuser;
   doc["MQTTpasswd"] = settingMQTTpasswd;
   doc["MQTTinterval"] = settingMQTTinterval;
   doc["MQTTtopTopic"] = settingMQTTtopTopic;
-  
+#endif  
   doc["LED"] = LEDenabled;
   doc["ota"] = BaseOTAurl;
   doc["enableHistory"] = EnableHistory;
@@ -166,6 +167,8 @@ void readSettings(bool show)
 //  CHANGE_INTERVAL_SEC(nextTelegram, settingTelegramInterval);
 // 
   //sprintf(settingMQTTbroker, "%s:%d", MQTTbroker, MQTTbrokerPort);
+
+#ifndef EVERGI
   strcpy(settingMQTTbroker, doc["MQTTbroker"]);
   settingMQTTbrokerPort = doc["MQTTbrokerPort"];
   strcpy(settingMQTTuser, doc["MQTTUser"]);
@@ -173,11 +176,12 @@ void readSettings(bool show)
   settingMQTTinterval = doc["MQTTinterval"];
   strcpy(settingMQTTtopTopic, doc["MQTTtopTopic"]);
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+  if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
+#endif
   
   CHANGE_INTERVAL_SEC(publishMQTTtimer, settingMQTTinterval);
   CHANGE_INTERVAL_MIN(reconnectMQTTtimer, 1);
   LEDenabled = doc["LED"];
-  if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
   if (doc.containsKey("enableHistory")) EnableHistory = doc["enableHistory"];
 
   if (doc.containsKey("watermeter")) WtrMtr = doc["watermeter"];
@@ -313,6 +317,7 @@ void updateSetting(const char *field, const char *newValue)
 
   if (!stricmp(field, "IndexPage"))        strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), newValue);  
 
+#ifndef EVERGI
   if (!stricmp(field, "mqtt_broker"))  {
     DebugT("settingMQTTbroker! to : ");
     memset(settingMQTTbroker, '\0', sizeof(settingMQTTbroker));
@@ -337,11 +342,13 @@ void updateSetting(const char *field, const char *newValue)
     mqttIsConnected = false;
     CHANGE_INTERVAL_MS(reconnectMQTTtimer, 100); // try reconnecting cyclus timer
   }
+  if (!stricmp(field, "mqtt_toptopic"))     strCopy(settingMQTTtopTopic, 20, newValue);  
+#endif
+
   if (!stricmp(field, "mqtt_interval")) {
     settingMQTTinterval   = String(newValue).toInt();  
     CHANGE_INTERVAL_SEC(publishMQTTtimer, settingMQTTinterval);
   }
-  if (!stricmp(field, "mqtt_toptopic"))     strCopy(settingMQTTtopTopic, 20, newValue);  
   
   if (!stricmp(field, "b_auth_user")) strCopy(bAuthUser,25, newValue);  
   if (!stricmp(field, "b_auth_pw")) strCopy(bAuthPW,25, newValue); 
