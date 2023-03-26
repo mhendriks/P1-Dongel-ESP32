@@ -64,7 +64,13 @@ const char* getResetReason(){
 //===========================================================================================
 
 void ShutDownHandler(){
+
+#ifdef EVERGI
+  sprintf(cMsg,"%s/LWT",settingMQTTtopTopic);
+#else
   sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
+#endif
+
   MQTTclient.publish(cMsg,"Offline", true); //LWT status update
   P1StatusWrite();
   P1StatusEnd();
