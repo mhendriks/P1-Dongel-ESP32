@@ -1,6 +1,19 @@
 #ifdef STUB
 
-const char T1[] =
+DECLARE_TIMER_SEC(StubTimer,  2); // try reconnecting cyclus timer
+
+
+const char P1_1[]  = 
+"/ISk5\2MT382-1000\r\n"
+"\r\n"
+"1-3:0.2.8(50)\r\n"
+"0-0:1.1.0(230319144324W)\r\n"
+"0-1:24.1.0(012)\r\n"
+"0-1:96.1.0(303030304B414D32)\r\n"
+"0-1:24.2.1(230319144324W)(31.177*m3)\r\n"
+"!970c";
+
+const char P1_1_[] =
 "/ISK5\2M550T-1012\r\n"
 "\r\n"
 "1-3:0.2.8(50)\r\n"
@@ -40,51 +53,53 @@ const char T1[] =
 "0-1:24.2.1(200923170001S)(02681.397*m3)\r\n"
 "!8d36";
 
-void handleSTUB(){
+void _handleSTUB(){
+  if (DUE(StubTimer)) {
   DebugFlush();
-  telegramCount++;
   DSMRdata = {};
   ParseResult<void> res;
-  res = P1Parser::parse(&DSMRdata, T1, lengthof(T1), false, true);
+  res = P1Parser::parse(&DSMRdata, P1_1, lengthof(P1_1), false, false);
 
   if (res.err)
   {
     // Parsing error, show it
-    Debugln(res.fullError(T1, T1 + lengthof(T1)));
+    Debugln(res.fullError(P1_1, P1_1 + lengthof(P1_1)));
   }
-  else if (!DSMRdata.all_present())
-  {
-    if (Verbose2) DebugTln("DSMR: Some fields are missing");
-  }
-  // Succesfully parsed, now process the data!
-  DebugTln("Processing telegram ..");
-  // Succesfully parsed, now process the data!
-  if (!DSMRdata.timestamp_present)
-  {
-    sprintf(cMsg, "%02d%02d%02d%02d%02d%02dW\0\0"
-            , (year(now()) - 2000), month(now()), day(now())
-            , hour(now()), minute(now()), second(now()));
-    DSMRdata.timestamp         = cMsg;
-    DSMRdata.timestamp_present = true;
-  }
+//  else if (!DSMRdata.all_present())
+//  {
+//    if (Verbose2) DebugTln("DSMR: Some fields are missing");
+//  }
+//  // Succesfully parsed, now process the data!
+//  DebugTln("Processing telegram ..");
+//  // Succesfully parsed, now process the data!
+//  if (!DSMRdata.timestamp_present)
+//  {
+//    sprintf(cMsg, "%02d%02d%02d%02d%02d%02dW\0\0"
+//            , (year(now()) - 2000), month(now()), day(now())
+//            , hour(now()), minute(now()), second(now()));
+//    DSMRdata.timestamp         = cMsg;
+//    DSMRdata.timestamp_present = true;
+//  }
 
   DSMRdata.identification ="TEST DATA";
-  
-  gasDelivered = modifyMbusDelivered();
-  modifySmFaseInfo();
+  processSlimmemeter();
 
-  //simulate time 
-  // one +hour = 3600 sec
-//  DSMRdata.timestamp = buildDateTimeString( DSMRdata.timestamp, sizeof(DSMRdata.timestamp)).c_str() );
-  time_t t;
-  t = epoch(DSMRdata.timestamp.c_str(), 12, false) + ( 3600 * telegramCount ) ;
-  strcpy(cMsg, DSMRdata.timestamp.c_str());
-  epochToTimestamp(t,cMsg , 12);
-  DSMRdata.timestamp = cMsg + String("S");
-  processTelegram();
+  
+//  gasDelivered = modifyMbusDelivered();
+//  modifySmFaseInfo();
+//
+//  //simulate time 
+//  // one +hour = 3600 sec
+////  DSMRdata.timestamp = buildDateTimeString( DSMRdata.timestamp, sizeof(DSMRdata.timestamp)).c_str() );
+//  time_t t;
+//  t = epoch(DSMRdata.timestamp.c_str(), 12, false) + ( 3600 * telegramCount ) ;
+//  strcpy(cMsg, DSMRdata.timestamp.c_str());
+//  epochToTimestamp(t,cMsg , 12);
+//  DSMRdata.timestamp = cMsg + String("S");
+//  processTelegram();
 
   //Debugf("==>> act date/time [%s] is [%s]\r\n\n", actTimestamp, );
-  
+  }
 }
 
 //==================================================================================================

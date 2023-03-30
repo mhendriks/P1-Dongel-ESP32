@@ -47,6 +47,7 @@ void handleSlimmemeter()
 {
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
 #ifdef STUB
+  _handleSTUB();
   return; //escape when stub is active
 #endif
     slimmeMeter.loop();
@@ -73,11 +74,13 @@ void processSlimmemeter()
       DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
     }
         
+#ifndef STUB
     DSMRdata = {};
     String    DSMRerror;
         
     if (slimmeMeter.parse(&DSMRdata, &DSMRerror))   // Parse succesful, print result
     {
+#endif      
       if (DSMRdata.identification_present)
       {
         //--- this is a hack! The identification can have a backslash in it
@@ -91,8 +94,9 @@ void processSlimmemeter()
 
 //      DebugT("CRC:");Debugln(slimmeMeter.GetCRC(), HEX);
 //      TelnetStream.print("CRC:");TelnetStream.println(slimmeMeter.GetCRC(), HEX);
+#ifndef STUB
       CRCTelegram = slimmeMeter.GetCRC();
-
+#endif
       if (DSMRdata.p1_version_be_present)
       {
         DSMRdata.p1_version = DSMRdata.p1_version_be;
@@ -102,6 +106,11 @@ void processSlimmemeter()
       }
 
       modifySmFaseInfo();
+#ifdef HEATLINK
+//        DSMRdata.timestamp         = cMsg;
+        DSMRdata.timestamp = DSMRdata.mbus1_delivered.timestamp;
+        DSMRdata.timestamp_present = true;
+#else
 #ifndef USE_NTP_TIME
   if (!DSMRdata.timestamp_present) { 
 #endif
@@ -119,11 +128,14 @@ void processSlimmemeter()
 #ifndef USE_NTP_TIME
   } //!timestamp present
 #endif  
+#endif //HEATLINK
+
       //-- handle mbus delivered values
       gasDelivered = modifyMbusDelivered();
       
       processTelegram();
       if (Verbose2) DSMRdata.applyEach(showValues());
+#ifndef STUB
     } 
     else // Parser error, print error
     {
@@ -131,6 +143,7 @@ void processSlimmemeter()
       DebugTf("Parse error\r\n%s\r\n\r\n", DSMRerror.c_str());
       slimmeMeter.clear(); //on errors clear buffer
     }
+#endif    
   
 } // handleSlimmeMeter()
 
