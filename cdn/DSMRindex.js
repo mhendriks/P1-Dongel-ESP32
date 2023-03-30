@@ -1515,18 +1515,23 @@ function parseSmFields(data)
       if (x != data.actSlot 	)
       {
         //avoid gaps and spikes
-        if ( AvoidSpikes && ( data.data[slotbefore].values[0] == 0 ) ) data.data[slotbefore].values = data.data[i].values;
+        if ( AvoidSpikes ) {
+        	if ( Dongle_Config == "p1-q" ) { 
+        		if ( data.data[slotbefore].values[4] == 0 ) data.data[slotbefore].values = data.data[i].values; 
+        	}
+        	else  if ( data.data[slotbefore].values[0] == 0 ) data.data[slotbefore].values = data.data[i].values;
+        }
         
         //simple differences
         data.data[i].p_edt1= (data.data[i].values[0] - data.data[slotbefore].values[0]);
         data.data[i].p_edt2= (data.data[i].values[1] - data.data[slotbefore].values[1]);
         data.data[i].p_ert1= (data.data[i].values[2] - data.data[slotbefore].values[2]);
         data.data[i].p_ert2= (data.data[i].values[3] - data.data[slotbefore].values[3]);
-		    data.data[i].p_gd  = (data.data[i].values[4] - data.data[slotbefore].values[4]);
+		data.data[i].p_gd  = (data.data[i].values[4] - data.data[slotbefore].values[4]);
         data.data[i].water = (data.data[i].values[5] - data.data[slotbefore].values[5]);
 
         //sums of T1 & T2
-		    data.data[i].p_ed  = (data.data[i].p_edt1 + data.data[i].p_edt2);
+		data.data[i].p_ed  = (data.data[i].p_edt1 + data.data[i].p_edt2);
         data.data[i].p_er  = (data.data[i].p_ert1 + data.data[i].p_ert2);
         
         //sums in watts
