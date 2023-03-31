@@ -379,10 +379,12 @@ void sendMQTTData()
     if ( !mqttIsConnected ) 
     {
       DebugTln(F("no connection with a MQTT broker .."));
-     Debug("WiFiClientSecure client state:");
+#ifdef EVERGI
+    Debug("WiFiClientSecure client state:");
     char lastError[100];
     wifiClient.lastError(lastError,100);  //Get the last error for WiFiClientSecure
     Debugln(lastError);
+#endif    
       return;
     }
   }

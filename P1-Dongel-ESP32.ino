@@ -56,7 +56,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define HEATLINK        //first draft
 //#define INSIGHT         
 //#define AP_ONLY
-//#define EVERGI
+#define EVERGI
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
