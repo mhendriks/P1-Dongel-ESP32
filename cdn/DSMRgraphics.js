@@ -145,7 +145,7 @@ function ensureChartsReady()
     
     if (HeeftGas) {           
       myGasChart.data = gasData;
-      labelString = "m3";
+      labelString = "dm3";
       if( type == "Hours") labelString = "dm3";
       if ( Dongle_Config == "p1-q") labelString = "kJ";
       myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
@@ -433,6 +433,7 @@ function ensureChartsReady()
     
     //update Elektra
     myElectrChart.data = dcEX;
+    myElectrChart.options.scales.yAxes[0].scaleLabel.labelString = "Watt";
     myElectrChart.update(0);
     
     //update Gas
@@ -497,22 +498,25 @@ function ensureChartsReady()
       {
         case "timestamp": telegram.set('timestamp', formatHHMMSS(item.value) ); break;
 
-        case "power_delivered_l1": telegram.set('pdl1', (item.value).toFixed(3) ); break;
-        case "power_delivered_l2": telegram.set('pdl2', (item.value).toFixed(3) ); break;
-        case "power_delivered_l3": telegram.set('pdl3', (item.value).toFixed(3) ); break;
-        case "power_delivered":    telegram.set('pd',   (item.value).toFixed(3) ); break;
+        //pd is in kWatt, so multply by 1000 to get Watt
+        case "power_delivered_l1": telegram.set('pdl1', Number(item.value) *1000 ); break;
+        case "power_delivered_l2": telegram.set('pdl2', Number(item.value) *1000 ); break;
+        case "power_delivered_l3": telegram.set('pdl3', Number(item.value) *1000 ); break;
+        case "power_delivered":    telegram.set('pd',   Number(item.value) *1000 ); break;
         
-        case "power_returned_l1": telegram.set('prl1', (item.value).toFixed(3) ); break;
-        case "power_returned_l2": telegram.set('prl2', (item.value).toFixed(3) ); break;
-        case "power_returned_l3": telegram.set('prl3', (item.value).toFixed(3) ); break;
-        case "power_returned":    telegram.set('pr',   (item.value).toFixed(3) ); break;
+        //pr is in kWatt, so multply by 1000 to get Watt
+        case "power_returned_l1": telegram.set('prl1', Number(item.value) *1000 ); break;
+        case "power_returned_l2": telegram.set('prl2', Number(item.value) *1000 ); break;
+        case "power_returned_l3": telegram.set('prl3', Number(item.value) *1000 ); break;
+        case "power_returned":    telegram.set('pr',   Number(item.value) *1000 ); break;
 
         case "gas_delivered_timestamp": 
           telegram.set('gas_timestamp', formatHHMMSS(item.value) );
           break;
 
         case "gas_delivered": 
-          telegram.set("gd", item.value ); 
+          //gd is in m3, so multply by 1000 to get dm3
+          telegram.set("gd", Number(item.value) * 1000 ); 
           break;
 
         default:
