@@ -19,10 +19,12 @@ const MAX_SM_ACTUAL     = 15*6; //store the last 15 minutes (each interval is 10
 const MAX_FILECOUNT     = 30;   //maximum filecount on the device is 30
 
 const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
+const URL_GITHUB_VERSION   = "https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat";
 
 const jsversie			= 221201;
 
 const SQUARE_M_CUBED = "\u33A5";
+const MONTHS_IN_YEAR_NL = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
   
 "use strict";
 
@@ -74,6 +76,7 @@ const SQUARE_M_CUBED = "\u33A5";
       .then(response => response.json())
       .then(json => { fnHandleData(json); })
       .catch(function (error) {
+        console.error("dal::fetchDataJSON() - " + error.message);
         var p = document.createElement('p');
         p.appendChild( document.createTextNode('Error: ' + error.message) );
       });
@@ -141,7 +144,7 @@ const SQUARE_M_CUBED = "\u33A5";
     }
   }
                     
-  var monthNames 			= [ "indxNul","Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December","\0"];
+  var monthNames 			= ["indxNul"].concat(MONTHS_IN_YEAR_NL).concat(["\0"]);
   const spinner 			= document.getElementById("loader");
 
 //---- frontend settings
@@ -318,6 +321,7 @@ Iconify.addCollection({
 });
 }
 
+//entry point 
 window.onload=bootsTrapMain;
 
 //============================================================================  
@@ -338,14 +342,17 @@ function visibilityListener() {
 	  refreshDevTime();
 	  openTab();
       break;
+    default:
+      console.log("visibilityListener() - unknown visibiltyState");
   }
 	//alert_message("Connectie met Dongle stond op pauze...nieuwe data ophalen");
 }
 
 document.addEventListener("visibilitychange", visibilityListener);
 
+//============================================================================  
+// if the user uses the backbutton in the browser
 window.addEventListener('popstate', function (event) {
-// 	console.log("location: " + document.location + ", hash: " +location.hash);
 	activeTab = "b" + location.hash.slice(1, location.hash.length);
 	openTab();
 });
@@ -485,6 +492,7 @@ function UpdateDash()
 //wartelink
 // 		  	json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"timestamp":{"value":"230104081758W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.667,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.667,"unit":"m3"},"gas_delivered_timestamp":{"value":"230104081758W"}}');
 // 	   	  json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"221231161038W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.613,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.613,"unit":"m3"},"gas_delivered_timestamp":{"value":"221231161038W"}}');
+// json = JSON.parse('{"identification":{"value":"ISk5=2MT382-1000"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"highest_peak_pwr_13mnd":{"value":"-"},"timestamp":{"value":"230329093336S"},"equipment_id":{"value":"-"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":12},"mbus1_equipment_id_tc":{"value":"303030304B414D32"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":35.819,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":6329.819,"unit":"m3"},"gas_delivered_timestamp":{"value":"230329073338S"}}');
 
 //others
 //    	  json = JSON.parse('{"timestamp":{"value":"220606085610S"},"energy_delivered_tariff1":{"value":55.026,"unit":"kWh"},"energy_delivered_tariff2":{"value":53.923,"unit":"kWh"},"energy_returned_tariff1":{"value":1,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0.398,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"voltage_l1":{"value":232.5,"unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":0,"unit":"A"},"power_delivered_l1":{"value":0.114,"unit":"kW"},"power_delivered_l2":{"value":0.284,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":5471.227,"unit":"m3"},"gas_delivered_timestamp":{"value":"220606085510S"},"water":{"value":379.782,"unit":"m3"}}');	   	  
@@ -496,7 +504,8 @@ function UpdateDash()
 // json = JSON.parse('{"identification":{"value":"KFM5KAIFA-METER"},"p1_version":{"value":"42"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220706121611S"},"equipment_id":{"value":"4530303236303030303134363435373135"},"energy_delivered_tariff1":{"value":16120.922,"unit":"kWh"},"energy_delivered_tariff2":{"value":15221.887,"unit":"kWh"},"energy_returned_tariff1":{"value":32.012,"unit":"kWh"},"energy_returned_tariff2":{"value":106.573,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.252,"unit":"kW"},"message_short":{"value":""},"message_long":{"value":""},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":2,"unit":"A"},"current_l2":{"value":1,"unit":"A"},"current_l3":{"value":1,"unit":"A"},"power_delivered_l1":{"value":0,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0.54,"unit":"kW"},"power_returned_l2":{"value":0.461,"unit":"kW"},"power_returned_l3":{"value":0.251,"unit":"kW"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303332353631323431353834373135"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":8979.463,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":8979.463,"unit":"m3"},"gas_delivered_timestamp":{"value":"220706120000S"}}');
 // 2.2 meter met teruglevering
 // json = JSON.parse('{"identification":{"value":"XMX5XMXABCE000060959"},"p1_version":{"value":"-"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220706121611S"},"equipment_id":{"value":"4530303236303030303134363435373135"},"energy_delivered_tariff1":{"value":16120.922,"unit":"kWh"},"energy_delivered_tariff2":{"value":15221.887,"unit":"kWh"},"energy_returned_tariff1":{"value":32.012,"unit":"kWh"},"energy_returned_tariff2":{"value":106.573,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.252,"unit":"kW"},"message_short":{"value":""},"message_long":{"value":""},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-","unit":"A"},"current_l2":{"value":"-","unit":"A"},"current_l3":{"value":"-","unit":"A"},"power_delivered_l1":{"value":"-","unit":"kW"},"power_delivered_l2":{"value":"-","unit":"kW"},"power_delivered_l3":{"value":"-","unit":"kW"},"power_returned_l1":{"value":"-","unit":"kW"},"power_returned_l2":{"value":"-","unit":"kW"},"power_returned_l3":{"value":"-","unit":"kW"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303332353631323431353834373135"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":8979.463,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":8979.463,"unit":"m3"},"gas_delivered_timestamp":{"value":"220706120000S"}}');
-
+//  json = JSON.parse('{"identification":{"value":"XMX5LGF0000453562119"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"highest_peak_pwr_13mnd":{"value":"-"},"timestamp":{"value":"230310104544W"},"equipment_id":{"value":"4530303531303035333536323131393139"},"energy_delivered_tariff1":{"value":8293.565,"unit":"kWh"},"energy_delivered_tariff2":{"value":9179.965,"unit":"kWh"},"energy_returned_tariff1":{"value":140.447,"unit":"kWh"},"energy_returned_tariff2":{"value":474.874,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0.176,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"(3)(0-0:96.7.19)(190515144214S)(0000000596*s)(210311024815W)(0000001506*s)(221021124654S)(0000000958*s)"},"voltage_l1":{"value":238.5,"unit":"V"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":3,"unit":"A"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":0.176,"unit":"kW"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303339303031393238303734373139"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":5876.51,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":5876.51,"unit":"m3"},"gas_delivered_timestamp":{"value":"230310104504W"}}');
+// json = JSON.parse('{"identification":{"value":"KFM5KAIFA-METER"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"timestamp":{"value":"230318223355W"},"equipment_id":{"value":"4530303630313030303035303738373232"},"energy_delivered_tariff1":{"value":3158.161,"unit":"kWh"},"energy_delivered_tariff2":{"value":3788.432,"unit":"kWh"},"energy_returned_tariff1":{"value":1000,"unit":"kWh"},"energy_returned_tariff2":{"value":200,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0.396,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"(0)(0-0:96.7.19)"},"voltage_l1":{"value":232.9,"unit":"V"},"voltage_l2":{"value":233.8,"unit":"V"},"voltage_l3":{"value":232.5,"unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":0,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.003,"unit":"kW"},"power_delivered_l2":{"value":0.062,"unit":"kW"},"power_delivered_l3":{"value":0.33,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303339303031373532383339333137"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":6295.621,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":6295.621,"unit":"m3"},"gas_delivered_timestamp":{"value":"230318222504W"}}');
  		//-------CHECKS
 
 		SetOnSettings(json);
@@ -530,9 +539,13 @@ function UpdateDash()
 		if (v1 && (!Injection || ShowVoltage) ) {
 			document.getElementById("l2").style.display = "block"
 			document.getElementById("fases").innerHTML = Phases;
-				
-			let Vmin_now = math.min(v1, v2, v3);
-			let Vmax_now= math.max(v1, v2, v3);
+			
+      let Vmin_now = v1;
+      let Vmax_now = v1;
+      if( Phases != 1){
+			  Vmin_now = math.min(v1, v2, v3);
+			  Vmax_now = math.max(v1, v2, v3);
+      }
 			
 			//min - max waarde
 			if (minV == 0.0 || Vmin_now < minV) { minV = Vmin_now; }
@@ -588,8 +601,6 @@ function UpdateDash()
 		} else {
 			// current is missing = calc current based on actual power		
 			TotalAmps = Number(Math.abs(TotalKW)*1000/230).toFixed(0);
-			
-// 			console.log("current : " + current);
 			gauge3f.data.datasets[0].data=[TotalAmps,AMPS-TotalAmps];
 		};	
 		
@@ -617,115 +628,91 @@ function UpdateDash()
 			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );                        
 		}
 		
-
+    // stop here if there is no history enabled
 		if (!EnableHist) {Spinner(false);return;}
 		
+
+    //-------VERBRUIK METER	
 		if (Dongle_Config != "p1-q") {
-		//-------VERBRUIK METER	
-		//bereken verschillen afname, teruglevering en totaal
-		for(let i=0;i<3;i++){
-			if (i==0) {
-				Parra[0]=Number(json.energy_delivered_tariff1.value + json.energy_delivered_tariff2.value - hist_arrPa[1]).toFixed(3);
-				Parri[0]=Number(json.energy_returned_tariff1.value + json.energy_returned_tariff2.value - hist_arrPi[1]).toFixed(3);
 
-			} else {
-				Parra[i]=Number(hist_arrPa[i] - hist_arrPa[i+1]).toFixed(3);
-				Parri[i]=Number(hist_arrPi[i] - hist_arrPi[i+1]).toFixed(3);
-			}
-			Parr[i]=Number(Parra[i] - Parri[i]).toFixed(3);
-// 			if (Parr[i] < 0) Parr[i] = 0;
-		}
+      //bereken verschillen afname, teruglevering en totaal
+      let nPA = json.energy_delivered_tariff1.value + json.energy_delivered_tariff2.value;
+      let nPI = json.energy_returned_tariff1.value  + json.energy_returned_tariff2.value;
+      Parra = calculateDifferences( nPA, hist_arrPa, 1);
+      Parri = calculateDifferences( nPI, hist_arrPi, 1);
+      for(let i=0;i<3;i++){ Parr[i]=Parra[i] - Parri[i]; }
 
-		//dataset berekenen voor Ptotaal
-		Pmax = math.max(Parr);		// maximale waarde bepalen voor de meters
-		for(let i=0;i<3;i++){
-			trend_p.data.datasets[i].data=[Number(Parr[i]).toFixed(1),Number(Pmax-Parr[i]).toFixed(1)];
-		};
-		trend_p.update();
+      //dataset berekenen voor Ptotaal      
+      updateGaugeTrend(trend_p, Parr);
+      document.getElementById("P").innerHTML = formatValue( Parr[0] );
+      
+      if (Injection) 
+      {
+        //-------INJECTIE METER
+        updateGaugeTrend(trend_pi, Parri);
+        document.getElementById("Pi").innerHTML = formatValue( Parri[0] );
 
-		//vermogen vandaag, min - max bepalen
-		document.getElementById("P").innerHTML = Number(Parr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
-		
-		if (Injection) 
-		{
-			//-------INTJECTIE METER	
-			//data sets berekenen voor de gauges
-			var Pmaxi = math.max(Parri);
-			for(let i=0;i<3;i++){
-				trend_pi.data.datasets[i].data=[Number(Parri[i]).toFixed(1),Number(Pmaxi-Parri[i]).toFixed(1)];
-			};
-			trend_pi.update();
-			//vermogen vandaag, min - max bepalen
-			document.getElementById("Pi").innerHTML = Number(Parri[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
-
-			//-------AFNAME METER	
-			//data sets berekenen voor de gauges
-			var Pmaxa = math.max(Parra);
-			for(let i=0;i<3;i++){
-				trend_pa.data.datasets[i].data=[Number(Parra[i]).toFixed(1),Number(Pmaxa-Parra[i]).toFixed(1)];
-			};
-			trend_pa.update();
-			//vermogen vandaag, min - max bepalen
-			document.getElementById("Pa").innerHTML = Number(Parra[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
-		}
+        //-------AFNAME METER	
+        updateGaugeTrend(trend_pa, Parra);
+        document.getElementById("Pa").innerHTML = formatValue( Parra[0] );
+      }
 		} //!= p1-q
-		//-------GAS METER	
+		
+    //-------GAS METER	
 		if ( HeeftGas && (Dongle_Config != "p1-q") ) 
 		{
-			//bereken verschillen gas, afname, teruglevering en totaal
-			for(let i=0;i<3;i++){
-				if (i==0) Garr[0]=Number(json.gas_delivered.value - hist_arrG[1]).toFixed(3) ;
-				else Garr[i]=Number(hist_arrG[i] - hist_arrG[i+1]).toFixed(3);
-				if (Garr[i] < 0) Garr[i] = 0;
-			}
-
-			Gmax = math.max(Garr);
-			for(let i=0;i<3;i++) trend_g.data.datasets[i].data=[Number(Garr[i]).toFixed(1),Number(Gmax-Garr[i]).toFixed(1)];
-			trend_g.update();
+      Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1);
+      updateGaugeTrend(trend_g, Garr);
 			document.getElementById("G").innerHTML = Number(Garr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
 		}
 		
 		//-------WATER METER	
 		if (HeeftWater) 
 		{
-			//bereken verschillen gas, afname, teruglevering en totaal
-			for(let i=0;i<3;i++){
-				if (i==0) Warr[0]=Number(json.water.value - hist_arrW[1])*1000 ;
-				else Warr[i]=Number(hist_arrW[i] - hist_arrW[i+1])*1000;
-				if (Warr[i] < 0) Warr[i] = 0;
-			}
-
-			Wmax = math.max(Warr);
-			for(let i=0;i<3;i++){
-				trend_w.data.datasets[i].data=[Number(Warr[i]).toFixed(),Number(Wmax-Warr[i]).toFixed()];
-			};
-			trend_w.update();
+      Warr = calculateDifferences(json.water.value, hist_arrW, 1000);
+      updateGaugeTrend(trend_w, Warr);
 			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString();
 		}
-		
-		
+				
 		//-------Warmte METER	
 		if (Dongle_Config == "p1-q") 
 		{
-			for(let i=0;i<3;i++){
-				if (i==0) Garr[0]=Number(json.gas_delivered.value - hist_arrG[1]).toFixed(3)*1000 ;
-				else Garr[i]=Number(hist_arrG[i] - hist_arrG[i+1]).toFixed(3)*1000;
-				if (Garr[i] < 0) Garr[i] = 0;
-			}
-
-			Gmax = math.max(Garr);
-			for(let i=0;i<3;i++) trend_q.data.datasets[i].data=[Number(Garr[i]).toFixed(0),Number(Gmax-Garr[i]).toFixed(0)];
-			trend_q.update();
+      Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1000);
+      updateGaugeTrend(trend_q, Garr);
 			document.getElementById("Q").innerHTML = Number(Garr[0]);
 		}
-		
 								
 		Spinner(false);
-		}); //end fetch fields
+	}); //end fetch fields
+}
+
+//bereken verschillen gas, afname, teruglevering en totaal
+function calculateDifferences(curval, hist_arr, factor)
+{
+  var out = []  
+  for(let i=0; i<3; i++)
+  {
+    if (i==0) 
+      out[0] = (curval - hist_arr[1]) * factor;
+    else 
+      out[i] = (hist_arr[i] - hist_arr[i+1]) * factor;
+
+    if (out[i] < 0) out[i] = 0;
+  }
+  return out;
+}
+
+//update dataset and update gauge 
+function updateGaugeTrend(objGauge, arr)
+{
+  var nMax = math.max(arr);
+  for(let i=0; i<3; i++){
+    objGauge.data.datasets[i].data = [ Number(arr[i]).toFixed(1), Number(nMax-arr[i]).toFixed(1) ];
+  }
+  objGauge.update();
 }
 	
-  //============================================================================  
-    
+//============================================================================      
 function menu() {
   var x = document.getElementById("myTopnav");
   if (x.className === "main-navigation") {
@@ -740,8 +727,7 @@ function menu() {
 	menu.classList.toggle("mdi-menu");
 }
    
-  //============================================================================  
-
+// attach an onclick handler for all menuitems
 function handle_menu_click()
 {	
 	var btns = document.getElementsByClassName("nav-item");
@@ -774,7 +760,7 @@ function handle_menu_click()
 	}
 }
 
-  //============================================================================  
+//create all chart-based gauges
 function createDashboardGauges()
 {
 	trend_p 	= new Chart(document.getElementById("container-3"), cfgGaugeELEKTRA);
@@ -787,6 +773,7 @@ function createDashboardGauges()
 	gaugeV 		= new Chart(document.getElementById("gauge-v"),     cfgGaugeVOLTAGE);
 }
 
+//callback function for the DAL
 function updateFromDAL(source, json)
 {
   console.log("updateFromDAL(); source="+source);
@@ -802,6 +789,7 @@ function updateFromDAL(source, json)
   }*/
 }
 
+//main entry point from DSMRindex.html or window.onload
 function bootsTrapMain() 
 {
   console.log("bootsTrapMain()");
@@ -832,8 +820,11 @@ function bootsTrapMain()
 // 	console.log("location-pathname: " + location.pathname );
 // 	console.log("location-msg: " + location.hash.split('msg=')[1]);
 // 	console.log("location-hash-split: " + location.hash.split('#')[1].split('?')[0]);
-	//goto tab after reload 
-	if (location.hash == "#FileExplorer") { document.getElementById('bFSexplorer').click(); }
+	
+  //goto tab after reload FSExplorer
+	if (location.hash == "#FileExplorer") { document.getElementById('bFSExplorer').click(); }
+
+  //handle the redirect after REBOOT / RESET / UPDATE
 	if (location.hash.split('#')[1].split('?')[0] == "Redirect") { handleRedirect(); }
 
 	//reselect Dash when Home icon has been clicked
@@ -843,7 +834,7 @@ function bootsTrapMain()
   } // bootsTrapMain()
   
   
-  //============================================================================  
+  //handles all redirects
   function handleRedirect(){
 	console.log("location-handle: " + location.hash.split('msg=')[1]);
 	//close all sections
@@ -869,9 +860,9 @@ function bootsTrapMain()
 	}, 1000);
 }
 
-  //============================================================================  
-  
-function Spinner(show) {
+  //============================================================================ 
+  //shows or hide spinner   
+  function Spinner(show) {
 	if (show) {
 		document.getElementById("loader").removeAttribute('hidden');
 		setTimeout(() => { document.getElementById("loader").setAttribute('hidden', '');}, 5000);
@@ -879,8 +870,8 @@ function Spinner(show) {
   }
   
   //============================================================================  
-  
-function show_hide_column(table, col_no, do_show) {
+  // shows or hide table column v1
+  function show_hide_column(table, col_no, do_show) {
    var tbl = document.getElementById(table);
    var col = tbl.getElementsByTagName('col')[col_no];
    if (col) {
@@ -889,7 +880,7 @@ function show_hide_column(table, col_no, do_show) {
 }
 
 //============================================================================  
-
+// show or hides table column v2
 function show_hide_column2(table, col_no, do_show) {
 
     var tbl  = document.getElementById(table);
@@ -911,6 +902,7 @@ function show_hide_column2(table, col_no, do_show) {
   }
   
   //============================================================================  
+  // handle opening the current selected tab (from onclick menuitems)
   function openTab() {
 
     console.log("openTab : " + activeTab );
@@ -918,10 +910,7 @@ function show_hide_column2(table, col_no, do_show) {
     clearInterval(tabTimer);  
     clearInterval(actualTimer);  
 
-	//--- hide canvas -------
-    document.getElementById("dataChart").style.display = "none";
-    document.getElementById("gasChart").style.display  = "none";
-	document.getElementById("waterChart").style.display  = "none";
+    hideAllCharts();
 
 	if (!EnableHist) {
 	}
@@ -1167,6 +1156,7 @@ function show_hide_column2(table, col_no, do_show) {
 	 });	
   }
 
+  //parse all json devinfo 
   function parseDeviceInfo(obj)
   {
     var tableRef = document.getElementById('tb_info');
@@ -1234,8 +1224,8 @@ function show_hide_column2(table, col_no, do_show) {
 		  else VerCel3.innerHTML = "laatste versie";
 	  }
   }
-  
-  //============================================================================  
+    
+  //get new devinfo==============================================================  
   function refreshDevInfo()
   { Spinner(true);
     fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
@@ -1246,6 +1236,7 @@ function show_hide_column2(table, col_no, do_show) {
 		    Spinner(false);
       })
       .catch(function(error) {
+        console.error("main::refreshDevInfo() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(   document.createTextNode('Error: ' + error.message)  );
       });
@@ -1318,7 +1309,7 @@ function show_hide_column2(table, col_no, do_show) {
       
     })
       .catch(function(error) {    
-		if (error.name === "AbortError") {console.log("time abort error")}
+		if (error.name === "AbortError") {console.error("time abort error")}
 //         var p = document.createElement('p');
 //         p.appendChild( document.createTextNode('Error: ' + error.message) );
 //         alert_message("Datum/tijd kan niet opgehaald worden");
@@ -1390,6 +1381,9 @@ function parseFailureLog(value) {
   return failures;
 };
 
+//format duration (in sec)
+//input: 3600
+//output: 1 hours
 function formatDuration(value) {
   var t = "";
   var sMIN = value / 60;
@@ -1406,6 +1400,15 @@ function formatDuration(value) {
   return t;
 }
 
+//format the complete failure log
+//input:   
+/*  
+  restored on 2017-11-07 01:35:57 (dst=off) after 8.55 min downtime.
+  restored on 2018-08-06 15:54:35 (dst=on) after 1.24 hours downtime.
+  restored on 2018-11-17 12:55:23 (dst=off) after 23.57 min downtime.
+  restored on 2021-06-02 10:03:32 (dst=on) after 50.12 min downtime.
+  restored on 2022-12-24 03:36:26 (dst=off) after 4.46 hours downtime.
+*/
 function formatFailureLog(svalue) {
   var t = "";
   failures = parseFailureLog(svalue);
@@ -1419,7 +1422,8 @@ function formatFailureLog(svalue) {
   return t;
 }
 
-function parseSmFields(data)
+  //parse the fields of the SM
+  function parseSmFields(data)
   {
     //console.log("parsed .., fields is ["+ JSON.stringify(data)+"]");
     for (var item in data) 
@@ -1484,6 +1488,7 @@ function parseSmFields(data)
   }
   
   //============================================================================  
+  //refresh the fields of the SM
   function refreshSmFields()
   { 
     Spinner(true);
@@ -1494,6 +1499,7 @@ function parseSmFields(data)
         Spinner(false);
       })
       .catch(function(error) {
+        console.error("main::refreshSmFields() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -1502,6 +1508,7 @@ function parseSmFields(data)
   };  // refreshSmFields()
   
   //============================================================================  
+  //calculate the diffs, sums and costs per entry
   function expandData(data)
   {
     var i;
@@ -1512,7 +1519,7 @@ function parseSmFields(data)
       slotbefore = math.mod(i-1, data.data.length);
       var costsED = 0;
       var costsER = 0;
-      if (x != data.actSlot 	)
+      if ( x != data.actSlot 	)
       {
         //avoid gaps and spikes
         if ( AvoidSpikes ) {
@@ -1560,7 +1567,7 @@ function parseSmFields(data)
         data.data[i].p_ert1    = data.data[i].values[2];        
         data.data[i].p_ert2    = data.data[i].values[3];        
         data.data[i].p_gd      = data.data[i].values[4];
-		    data.data[i].water     = data.data[i].values[5];
+		data.data[i].water     = data.data[i].values[5];
         data.data[i].p_ed      = (data.data[i].p_edt1 + data.data[i].p_edt2);
         data.data[i].p_er      = (data.data[i].p_ert1 + data.data[i].p_ert2);        
         data.data[i].p_edw     = (data.data[i].p_ed * 1000);
@@ -1582,6 +1589,7 @@ function parseSmFields(data)
   }
   
   //============================================================================  
+  //display an alert message at the top
   function alert_message(msg) {
   	if (msg==""){
   		document.getElementById('messages').style="display:none";
@@ -1615,6 +1623,7 @@ function parseSmFields(data)
 
       })
       .catch(function(error) {
+        console.error("main::refreshHours() - " + error.message);
         var p = document.createElement('p');
         p.appendChild( document.createTextNode('Error: ' + error.message) );
     	alert_message("Fout bij ophalen van de historische uurgegevens");
@@ -1647,10 +1656,10 @@ function parseSmFields(data)
 //         console.log("Refreshdays - actSlot: " + act_slot);
 		for (let i=0;i<4;i++)
 		{	let tempslot = math.mod(act_slot-i,15);
-			hist_arrG[i] = json.data[tempslot].values[4];
-			hist_arrW[i] = json.data[tempslot].values[5];
-			hist_arrPa[i] = json.data[tempslot].values[0] + json.data[tempslot].values[1];
-			hist_arrPi[i] = json.data[tempslot].values[2] + json.data[tempslot].values[3];
+			hist_arrG[i] = data.data[tempslot].values[4];
+			hist_arrW[i] = data.data[tempslot].values[5];
+			hist_arrPa[i] = data.data[tempslot].values[0] + data.data[tempslot].values[1];
+			hist_arrPi[i] = data.data[tempslot].values[2] + data.data[tempslot].values[3];
 		};
 	    Spinner(false);
       })
@@ -1659,7 +1668,7 @@ function parseSmFields(data)
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
         );
-    	console.log(error);
+    	console.error("main::refreshDays() - " + error);
     	alert_message("Fout bij ophalen van de historische daggegevens");
       });
   } // resfreshDays()
@@ -1692,6 +1701,7 @@ function parseSmFields(data)
         Spinner(false);
       })
       .catch(function(error) {
+        console.error("main::refreshMonths() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -1725,6 +1735,7 @@ function parseSmFields(data)
         Spinner(false);
       })
       .catch(function(error) {
+        console.error("main::refreshSmTelegram() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -1732,7 +1743,7 @@ function parseSmFields(data)
       });     
   } // refreshSmTelegram()
 
-  //
+  //format a value based on the locale of the client
   function formatValue(value)
   {
     var t="";
@@ -1752,28 +1763,20 @@ function parseSmFields(data)
 
     for (var item in data) 
     {
+      //skip if dongle=Q
      	if ( (item == "gas_delivered_timestamp") && (Dongle_Config == "p1-q") ) continue;
-       	//console.log("showActualTableV2 i: "+item);
-    	//console.log("showActualTableV2 data[i]: "+data[item]);
-    	//console.log("showActualTableV2 data[i].value: "+data[item].value);
     	
+      //ensure tablerow exists
       data[item].humanName = translateToHuman(item);
       var tableRef = document.getElementById('actualTable').getElementsByTagName('tbody')[0];
-      if( ( document.getElementById("actualTable_"+item)) == null )
+      var itemid = "actualTable_"+item;
+      if( ( document.getElementById(itemid)) == null )
       {
-        var newRow   = tableRef.insertRow();
-        newRow.setAttribute("id", "actualTable_"+item, 0);
-        // Insert a cell in the row at index 0
-        var newCell  = newRow.insertCell(0);            // (short)name
-        var newText  = document.createTextNode('');
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(1);                // value
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(2);                // unit
-        newCell.appendChild(newText);
+        createTableRowWithCells(tableRef, itemid, 3, '');
       }
       //get ref to tablecells
-      tableCells = document.getElementById("actualTable_"+item).cells;
+      tableCells = document.getElementById(itemid).cells;
+      
       //fill cells
       switch(item)
       {
@@ -1802,9 +1805,7 @@ function parseSmFields(data)
     }
 
     //--- hide canvas
-    document.getElementById("dataChart").style.display = "none";
-    document.getElementById("gasChart").style.display  = "none";
-	  document.getElementById("waterChart").style.display  = "none";
+    hideAllCharts();
     //--- show table
     document.getElementById("actual").style.display    = "block";
 
@@ -1826,17 +1827,16 @@ function parseSmFields(data)
 
     
     for (let i=start; i>stop; i--)
-    {  index = i % data.data.length;
-		//console.log("showHistTable index: "+index);
-		//console.log("showHistTable("+type+"): data["+i+"] => data["+i+"]name["+data[i].recid+"]");
+    {  
+      index = i % data.data.length;
+      var tref = tableRef.getElementsByTagName('tbody')[0];
+      var itemid = type+"Table_"+type+"_R"+index;
+      var nCells = 5;
+      if (type == "Days") nCells += 1;
+      createTableRowWithCells( tref, itemid, nCells, '-');
 
-//       var tableRef = document.getElementById('last'+type+'Table');
-//       if( ( document.getElementById(type +"Table_"+type+"_R"+index)) == null )
-//       {
-        var newRow   = tableRef.getElementsByTagName('tbody')[0].insertRow();
-        //newRow.setAttribute("id", type+"Table_"+data[i].recid, 0);
-        newRow.setAttribute("id", type+"Table_"+type+"_R"+index, 0);
-        // Insert a cell in the row at index 0
+        /*
+        newRow.setAttribute("id", itemid, 0);
         var newCell  = newRow.insertCell(0);
         var newText  = document.createTextNode('-');
         newCell.appendChild(newText);
@@ -1852,9 +1852,9 @@ function parseSmFields(data)
           newCell  = newRow.insertCell(5);
           newCell.appendChild(newText);
         }
-//       }
-      	
-      tableCells = document.getElementById(type+"Table_"+type+"_R"+index).cells;
+        }
+      	*/
+      tableCells = document.getElementById(itemid).cells;
       tableCells[0].innerHTML = formatDate(type, data.data[index].date);
       
       if (data.data[index].p_edw >= 0) tableCells[1].innerHTML = Number(data.data[index].p_edw).toLocaleString( 'nl-NL' );
@@ -1873,10 +1873,7 @@ function parseSmFields(data)
     };
 
     //--- hide canvas
-    document.getElementById("dataChart").style.display = "none";
-    document.getElementById("gasChart").style.display  = "none";
-	document.getElementById("waterChart").style.display  = "none";
-	
+    hideAllCharts();
 
 
 	if ( Dongle_Config == "p1-q" ) 	{
@@ -1911,47 +1908,7 @@ function parseSmFields(data)
       var tableRef = document.getElementById('lastMonthsTable').getElementsByTagName('tbody')[0];
       if( ( document.getElementById("lastMonthsTable_R"+i)) == null )
       {
-        var newRow   = tableRef.insertRow();
-        newRow.setAttribute("id", "lastMonthsTable_R"+i, 0);
-        // Insert a cell in the row at index 0
-        var newCell  = newRow.insertCell(0);          // maand
-        var newText  = document.createTextNode('-');
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(1);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(2);              // verbruik
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(3);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(4);              // verbruik
-        newCell.appendChild(newText);
-
-        newCell  = newRow.insertCell(5);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(6);              // opgewekt
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(7);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(8);             // opgewekt
-        newCell.appendChild(newText);
-        
-        newCell  = newRow.insertCell(9);             // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(10);             // gas
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(11);             // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(12);             // gas
-        newCell.appendChild(newText);
-
-        newCell  = newRow.insertCell(13);             // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(14);             // gas
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(15);             // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(16);             // gas
-        newCell.appendChild(newText);
+        createTableRowWithCells(tableRef, "lastMonthsTable_R"+i, 17, '-' );
       }
       var mmNr = parseInt(data.data[i].date.substring(2,4), 10);
 
@@ -1990,9 +1947,7 @@ function parseSmFields(data)
     };
     
     //--- hide canvas
-    document.getElementById("dataChart").style.display  = "none";
-    document.getElementById("gasChart").style.display   = "none";
-	document.getElementById("waterChart").style.display   = "none";
+    hideAllCharts();
     //--- show table
 	if (Dongle_Config == "p1-q") {
   		show_hide_column2('lastMonthsTable', 1,false);
@@ -2015,6 +1970,23 @@ function parseSmFields(data)
     document.getElementById("lastMonths").style.display = "block";
 
   } // showMonthsHist()
+
+  function createTableRowWithCells(tableRef, itemid, cellcount, content)
+  {
+    var newText  = document.createTextNode(content);
+    var newRow   = tableRef.insertRow();
+    newRow.setAttribute("id", itemid, 0);
+    for( var i=0; i<cellcount; i++)
+    {
+      var newCell  = newRow.insertCell(i);
+      newCell.appendChild(newText);
+    }
+  }
+  
+  function formatValueLocale(val, minf, maxf)
+  {
+    return Number(val).toLocaleString('nl-NL', {minimumFractionDigits: minf, maximumFractionDigits: maxf} );
+  }
   
   //============================================================================  
   function showMonthsCosts(data)
@@ -2032,39 +2004,19 @@ function parseSmFields(data)
       	slotyearbefore = math.mod(i-12,data.data.length);
       //console.log("showMonthsHist(): data["+i+"] => data["+i+"].name["+data[i].recid+"]");
       var tableRef = document.getElementById('lastMonthsTableCosts').getElementsByTagName('tbody')[0];
-      if( ( document.getElementById("lastMonthsTableCosts_R"+i)) == null )
-      {
-        var newRow   = tableRef.insertRow();
-        newRow.setAttribute("id", "lastMonthsTableCosts_R"+i, 0);
-        // Insert a cell in the row at index 0
-        var newCell  = newRow.insertCell(0);          // maand
-        var newText  = document.createTextNode('-');
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(1);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(2);              // kosten electra
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(3);              // kosten gas
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(4);              // vast recht
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(5);              // kosten totaal
-        newCell.appendChild(newText);
 
-        newCell  = newRow.insertCell(6);              // jaar
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(7);              // kosten electra
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(8);              // kosten gas
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(9);              // vast recht
-        newCell.appendChild(newText);
-        newCell  = newRow.insertCell(10);              // kosten totaal
-        newCell.appendChild(newText);
+      //ensure tablerow exists
+      var itemid = "lastMonthsTableCosts_R"+i;
+      if( ( document.getElementById(itemid)) == null )
+      {
+        createTableRowWithCells(tableRef, itemid, 11, '-');       
       }
       var mmNr = parseInt(data.data[i].date.substring(2,4), 10);
 
-      tableCells = document.getElementById("lastMonthsTableCosts_R"+i).cells;
+      //get ref to cells
+      tableCells = document.getElementById(itemid).cells;
+
+      //fill table
       tableCells[0].style.textAlign = "right";
       tableCells[0].innerHTML = monthNames[mmNr];                           // maand
       
@@ -2133,9 +2085,7 @@ function parseSmFields(data)
 
     
     //--- hide canvas
-    document.getElementById("dataChart").style.display  = "none";
-    document.getElementById("gasChart").style.display   = "none";
-	document.getElementById("waterChart").style.display   = "none";
+    hideAllCharts();
     //--- show table
     if ( Dongle_Config == "p1-q" ){
 		show_hide_column2('lastMonthsTableCosts', 2,false);
@@ -2178,6 +2128,7 @@ function parseSmFields(data)
         SettingsRead = true;
       })
       .catch(function(error) {
+        console.error("main::getDevSettings() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -2237,6 +2188,7 @@ function parseSmFields(data)
     console.log("Set Month Table Type");
     if (presentationType == 'GRAPH') 
     {
+      //reset checkbox when you select a graph
       document.getElementById('mCOST').checked = false;
       return;
     }
@@ -2339,6 +2291,7 @@ function parseSmFields(data)
 
       })
       .catch(function(error) {
+        console.error("main::refreshSettings() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -2363,6 +2316,7 @@ function parseSmFields(data)
         Spinner(false);
       })
       .catch(function(error) {
+        console.error("main::EditMonths() - " + error.message);
         var p = document.createElement('p');
         p.appendChild(
           document.createTextNode('Error: ' + error.message)
@@ -2573,14 +2527,13 @@ function parseSmFields(data)
   function saveData() 
   {
     document.getElementById('message').innerHTML = "Gegevens worden opgeslagen ..";
-
-    if (activeTab == "bEditSettings")
-    {
-      saveSettings();
-    } 
-    else if (activeTab == "bEditMonths")
-    {
-      saveMeterReadings();
+    switch(activeTab){
+      case "bEditSettings":
+        saveSettings();
+        break;
+      case "bEditMonths":
+        saveMeterReadings();
+        break;
     }
     
   } // saveData()
@@ -2847,12 +2800,28 @@ function parseSmFields(data)
       
   } // sendPostReading()
 
-  
+  function parseGitHubVersion(text){
+    var tmpGHF = text.replace(/(\r\n|\n|\r)/gm, "");
+    GitHubVersion_dspl = tmpGHF;
+    //console.log("parsed: GitHubVersion is ["+GitHubVersion_dspl+"]");
+    tmpX = tmpGHF.substring(1, tmpGHF.indexOf(' '));
+    tmpN = tmpX.split(".");
+    GitHubVersion = tmpN[0]*10000 + tmpN[1]*100 + tmpN[2]*1;    
+    //console.log("firmwareVersion["+firmwareVersion+"] >= GitHubVersion["+GitHubVersion+"]");
+    if (firmwareVersion == 0 || firmwareVersion >= GitHubVersion)
+          newVersionMsg = "";
+    else  newVersionMsg = firmwareVersion_dspl + " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
+    //set
+    document.getElementById('message').innerHTML = newVersionMsg;
+    //console.log(newVersionMsg);
+  }
+
   //============================================================================  
   function readGitHubVersion()
   {
     if (GitHubVersion != 0) return;
-    fetch("https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat")
+
+    fetch(URL_GITHUB_VERSION)
       .then(response => {
         if (response.ok) {
           return response.text();
@@ -2862,29 +2831,24 @@ function parseSmFields(data)
         }
       })
       .then(text => {
-        var tmpGHF     = text.replace(/(\r\n|\n|\r)/gm, "");
-        GitHubVersion_dspl = tmpGHF;
-        console.log("parsed: GitHubVersion is ["+GitHubVersion_dspl+"]");
-        tmpX = tmpGHF.substring(1, tmpGHF.indexOf(' '));
-        tmpN = tmpX.split(".");
-        GitHubVersion = tmpN[0]*10000 + tmpN[1]*100 + tmpN[2]*1;
-        
-        console.log("firmwareVersion["+firmwareVersion+"] >= GitHubVersion["+GitHubVersion+"]");
-        if (firmwareVersion == 0 || firmwareVersion >= GitHubVersion)
-              newVersionMsg = "";
-        else  newVersionMsg = firmwareVersion_dspl + " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
-        document.getElementById('message').innerHTML = newVersionMsg;
-        console.log(newVersionMsg);
-
+        parseGitHubVersion(text);
       })
       .catch(function(error) {
-        console.log(error);
+        console.error("main::readGitHubVersion() - " + error.message);
         GitHubVersion_dspl   = "";
         GitHubVersion        = 0;
-      });     
-
+      });
   } // readGitHubVersion()
 
+  /*
+  ****************************** UTILS *******************************************
+  */
+
+  function hideAllCharts(){//--- hide canvas -------
+    document.getElementById("dataChart" ).style.display = "none";
+    document.getElementById("gasChart"  ).style.display = "none";
+    document.getElementById("waterChart").style.display = "none";
+  }
     
   //============================================================================  
   function setEditType(eType) {
@@ -3035,7 +2999,8 @@ function parseSmFields(data)
     var multiplier = Math.pow(10, precision || 0);
     return Math.round(value * multiplier) / multiplier;
   }
-    
+  
+  //translation array
   var translateFields = [
            [ "author",                    "Auteur" ]
           ,[ "identification",            "Slimme Meter ID" ]
