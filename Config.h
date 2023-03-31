@@ -45,7 +45,7 @@
     #define DTR_IO              4 // nr = IO pulse = N/A
     #define RXP1                10
     #define TXP1               -1 //disable
-    #define IO_WATER_SENSOR     5
+    #define IO_WATER_SENSOR     0
 #endif
   #else//v4.2
     #warning Using ESP32
@@ -81,6 +81,7 @@
   #define PRO         0
   #define PRO_BRIDGE  1
   #define PRO_ETH     2
+  #define PRO_H20_B   3
 
   #define RGBLED_PIN        8
   #define PRT_LED           0
