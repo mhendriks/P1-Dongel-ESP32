@@ -74,10 +74,10 @@ void AutoDiscoverHA(){
 
 //===========================================================================================
 void connectMQTT() {
-  
+
   if (Verbose2) DebugTf("MQTTclient.connected(%d), mqttIsConnected[%d], stateMQTT [%d]\r\n", MQTTclient.connected(), mqttIsConnected, stateMQTT);
 
-  if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) {
+  if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) {
     mqttIsConnected = false;
     return;
   }
@@ -118,9 +118,8 @@ bool connectMQTT_FSM()
           {
         LogFile("MQTT Starting",true);
 #ifdef EVERGI
-          #include "development/evergi.h"
-          DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbroker, settingMQTTbrokerPort);
-          MQTTclient.setServer(EVERGI_HOST, EVERGI_PORT);
+//          DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbroker, settingMQTTbrokerPort);
+//          MQTTclient.setServer(EVERGI_HOST, EVERGI_PORT);
 #else
 //        DebugTln(F("MQTT State: MQTT Initializing"));
         MQTTbrokerIP = MDNS.queryHost(settingMQTTbroker);
@@ -148,7 +147,6 @@ bool connectMQTT_FSM()
           MQTTclient.setServer(MQTTbrokerIPchar, settingMQTTbrokerPort);
 #endif
           DebugTf("setServer  -> MQTT status, rc=%d \r\n", MQTTclient.state());
-          MQTTclientId  = String(settingHostname) + "-" + WiFi.macAddress();
           stateMQTT = MQTT_STATE_TRY_TO_CONNECT;
           reconnectAttempts = 0;
           }
@@ -162,22 +160,21 @@ bool connectMQTT_FSM()
 
           //--- If no username, then anonymous connection to broker, otherwise assume username/password.
 #ifdef EVERGI
-          DebugTf("connect USER [%s] TOKEN [%s]\r\n", EVERGI_USER, EVERGI_TOKEN);
-          MQTTclient.connect("P1-Dongle-Pro",EVERGI_USER, EVERGI_TOKEN);
+//          DebugTf("connect USER [%s] TOKEN [%s]\r\n", EVERGI_USER, EVERGI_TOKEN);
+          snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
+          MQTTclient.connect("P1-Dongle-Pro",EVERGI_USER, EVERGI_TOKEN,cMsg,1,true,"Offline");
           if (MQTTclient.connected())
           {
             reconnectAttempts = 0;  
             Debugf(" .. connected -> MQTT status, rc=%d\r\n", MQTTclient.state());
-            
-            snprintf( cMsg, 150, "%s/LWT", settingMQTTtopTopic );
-//            DebugTln("publish: " + String(cMsg));
-            MQTTclient.publish(cMsg,"Online", true);
+            MQTTclient.publish(cMsg,"Online", true); //LWT = online
 
 #else          
           sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
           if (String(settingMQTTuser).length() == 0) 
           {
             DebugT(F("without a Username/Password "));
+            MQTTclientId  = String(settingHostname) + "-" + WiFi.macAddress();
             MQTTclient.connect(MQTTclientId.c_str(),"","",cMsg,1,true,"Offline");
           } 
           else 
@@ -241,6 +238,8 @@ bool connectMQTT_FSM()
   return false; 
   
 } // connectMQTT_FSM()
+
+
 
 //=======================================================================
 
@@ -346,12 +345,77 @@ void MQTTsendGas(){
 #endif
 }
 
+void MQTTConnectEV() {
+  //try every 5 sec
+  if ( DUE( reconnectMQTTtimer) ){ 
+    LogFile("MQTT: Attempting connection...",true);
+    snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
+    if ( MQTTclient.connect( MqttID, EVERGI_USER, EVERGI_TOKEN, cMsg, 1, true, "Offline" ) ) {
+//    if ( MQTTclient.connect( MqttID, EVERGI_USER, EVERGI_TOKEN)) {
+//      reconnectAttempts = 0;  
+      LogFile("MQTT: connected",true);
+//      Debugf("MQTT status, rc=%d\r\n", MQTTclient.state());
+      MQTTclient.publish(cMsg,"Online", true); //LWT = online
+      StaticInfoSend = false; //resend
+//      MQTTclient.setCallback(MQTTcallback); //set listner update callback
+    } else {
+//      Debug(F("failed, rc="));Debugln(MQTTclient.state());
+      LogFile( String("MQTT: connection failed status: ". MQTTclient.state()).c_str() ,true);
+    }
+  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
+  }  
+}
+
+void sendMQTTDataEV() {
+
+//TODO: log to file on error or reconnect
+  
+    if (!MQTTclient.connected()) MQTTConnectEV();
+    if ( MQTTclient.connected() ) {         
+     DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
+  
+  if ( !StaticInfoSend )  { 
+#ifndef EVERGI    
+    MQTTSentStaticInfo(); 
+#else    
+    MQTTSentStaticInfoEvergi(); 
+#endif
+  }
+    
+  fieldsElements = ACTUALELEMENTS;
+  
+  if ( bActJsonMQTT ) jsonDoc.clear();
+
+  DSMRdata.applyEach(buildJsonMQTT());
+  
+#ifdef EVERGI
+    jsonDoc["gas_delivered"] = gasDelivered;
+    jsonDoc["gas_delivered_timestamp"] = gasDeliveredTimestamp;
+    
+    String buffer;
+    serializeJson(jsonDoc,buffer);
+    MQTTSend("grid",buffer);
+#else    
+  if ( bActJsonMQTT ) {
+    String buffer;
+    serializeJson(jsonDoc,buffer);
+    MQTTSend("all",buffer);
+  }
+  
+  MQTTsendGas();
+  sendMQTTWater();
+#endif 
+
+  } 
+}
+
 //---------------------------------------------------------------
 void sendMQTTData() 
 {
 //  String dateTime, topicId, json;
 
   if ((settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) || bailout() ) return;
+  
 
   //make proper TopTopic
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') snprintf(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), "%s/",  settingMQTTtopTopic);
@@ -379,24 +443,32 @@ void sendMQTTData()
     if ( !mqttIsConnected ) 
     {
       DebugTln(F("no connection with a MQTT broker .."));
-#ifdef EVERGI
-    Debug("WiFiClientSecure client state:");
-    char lastError[100];
-    wifiClient.lastError(lastError,100);  //Get the last error for WiFiClientSecure
-    Debugln(lastError);
-#endif    
       return;
     }
   }
 
   DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
-  if (!StaticInfoSend)  MQTTSentStaticInfo();
+  
+  if ( !StaticInfoSend )  { 
+#ifndef EVERGI    
+    MQTTSentStaticInfo(); 
+#else    
+    MQTTSentStaticInfoEvergi(); 
+#endif
+  }
+    
   fieldsElements = ACTUALELEMENTS;
   
   if ( bActJsonMQTT ) jsonDoc.clear();
-  
+
   DSMRdata.applyEach(buildJsonMQTT());
   
+#ifdef EVERGI
+    //TODO: ADD GAS FIRST
+    String buffer;
+    serializeJson(jsonDoc,buffer);
+    MQTTSend("grid",buffer);
+#else    
   if ( bActJsonMQTT ) {
     String buffer;
     serializeJson(jsonDoc,buffer);
@@ -405,7 +477,7 @@ void sendMQTTData()
   
   MQTTsendGas();
   sendMQTTWater();
-
+#endif 
 
 } // sendMQTTData()
 

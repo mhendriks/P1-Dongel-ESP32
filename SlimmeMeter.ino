@@ -151,7 +151,7 @@ void processTelegram(){
     writeRingFiles();
   }
 
-  if ( DUE(publishMQTTtimer) ) sendMQTTData();
+  if ( DUE(publishMQTTtimer) ) sendMQTTDataEV();
 
   if ( bRawPort ) {
     ws_raw.print("/" + CapTelegram + "!" ); //print telegram to dongle port

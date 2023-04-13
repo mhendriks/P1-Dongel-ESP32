@@ -25,8 +25,9 @@
 #include <LittleFS.h>
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git
 
-#define JSON_BUFF_MAX     255
-#define MQTT_BUFF_MAX     800
+#define JSON_BUFF_MAX     256
+#define MQTT_BUFF_MAX     1600
+
 #define LED_BLINK_MS       80
 #define MIN_TELEGR_INTV     1
 #define MIN_T_INTV_PRE40   10
@@ -52,6 +53,15 @@ const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {
 #define DATA_RECLEN      98  //total length incl comma and new line
 
 #include "Debug.h"
+
+#ifdef EVERGI
+
+#define EVERGI_TEST
+#include "development/evergi.h"
+static char MqttID[30];
+static char StrMac[13]; 
+
+#endif
 
   /**
   * Define the DSMRdata we're interested in, as well as the DSMRdatastructure to
@@ -169,17 +179,15 @@ void delayms(unsigned long);
 //===========================GLOBAL VAR'S======================================
 #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
 
-
 #ifdef EVERGI
   #include "WiFiClientSecure.h"
   WiFiClientSecure wifiClient;
   static PubSubClient MQTTclient(wifiClient);
+  
 #else
   WiFiClient  wifiClient;
   static PubSubClient MQTTclient(wifiClient);
 #endif
-
-#include "Network.h"
 
 struct Status {
    uint32_t           reboots;
@@ -190,6 +198,8 @@ struct Status {
    uint16_t           dev_type;
    bool               FirstUse;
 } P1Status;
+
+#include "Network.h"
   
 MyData      DSMRdata;
 struct tm   tm;
@@ -231,6 +241,7 @@ char      BaseOTAurl[35] = OTAURL;
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;
+bool      bNewVersionAvailable = false;
 
 //MQTT
 char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[45] = _DEFAULT_MQTT_TOPIC;
@@ -248,6 +259,7 @@ DECLARE_TIMER_SEC(reconnectMQTTtimer,  5); // try reconnecting cyclus timer
 DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time between MQTT messages  
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);
 DECLARE_TIMER_SEC(StatusTimer,        10); //first time = 10 sec usual 10min (see loop)
+DECLARE_TIMER_MIN(AutoUpdate,         UPDATE_INTERVAL); 
 
 /***************************************************************************
 *

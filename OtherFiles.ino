@@ -102,7 +102,7 @@ void writeSettings()
   doc["HAdiscovery"] = EnableHAdiscovery;
   doc["basic-auth"]["user"] = bAuthUser;
   doc["basic-auth"]["pass"] = bAuthPW;
-  doc["auto-update"] = bAutoUpdate;
+//  doc["auto-update"] = bAutoUpdate;
   doc["pre40"] = bPre40;
   doc["act-json-mqtt"] = bActJsonMQTT;
   doc["raw-port"] = bRawPort;
@@ -180,7 +180,7 @@ void readSettings(bool show)
 #endif
   
   CHANGE_INTERVAL_SEC(publishMQTTtimer, settingMQTTinterval);
-  CHANGE_INTERVAL_MIN(reconnectMQTTtimer, 1);
+  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
   LEDenabled = doc["LED"];
   if (doc.containsKey("enableHistory")) EnableHistory = doc["enableHistory"];
 
@@ -200,7 +200,6 @@ void readSettings(bool show)
   
   temp = doc["basic-auth"]["pass"];
   if (temp) strcpy(bAuthPW, temp);
-
   
   SettingsFile.close();
   //end json

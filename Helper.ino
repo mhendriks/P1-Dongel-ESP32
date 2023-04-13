@@ -65,22 +65,19 @@ const char* getResetReason(){
 
 void ShutDownHandler(){
 
-#ifdef EVERGI
-  sprintf(cMsg,"%s/LWT",settingMQTTtopTopic);
-#else
-  sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
-#endif
-
-  MQTTclient.publish(cMsg,"Offline", true); //LWT status update
-  P1StatusWrite();
+   P1StatusWrite();
   P1StatusEnd();
   DebugTln(F("/!\\ SHUTDOWN /!\\"));
+  DebugFlush();
 }
 
 //===========================================================================================
 
 void P1Reboot(){
-    delay(3000);
+    delay(1000);
+    sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
+    MQTTclient.publish(cMsg,"Offline", true); //LWT status update
+    MQTTclient.loop(); //process last events
     ESP.restart();
     delay(2000);  
 }

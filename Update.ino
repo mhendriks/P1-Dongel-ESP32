@@ -10,6 +10,23 @@
 #include <HTTPUpdate.h>
 bool bWebUpdate = false;
 
+void handleUpdate() {
+  
+  if ( DUE(AutoUpdate) ) { 
+      if ( bAutoUpdate ) {
+        CheckNewVersion();
+        if ( bNewVersionAvailable ) {
+          LogFile("AutoUpdate - new version available",true);
+          RemoteUpdate(UpdateVersion, true);
+        }
+        else LogFile("AutoUpdate - NO new version available",true);
+      }
+      CHANGE_INTERVAL_MIN(AutoUpdate, UPDATE_INTERVAL);
+  }
+  
+  if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
+}
+
 void handleRemoteUpdate(){
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
 }
@@ -109,41 +126,52 @@ void RemoteUpdate(const char* versie, bool sketch){
   Debugln();
   UpdateRequested = false;
   bWebUpdate = false;
+  bNewVersionAvailable = false;
   vTaskResume(tP1Reader); //ook als het hiet goed is gegaan weer starten met lezen
 } //RemoteUpdate
 
 //---------------
 
-void ReadManifest() {
+void CheckNewVersion() {
+  DebugTln( F("Version update check") );
   HTTPClient http;
-  http.begin(wifiClient, "http://ota.smart-stuff.nl/v5/version-manifest.json");
+  snprintf( cMsg, sizeof( cMsg ), "%s%s",BaseOTAurl, "version-manifest.json" );
+  http.begin( cMsg );
   
   int httpResponseCode = http.GET();
   if ( httpResponseCode<=0 ) { 
     Debug(F("Error code: "));Debugln(httpResponseCode);
+    CHANGE_INTERVAL_MIN(AutoUpdate, 60); //try again over 60 min
     return; //leave on error
   }
   
-  Debugln( F("Version Manifest") );
-  Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
+//  Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
   String payload = http.getString();
-  Debugln(payload);
+//  Debugln(payload);
   http.end();
     
   // Parse JSON object in response
   DynamicJsonDocument manifest(256);
 
   // Parse JSON object
-//  DeserializationError error = deserializeJson(manifest, payload);
-//  if (error) Debugln(F("Error deserialisation Json"));
-//  Debugf("version: %s\n\r",manifest["version"]);
-//  Debugf("major: %i\n\r",manifest["major"]);
-//  Debugf("minor: %i\n\r",manifest["minor"]);
-//  Debug(F("build: "));Debugln(String(manifest["build"]).c_str());
-//  Debug(F("notes: "));Debugln(String(manifest["notes"]).c_str());
-//  Debug(F("ota_url: "));Debugln(String(manifest["ota_url"]).c_str());
+  DeserializationError error = deserializeJson(manifest, payload);
+  if (error) {
+    Debugln(F("Error deserialisation Json"));
+    CHANGE_INTERVAL_MIN(AutoUpdate, 60); //try again over 60 min
+    return;
+  }
+  snprintf(UpdateVersion,sizeof(UpdateVersion),"%i.%i.%i",int(manifest["major"]), (int)manifest["minor"], (int)manifest["fix"]);
+  Debugf( "Latest version %s\n\r", UpdateVersion );
+  Debugf( "Current version: %i.%i.%i\n\r", _VERSION_MAJOR, _VERSION_MINOR, _VERSION_PATCH );
+
+
+//(A<X) OR ((A=X) AND (B<Y)) OR ((A=X) AND (B=Y) AND (C<Z))
+
+if ( manifest["major"] > _VERSION_MAJOR ) bNewVersionAvailable = true;
+else if ( (manifest["major"] = _VERSION_MAJOR) && (manifest["minor"] > _VERSION_MINOR) ) bNewVersionAvailable = true;
+else if ( (manifest["major"] = _VERSION_MAJOR) && (manifest["minor"] = _VERSION_MINOR) && (manifest["fix"] > _VERSION_PATCH) ) bNewVersionAvailable = true;
     
-} //ReadManifest
+} //CheckNewVersion
 
 
 /***************************************************************************
