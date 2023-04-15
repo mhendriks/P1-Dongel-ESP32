@@ -203,7 +203,7 @@ void sendDeviceInfo()
   snprintf(cMsg, sizeof(cMsg), "%s:%04d", settingMQTTbroker, settingMQTTbrokerPort);
   doc["mqttbroker"] = cMsg;
   doc["mqttinterval"] = settingMQTTinterval;
-  if (mqttIsConnected) doc["mqttbroker_connected"] = "yes";
+  if (MQTTclient.connected()) doc["mqttbroker_connected"] = "yes";
   else  doc["mqttbroker_connected"] = "no";
 
   doc["reboots"] = (int)P1Status.reboots;
