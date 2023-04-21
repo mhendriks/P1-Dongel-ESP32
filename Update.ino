@@ -66,13 +66,14 @@ void RemoteUpdate(const char* versie, bool sketch){
  * voorbeeld : invoer 2.3.7BE -> DMSR-API-V2.3.7BE_<FLASHSIZE>Mb.bin
  * voorbeeld : invoer 2.3.7 -> DMSR-API-V2.3.7_<FLASHSIZE>Mb.bin
  */
-  WiFiClient client;
+  WiFiClientSecure client;
+  client.setInsecure(); //no cert validation
   int flashSize = (ESP.getFlashChipSize() / 1024.0 / 1024.0);
   String path, otaFile, _versie;
   t_httpUpdate_return ret;
 
-  Debugln(F("\n!!! OTA UPDATE !!!"));
-  Debugln(sketch ? "Update type: Sketch" : "Update type: File"); 
+  Debugln(F("\n!!! OTA UPDATE !!!\nUpdate type: Sketch"));
+//  Debugln(sketch ? "Update type: Sketch" : "Update type: File"); 
 
 
   if (bWebUpdate) {
@@ -94,8 +95,8 @@ void RemoteUpdate(const char* versie, bool sketch){
   vTaskSuspend(tP1Reader);
 
   otaFile = strcmp(versie,"4-sketch-latest") == 0 ? "" : "DSMR-API-V";
-  otaFile += _versie + "_" + flashSize; 
-  otaFile+= sketch ? "Mb.bin" : "Mb.spiffs.bin";
+  otaFile += _versie + "_" + flashSize + "Mb.bin"; 
+//  otaFile+= sketch ? "Mb.bin" : "Mb.spiffs.bin";
   path = String(BaseOTAurl) + otaFile;
   Debugf("OTA versie: %s | flashsize: %i Mb\n", _versie.c_str(), flashSize);
   Debugln("OTA path: " + path);
@@ -108,8 +109,11 @@ void RemoteUpdate(const char* versie, bool sketch){
   httpUpdate.rebootOnUpdate(false); 
   
   //start update proces
-  if ( sketch ) ret = httpUpdate.update(client, path.c_str());
-  else ret = httpUpdate.updateSpiffs(client,path.c_str());
+
+    ret = httpUpdate.update(client, path.c_str(), "", [](HTTPClient *client) {  client->setAuthorization( OTA_USR, OTA_PW ); });
+  
+//  if ( sketch ) ret = httpUpdate.update(client, path.c_str());
+//  else ret = httpUpdate.updateSpiffs(client,path.c_str());
   switch (ret) {
       case HTTP_UPDATE_FAILED:
         Debugf("OTA ERROR: (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
@@ -161,7 +165,7 @@ void CheckNewVersion() {
     return;
   }
   snprintf(UpdateVersion,sizeof(UpdateVersion),"%i.%i.%i",int(manifest["major"]), (int)manifest["minor"], (int)manifest["fix"]);
-  Debugf( "Latest version %s\n\r", UpdateVersion );
+  Debugf( "Latest version : %s\n\r", UpdateVersion );
   Debugf( "Current version: %i.%i.%i\n\r", _VERSION_MAJOR, _VERSION_MINOR, _VERSION_PATCH );
 
 
@@ -170,7 +174,7 @@ void CheckNewVersion() {
 if ( manifest["major"] > _VERSION_MAJOR ) bNewVersionAvailable = true;
 else if ( (manifest["major"] = _VERSION_MAJOR) && (manifest["minor"] > _VERSION_MINOR) ) bNewVersionAvailable = true;
 else if ( (manifest["major"] = _VERSION_MAJOR) && (manifest["minor"] = _VERSION_MINOR) && (manifest["fix"] > _VERSION_PATCH) ) bNewVersionAvailable = true;
-    
+Debug( F("New version available (y/n): ") );Debugln(bNewVersionAvailable);
 } //CheckNewVersion
 
 
