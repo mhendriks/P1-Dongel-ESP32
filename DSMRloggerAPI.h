@@ -16,7 +16,8 @@
   volatile time_t      WtrPrevReading = 0;
   bool                 WtrMtr         = false;
   #define              DEBOUNCETIMER 1700
- 
+
+#include "development/secrets.h"
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
@@ -56,7 +57,7 @@ const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {
 
 #ifdef EVERGI
 
-#define EVERGI_TEST
+//#define EVERGI_TEST
 #include "development/evergi.h"
 static char MqttID[30];
 static char StrMac[13]; 
@@ -237,10 +238,10 @@ char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 
 //update
-char      BaseOTAurl[35] = OTAURL;
+char      BaseOTAurl[40] = OTAURL;
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
-bool      bAutoUpdate = false;
+bool      bAutoUpdate = true;
 bool      bNewVersionAvailable = false;
 
 //MQTT
