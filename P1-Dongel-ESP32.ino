@@ -36,6 +36,12 @@ TODO
 
 WiP
 
+TODO EV
+√- update authenticatie
+√- telegram piek values
+- opschonen oude MQTT logica en globals
+√ static send nog niet in orde
+- frontend meesturen van update url ...
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -126,10 +132,6 @@ void setup()
   startMDNS(settingHostname);
   startNTP();
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
-#ifdef EVERGI
-  EvergiMQTTSettings();
-#endif  
-
 //================ Start MQTT  ======================================
 //  connectMQTT(); //not needed ... will be initiated on first mqtt message
 #endif
@@ -152,8 +154,12 @@ void setup()
     GetFile("/Frontend.json");
   }
   setupFSexplorer();
- 
+
   esp_register_shutdown_handler(ShutDownHandler);
+
+#ifdef EVERGI
+  EvergiMQTTSettings();
+#endif 
 
   setupWater();
   setupAuxButton(); //esp32c3 only
