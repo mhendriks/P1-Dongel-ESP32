@@ -11,13 +11,16 @@
 
 void GetFile(String filename){
   HTTPClient http;
+#ifdef EVERGI
+  wifiClient.setInsecure();
+#endif  
   if(wifiClient.connect(HOST_DATA_FILES, 443)) {
       http.begin(PATH_DATA_FILES + filename);
       int httpResponseCode = http.GET();
 //      Serial.print(F("HTTP Response code: "));Serial.println(httpResponseCode);
       if (httpResponseCode == 200 ){
         String payload = http.getString();
-  //      Serial.println(payload);
+//        Serial.println(payload);
         File file = LittleFS.open(filename, "w"); // open for reading and writing
         if (!file) DebugTln(F("open file FAILED!!!\r\n"));
         else file.print(payload); 
@@ -102,7 +105,7 @@ void writeSettings()
   doc["HAdiscovery"] = EnableHAdiscovery;
   doc["basic-auth"]["user"] = bAuthUser;
   doc["basic-auth"]["pass"] = bAuthPW;
-//  doc["auto-update"] = bAutoUpdate;
+  doc["auto-update"] = bAutoUpdate;
   doc["pre40"] = bPre40;
   doc["act-json-mqtt"] = bActJsonMQTT;
   doc["raw-port"] = bRawPort;
@@ -258,7 +261,8 @@ if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
   Debug(F("    HA Auto Discovery Enabled: ")); Debugln(EnableHAdiscovery);
   Debug(F("   Support 2.x and 3.x meters: ")); Debugln(bPre40);
   Debug(F("      Raw Telegram on port 82: ")); Debugln(bRawPort);
-  Debug(F("  Enables actual json in mqtt: ")); Debugln(bActJsonMQTT);
+  Debug(F("  Enabled actual json in mqtt: ")); Debugln(bActJsonMQTT);
+  Debug(F("          Auto Update enabled: ")); Debugln(bAutoUpdate);
     
   Debugln(F("-\r"));
 
