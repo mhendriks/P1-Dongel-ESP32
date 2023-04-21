@@ -16,11 +16,11 @@
   static IPAddress    MQTTbrokerIP;
   static char         MQTTbrokerIPchar[20];
   int8_t              reconnectAttempts = 0;
-  char                lastMQTTtimestamp[15] = "-";
-  char                mqttBuff[100];
+//  char                lastMQTTtimestamp[15] = "-";
+//  char                mqttBuff[100];
 
-  enum states_of_MQTT { MQTT_STATE_INIT, MQTT_STATE_TRY_TO_CONNECT, MQTT_STATE_IS_CONNECTED, MQTT_STATE_ERROR };
-  enum states_of_MQTT stateMQTT = MQTT_STATE_INIT;
+//  enum states_of_MQTT { MQTT_STATE_INIT, MQTT_STATE_TRY_TO_CONNECT, MQTT_STATE_IS_CONNECTED, MQTT_STATE_ERROR };
+//  enum states_of_MQTT stateMQTT = MQTT_STATE_INIT;
 
   String            MQTTclientId;
 
@@ -72,6 +72,7 @@ void AutoDiscoverHA(){
 #endif
 }
 
+/*
 //===========================================================================================
 void connectMQTT() {
 
@@ -97,7 +98,7 @@ void connectMQTT() {
 }
 
 //===========================================================================================
-
+*/
 static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
   if (length > 24) return;
   sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
@@ -108,7 +109,7 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
   DebugT("Message arrived [");Debug(topic);Debug("] ");Debugln(UpdateVersion);
   UpdateRequested = true;
 }
-
+/*
 //===========================================================================================
 bool connectMQTT_FSM() 
 {  
@@ -239,7 +240,7 @@ bool connectMQTT_FSM()
   
 } // connectMQTT_FSM()
 
-
+*/
 
 //=======================================================================
 
@@ -257,7 +258,7 @@ struct buildJsonMQTT {
      char Name[25];
      strncpy(Name,String(Item::name).c_str(),25);
     if ( isInFieldsArray(Name) && i.present() ) {
-#ifndef EVERGI      
+#ifdef EVERGI      
           jsonDoc[Name] = value_to_json_mqtt(i.val());
 #else 
           if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
@@ -275,9 +276,8 @@ struct buildJsonMQTT {
     return i;
   }
 
-  bool value_to_json(TimestampedFixedValue i) {
-    //wordt niet aangeroepen ivm niet uitvragen van dit type
-    return i;
+  String value_to_json(TimestampedFixedValue i) {
+    return String(i,3);
   }
   
   String value_to_json(FixedValue i) {
@@ -289,9 +289,8 @@ struct buildJsonMQTT {
     return i;
   }
 
-  bool value_to_json_mqtt(TimestampedFixedValue i) {
-    //wordt niet aangeroepen ivm niet uitvragen van dit type
-    return 0;
+  String value_to_json_mqtt(TimestampedFixedValue i) {
+    return String(i,3);
   }
   
   double value_to_json_mqtt(FixedValue i) {
@@ -338,7 +337,7 @@ void MQTTsendGas(){
   if (!gasDelivered) return;
 #ifdef HEATLINK
   MQTTSend( "heat_delivered", gasDelivered );
-//  MQTTSend( "heat_delivered_timestamp", gasDeliveredTimestamp ); // double: because device timestamp is equal
+//  MQTTSend( "heat_delivered_timestamp", gasDeliveredTimestamp ); // 2x: because device timestamp is equal
 #else
   MQTTSend( "gas_delivered", gasDelivered );
   MQTTSend( "gas_delivered_timestamp", gasDeliveredTimestamp );
@@ -351,16 +350,13 @@ void MQTTConnectEV() {
     LogFile("MQTT: Attempting connection...",true);
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
     if ( MQTTclient.connect( MqttID, EVERGI_USER, EVERGI_TOKEN, cMsg, 1, true, "Offline" ) ) {
-//    if ( MQTTclient.connect( MqttID, EVERGI_USER, EVERGI_TOKEN)) {
 //      reconnectAttempts = 0;  
       LogFile("MQTT: connected",true);
-//      Debugf("MQTT status, rc=%d\r\n", MQTTclient.state());
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
 //      MQTTclient.setCallback(MQTTcallback); //set listner update callback
     } else {
-//      Debug(F("failed, rc="));Debugln(MQTTclient.state());
-      LogFile( String("MQTT: connection failed status: ". MQTTclient.state()).c_str() ,true);
+      LogFile( String("MQTT: connection failed status: " + MQTTclient.state()).c_str() ,true);
     }
   CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
   }  
@@ -387,28 +383,19 @@ void sendMQTTDataEV() {
   if ( bActJsonMQTT ) jsonDoc.clear();
 
   DSMRdata.applyEach(buildJsonMQTT());
-  
-#ifdef EVERGI
-    jsonDoc["gas_delivered"] = gasDelivered;
-    jsonDoc["gas_delivered_timestamp"] = gasDeliveredTimestamp;
-    
-    String buffer;
-    serializeJson(jsonDoc,buffer);
-    MQTTSend("grid",buffer);
-#else    
-  if ( bActJsonMQTT ) {
-    String buffer;
-    serializeJson(jsonDoc,buffer);
-    MQTTSend("all",buffer);
+  //check if gas and peak is available
+  if ( gasDelivered ) {
+    jsonDoc["gas"] = gasDelivered;
+    jsonDoc["gas_ts"] = gasDeliveredTimestamp;
   }
-  
-  MQTTsendGas();
-  sendMQTTWater();
-#endif 
-
+  if ( DSMRdata.highest_peak_pwr_present ) jsonDoc["highest_peak_pwr_ts"] = DSMRdata.highest_peak_pwr.timestamp;
+  String buffer;
+  serializeJson(jsonDoc,buffer);
+  MQTTSend("grid",buffer);
   } 
 }
 
+/*
 //---------------------------------------------------------------
 void sendMQTTData() 
 {
@@ -480,6 +467,7 @@ void sendMQTTData()
 #endif 
 
 } // sendMQTTData()
+*/
 
 /***************************************************************************
 *
