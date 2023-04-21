@@ -147,6 +147,12 @@ void handleKeyInput()
       case 'b':
       case 'B':     displayBoardInfo();
                     break;
+      case 'c':    CheckNewVersion(); break;
+      case 'C':    if ( bNewVersionAvailable ) {
+                    LogFile("AutoUpdate - new version available",true);
+                    RemoteUpdate(UpdateVersion, true);
+                    }; break;              
+      case 'g':     MQTTConnectEV();break;                    
       case 'T':   {        
                       char c;
                       Debugln(F("Devices types: 0 = P1 Pro, 1 = P1 Pro Bridge"));
