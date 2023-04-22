@@ -36,13 +36,6 @@ TODO
 
 WiP
 
-TODO EV
-√- update authenticatie
-√- telegram piek values
-- opschonen oude MQTT logica en globals
-√ static send nog niet in orde
-- frontend meesturen van update url ...
-
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Board: "ESP32 Dev Module"

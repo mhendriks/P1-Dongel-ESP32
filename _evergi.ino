@@ -68,8 +68,7 @@ void MQTTSentStaticInfoEvergi(){
   jsonDoc["firmware"] = _VERSION_ONLY;
   jsonDoc["ip_address"] = WiFi.localIP().toString();
   jsonDoc["wifi_rssi"] = String( WiFi.RSSI() );
-  //TODO: check if gas id is present
-  jsonDoc["gas_id"] = DSMRdata.mbus1_equipment_id_tc;
+  jsonDoc["gas_id"] = DSMRdata.mbus1_equipment_id_tc; // empty when nonexisting 
   jsonDoc["reboot"] = P1Status.reboots;
   String buffer;
   serializeJson(jsonDoc,buffer);
