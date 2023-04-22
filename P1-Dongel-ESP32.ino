@@ -34,8 +34,8 @@ TODO
 - Modbus Registers van de "Actueel" pagina lijkt me in eerste instantie voldoende. Wel mis ik zo iets als m3 (of liters) gas per uur. Belangrijk bij hybride warmteopwekking (ketel en warmtepomp), waarbij elke liter gas er één te veel is :-). Is natuurlijk ook softwarematig te maken.
 
 WiP
-√ fix mqtt peak value (always 1) = BE (Giovanni W.)
 - toevoegen van mdns aanmelding na 1 minuut
+- watermeter mbus type 007 toevoegen (Broes)
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
