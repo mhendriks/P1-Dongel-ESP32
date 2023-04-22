@@ -250,9 +250,8 @@ struct buildJsonMQTT {
     return i;
   }
 
-  bool value_to_json(TimestampedFixedValue i) {
-    //wordt niet aangeroepen ivm niet uitvragen van dit type
-    return i;
+  String value_to_json(TimestampedFixedValue i) {
+    return String(i,3);
   }
   
   String value_to_json(FixedValue i) {
@@ -264,11 +263,10 @@ struct buildJsonMQTT {
     return i;
   }
 
-  bool value_to_json_mqtt(TimestampedFixedValue i) {
-    //wordt niet aangeroepen ivm niet uitvragen van dit type
-    return 0;
+  String value_to_json_mqtt(TimestampedFixedValue i) {
+    return String(i,3);
   }
-  
+
   double value_to_json_mqtt(FixedValue i) {
     return i.int_val()/1000.0;
   }
@@ -370,7 +368,8 @@ void sendMQTTData()
     serializeJson(jsonDoc,buffer);
     MQTTSend("all",buffer);
   }
-  
+  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp));
+
   MQTTsendGas();
   sendMQTTWater();
 
