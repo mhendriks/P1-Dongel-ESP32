@@ -69,8 +69,6 @@ void writeSettings()
   }
 
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), _DEFAULT_HOMEPAGE);
-//  byte min_value = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
-//  if (settingTelegramInterval < min_value)  settingTelegramInterval = min_value;
   if (settingMQTTbrokerPort < 1)    settingMQTTbrokerPort = 1883;
     
   DebugTln(F("Start writing setting data to json settings file"));
@@ -215,8 +213,6 @@ if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
 
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), "DSMRindexEDGE.html");
   
-//  byte min_value = bPre40?MIN_T_INTV_PRE40:MIN_TELEGR_INTV;
-//  if (settingTelegramInterval  < min_value) settingTelegramInterval = min_value;
   if (settingMQTTbrokerPort    < 1) settingMQTTbrokerPort   = 1883;
 
   if (!show) return;

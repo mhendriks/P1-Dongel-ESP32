@@ -57,12 +57,10 @@ static void onWifiEvent (WiFiEvent_t event) {
     switch (event) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED:
         DebugTf ("Connected to %s. Asking for IP address.\r\n", WiFi.BSSIDstr().c_str());
-//        digitalWrite(LED, LED_ON);
         SwitchLED( LED_ON, BLUE );
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
         LogFile("Wifi Connected",true);
-//        digitalWrite(LED, LED_ON);
         SwitchLED( LED_ON, BLUE );
         Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
@@ -71,7 +69,6 @@ static void onWifiEvent (WiFiEvent_t event) {
         WifiConnected = true;
         break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-//        digitalWrite(LED, LED_OFF);
         SwitchLED( LED_OFF, BLUE );
         if (DUE(WifiReconnect)) {
           if ( WifiConnected ) LogFile("Wifi connection lost",true); //log only once 

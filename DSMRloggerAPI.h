@@ -26,10 +26,7 @@
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git
 
 #define JSON_BUFF_MAX     255
-#define MQTT_BUFF_MAX     200
-#define LED_BLINK_MS       80
-#define MIN_TELEGR_INTV     1
-#define MIN_T_INTV_PRE40   10
+#define MQTT_BUFF_MAX     800
 
 P1Reader    slimmeMeter(&Serial1, DTR_IO);
 
