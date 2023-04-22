@@ -9,7 +9,7 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-
+// const APIGW='http://localhost/dsmr-api/v5/local/api/'; //test only
 const APIGW=window.location.protocol+'//'+window.location.host+'/api/';
 
 const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
@@ -21,10 +21,10 @@ const MAX_FILECOUNT     = 30;   //maximum filecount on the device is 30
 const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
 const URL_GITHUB_VERSION   = "https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat";
 
-const jsversie			= 221201;
+const jsversie			   = 221201;
 
-const SQUARE_M_CUBED = "\u33A5";
-const MONTHS_IN_YEAR_NL = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
+const SQUARE_M_CUBED 	   = "\u33A5";
+const MONTHS_IN_YEAR_NL    = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
   
 "use strict";
 
@@ -396,16 +396,17 @@ function SetOnSettings(json){
 	show_hide_column('lastMonthsTable',15,HeeftWater);
 	show_hide_column('lastMonthsTable',16,HeeftWater);
 
-	show_hide_column('lastHoursTable',  3,HeeftGas);
-	show_hide_column('lastDaysTable',   3,HeeftGas);
-	show_hide_column('lastMonthsTable', 9,HeeftGas);
-	show_hide_column('lastMonthsTable',10,HeeftGas);
-	show_hide_column('lastMonthsTable',11,HeeftGas);
-	show_hide_column('lastMonthsTable',12,HeeftGas);
+	if ( Dongle_Config != "p1-q" ) {
+		show_hide_column('lastHoursTable',  3,HeeftGas);
+		show_hide_column('lastDaysTable',   3,HeeftGas);
+		show_hide_column('lastMonthsTable', 9,HeeftGas);
+		show_hide_column('lastMonthsTable',10,HeeftGas);
+		show_hide_column('lastMonthsTable',11,HeeftGas);
+		show_hide_column('lastMonthsTable',12,HeeftGas);
 	
-	show_hide_column('lastMonthsTableCosts',  3,HeeftGas);
-	show_hide_column('lastMonthsTableCosts',  8,HeeftGas);
-
+		show_hide_column('lastMonthsTableCosts',  3,HeeftGas);
+		show_hide_column('lastMonthsTableCosts',  8,HeeftGas);
+	}
 	show_hide_column('lastHoursTable',  2,Injection);
 	show_hide_column('lastDaysTable',  	2,Injection);
 
@@ -415,6 +416,9 @@ function SetOnSettings(json){
 	show_hide_column('lastMonthsTable', 8,Injection);
 	
 	if ( Dongle_Config == "p1-q" ) {
+		show_hide_column('lastHoursTable',  1,false); //hide Power obtained 
+		show_hide_column('lastDaysTable',  	1,false);
+
 		document.getElementById("l1").style.display = "none";
 		document.getElementById("l3").style.display = "none";
 		document.getElementById("l8").style.display = "block";
@@ -492,7 +496,7 @@ function UpdateDash()
 //wartelink
 // 		  	json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"timestamp":{"value":"230104081758W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.667,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.667,"unit":"m3"},"gas_delivered_timestamp":{"value":"230104081758W"}}');
 // 	   	  json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"221231161038W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.613,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.613,"unit":"m3"},"gas_delivered_timestamp":{"value":"221231161038W"}}');
-// json = JSON.parse('{"identification":{"value":"ISk5=2MT382-1000"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"highest_peak_pwr_13mnd":{"value":"-"},"timestamp":{"value":"230329093336S"},"equipment_id":{"value":"-"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":12},"mbus1_equipment_id_tc":{"value":"303030304B414D32"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":35.819,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":6329.819,"unit":"m3"},"gas_delivered_timestamp":{"value":"230329073338S"}}');
+// json = JSON.parse('{"identification":{"value":"ISk5=2MT382-1000"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"highest_peak_pwr_13mnd":{"value":"-"},"timestamp":{"value":"230329093336S"},"equipment_id":{"value":"-"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":12},"mbus1_equipment_id_tc":{"value":"303030304B414D32"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":35.819,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":6329.819,"unit":"m3"},"gas_delivered_timestamp":{"value":"230329073338S"},"water":{"value":517.916,"unit":"m3"}}');
 
 //others
 //    	  json = JSON.parse('{"timestamp":{"value":"220606085610S"},"energy_delivered_tariff1":{"value":55.026,"unit":"kWh"},"energy_delivered_tariff2":{"value":53.923,"unit":"kWh"},"energy_returned_tariff1":{"value":1,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0.398,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"voltage_l1":{"value":232.5,"unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":0,"unit":"A"},"power_delivered_l1":{"value":0.114,"unit":"kW"},"power_delivered_l2":{"value":0.284,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":5471.227,"unit":"m3"},"gas_delivered_timestamp":{"value":"220606085510S"},"water":{"value":379.782,"unit":"m3"}}');	   	  
@@ -1001,79 +1005,6 @@ function show_hide_column2(table, col_no, do_show) {
 			break;
     }
     
- //    if (activeTab == "bActualTab") {
-//       refreshSmActual();
-//       if (tlgrmInterval < 10)
-//             actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
-//       else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
-// 
-//     } else if (activeTab == "bPlafondTab") {
-//       refreshData();
-//     } else if (activeTab == "bHoursTab") {
-//       refreshHours();
-//       clearInterval(tabTimer);
-//       tabTimer = setInterval(refreshHours, 58 * 1000); // repeat every 58s
-// 
-//     } else if (activeTab == "bDaysTab") {
-//       refreshDays();
-//       clearInterval(tabTimer);
-//       tabTimer = setInterval(refreshDays, 58 * 1000); // repeat every 58s
-// 
-//     } else if (activeTab == "bMonthsTab") {
-//       refreshMonths();
-//       clearInterval(tabTimer);
-//       tabTimer = setInterval(refreshMonths, 118 * 1000); // repeat every 118s
-//     
-//     } else if (activeTab == "bSysInfoTab") {
-//       refreshDevInfo();
-//       clearInterval(tabTimer);
-//       tabTimer = setInterval(refreshDevInfo, 58 * 1000); // repeat every 58s
-// 
-//     } else if (activeTab == "bFieldsTab") {
-//       refreshSmFields();
-//       clearInterval(tabTimer);
-//       tabTimer = setInterval(refreshSmFields, 58 * 1000); // repeat every 58s
-// 
-//     } else if (activeTab == "bTelegramTab") {
-//       refreshSmTelegram();
-//       clearInterval(tabTimer); // do not repeat!
-// 
-//     } else if (activeTab == "bInfo_APIdoc") {
-//       //do nothing = static html
-//     } else if (activeTab == "bDashTab") {
-//        readGitHubVersion();
-//        UpdateDash();
-//        clearInterval(tabTimer);
-//        clearInterval(actualTimer);  
-//        tabTimer = setInterval(UpdateDash, 10 * 1000); // repeat every 10s
-//     } else if (activeTab == "bFSExplorer") {
-//       FSExplorer();
-//     } else if (activeTab == "bEditMonths") {
-//       document.getElementById('tabEditMonths').style.display = "block";
-//       document.getElementById('tabEditSettings').style.display = "none";
-//       clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-//       EditMonths();
-// 
-//     } else if (activeTab == "bSettings" || activeTab == "bEditSettings") {
-// 	  refreshDevTime();
-// 	  //refreshDevInfo();
-// 	  data = {};
-//       document.getElementById('tabEditSettings').style.display = 'block';
-//       document.getElementById('tabEditMonths').style.display = "none";
-// 	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-//       refreshSettings();
-//       getDevSettings();
-//       activeTab = "bEditSettings";
-//     } else if (activeTab == "bSysInfoTab") {
-// 	  data = {};
-// 	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-//       refreshDevInfo();
-// 	  tabTimer = setInterval(refreshDevInfo, 10 * 1000); // repeat every 10s
-//     } else if (activeTab == "bInfo_frontend") {
-// 	  data = {};
-// 	  clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-//       FrontendConfig();
-//     } 
   } // openTab()
   
 
@@ -1874,18 +1805,6 @@ function formatFailureLog(svalue) {
 
     //--- hide canvas
     hideAllCharts();
-
-
-	if ( Dongle_Config == "p1-q" ) 	{
-			show_hide_column2('lastHoursTable',1,false);
-			show_hide_column2('lastHoursTable',2,false);
-			show_hide_column2('lastHoursTable',4,false);
-			
-			show_hide_column2('lastDaysTable',1,false);
-			show_hide_column2('lastDaysTable',2,false);
-			show_hide_column2('lastDaysTable',4,false);
-			show_hide_column2('lastDaysTable',5,false);
-	}
 	
     //--- show table
     document.getElementById("lastHours").style.display = "block";
