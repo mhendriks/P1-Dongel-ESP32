@@ -380,7 +380,7 @@ void sendMQTTDataEV() {
     
   fieldsElements = ACTUALELEMENTS;
   
-  if ( bActJsonMQTT ) jsonDoc.clear();
+  jsonDoc.clear();
 
   DSMRdata.applyEach(buildJsonMQTT());
   //check if gas and peak is available
