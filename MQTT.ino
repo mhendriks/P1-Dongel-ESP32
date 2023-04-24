@@ -29,8 +29,8 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
   char msg_payload[500];
     sprintf(msg_topic,"homeassistant/sensor/p1-dongle-pro/%s/config",dev_name);
 //    Debugln(msg_topic);
-  if (strlen(dev_class)) sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"dev_cla\": \"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"state_class\":\"%s\"%s }", dev_name,dev_class, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl);
-  else sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"state_class\":\"%s\"%s }", dev_name, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl);
+  if (strlen(dev_class)) sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"dev_cla\": \"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"stat_cla\":\"%s\"%s,\"dev\": {\"ids\": %d,\"name\": \"%s\", \"mdl\": \"P1 Dongle Pro\",\"mf\": \"Smartstuff\"} }", dev_name,dev_class, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl,WIFI_getChipId(), settingHostname);
+  else sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"stat_cla\":\"%s\"%s,\"dev\": {\"ids\": %d,\"name\": \"%s\", \"mdl\": \"P1 Dongle Pro\",\"mf\": \"Smartstuff\"}}", dev_name, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl,WIFI_getChipId(), settingHostname);
 //    Debugln(msg_payload);
   if (!MQTTclient.publish(msg_topic, msg_payload, true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", msg_topic, msg_payload, (strlen(msg_topic) + strlen(msg_payload)));
 }
