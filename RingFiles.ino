@@ -88,19 +88,19 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, char* Timestamp)
 
 //===========================================================================================
 
-void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec) {
-  uint8_t slot = CalcSlot(ringfiletype, false);
-  writeRingFile(ringfiletype, JsonRec, slot);
-}
+//void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec) {
+////  uint8_t slot = CalcSlot(ringfiletype, false);
+//  writeRingFile(ringfiletype, JsonRec, false);
+//}
 
 //===========================================================================================
 
-void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, byte actSlot) 
+void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) 
 {
   if ( !EnableHistory || !FSmounted ) return; //do nothing
   char key[9] = "";
   byte slot = 0;
-//  uint8_t actSlot = CalcSlot(ringfiletype, false);
+  uint8_t actSlot = CalcSlot(ringfiletype, bPrev);
 //  if ( actSlot == 99 ) return;  // stop if error occured
   StaticJsonDocument<145> rec;
 
@@ -169,10 +169,49 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, byte actSlot
 //    LogFile(log_temp.c_str(),true);
 } // writeRingFile()
 
+/*
+
+ringfiles previous record
+example: 23-04-2023 10:03 ==> in ring file => 23042310
+
+previous records
+Hour: 23042309 -> epoch - 3.600 -> to string
+Day: 230422xx -> epoch - 86.400 -> to string
+Month: 2303xxxx -> month - 1 (if 0 then 12 and year - 1) or epoch - 31 days
+ 
+*/
+
 //===========================================================================================
 void WritePrevRingRecord(E_ringfiletype ringfiletype){
-  uint8_t slot = CalcSlot(ringfiletype, true);
-  writeRingFile(ringfiletype, "", slot);
+//  uint8_t slot = CalcSlot(ringfiletype, true);
+  char tempTS[20];
+  int yr,mth;
+  
+  strncpy( tempTS, actTimestamp, sizeof(tempTS) ); // backup act ts
+//  Debugf("actTS: %s\r\n",actTimestamp);
+  
+  switch ( ringfiletype ) {
+
+    case RINGHOURS :  epochToTimestamp( actT-3600, actTimestamp, sizeof(actTimestamp) );
+                      break;
+    case RINGDAYS :   epochToTimestamp( actT-86400, actTimestamp, sizeof(actTimestamp) );
+                      break;
+    case RINGMONTHS : { // because not all months are 31 days ;-)
+                        yr = YearFromTimestamp(actTimestamp);
+                        mth = MonthFromTimestamp(actTimestamp);
+                        if ( mth == 1) {
+                          mth = 12;
+                          yr--;
+                        } else mth--;
+                        snprintf(actTimestamp, sizeof(actTimestamp),"%2.2d%2.2d2823",yr,mth);
+//                        Debugln(actTimestamp);
+                      break;
+                      }
+  }
+  
+//  Debugf("newTS: %s \r\n",actTimestamp);
+  writeRingFile(ringfiletype, "", true);
+  strncpy( actTimestamp, tempTS, sizeof(tempTS) ); // restore act ts
 }
 
 //===========================================================================================
@@ -189,11 +228,11 @@ void writeRingFiles() {
     P1SetDevFirstUse( false ); 
   }
   //normal 
-  writeRingFile(RINGHOURS, "");
+  writeRingFile(RINGHOURS, "", false);
   yield();
-  writeRingFile(RINGDAYS, "");
+  writeRingFile(RINGDAYS, "", false);
   yield();
-  writeRingFile(RINGMONTHS, "");
+  writeRingFile(RINGMONTHS, "", false);
   
 } // writeRingFiles()
  
