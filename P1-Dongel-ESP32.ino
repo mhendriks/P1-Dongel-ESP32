@@ -36,6 +36,9 @@ TODO
 WiP
 - toevoegen van mdns aanmelding na 1 minuut
 - watermeter mbus type 007 toevoegen (Broes)
+- issue : energieplafond -> fix in firmware
+- update Warmtelink url en mechanisme isoleren (Henry de J)
+- Frontend: teruglevering kosten (Alexander van D)
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
