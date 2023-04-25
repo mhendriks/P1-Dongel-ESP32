@@ -41,10 +41,6 @@ TODO
 
 
 WiP
-√ Add: HA auto Discovery device ID
-√ Fix: Initial date values (previous slot) 
-√ Add: total values counters 1.8.0 en 2.8.0
-√ Fix: PrijsPlafond month only showing up after 1 month
 
 
 ************************************************************************************
