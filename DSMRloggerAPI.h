@@ -70,17 +70,12 @@ using MyData = ParsedData<
   /* String */                ,highest_peak_pwr_13mnd
   /* String */                ,timestamp
   /* String */                ,equipment_id
-#ifndef SE_VERSION
   /* FixedValue */            ,energy_delivered_tariff1
   /* FixedValue */            ,energy_delivered_tariff2
   /* FixedValue */            ,energy_returned_tariff1
   /* FixedValue */            ,energy_returned_tariff2
-#else
   /* FixedValue */            ,energy_delivered_total
-  /* FixedValue */            ,energy_delivered_tariff2
   /* FixedValue */            ,energy_returned_total
-  /* FixedValue */            ,energy_returned_tariff2 
-#endif
   /* String */                ,electricity_tariff
   /* FixedValue */            ,power_delivered
   /* FixedValue */            ,power_returned
