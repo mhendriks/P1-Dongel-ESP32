@@ -133,7 +133,8 @@ class dsmr_dal_burnup{
 	{
 		var ret = [];
 		var sYYMM = (""+nYY)+((nMM<=9)?"0"+nMM:nMM);
-		for(var i=0;i<this.months.data.length; i++)
+// 		console.log("sYYMM: "+sYYMM);
+			for(var i=0;i<this.months.data.length; i++)
 		{
 			var item = this.months.data[i];
 			var date = item.date;
@@ -394,9 +395,9 @@ function parseMonths(json)
 
 //copy of the DMSRindex.js but without the costs
 function expandData_v2(dataIN) {
-	console.log("expandData_v2()");
-	console.log(dataIN);
-
+// 	console.log("expandData_v2()");
+// 	console.log(dataIN);
+	
 	var i;
 	var slotbefore;
 	var AvoidSpikes = true;
@@ -441,8 +442,8 @@ function expandData_v2(dataIN) {
 			
 		}
 	} //endfor
-	console.log(data);
-	console.log("~expandData_v2()");
+// 	console.log(data);
+// 	console.log("~expandData_v2()");
 	return data;
 } // expandData_v2()
 
@@ -489,19 +490,22 @@ function showDays(histdata)
 function prepareDataBURNUP_DAYSINMONTH(histdata)
 {
 	//only this month and no water in the ceiling
-	const [hcED, hcGD, hcWD] = convertRingBufferToStaticHistoryContainerDIM( histdata);
+	const [hcED, hcGD, hcWD] = convertRingBufferToStaticHistoryContainerDIM( histdata );
 
 	//get day 0 values
 	objToday = new Date();
 	nYY = objToday.getFullYear() - 2000;
 	nMM = objToday.getMonth()+1;
+
+// 	console.log("nYY: "+nYY+" nMM: "+nMM);
 	//current month start is previous month end
 	var itemCM = objStorage.getMonth(nYY,nMM-1)[0];
+// 	console.log("itemCM: " + itemCM);
 	var nCED0 = itemCM.values[0] + itemCM.values[1];
 	var nCGD0 = itemCM.values[4];
 	var nCWD0 = itemCM.values[5];
 
-	//get meterreadung previous month
+	//get meter reading previous month
 	if( nMM-2 <= 0)
 	{
 		nYY -= 1;
@@ -509,10 +513,23 @@ function prepareDataBURNUP_DAYSINMONTH(histdata)
 	}
 	else
 		nMM -= 2;
+		
+// 	console.log("nYY: "+nYY+" nMM: "+nMM);
+		
 	var itemPM = objStorage.getMonth(nYY,nMM)[0];
+// 	console.log("itemPM: "+itemPM);
+	if (itemPM != undefined ) {
+
 	var nPED0 = itemPM.values[0] + itemPM.values[1];
 	var nPGD0 = itemPM.values[4];
 	var nPWD0 = itemPM.values[5];
+	} else {
+	// months - 2 = missing
+	nPED0 = 0;
+	nPGD0 = 0;
+	nPWD0 = 0;		
+	
+	}
 
 	//add absolute reading for day0 and calc relative values
 	hcED.current.data = normalizeArray(hcED.current.data, nCED0);
