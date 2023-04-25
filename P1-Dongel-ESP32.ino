@@ -32,13 +32,20 @@ TODO
 - RNGDays 31 days
 - Modbus TCP (a3) Vrij slave adres. Sommige systemen kennen alleen uniek slave adres/id. Maken geen onderscheid in IP adres omdat soms meer RS485/RTU devices achter 1 TCP naar RTU converter (bijvoorbeeld Moxa M-gate) zitten.
 - Modbus Registers van de "Actueel" pagina lijkt me in eerste instantie voldoende. Wel mis ik zo iets als m3 (of liters) gas per uur. Belangrijk bij hybride warmteopwekking (ketel en warmtepomp), waarbij elke liter gas er één te veel is :-). Is natuurlijk ook softwarematig te maken.
-
-WiP
-- toevoegen van mdns aanmelding na 1 minuut
+- Spanning bijhouden ivm overspanningssituaties (Hans Vink)
+- optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
 - watermeter mbus type 007 toevoegen (Broes)
-- issue : energieplafond -> fix in firmware
+- toevoegen van mdns aanmelding na 1 minuut
 - update Warmtelink url en mechanisme isoleren (Henry de J)
 - Frontend: teruglevering kosten (Alexander van D)
+
+
+WiP
+√ Add: HA auto Discovery device ID
+√ Fix: Initial date values (previous slot) 
+√ Add: total values counters 1.8.0 en 2.8.0
+√ Fix: PrijsPlafond month only showing up after 1 month
+
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
