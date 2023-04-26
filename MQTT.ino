@@ -36,7 +36,7 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
 }
 
 void AutoDiscoverHA(){
-#ifndef EVERGI  
+#ifndef BB  
   if (!EnableHAdiscovery) return;
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/power_delivered/config" -m '{"dev_cla": "gas", "name": "Power Delivered", "stat_t": "DSMR-API/power_delivered", "unit_of_meas": "Wh", "val_tpl": "{{ value_json.power_delivered[0].value | round(3) }}" }'
 
@@ -118,9 +118,9 @@ bool connectMQTT_FSM()
     case MQTT_STATE_INIT:  
           {
         LogFile("MQTT Starting",true);
-#ifdef EVERGI
+#ifdef BB
 //          DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbroker, settingMQTTbrokerPort);
-//          MQTTclient.setServer(EVERGI_HOST, EVERGI_PORT);
+//          MQTTclient.setServer(BB_HOST, BB_PORT);
 #else
 //        DebugTln(F("MQTT State: MQTT Initializing"));
         MQTTbrokerIP = MDNS.queryHost(settingMQTTbroker);
@@ -160,10 +160,10 @@ bool connectMQTT_FSM()
           reconnectAttempts++;
 
           //--- If no username, then anonymous connection to broker, otherwise assume username/password.
-#ifdef EVERGI
-//          DebugTf("connect USER [%s] TOKEN [%s]\r\n", EVERGI_USER, EVERGI_TOKEN);
+#ifdef BB
+//          DebugTf("connect USER [%s] TOKEN [%s]\r\n", BB_USER, BB_TOKEN);
           snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
-          MQTTclient.connect("P1-Dongle-Pro",EVERGI_USER, EVERGI_TOKEN,cMsg,1,true,"Offline");
+          MQTTclient.connect("P1-Dongle-Pro",BB_USER, BB_TOKEN,cMsg,1,true,"Offline");
           if (MQTTclient.connected())
           {
             reconnectAttempts = 0;  
@@ -258,7 +258,7 @@ struct buildJsonMQTT {
      char Name[25];
      strncpy(Name,String(Item::name).c_str(),25);
     if ( isInFieldsArray(Name) && i.present() ) {
-#ifdef EVERGI      
+#ifdef BB      
           jsonDoc[Name] = value_to_json_mqtt(i.val());
 #else 
           if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
@@ -349,7 +349,7 @@ void MQTTConnectEV() {
   if ( DUE( reconnectMQTTtimer) ){ 
     LogFile("MQTT: Attempting connection...",true);
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
-    if ( MQTTclient.connect( MqttID, EVERGI_USER, EVERGI_TOKEN, cMsg, 1, true, "Offline" ) ) {
+    if ( MQTTclient.connect( MqttID, BB_USER, BB_TOKEN, cMsg, 1, true, "Offline" ) ) {
 //      reconnectAttempts = 0;  
       LogFile("MQTT: connected",true);
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
@@ -371,7 +371,7 @@ void sendMQTTDataEV() {
      DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
   
   if ( !StaticInfoSend )  { 
-#ifndef EVERGI    
+#ifndef BB    
     MQTTSentStaticInfo(); 
 #else    
     MQTTSentStaticInfoEvergi(); 

@@ -56,7 +56,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define HEATLINK        //first draft
 //#define INSIGHT         
 //#define AP_ONLY
-#define EVERGI
+#define BB
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
@@ -150,7 +150,7 @@ void setup()
 
   esp_register_shutdown_handler(ShutDownHandler);
 
-#ifdef EVERGI
+#ifdef BB
   EvergiMQTTSettings();
 #endif 
 
@@ -182,20 +182,19 @@ void fP1Reader( void * pvParameters ){
 }
 
 //test MQTT 
-//DECLARE_TIMER_SEC(mqtttest,          3);
-//const char* pp = "{'timestamp':'230402232030S','energy_delivered_tariff1':3321.77,'energy_delivered_tariff2':3943.237,'energy_returned_tariff1':0,'energy_returned_tariff2':0,'electricity_tariff':'0001','power_delivered':0.689,'power_returned':0,'voltage_l1':232.2,'voltage_l2':233,'voltage_l3':233.1,'current_l1':0,'current_l2':0,'current_l3':3,'power_delivered_l1':0.003,'power_delivered_l2':0.073,'power_delivered_l3':0.613,'power_returned_l1':0,'power_returned_l2':0,'power_returned_l3':0}";
+DECLARE_TIMER_SEC(mqtttest,3);
 
 void loop () { 
         
         httpServer.handleClient();              
-//        if (DUE(mqtttest)) sendMQTTDataEV_test();
+        if (DUE(mqtttest)) sendMQTTDataEV_test();
         MQTTclient.loop();
         yield();
       
        if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
           P1StatusWrite();
           StaticInfoSend = false;
-#ifdef EVERGI
+#ifdef BB
           MQTTSentStaticInfoEvergi();
 #else 
           MQTTSentStaticInfo();          

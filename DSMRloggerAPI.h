@@ -27,7 +27,7 @@
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git
 
 #define JSON_BUFF_MAX     256
-#define MQTT_BUFF_MAX     1600
+#define MQTT_BUFF_MAX     1000
 
 #define LED_BLINK_MS       80
 #define MIN_TELEGR_INTV     1
@@ -55,10 +55,10 @@ const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {
 
 #include "Debug.h"
 
-#ifdef EVERGI
+#ifdef BB
 
-//#define EVERGI_TEST
-#include "development/evergi.h"
+#define BB_TEST
+#include "development/bb_config.h"
 static char MqttID[30];
 static char StrMac[13]; 
 
@@ -180,7 +180,7 @@ void delayms(unsigned long);
 //===========================GLOBAL VAR'S======================================
 #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
 
-#ifdef EVERGI
+#ifdef BB
   #include "WiFiClientSecure.h"
   WiFiClientSecure wifiClient;
   static PubSubClient MQTTclient(wifiClient);
@@ -245,7 +245,7 @@ bool      bAutoUpdate = true;
 bool      bNewVersionAvailable = false;
 
 //MQTT
-char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[45] = _DEFAULT_MQTT_TOPIC;
+char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[BB_TOPTOPIC_LENGTH] = _DEFAULT_MQTT_TOPIC;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;

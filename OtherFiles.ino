@@ -11,7 +11,7 @@
 
 void GetFile(String filename){
   HTTPClient http;
-#ifdef EVERGI
+#ifdef BB
   wifiClient.setInsecure();
 #endif  
   if(wifiClient.connect(HOST_DATA_FILES, 443)) {
@@ -89,7 +89,7 @@ void writeSettings()
 //  doc["TelegramInterval"] = settingTelegramInterval;
   doc["IndexPage"] = settingIndexPage;
   yield();
-#ifndef EVERGI  
+#ifndef BB  
   doc["MQTTbroker"] = settingMQTTbroker;
   doc["MQTTbrokerPort"] = settingMQTTbrokerPort;
   doc["MQTTUser"] = settingMQTTuser;
@@ -171,7 +171,7 @@ void readSettings(bool show)
 // 
   //sprintf(settingMQTTbroker, "%s:%d", MQTTbroker, MQTTbrokerPort);
 
-#ifndef EVERGI
+#ifndef BB
   strcpy(settingMQTTbroker, doc["MQTTbroker"]);
   settingMQTTbrokerPort = doc["MQTTbrokerPort"];
   strcpy(settingMQTTuser, doc["MQTTUser"]);
@@ -320,7 +320,7 @@ void updateSetting(const char *field, const char *newValue)
 
   if (!stricmp(field, "IndexPage"))        strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), newValue);  
 
-#ifndef EVERGI
+#ifndef BB
   if (!stricmp(field, "mqtt_broker"))  {
     DebugT("settingMQTTbroker! to : ");
     memset(settingMQTTbroker, '\0', sizeof(settingMQTTbroker));

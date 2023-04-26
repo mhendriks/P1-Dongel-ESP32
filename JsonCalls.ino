@@ -267,7 +267,7 @@ void sendDeviceSettings()
   doc["IndexPage"]["type"] = "s";
   doc["IndexPage"]["maxlen"] = sizeof(settingIndexPage) -1;
  
-#ifndef EVERGI
+#ifndef BB
   doc["mqtt_broker"]["value"]  = settingMQTTbroker;
   doc["mqtt_broker"]["type"] = "s";
   doc["mqtt_broker"]["maxlen"] = sizeof(settingMQTTbroker) -1;
