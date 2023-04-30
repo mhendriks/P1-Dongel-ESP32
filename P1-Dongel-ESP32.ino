@@ -11,11 +11,8 @@ TODO
 - feature: nieuwe meter = beginstand op 0
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
 - front-end: functie toevoegen die de beschikbare versies toont (incl release notes) en je dan de keuze geeft welke te flashen. (Erik)
-- remote-update: redirect  na succesvolle update (Erik)
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
-- automatische update
 - influxdb koppeling onderzoeken
-- auto update check + update every night 3:<random> hour
 - issue met reconnect dns name mqtt (Eric)
 - auto switch 3 - 1 fase max fuse
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
@@ -32,16 +29,15 @@ TODO
 - RNGDays 31 days
 - Modbus TCP (a3) Vrij slave adres. Sommige systemen kennen alleen uniek slave adres/id. Maken geen onderscheid in IP adres omdat soms meer RS485/RTU devices achter 1 TCP naar RTU converter (bijvoorbeeld Moxa M-gate) zitten.
 - Modbus Registers van de "Actueel" pagina lijkt me in eerste instantie voldoende. Wel mis ik zo iets als m3 (of liters) gas per uur. Belangrijk bij hybride warmteopwekking (ketel en warmtepomp), waarbij elke liter gas er één te veel is :-). Is natuurlijk ook softwarematig te maken.
-- Spanning bijhouden ivm overspanningssituaties (Hans Vink)
 - optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
-- watermeter mbus type 007 toevoegen (Broes)
 - toevoegen van mdns aanmelding na 1 minuut
 - update Warmtelink url en mechanisme isoleren (Henry de J)
-- Frontend: teruglevering kosten (Alexander van D)
 
 
 WiP
-
+- Frontend: teruglevering kosten (Alexander van D)
+- watermeter mbus type 007 toevoegen (Broes)
+√ add: voltage logging #400 samples every 30s
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -63,6 +59,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define HEATLINK        //first draft
 //#define INSIGHT         
 //#define AP_ONLY
+//#define VOLTAGE
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
@@ -86,7 +83,7 @@ void setup()
     digitalWrite(PRT_LED, true); //default on
   }
 
-  if ( (P1Status.dev_type == PRO_BRIDGE) || (P1Status.dev_type == PRO_ETH) ){
+  if ( (P1Status.dev_type == PRO_BRIDGE) || (P1Status.dev_type == PRO_ETH) || (P1Status.dev_type == PRO_H20_B) ){
     RGBLED.begin();           
     RGBLED.clear();
     RGBLED.show();            
@@ -168,6 +165,12 @@ if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT
   
 //create a task that will be executed in the fP1Reader() function, with priority 2
   if( xTaskCreate( fP1Reader, "p1-reader", 30000, NULL, 2, &tP1Reader ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
+
+#ifdef VOLTAGE
+  //reset at every startup
+  CreateRingVoltage();
+#endif
+
   
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
   
@@ -201,6 +204,11 @@ void loop () {
        handleRemoteUpdate();
        handleButton();
        handleWater();
+       if ( telegramCount == 2 ) { 
+        // check only once
+        WaterReadingAvailable(); 
+//todo        GasReadingAvailable(); 
+       }
   
 } // loop()
 
