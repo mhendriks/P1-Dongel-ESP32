@@ -33,20 +33,28 @@ P1Reader    slimmeMeter(&Serial1, DTR_IO);
 TaskHandle_t tP1Reader; //  own proces for P1 reading
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
-enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS,RINGPROFILE};
+enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS, RINGVOLTAGE};
 
 typedef struct {
     char filename[17];
-    uint8_t slots;
+    uint16_t slots;
     unsigned int seconds;
     int f_len;
   } S_ringfile;
 
-const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, 1494},{"/RNGmonths.json",24+1,0,2474}}; //+1 voor de vergelijking, laatste record wordt niet getoond 
 #define JSON_HEADER_LEN   23  //total length incl new line
 #define DATA_CLOSE        2   //length last row of datafile
 #define DATA_FORMAT      "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}"
 #define DATA_RECLEN      98  //total length incl comma and new line
+
+#ifdef VOLTAGE
+  #define DATA_FORMAT_V    "%-12.12s,%3.3f,%3.3f,%3.3f"
+  #define DATA_RECLEN_V    37  //total length incl comma and new line
+  #define V_SLOTS          400 //# of samples
+  const S_ringfile RingFiles[4] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, (14+1)*(DATA_RECLEN)+DATA_CLOSE+JSON_HEADER_LEN-1 },{"/RNGmonths.json",24+1,0,2474},{"/RNGvoltage.txt",V_SLOTS,0,V_SLOTS*DATA_RECLEN_V}}; 
+#else
+  const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, (14+1)*(DATA_RECLEN)+DATA_CLOSE+JSON_HEADER_LEN-1 },{"/RNGmonths.json",24+1,0,2474}}; //+1 voor de vergelijking, laatste record wordt niet getoond 
+#endif
 
 #include "Debug.h"
 
@@ -223,6 +231,9 @@ float     gasDelivered;
 String    gasDeliveredTimestamp;
 bool      UpdateRequested = false;
 byte      mbusGas = 0;
+byte      mbusWater = 0;
+float     waterDelivered;
+String    waterDeliveredTimestamp;
 bool      StaticInfoSend = false;
 
 //===========================================================================================

@@ -132,6 +132,7 @@ void processSlimmemeter()
 
       //-- handle mbus delivered values
       gasDelivered = modifyMbusDelivered();
+      WaterMbusDelivered();
       
       processTelegram();
       if (Verbose2) DSMRdata.applyEach(showValues());
@@ -170,6 +171,10 @@ void processTelegram(){
     ws_raw.print("/" + CapTelegram + "!" ); //print telegram to dongle port
     ws_raw.println(CRCTelegram, HEX);
   }
+  
+#ifdef VOLTAGE
+  ProcessVoltage();
+#endif  
 
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
@@ -201,6 +206,58 @@ void modifySmFaseInfo()
 } //  modifySmFaseInfo()
 
 //==================================================================================
+void WaterReadingAvailable(){
+  if ( mbusWater ) return;
+  if ( DSMRdata.mbus1_device_type == 7 ) mbusWater = 1;
+  else if ( DSMRdata.mbus2_device_type == 7 ) mbusWater = 2;
+  else if ( DSMRdata.mbus3_device_type == 7 ) mbusWater = 3;
+  else if ( DSMRdata.mbus4_device_type == 7 ) mbusWater = 4;
+}
+
+//==================================================================================
+void WaterMbusDelivered(){
+  switch ( mbusWater ){
+    case 1: 
+            if (DSMRdata.mbus1_delivered_ntc_present) DSMRdata.mbus1_delivered = DSMRdata.mbus1_delivered_ntc;
+            else if (DSMRdata.mbus1_delivered_dbl_present) DSMRdata.mbus1_delivered = DSMRdata.mbus1_delivered_dbl;
+            DSMRdata.mbus1_delivered_present     = true;
+            DSMRdata.mbus1_delivered_ntc_present = false;
+            DSMRdata.mbus1_delivered_dbl_present = false;
+            waterDelivered = (float)(DSMRdata.mbus1_delivered * 1.0);
+            waterDeliveredTimestamp = DSMRdata.mbus1_delivered.timestamp;   
+            break;
+    case 2: 
+            if (DSMRdata.mbus2_delivered_ntc_present) DSMRdata.mbus2_delivered = DSMRdata.mbus2_delivered_ntc;
+            else if (DSMRdata.mbus2_delivered_dbl_present) DSMRdata.mbus2_delivered = DSMRdata.mbus2_delivered_dbl;
+            DSMRdata.mbus2_delivered_present     = true;
+            DSMRdata.mbus2_delivered_ntc_present = false;
+            DSMRdata.mbus2_delivered_dbl_present = false;
+            waterDelivered = (float)(DSMRdata.mbus2_delivered * 1.0);
+            waterDeliveredTimestamp = DSMRdata.mbus2_delivered.timestamp;   
+            break;      
+    case 3: 
+            if (DSMRdata.mbus3_delivered_ntc_present) DSMRdata.mbus3_delivered = DSMRdata.mbus3_delivered_ntc;
+            else if (DSMRdata.mbus3_delivered_dbl_present) DSMRdata.mbus3_delivered = DSMRdata.mbus3_delivered_dbl;
+            DSMRdata.mbus3_delivered_present     = true;
+            DSMRdata.mbus3_delivered_ntc_present = false;
+            DSMRdata.mbus3_delivered_dbl_present = false;
+            waterDelivered = (float)(DSMRdata.mbus3_delivered * 1.0);
+            waterDeliveredTimestamp = DSMRdata.mbus3_delivered.timestamp;   
+            break;    
+    case 4: 
+            if (DSMRdata.mbus4_delivered_ntc_present) DSMRdata.mbus4_delivered = DSMRdata.mbus4_delivered_ntc;
+            else if (DSMRdata.mbus4_delivered_dbl_present) DSMRdata.mbus4_delivered = DSMRdata.mbus4_delivered_dbl;
+            DSMRdata.mbus4_delivered_present     = true;
+            DSMRdata.mbus4_delivered_ntc_present = false;
+            DSMRdata.mbus4_delivered_dbl_present = false;
+            waterDelivered = (float)(DSMRdata.mbus4_delivered * 1.0);
+            waterDeliveredTimestamp = DSMRdata.mbus4_delivered.timestamp;   
+            break;
+    default: break;
+  }
+}
+
+
 float modifyMbusDelivered()
 {
   float tmpGasDelivered = 0;

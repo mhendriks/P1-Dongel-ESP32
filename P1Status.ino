@@ -18,6 +18,7 @@ void P1StatusPrint(){
   }
 
 void P1StatusDefType(){
+  Debugln(F("Devices types: 0 = Pro, 1 = Pro Bridge, 2 = Pro Ethernet, 3 = Pro H2O+"));
   DebugT(F("P1 Status Device Type: "));Debugln(P1Status.dev_type);
   DebugT(F("P1 Status Device Fist Use: "));Debugln(P1Status.FirstUse);
 }

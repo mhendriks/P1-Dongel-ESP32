@@ -149,7 +149,6 @@ void handleKeyInput()
                     break;
       case 'T':   {        
                       char c;
-                      Debugln(F("Devices types: 0 = P1 Pro, 1 = P1 Pro Bridge"));
                       while (TelnetStream.available() > 0) { 
                         c = (char)TelnetStream.read();
                             while (TelnetStream.available() > 0) {(char)TelnetStream.read();} //verwijder extra input

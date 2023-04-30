@@ -25,16 +25,19 @@ void IRAM_ATTR iWater() {
 }
 
 void setupWater() {
+  byte tempIO;
   if ( IO_WATER_SENSOR == -1 ) {
     DebugTln(F("Water sensor : N/A"));
 //    USBSerial.println(F("Water sensor : N/A"));
     return; // water sensor n/a
   }
+    tempIO = IO_WATER_SENSOR;
 #ifdef ARDUINO_ESP32C3_DEV
-    pinMode(IO_WATER_SENSOR, INPUT_PULLUP);
+    if ( P1Status.dev_type == PRO_H20_B ) tempIO = 0;
+    pinMode(tempIO, INPUT_PULLUP);
 #else
-    pinMode(IO_WATER_SENSOR, INPUT);
+    pinMode(tempIO, INPUT);
 #endif
-  attachInterrupt(IO_WATER_SENSOR, iWater, RISING);
+  attachInterrupt(tempIO, iWater, RISING);
   DebugTln(F("WaterSensor setup completed"));
 }
