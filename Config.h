@@ -1,8 +1,8 @@
-  // Device Types
-  #define PRO         0
-  #define PRO_BRIDGE  1
-  #define PRO_ETH     2
-  #define PRO_H20_B   3
+// Device Types
+#define PRO         0
+#define PRO_BRIDGE  1
+#define PRO_ETH     2
+#define PRO_H20_B   3
 
 #define ALL_OPTIONS "[CORE]"
   
@@ -52,18 +52,18 @@
     #define RXP1                10
     #define TXP1               -1 //disable
     #define IO_WATER_SENSOR     5
-#endif
-  #else//v4.2
-    #warning Using ESP32
-    #define LED                14 
-    #define DTR_IO             18 
-    #define RXP1               16
-    #define TXP1                0
-    #define LED_ON              LOW
-    #define LED_OFF             HIGH
-    #define SerialOut           Serial
-    #define IO_WATER_SENSOR    26  
-    #define OTAURL              "http://ota.smart-stuff.nl/"
+#endif //ethernet
+//  #else//v4.2
+//    #warning Using ESP32
+//    #define LED                14 
+//    #define DTR_IO             18 
+//    #define RXP1               16
+//    #define TXP1                0
+//    #define LED_ON              LOW
+//    #define LED_OFF             HIGH
+//    #define SerialOut           Serial
+//    #define IO_WATER_SENSOR    26  
+//    #define OTAURL              "http://ota.smart-stuff.nl/"
   #endif
 #else
   #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.

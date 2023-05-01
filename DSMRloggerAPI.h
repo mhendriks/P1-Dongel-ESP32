@@ -173,6 +173,10 @@ static PubSubClient MQTTclient(wifiClient);
 
 #include "Network.h"
 
+//config
+int8_t IOWater = 0;
+bool UseRGB = false; 
+
 struct Status {
    uint32_t           reboots;
    uint32_t           sloterrors; //deprecated

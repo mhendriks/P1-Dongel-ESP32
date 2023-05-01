@@ -37,6 +37,8 @@ TODO
 WiP
 - Frontend: teruglevering kosten (Alexander van D)
 - watermeter mbus type 007 toevoegen (Broes)
+√ remove ESP32 WROOM Support (Pro v4)
+√ add set configuration (Water/RGB IO)
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -66,14 +68,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //===========================================================================================
 void setup() 
 {
-  SerialOut.begin(115200); //debug stream
-  
-#ifdef ARDUINO_ESP32C3_DEV
+  SerialOut.begin(115200); //debug stream  
   USBSerial.begin(115200); //cdc stream
-#endif
+
+  Debug("\n\n ----> BOOTING....[" _VERSION "] <-----\n\n");
+  DebugTln("The board name is: " ARDUINO_BOARD);
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
-
+  SetConfig();
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
   
@@ -82,20 +84,7 @@ void setup()
     digitalWrite(PRT_LED, true); //default on
   }
 
-  if ( (P1Status.dev_type == PRO_BRIDGE) || (P1Status.dev_type == PRO_ETH) || (P1Status.dev_type == PRO_H20_B) ){
-    RGBLED.begin();           
-    RGBLED.clear();
-    RGBLED.show();            
-    RGBLED.setBrightness(BRIGHTNESS);
-  }
-  // sign of life = ON during setup
-  SwitchLED( LED_ON, BLUE );
-  delay(1000);
-  SwitchLED( LED_OFF, BLUE );
-
   lastReset = getResetReason();
-  Debug("\n\n ----> BOOTING....[" _VERSION "] <-----\n\n");
-  DebugTln("The board name is: " ARDUINO_BOARD);
   DebugT(F("Last reset reason: ")); Debugln(lastReset);
   
 //================ File System =====================================

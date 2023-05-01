@@ -18,6 +18,41 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 "Reset when the vdd voltage is not stable","RTC Watch dog reset digital core and rtc module"};
 
 
+
+//config Pro / Pro bridge / Pro h2o+ (all use same firmware version)
+// IOWater, USERGB
+//Pro         : {5,0}
+//Pro bridge  : {0,1}
+//Pro h2o+    : {0,1}
+
+void SetConfig(){
+  switch ( P1Status.dev_type ) {
+    case PRO       : UseRGB = false; 
+                     IOWater = 5;
+                     break;
+    case PRO_BRIDGE: UseRGB = true; 
+                     IOWater = -1;
+                     break;
+    case PRO_ETH:    UseRGB = true; 
+                     IOWater = -1;
+                     break;
+    case PRO_H20_B:  UseRGB = true; 
+                     IOWater = 0;
+                     break;
+  }
+  Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);
+  if ( UseRGB ){
+    RGBLED.begin();           
+    RGBLED.clear();
+    RGBLED.show();            
+    RGBLED.setBrightness(BRIGHTNESS);
+  }
+  // sign of life = ON during setup or change config
+  SwitchLED( LED_ON, BLUE );
+  delay(1000);
+  SwitchLED( LED_OFF, BLUE );
+}
+
 void FacReset() {
   DebugTln(F("/!\\ Factory reset"));
 //  bFacReset = false;
@@ -28,7 +63,7 @@ void FacReset() {
 
 void ToggleLED(byte mode) {
 
-  if ( P1Status.dev_type == PRO_BRIDGE || P1Status.dev_type == PRO_ETH ) { 
+  if ( UseRGB ) { 
     if ( LEDenabled ) SwitchLED( mode, GREEN ); 
     else { RGBLED.setPixelColor(0,0,0,0);RGBLED.show(); }; 
   } // PRO_BRIDGE
@@ -37,7 +72,7 @@ void ToggleLED(byte mode) {
 }
 
 void SwitchLED( byte mode, byte color) {
-if ( (P1Status.dev_type == PRO_BRIDGE) || (P1Status.dev_type == PRO_ETH) ) {
+if ( UseRGB ) {
     if ( LEDenabled ) {
       byte value = 0;
       if ( mode == LED_ON ) value = 255;

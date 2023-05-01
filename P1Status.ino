@@ -49,6 +49,7 @@ void P1SetDevFirstUse(bool first_use){
 
 void P1SetDevType(){
    preferences.putUShort("dev_type", P1Status.dev_type);
+   SetConfig();
 }
 
 void P1StatusWrite(){
