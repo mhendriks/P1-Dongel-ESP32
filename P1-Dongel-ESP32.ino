@@ -195,7 +195,7 @@ void loop () {
           P1StatusWrite();
           StaticInfoSend = false;
 #ifdef BB
-          MQTTSentStaticInfoEvergi();
+//          MQTTSentStaticInfoEvergi();
 #else 
           MQTTSentStaticInfo();          
 #endif          

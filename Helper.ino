@@ -75,9 +75,9 @@ void ShutDownHandler(){
 
 void P1Reboot(){
     delay(1000);
-    sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
-    MQTTclient.publish(cMsg,"Offline", true); //LWT status update
-    MQTTclient.loop(); //process last events
+//    sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
+//    MQTTclient.publish(cMsg,"Offline", true); //LWT status update
+//    MQTTclient.loop(); //process last events
     ESP.restart();
     delay(2000);  
 }

@@ -352,7 +352,7 @@ void MQTTConnectEV() {
     if ( MQTTclient.connect( MqttID, BB_USER, BB_TOKEN, cMsg, 1, true, "Offline" ) ) {
 //      reconnectAttempts = 0;  
       LogFile("MQTT: connected",true);
-      MQTTclient.publish(cMsg,"Online", true); //LWT = online
+//      MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
 //      MQTTclient.setCallback(MQTTcallback); //set listner update callback
     } else {
@@ -374,7 +374,7 @@ void sendMQTTDataEV() {
 #ifndef BB    
     MQTTSentStaticInfo(); 
 #else    
-    MQTTSentStaticInfoEvergi(); 
+//    MQTTSentStaticInfoEvergi(); 
 #endif
   }
     
@@ -388,10 +388,13 @@ void sendMQTTDataEV() {
     jsonDoc["gas"] = gasDelivered;
     jsonDoc["gas_ts"] = gasDeliveredTimestamp;
   }
+  
+  jsonDoc["ts"] = DSMRdata.timestamp[12] == 'S' ?  epoch(DSMRdata.timestamp.c_str(), 12, false) - 3600 : epoch(DSMRdata.timestamp.c_str(), 12, false) - 7200  ;
   if ( DSMRdata.highest_peak_pwr_present ) jsonDoc["highest_peak_pwr_ts"] = DSMRdata.highest_peak_pwr.timestamp;
   String buffer;
   serializeJson(jsonDoc,buffer);
-  MQTTSend("grid",buffer);
+  if (Verbose2) Debugln(buffer);
+  MQTTSend("measurements",buffer);
   } 
 }
 
