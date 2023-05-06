@@ -6,9 +6,14 @@ void handleWater(){
 }
 
 void sendMQTTWater(){
-  if (!WtrMtr) return;
-  sprintf(cMsg,"%d.%3.3d",P1Status.wtr_m3,P1Status.wtr_l);
-  MQTTSend("water",cMsg);
+  if (!WtrMtr && !mbusWater) return;
+  if ( mbusWater ){
+    MQTTSend( "water_delivered", waterDelivered );
+    MQTTSend( "water_delivered_ts", waterDeliveredTimestamp );    
+  } else {
+    sprintf(cMsg,"%d.%3.3d",P1Status.wtr_m3,P1Status.wtr_l);
+    MQTTSend("water",cMsg);    
+  }
 }
 
 void IRAM_ATTR iWater() {
