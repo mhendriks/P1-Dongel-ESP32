@@ -207,7 +207,7 @@ bool        bRawPort = false;
 bool        bLED_PRT = true;
 
 String      CapTelegram;
-uint16_t    CRCTelegram;
+//uint16_t    CRCTelegram;
 char        cMsg[150];
 String      lastReset           = "";
 bool      FSNotPopulated      = false;
@@ -238,7 +238,10 @@ byte      mbusGas = 0;
 byte      mbusWater = 0;
 float     waterDelivered;
 String    waterDeliveredTimestamp;
+String    mbusDeliveredTimestamp;
+String    smID;
 bool      StaticInfoSend = false;
+
 
 //===========================================================================================
 // setup timers 
