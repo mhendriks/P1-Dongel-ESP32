@@ -1,9 +1,11 @@
 #ifdef STUB
 
+// Parse static test telegram 
+
 DECLARE_TIMER_SEC(StubTimer,  2); // try reconnecting cyclus timer
 
-
-const char P1_1[]  = 
+//warmtelink
+const char P1_1_[]  = 
 "/ISk5\2MT382-1000\r\n"
 "\r\n"
 "1-3:0.2.8(50)\r\n"
@@ -13,7 +15,8 @@ const char P1_1[]  =
 "0-1:24.2.1(230319144324W)(31.177*m3)\r\n"
 "!970c";
 
-const char P1_1_[] =
+//normale 3 fase smr 5
+const char P1_1__[] =
 "/ISK5\2M550T-1012\r\n"
 "\r\n"
 "1-3:0.2.8(50)\r\n"
@@ -53,6 +56,48 @@ const char P1_1_[] =
 "0-1:24.2.1(200923170001S)(02681.397*m3)\r\n"
 "!8d36";
 
+//BE met gas en water en piek waardes
+const char P1_1[] =
+"/FLU5\253769484_A\r\n"
+"\r\n"
+"0-0:96.1.4(50217)\r\n"
+"0-0:96.1.1(3153414733313035323039343933)\r\n"
+"0-0:1.0.0(230421165328S)\r\n"
+"1-0:1.8.1(000056.913*kWh)\r\n"
+"1-0:1.8.2(000184.024*kWh)\r\n"
+"1-0:2.8.1(000083.503*kWh)\r\n"
+"1-0:2.8.2(000015.696*kWh)\r\n"
+"0-0:96.14.0(0001)\r\n"
+"1-0:1.4.0(00.000*kW)\r\n"
+"1-0:1.6.0(230411223000S)(04.509*kW)\r\n"
+"0-0:98.1.0(0)(1-0:1.6.0)(1-0:1.6.0)()\r\n"
+"1-0:1.7.0(00.000*kW)\r\n"
+"1-0:2.7.0(01.739*kW)\r\n"
+"1-0:21.7.0(00.188*kW)\r\n"
+"1-0:41.7.0(00.000*kW)\r\n"
+"1-0:61.7.0(00.000*kW)\r\n"
+"1-0:22.7.0(00.000*kW)\r\n"
+"1-0:42.7.0(00.000*kW)\r\n"
+"1-0:62.7.0(01.928*kW)\r\n"
+"1-0:32.7.0(245.3*V)\r\n"
+"1-0:52.7.0(000.0*V)\r\n"
+"1-0:72.7.0(246.8*V)\r\n"
+"1-0:31.7.0(001.00*A)\r\n"
+"1-0:51.7.0(007.74*A)\r\n"
+"1-0:71.7.0(007.97*A)\r\n"
+"0-0:96.3.10(1)\r\n"
+"0-0:17.0.0(999.9*kW)\r\n"
+"1-0:31.4.0(999*A)\r\n"
+"0-0:96.13.0()\r\n"
+"0-1:24.1.0(007)\r\n"
+"0-1:96.1.1(3853455430303030383337393634)\r\n"
+"0-1:24.2.1(230421165102S)(00003.830*m3)\r\n"
+"0-2:24.1.0(003)\r\n"
+"0-2:96.1.1(37464C4F32313233303135313839)\r\n"
+"0-2:24.4.0(1)\r\n"
+"0-2:24.2.3(230421164959S)(00107.812*m3)\r\n"
+"!438b";
+
 void _handleSTUB(){
   if (DUE(StubTimer)) {
   DebugFlush();
@@ -64,41 +109,13 @@ void _handleSTUB(){
   {
     // Parsing error, show it
     Debugln(res.fullError(P1_1, P1_1 + lengthof(P1_1)));
+    return;
   }
-//  else if (!DSMRdata.all_present())
-//  {
-//    if (Verbose2) DebugTln("DSMR: Some fields are missing");
-//  }
-//  // Succesfully parsed, now process the data!
-//  DebugTln("Processing telegram ..");
-//  // Succesfully parsed, now process the data!
-//  if (!DSMRdata.timestamp_present)
-//  {
-//    sprintf(cMsg, "%02d%02d%02d%02d%02d%02dW\0\0"
-//            , (year(now()) - 2000), month(now()), day(now())
-//            , hour(now()), minute(now()), second(now()));
-//    DSMRdata.timestamp         = cMsg;
-//    DSMRdata.timestamp_present = true;
-//  }
 
   DSMRdata.identification ="TEST DATA";
+  CapTelegram = P1_1;
   processSlimmemeter();
-
   
-//  gasDelivered = modifyMbusDelivered();
-//  modifySmFaseInfo();
-//
-//  //simulate time 
-//  // one +hour = 3600 sec
-////  DSMRdata.timestamp = buildDateTimeString( DSMRdata.timestamp, sizeof(DSMRdata.timestamp)).c_str() );
-//  time_t t;
-//  t = epoch(DSMRdata.timestamp.c_str(), 12, false) + ( 3600 * telegramCount ) ;
-//  strcpy(cMsg, DSMRdata.timestamp.c_str());
-//  epochToTimestamp(t,cMsg , 12);
-//  DSMRdata.timestamp = cMsg + String("S");
-//  processTelegram();
-
-  //Debugf("==>> act date/time [%s] is [%s]\r\n\n", actTimestamp, );
   }
 }
 
