@@ -302,7 +302,7 @@ void MQTTSentStaticInfo(){
   MQTTSend( "firmware",_VERSION_ONLY );
   MQTTSend( "ip_address",WiFi.localIP().toString());
   MQTTSend( "wifi_rssi",String( WiFi.RSSI() ) );
-  if (DSMRdata.mbus1_device_type_present){ MQTTSend("gas_device_type", String(DSMRdata.mbus1_device_type) ); }
+//  if (DSMRdata.mbus1_device_type_present){ MQTTSend("gas_device_type", String(DSMRdata.mbus1_device_type) ); } // always 3
   if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc); }  
 }
 
