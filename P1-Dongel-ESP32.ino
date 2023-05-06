@@ -12,21 +12,14 @@ TODO
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
 - front-end: functie toevoegen die de beschikbare versies toont (incl release notes) en je dan de keuze geeft welke te flashen. (Erik)
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
-- influxdb koppeling onderzoeken
 - issue met reconnect dns name mqtt (Eric)
 - auto switch 3 - 1 fase max fuse
-- localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - issue met basic auth afscherming rng bestanden
 - temparatuur ook opnemen in grafieken (A van Dijken)
 - websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
-- eigen NTP server instellen ( P. bij de Leij )
-- fixed ip kunnen opgeven ( P. bij de Leij )
-- eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - Roberto: P1 H2O watersensor gegevens apart versturen (MQTT) van P1 
 - Sluipverbruik bijhouden
-- issue: wegvallen wifi geen reconnect / reconnect mqtt
-- RNGDays 31 days
 - Modbus TCP (a3) Vrij slave adres. Sommige systemen kennen alleen uniek slave adres/id. Maken geen onderscheid in IP adres omdat soms meer RS485/RTU devices achter 1 TCP naar RTU converter (bijvoorbeeld Moxa M-gate) zitten.
 - Modbus Registers van de "Actueel" pagina lijkt me in eerste instantie voldoende. Wel mis ik zo iets als m3 (of liters) gas per uur. Belangrijk bij hybride warmteopwekking (ketel en warmtepomp), waarbij elke liter gas er één te veel is :-). Is natuurlijk ook softwarematig te maken.
 - optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
@@ -36,9 +29,22 @@ TODO
 
 WiP
 - Frontend: teruglevering kosten (Alexander van D)
-- watermeter mbus type 007 toevoegen (Broes)
+√ watermeter mbus type 007 toevoegen (Broes)
 √ remove ESP32 WROOM Support (Pro v4)
 √ add set configuration (Water/RGB IO)
+√ final P1 Pro H2O bridge support
+- localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
+√ remove USE_NTP option
+
+4.9.0
+- RNGDays 31 days
+- MQTT refactor
+- eigen NTP server instellen ( P. bij de Leij )
+- eigen NTP kunnen opgeven of juist niet (stopt pollen)
+- fixed ip kunnen opgeven ( P. bij de Leij )
+- support https / http mqtt link extern
+- issue: wegvallen wifi geen reconnect / reconnect mqtt
+
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -54,9 +60,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
-//#define USE_NTP_TIME              
 //#define ETHERNET
-//#define STUB            //test only : first draft
+//#define STUB            //test only
 //#define HEATLINK        //first draft
 //#define INSIGHT         
 //#define AP_ONLY
@@ -192,11 +197,6 @@ void loop () {
        handleRemoteUpdate();
        handleButton();
        handleWater();
-       if ( telegramCount == 2 ) { 
-        // check only once
-        WaterReadingAvailable(); 
-//todo        GasReadingAvailable(); 
-       }
   
 } // loop()
 
