@@ -33,10 +33,10 @@ WiP
 √ remove ESP32 WROOM Support (Pro v4)
 √ add set configuration (Water/RGB IO)
 √ final P1 Pro H2O bridge support
-- localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 √ remove USE_NTP option
 
 4.9.0
+- localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
 - MQTT refactor
 - eigen NTP server instellen ( P. bij de Leij )
