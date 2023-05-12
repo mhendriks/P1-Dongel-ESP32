@@ -4,23 +4,8 @@
 #define PRO_ETH     2
 #define PRO_H20_B   3
 
-#define ALL_OPTIONS "[CORE]"
-  
-#ifdef SE_VERSION
-  #undef ALL_OPTIONS
-  #define ALL_OPTIONS "[CORE][SE]"
-#endif
-
-#ifdef ETHERNET
-  #undef ALL_OPTIONS
-  #define ALL_OPTIONS "[CORE][ETHERNET]"
-#endif
-
-#ifdef HEATLINK
-  #undef ALL_OPTIONS
-  #define ALL_OPTIONS "[CORE][Q]"
-#endif
-
+#define BASE_OPTIONS "[CORE]"
+ 
 #ifdef ESP32
   #define MBUS_TYPE 3
   #define _DEFAULT_HOSTNAME   "P1-Dongle-Pro"
@@ -36,6 +21,7 @@
   volatile byte               pressed = 0;
 #ifdef ETHERNET
     #warning Using ESP32C3-ETHERNET
+    #define ALL_OPTIONS BASE_OPTIONS "[ETHERNET]"
     #define LED                 3 // n/a
     #define DTR_IO              0 // n/a not used poort / -1 = error
     #define RXP1                7
@@ -53,23 +39,14 @@
     #define TXP1               -1 //disable
     #define IO_WATER_SENSOR     5
 #endif //ethernet
-//  #else//v4.2
-//    #warning Using ESP32
-//    #define LED                14 
-//    #define DTR_IO             18 
-//    #define RXP1               16
-//    #define TXP1                0
-//    #define LED_ON              LOW
-//    #define LED_OFF             HIGH
-//    #define SerialOut           Serial
-//    #define IO_WATER_SENSOR    26  
-//    #define OTAURL              "http://ota.smart-stuff.nl/"
-  #endif
+#endif //ARDUINO_ESP32C3_DEV
 #else
   #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.
-#endif
+#endif //ESP32
 
 #ifdef HEATLINK
+  #define ALL_OPTIONS BASE_OPTIONS "[Q]"
+
   #undef MBUS_TYPE
   #define MBUS_TYPE 3
   
@@ -79,6 +56,14 @@
   #undef OTAURL
   #define OTAURL              "http://ota.smart-stuff.nl/v5-q/"
 #endif  
+
+#ifdef SE_VERSION
+  #define ALL_OPTIONS BASE_OPTIONS "[SE]"
+#endif
+
+#ifndef ALL_OPTIONS
+ #define ALL_OPTIONS BASE_OPTIONS
+#endif
 
   #define _DEFAULT_MQTT_TOPIC _DEFAULT_HOSTNAME "/"
 
