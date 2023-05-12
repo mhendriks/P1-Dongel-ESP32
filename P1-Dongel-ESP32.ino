@@ -25,6 +25,7 @@ TODO
 - optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
 - toevoegen van mdns aanmelding na 1 minuut
 - update Warmtelink url en mechanisme isoleren (Henry de J)
+- ondersteuning ISTA devices (868MHz)
 
 4.8.4
 - Frontend: teruglevering kosten (Alexander van D)
