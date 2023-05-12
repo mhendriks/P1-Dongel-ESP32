@@ -27,13 +27,16 @@ TODO
 - update Warmtelink url en mechanisme isoleren (Henry de J)
 
 
-WiP
-- Frontend: teruglevering kosten (Alexander van D)
+4.8.3
 √ watermeter mbus type 007 toevoegen (Broes)
 √ remove ESP32 WROOM Support (Pro v4)
 √ add set configuration (Water/RGB IO)
 √ final P1 Pro H2O bridge support
 √ remove USE_NTP option
+
+4.8.4
+- Frontend: teruglevering kosten (Alexander van D)
+- issue initial setup
 
 4.9.0
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
