@@ -26,17 +26,9 @@ TODO
 - toevoegen van mdns aanmelding na 1 minuut
 - update Warmtelink url en mechanisme isoleren (Henry de J)
 
-
-4.8.3
-√ watermeter mbus type 007 toevoegen (Broes)
-√ remove ESP32 WROOM Support (Pro v4)
-√ add set configuration (Water/RGB IO)
-√ final P1 Pro H2O bridge support
-√ remove USE_NTP option
-
 4.8.4
 - Frontend: teruglevering kosten (Alexander van D)
-- issue initial setup
+- issue initial setup (Leo)
 - #18 water en gas ook in de enkele json string (mqtt)
 
 4.9.0
