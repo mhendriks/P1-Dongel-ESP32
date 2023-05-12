@@ -37,6 +37,7 @@ TODO
 4.8.4
 - Frontend: teruglevering kosten (Alexander van D)
 - issue initial setup
+- #18 water en gas ook in de enkele json string (mqtt)
 
 4.9.0
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
