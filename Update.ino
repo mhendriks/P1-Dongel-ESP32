@@ -11,19 +11,21 @@
 bool bWebUpdate = false;
 
 void handleUpdate() {
-  
-  if ( DUE(AutoUpdate) ) { 
-      if ( bAutoUpdate ) {
-        CheckNewVersion();
-        if ( bNewVersionAvailable ) {
-          LogFile("AutoUpdate - new version available",true);
-          RemoteUpdate(UpdateVersion, true);
-        }
-        else LogFile("AutoUpdate - NO new version available",true);
-      }
+  if ( DUE(AutoUpdate) ) {
+    //time to check for updates
+      if ( bAutoUpdate ) { //auto update ON
+        if ( CheckNewVersion() ) {
+          //check was succesful
+          if ( bNewVersionAvailable ) {
+            LogFile("AutoUpdate - new version available",true);
+            RemoteUpdate(UpdateVersion, true);
+            return;            
+          } else LogFile("AutoUpdate - NO new version available",true);
+        } else  LogFile("AutoUpdate - error when checking for new version",true); //CheckNewVersion
+      } else LogFile("AutoUpdate - turned OFF in settings",true);
       CHANGE_INTERVAL_MIN(AutoUpdate, UPDATE_INTERVAL);
-  }
-  
+  }//DUE(AutoUpdate)
+   
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
 }
 
@@ -136,7 +138,7 @@ void RemoteUpdate(const char* versie, bool sketch){
 
 //---------------
 
-void CheckNewVersion() {
+bool CheckNewVersion() {
   DebugTln( F("Version update check") );
   HTTPClient http;
   snprintf( cMsg, sizeof( cMsg ), "%s%s",BaseOTAurl, "version-manifest.json" );
@@ -146,7 +148,7 @@ void CheckNewVersion() {
   if ( httpResponseCode<=0 ) { 
     Debug(F("Error code: "));Debugln(httpResponseCode);
     CHANGE_INTERVAL_MIN(AutoUpdate, 60); //try again over 60 min
-    return; //leave on error
+    return false; //leave on error
   }
   
 //  Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
@@ -162,19 +164,20 @@ void CheckNewVersion() {
   if (error) {
     Debugln(F("Error deserialisation Json"));
     CHANGE_INTERVAL_MIN(AutoUpdate, 60); //try again over 60 min
-    return;
+    return false;
   }
   snprintf(UpdateVersion,sizeof(UpdateVersion),"%i.%i.%i",int(manifest["major"]), (int)manifest["minor"], (int)manifest["fix"]);
   Debugf( "Latest version : %s\n\r", UpdateVersion );
   Debugf( "Current version: %i.%i.%i\n\r", _VERSION_MAJOR, _VERSION_MINOR, _VERSION_PATCH );
 
 
-//(A<X) OR ((A=X) AND (B<Y)) OR ((A=X) AND (B=Y) AND (C<Z))
-
-if ( manifest["major"] > _VERSION_MAJOR ) bNewVersionAvailable = true;
-else if ( (manifest["major"] = _VERSION_MAJOR) && (manifest["minor"] > _VERSION_MINOR) ) bNewVersionAvailable = true;
-else if ( (manifest["major"] = _VERSION_MAJOR) && (manifest["minor"] = _VERSION_MINOR) && (manifest["fix"] > _VERSION_PATCH) ) bNewVersionAvailable = true;
-Debug( F("New version available (y/n): ") );Debugln(bNewVersionAvailable);
+  //(A<X) OR ((A=X) AND (B<Y)) OR ((A=X) AND (B=Y) AND (C<Z))
+  
+  if ( manifest["major"] > _VERSION_MAJOR ) bNewVersionAvailable = true;
+  else if ( (manifest["major"] = _VERSION_MAJOR) && (manifest["minor"] > _VERSION_MINOR) ) bNewVersionAvailable = true;
+  else if ( (manifest["major"] = _VERSION_MAJOR) && (manifest["minor"] = _VERSION_MINOR) && (manifest["fix"] > _VERSION_PATCH) ) bNewVersionAvailable = true;
+  Debug( F("New version available (y/n): ") );Debugln(bNewVersionAvailable);
+  return true;
 } //CheckNewVersion
 
 

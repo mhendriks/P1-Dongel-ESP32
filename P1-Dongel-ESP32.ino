@@ -62,8 +62,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 #include "DSMRloggerAPI.h"
 
 //===========================================================================================
-void setup() 
-{
+void setup() {
   SerialOut.begin(115200); //debug stream
   
 #ifdef ARDUINO_ESP32C3_DEV
@@ -204,7 +203,6 @@ void loop () {
        }
        
        handleKeyInput();
-//       handleRemoteUpdate();
        handleButton();
        handleWater();
        handleUpdate();

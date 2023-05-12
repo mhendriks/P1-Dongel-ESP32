@@ -101,4 +101,4 @@
 #define SETTINGS_FILE      "/DSMRsettings.json"
 #define HOST_DATA_FILES    "cdn.jsdelivr.net"
 #define PATH_DATA_FILES    "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/data"
-#define UPDATE_INTERVAL    720 //minutes = 12h
+#define UPDATE_INTERVAL    720 //minutes 720 = 12h (twice a day)
