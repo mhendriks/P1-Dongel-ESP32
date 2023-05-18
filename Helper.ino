@@ -104,6 +104,7 @@ void ShutDownHandler(){
   P1StatusWrite();
   P1StatusEnd();
   DebugTln(F("/!\\ SHUTDOWN /!\\"));
+  DebugFlush();
 }
 
 //===========================================================================================
