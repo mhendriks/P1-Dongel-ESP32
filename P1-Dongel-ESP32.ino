@@ -105,7 +105,7 @@ void setup() {
 //================ Status update ===================================
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
   P1StatusWrite();
-  LogFile("",false); // write reboot status to file
+  Log2File("", true); // write reboot status to file
   readSettings(true);
   
 //=============start Networkstuff ==================================

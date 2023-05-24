@@ -387,8 +387,7 @@ void updateSetting(const char *field, const char *newValue)
 } // updateSetting()
 
 //=======================================================================
-void LogFile(const char* payload, bool toDebug = false) {
-  if (toDebug) DebugTln(payload);
+void Log2File(const char* payload, bool reboot ){
   if (!FSmounted) return;
   File LogFile = LittleFS.open("/P1.log", "a"); // open for appending  
   if (!LogFile) {
@@ -406,7 +405,7 @@ void LogFile(const char* payload, bool toDebug = false) {
     LogFile = LittleFS.open("/P1.log", "a"); // open for appending  
     }
     
-    if (strlen(payload)==0) {
+    if ( reboot ) {
       //reboot
       //make one record : {"time":"2020-09-23 17:03:25","reason":"Software/System restart","reboots":42}
       LogFile.println("{\"time\":\"" + buildDateTimeString(actTimestamp, sizeof(actTimestamp)) + "\",\"reboot\":\"" + lastReset + "\",\"reboots\":" +  (int)P1Status.reboots + "}");
@@ -416,6 +415,12 @@ void LogFile(const char* payload, bool toDebug = false) {
     }
     //closing the file
     LogFile.close(); 
+}
+
+
+void LogFile(const char* payload, bool toDebug ) {
+  if (toDebug) DebugTln(payload);
+  Log2File(payload, false);
 }
 
 /***************************************************************************

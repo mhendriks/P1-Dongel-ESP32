@@ -347,18 +347,17 @@ void MQTTsendGas(){
 void MQTTConnectEV() {
   //try every 5 sec
   if ( DUE( reconnectMQTTtimer) ){ 
-    LogFile("MQTT: Attempting connection...",true);
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
     if ( MQTTclient.connect( MqttID, EVERGI_USER, EVERGI_TOKEN, cMsg, 1, true, "Offline" ) ) {
 //      reconnectAttempts = 0;  
-      LogFile("MQTT: connected",true);
+      LogFile("MQTT: Attempting connection... connected", true);
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
 //      MQTTclient.setCallback(MQTTcallback); //set listner update callback
     } else {
-      LogFile( String("MQTT: connection failed status: " + MQTTclient.state()).c_str() ,true);
+      LogFile("MQTT: Attempting connection... connection FAILED", true);
     }
-  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
+  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 10);
   }  
 }
 
