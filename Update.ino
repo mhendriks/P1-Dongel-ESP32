@@ -19,7 +19,7 @@ void update_finished() {
 }
 
 void update_started() {
-  LogFile("OTA UPDATE started",true);
+  LogFile("OTA UPDATE started", true);
   if (bWebUpdate) httpServer.send(200, "text/html", "OTA update gestart, duurt ca. 2 - 3 minuten...");
 }
 

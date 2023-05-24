@@ -234,7 +234,7 @@ struct buildJsonMQTT {
     template<typename Item>
     void apply(Item &i) {
      char Name[25];
-     strncpy(Name,String(Item::name).c_str(),25);
+     strncpy(Name,String(Item::name).c_str(),sizeof(Name));
     if ( isInFieldsArray(Name) && i.present() ) {
           if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
           else {
@@ -311,7 +311,7 @@ void MQTTsendGas(){
   if (!gasDelivered) return;
 #ifdef HEATLINK
   MQTTSend( "heat_delivered", gasDelivered );
-//  MQTTSend( "heat_delivered_timestamp", gasDeliveredTimestamp ); // double: because device timestamp is equal
+//  MQTTSend( "heat_delivered_ts", gasDeliveredTimestamp ); // double: because device timestamp is equal
 #else
   MQTTSend( "gas_delivered", gasDelivered );
   MQTTSend( "gas_delivered_timestamp", gasDeliveredTimestamp );

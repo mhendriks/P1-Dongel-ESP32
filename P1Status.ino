@@ -24,18 +24,12 @@ void P1StatusDefType(){
 }
   
 void P1StatusRead(){
-    /*  
-    size_t schLen = preferences.getBytes("Status", NULL, NULL);
-    char buffer[schLen]; // prepare a buffer for the data
-    preferences.getBytes("Status", buffer, schLen);
-    */
-
     P1Status.reboots = preferences.getUInt("reboots", 0);
     P1Status.sloterrors = preferences.getUInt("sloterrors", 0);
     preferences.getString("timestamp",P1Status.timestamp,14);
     P1Status.wtr_m3 = preferences.getShort("wtr_m3", 0);
     P1Status.wtr_l = preferences.getUInt("wtr_l", 0);
-    P1Status.dev_type = preferences.getUShort("dev_type", 0);
+    P1Status.dev_type = preferences.getUShort("dev_type", PRO);
     P1Status.FirstUse = preferences.getBool("first_use", false);
     if (strlen(P1Status.timestamp)!=13) strcpy(P1Status.timestamp,"010101010101X"); 
     strcpy(actTimestamp, P1Status.timestamp);

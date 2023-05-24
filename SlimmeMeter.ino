@@ -53,10 +53,10 @@ void handleSlimmemeter()
     slimmeMeter.loop();
     if (slimmeMeter.available()) {
       ToggleLED(LED_ON);
-      CapTelegram = "/" + slimmeMeter.raw() + "!" + String(slimmeMeter.GetCRC(), HEX); //capture last telegram
+      CapTelegram = "/" + slimmeMeter.raw() + "!" + slimmeMeter.GetCRC_str(); //capture last telegram
       if (showRaw) {
         //-- process telegrams in raw mode
-        Debugf("Telegram Raw (%d)\n/%s!%x\n", slimmeMeter.raw().length(), slimmeMeter.raw().c_str(), slimmeMeter.GetCRC() ); 
+        Debugf("Telegram Raw (%d)\n%s\n", slimmeMeter.raw().length(), CapTelegram ); 
         showRaw = false; //only 1 reading
       } else processSlimmemeter();
       ToggleLED(LED_OFF);
@@ -157,6 +157,7 @@ void processSlimmemeter() {
     {
       telegramErrors++;
       DebugTf("Parse error\r\n%s\r\n\r\n", DSMRerror.c_str());
+      DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
       slimmeMeter.clear(); //on errors clear buffer
     }
 #endif    
