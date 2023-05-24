@@ -25,12 +25,14 @@ TODO
 - optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
 - toevoegen van mdns aanmelding na 1 minuut
 - update Warmtelink url en mechanisme isoleren (Henry de J)
-- ondersteuning ISTA devices (868MHz)
+- ondersteuning ISTA devices (868MHz) - Jan Winder
 
 4.8.4
-- Frontend: teruglevering kosten (Alexander van D)
 - issue initial setup (Leo)
 - #18 water en gas ook in de enkele json string (mqtt)
+√ fix: startup led blink
+√ crc hex issue (no leading 0) solves errors Domoticz integration
+√ Watermeter pin always pullup
 
 4.9.0
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
@@ -77,9 +79,11 @@ void setup()
   DebugTln("The board name is: " ARDUINO_BOARD);
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
-  SetConfig();
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
+  if ( IOWater ) pinMode(IOWater, INPUT_PULLUP);
+  
+  SetConfig();
   
   if ( P1Status.dev_type == PRO_BRIDGE ) {
     pinMode(PRT_LED, OUTPUT);

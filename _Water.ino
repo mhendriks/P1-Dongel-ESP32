@@ -35,7 +35,6 @@ void setupWater() {
 //    USBSerial.println(F("Water sensor : N/A"));
     return; // water sensor n/a
   }
-  pinMode(IOWater, INPUT_PULLUP);
   attachInterrupt(IOWater, iWater, RISING);
   DebugTln(F("WaterSensor setup completed"));
 }
