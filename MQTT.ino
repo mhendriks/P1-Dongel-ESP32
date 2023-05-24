@@ -1,28 +1,7 @@
-/* 
-***************************************************************************  
-**  Program  : MQTTstuff, part of DSMRloggerAPI
-**  Version  : v4.2.1
-**
-**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
-**
-**  TERMS OF USE: MIT License. See bottom of file.                                                            
-***************************************************************************      
-**  RvdB  changed MQTT stuff to FSM 
-**  AaW   simplified and restructured the FSM 
-*/
-
-// Declare some variables within global scope
-
   static IPAddress    MQTTbrokerIP;
   static char         MQTTbrokerIPchar[20];
   int8_t              reconnectAttempts = 0;
-//  char                lastMQTTtimestamp[15] = "-";
-//  char                mqttBuff[100];
-
-//  enum states_of_MQTT { MQTT_STATE_INIT, MQTT_STATE_TRY_TO_CONNECT, MQTT_STATE_IS_CONNECTED, MQTT_STATE_ERROR };
-//  enum states_of_MQTT stateMQTT = MQTT_STATE_INIT;
-
-  String            MQTTclientId;
+  String              MQTTclientId;
 
 void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char* dev_title, const char* dev_unit, const char* dev_payload, const char* state_class, const char* extrapl ){
   char msg_topic[80];
@@ -72,33 +51,7 @@ void AutoDiscoverHA(){
 #endif
 }
 
-/*
 //===========================================================================================
-void connectMQTT() {
-
-  if (Verbose2) DebugTf("MQTTclient.connected(%d), mqttIsConnected[%d], stateMQTT [%d]\r\n", MQTTclient.connected(), mqttIsConnected, stateMQTT);
-
-  if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) {
-    mqttIsConnected = false;
-    return;
-  }
-
-  if (!MQTTclient.connected() || stateMQTT != MQTT_STATE_IS_CONNECTED)
-  {
-    mqttIsConnected = false;
-    stateMQTT = MQTT_STATE_INIT;
-  }
-
-  mqttIsConnected = connectMQTT_FSM();
-  
-  if (Verbose1) DebugTf("connected()[%d], mqttIsConnected[%d], stateMQTT [%d]\r\n", MQTTclient.connected(), mqttIsConnected, stateMQTT);
-
-  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
-
-}
-
-//===========================================================================================
-*/
 static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
   if (length > 24) return;
   sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
@@ -109,141 +62,8 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
   DebugT("Message arrived [");Debug(topic);Debug("] ");Debugln(UpdateVersion);
   UpdateRequested = true;
 }
-/*
-//===========================================================================================
-bool connectMQTT_FSM() 
-{  
-  switch(stateMQTT) 
-  {
-    case MQTT_STATE_INIT:  
-          {
-        LogFile("MQTT Starting",true);
-#ifdef EVERGI
-//          DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbroker, settingMQTTbrokerPort);
-//          MQTTclient.setServer(EVERGI_HOST, EVERGI_PORT);
-#else
-//        DebugTln(F("MQTT State: MQTT Initializing"));
-        MQTTbrokerIP = MDNS.queryHost(settingMQTTbroker);
-        if (isValidIP(MQTTbrokerIP)) {
-          DebugT("queryHost: IP address of server: ");Debugln(MQTTbrokerIP.toString());
-        } else {
-          DebugTln(F("queryHost MQTT failed"));
-//          WiFi.hostByName(settingMQTTbroker, MQTTbrokerIP);  // try to connect directly with ip
-            if (MQTTbrokerIP.fromString(settingMQTTbroker)) DebugTln(F("MQTT ip setting = valid ip-address"));
-        }
- 
-          snprintf(MQTTbrokerIPchar, sizeof(MQTTbrokerIPchar), "%d.%d.%d.%d", MQTTbrokerIP[0], MQTTbrokerIP[1], MQTTbrokerIP[2], MQTTbrokerIP[3]);
-          if (!isValidIP(MQTTbrokerIP))  
-          {
-            DebugTf("ERROR: [%s] => is not a valid URL\r\n", settingMQTTbroker);
-            settingMQTTinterval = 0;
-            stateMQTT = MQTT_STATE_ERROR;
-            LogFile("MQTT Error : not connected",false);
-            return false;
-          }
-          
-          //MQTTclient.disconnect();
-          //DebugTf("disconnect -> MQTT status, rc=%d \r\n", MQTTclient.state());
-          DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, MQTTbrokerIPchar, settingMQTTbrokerPort);
-          MQTTclient.setServer(MQTTbrokerIPchar, settingMQTTbrokerPort);
-#endif
-          DebugTf("setServer  -> MQTT status, rc=%d \r\n", MQTTclient.state());
-          stateMQTT = MQTT_STATE_TRY_TO_CONNECT;
-          reconnectAttempts = 0;
-          }
-    case MQTT_STATE_TRY_TO_CONNECT:
-//          DebugTln(F("MQTT State: MQTT try to connect"));
-          LogFile("MQTT State: MQTT try to connect",false);
-          DebugTf("MQTT server is [%s], IP[%s]\r\n", settingMQTTbroker, MQTTbrokerIPchar);
-          
-          DebugTf("Attempting MQTT connection as [%s] .. \r\n", MQTTclientId.c_str());
-          reconnectAttempts++;
-
-          //--- If no username, then anonymous connection to broker, otherwise assume username/password.
-#ifdef EVERGI
-//          DebugTf("connect USER [%s] TOKEN [%s]\r\n", EVERGI_USER, EVERGI_TOKEN);
-          snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
-          MQTTclient.connect("P1-Dongle-Pro",EVERGI_USER, EVERGI_TOKEN,cMsg,1,true,"Offline");
-          if (MQTTclient.connected())
-          {
-            reconnectAttempts = 0;  
-            Debugf(" .. connected -> MQTT status, rc=%d\r\n", MQTTclient.state());
-            MQTTclient.publish(cMsg,"Online", true); //LWT = online
-
-#else          
-          sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
-          if (String(settingMQTTuser).length() == 0) 
-          {
-            DebugT(F("without a Username/Password "));
-            MQTTclientId  = String(settingHostname) + "-" + WiFi.macAddress();
-            MQTTclient.connect(MQTTclientId.c_str(),"","",cMsg,1,true,"Offline");
-          } 
-          else 
-          {
-            DebugTf("with Username [%s] and password ", settingMQTTuser);
-            MQTTclient.connect(MQTTclientId.c_str(), settingMQTTuser, settingMQTTpasswd,cMsg,1,true,"Offline");
-          }
-       
-          //--- If connection was made succesful, move on to next state...
-          if (MQTTclient.connected())
-          {
-            reconnectAttempts = 0;  
-            Debugf(" .. connected -> MQTT status, rc=%d\r\n", MQTTclient.state());
-
-            AutoDiscoverHA();
-
-            //subscribe mqtt update topics
-            MQTTclient.publish(cMsg,"Online", true);
-            MQTTclient.setCallback(MQTTcallback); //set listner update callback
-            sprintf(cMsg,"%supdate",settingMQTTtopTopic);
-            MQTTclient.subscribe(cMsg); //subscribe mqtt update
-            sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
-            MQTTclient.subscribe(cMsg); //subscribe mqtt update
-#endif  
-            LogFile("MQTT connected",false);
-            MQTTclient.loop();
-            stateMQTT = MQTT_STATE_IS_CONNECTED;
-            return true;
-          }
- 
-          Debugf(" -> MQTT status, rc=%d \r\n", MQTTclient.state());
-      
-          //--- After 3 attempts... go wait for a while.
-          if (reconnectAttempts >= 3)
-          {
-            DebugTln(F("3 attempts have failed. Retry wait for next reconnect in 10 minutes\r"));
-            stateMQTT = MQTT_STATE_ERROR;  // if the re-connect did not work, then return to wait for reconnect
-          }   
-          break;
-          
-    case MQTT_STATE_IS_CONNECTED:
-          LogFile("MQTT connected",false);
-          MQTTclient.loop();
-          return true;
-
-    case MQTT_STATE_ERROR:
-//          DebugTln(F("MQTT State: MQTT ERROR, wait for 5 sec, before trying again"));
-          LogFile("MQTT Error: retry after 5 seconds",true);
-          //--- next retry in 10 minutes.
-          CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
-          break;
-    default:
-          DebugTln(F("MQTT State: default, this should NEVER happen!"));
-          //--- do nothing, this state should not happen
-          stateMQTT = MQTT_STATE_INIT;
-          CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
-          DebugTln(F("Next State: MQTT_STATE_INIT"));
-          break;
-  }
-
-  return false; 
-  
-} // connectMQTT_FSM()
-
-*/
 
 //=======================================================================
-
 struct buildJsonMQTT {
 /* twee types
  *  {energy_delivered_tariff1":[{"value":11741.29,"unit":"kWh"}]}"
@@ -332,7 +152,7 @@ void MQTTSentStaticInfo(){
   if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc); }  
 }
 
-//---------------------------------------------------------------
+//===========================================================================================
 void MQTTsendGas(){
   if (!gasDelivered) return;
 #ifdef HEATLINK
@@ -344,6 +164,7 @@ void MQTTsendGas(){
 #endif
 }
 
+//===========================================================================================
 void MQTTConnectEV() {
   //try every 5 sec
   if ( DUE( reconnectMQTTtimer) ){ 
@@ -361,6 +182,7 @@ void MQTTConnectEV() {
   }  
 }
 
+//===========================================================================================
 void sendMQTTDataEV() {
 
 //TODO: log to file on error or reconnect
@@ -393,101 +215,3 @@ void sendMQTTDataEV() {
   MQTTSend("grid",buffer);
   } 
 }
-
-/*
-//---------------------------------------------------------------
-void sendMQTTData() 
-{
-//  String dateTime, topicId, json;
-
-  if ((settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) || bailout() ) return;
-  
-
-  //make proper TopTopic
-  if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') snprintf(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), "%s/",  settingMQTTtopTopic);
-  
-  if (MQTTclient.connected() && !mqttIsConnected) {
-    sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
-    MQTTclient.publish(cMsg,"Offline", true); //LWT status update
-    MQTTclient.disconnect(); //disconnect when connection is not allowed
-  }
-  
-  if (!MQTTclient.connected() || !mqttIsConnected) DebugTf("MQTTclient.connected(%d), mqttIsConnected[%d], stateMQTT [%d]\r\n", MQTTclient.connected(), mqttIsConnected, stateMQTT);
-
-  if (!MQTTclient.connected())  
-  {
-    if ( DUE( reconnectMQTTtimer) || mqttIsConnected)
-    {
-      mqttIsConnected = false;
-      StaticInfoSend = false; //zorg voor resend retained info
-      connectMQTT();
-    }
-    else
-    {
-      DebugTf("trying to reconnect in less than %d seconds\r\n", (TIME_LEFT_SEC(reconnectMQTTtimer) +1) );
-    }
-    if ( !mqttIsConnected ) 
-    {
-      DebugTln(F("no connection with a MQTT broker .."));
-      return;
-    }
-  }
-
-  DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
-  
-  if ( !StaticInfoSend )  { 
-#ifndef EVERGI    
-    MQTTSentStaticInfo(); 
-#else    
-    MQTTSentStaticInfoEvergi(); 
-#endif
-  }
-    
-  fieldsElements = ACTUALELEMENTS;
-  
-  if ( bActJsonMQTT ) jsonDoc.clear();
-
-  DSMRdata.applyEach(buildJsonMQTT());
-  
-#ifdef EVERGI
-    //TODO: ADD GAS FIRST
-    String buffer;
-    serializeJson(jsonDoc,buffer);
-    MQTTSend("grid",buffer);
-#else    
-  if ( bActJsonMQTT ) {
-    String buffer;
-    serializeJson(jsonDoc,buffer);
-    MQTTSend("all",buffer);
-  }
-  
-  MQTTsendGas();
-  sendMQTTWater();
-#endif 
-
-} // sendMQTTData()
-*/
-
-/***************************************************************************
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to permit
-* persons to whom the Software is furnished to do so, subject to the
-* following conditions:
-*
-* The above copyright notice and this permission notice shall be included
-* in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
-* THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-* 
-****************************************************************************
-*/
