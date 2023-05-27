@@ -26,13 +26,14 @@ TODO
 - toevoegen van mdns aanmelding na 1 minuut
 - update Warmtelink url en mechanisme isoleren (Henry de J)
 - ondersteuning ISTA devices (868MHz) - Jan Winder
+- Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
+- #18 water en gas ook in de enkele json string (mqtt)
 
 4.8.4
-- issue initial setup (Leo)
-- #18 water en gas ook in de enkele json string (mqtt)
+√ issue initial setup, wrong slots write (Leo)
 √ fix: startup led blink
 √ crc hex issue (no leading 0) solves errors Domoticz integration
-√ Watermeter pin always pullup
+√ Watermeter pin always pullup (non floating)
 
 4.9.0
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
@@ -105,7 +106,6 @@ void setup()
   P1StatusWrite();
   LogFile("",false); // write reboot status to file
   readSettings(true);
-  
 //=============start Networkstuff ==================================
 #ifndef ETHERNET
   #ifndef AP_ONLY

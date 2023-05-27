@@ -35,9 +35,6 @@ struct showValues {
       TelnetStream.print(F(": "));
       TelnetStream.print(i.val());
       TelnetStream.println(Item::unit());
-    //} else 
-    //{
-    //  TelnetStream.print(F("<no value>"));
     }
   }
 };
@@ -106,10 +103,8 @@ void processSlimmemeter() {
     if (slimmeMeter.parse(&DSMRdata, &DSMRerror))   // Parse succesful
     {
 #endif      
-
-      if ( telegramCount == 1) { //only the first time 
-        SMCheckOnce();
-      } else {
+      if ( telegramCount == 1) SMCheckOnce(); //only the first telegram
+      else {
         //use the keys from the initial check; saves processing power
         DSMRdata.identification = smID;
         if ( !DSMR_NL ){
