@@ -49,7 +49,7 @@ void SetConfig(){
   }
   // sign of life = ON during setup or change config
   SwitchLED( LED_ON, BLUE );
-  delay(1000);
+  delay(2000);
   SwitchLED( LED_OFF, BLUE );
 }
 
