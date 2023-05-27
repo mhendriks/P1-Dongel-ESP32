@@ -191,14 +191,14 @@ void WritePrevRingRecord(E_ringfiletype ringfiletype){
 //  Debugf("actTS: %s\r\n",actTimestamp);
   
   switch ( ringfiletype ) {
-
-    case RINGHOURS :  epochToTimestamp( actT-3600, actTimestamp, sizeof(actTimestamp) );
+    //use newT because actT is not set at the first telegram
+    case RINGHOURS :  epochToTimestamp( newT-3600, actTimestamp, sizeof(actTimestamp) );
                       break;
-    case RINGDAYS :   epochToTimestamp( actT-86400, actTimestamp, sizeof(actTimestamp) );
+    case RINGDAYS :   epochToTimestamp( newT-86400, actTimestamp, sizeof(actTimestamp) );
                       break;
     case RINGMONTHS : { // because not all months are 31 days ;-)
-                        yr = YearFromTimestamp(actTimestamp);
-                        mth = MonthFromTimestamp(actTimestamp);
+                        yr = YearFromTimestamp(DSMRdata.timestamp.c_str());
+                        mth = MonthFromTimestamp(DSMRdata.timestamp.c_str());
                         if ( mth == 1) {
                           mth = 12;
                           yr--;
