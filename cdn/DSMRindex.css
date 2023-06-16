@@ -328,9 +328,10 @@ ul:after { clear: both; }
 #myTopnav .iconify{font-size:130%;}
 
 #DashTab h1 svg.iconify , #DashTab h1 svg.iconify path  {
-    background-color: rgb(49, 75, 119);
+    background-color: transparent;
 	color: white!important;
-	}
+}
+	
 nav {
 	position: fixed;
     left: 0;
