@@ -29,7 +29,11 @@ void P1StatusRead(){
     preferences.getString("timestamp",P1Status.timestamp,14);
     P1Status.wtr_m3 = preferences.getShort("wtr_m3", 0);
     P1Status.wtr_l = preferences.getUInt("wtr_l", 0);
+#ifdef ETHERNET
+    P1Status.dev_type = PRO_ETH;
+#else
     P1Status.dev_type = preferences.getUShort("dev_type", PRO);
+#endif    
     P1Status.FirstUse = preferences.getBool("first_use", false);
     if (strlen(P1Status.timestamp)!=13) strcpy(P1Status.timestamp,"010101010101X"); 
     strcpy(actTimestamp, P1Status.timestamp);
