@@ -34,8 +34,12 @@ TODO
 √ fix: startup led blink
 √ crc hex issue (no leading 0) solves errors Domoticz integration
 √ Watermeter pin always pullup (non floating)
+√ static ip / dns te kiezen bij Wifi Setup
+√ fix: H2O pro+ watersensor not detected
+√ fix: HA auto discovery 23.6.x issue with timestamp 
 
 4.9.0
+- teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
 - MQTT refactor
@@ -82,9 +86,10 @@ void setup()
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
-  if ( IOWater ) pinMode(IOWater, INPUT_PULLUP);
   
   SetConfig();
+  
+  if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP); //Setconfig first
   
   if ( P1Status.dev_type == PRO_BRIDGE ) {
     pinMode(PRT_LED, OUTPUT);
