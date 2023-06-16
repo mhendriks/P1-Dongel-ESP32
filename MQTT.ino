@@ -24,22 +24,37 @@
 
   String            MQTTclientId;
 
+String AddPayload(const char* key, const char* value ){
+  if ( strlen(value) == 0 ) return "";
+  return "\"" + String(key) + "\":\"" + String(value) + "\",";
+}
+
 void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char* dev_title, const char* dev_unit, const char* dev_payload, const char* state_class, const char* extrapl ){
   char msg_topic[80];
-  char msg_payload[500];
-    sprintf(msg_topic,"homeassistant/sensor/p1-dongle-pro/%s/config",dev_name);
+  String msg_payload = "{";
+  sprintf(msg_topic,"homeassistant/sensor/p1-dongle-pro/%s/config",dev_name);
 //    Debugln(msg_topic);
-  if (strlen(dev_class)) sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"dev_cla\": \"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"stat_cla\":\"%s\"%s,\"dev\": {\"ids\": %d,\"name\": \"%s\", \"mdl\": \"P1 Dongle Pro\",\"mf\": \"Smartstuff\"} }", dev_name,dev_class, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl,WIFI_getChipId(), settingHostname);
-  else sprintf(msg_payload,"{\"uniq_id\":\"%s\",\"name\": \"%s\", \"stat_t\": \"%s%s\", \"unit_of_meas\": \"%s\", \"val_tpl\": \"%s\", \"stat_cla\":\"%s\"%s,\"dev\": {\"ids\": %d,\"name\": \"%s\", \"mdl\": \"P1 Dongle Pro\",\"mf\": \"Smartstuff\"}}", dev_name, dev_title, settingMQTTtopTopic, dev_name, dev_unit, dev_payload,state_class, extrapl,WIFI_getChipId(), settingHostname);
-//    Debugln(msg_payload);
-  if (!MQTTclient.publish(msg_topic, msg_payload, true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", msg_topic, msg_payload, (strlen(msg_topic) + strlen(msg_payload)));
+  msg_payload += AddPayload( "uniq_id"        , dev_name);
+  msg_payload += AddPayload( "dev_cla"        , dev_class);
+  msg_payload += AddPayload( "name"           , dev_title);
+  msg_payload += AddPayload( "stat_t"         , String((String)settingMQTTtopTopic + (String)dev_name).c_str() );
+  msg_payload += AddPayload( "unit_of_meas"   , dev_unit);
+  msg_payload += AddPayload( "val_tpl"        , dev_payload);
+  msg_payload += AddPayload( "stat_cla"       , state_class);
+  msg_payload += extrapl;
+  msg_payload += "\"dev\":{";
+  msg_payload += AddPayload("ids"             , String(WIFI_getChipId()).c_str() );
+  msg_payload += AddPayload("name"            , settingHostname);
+  msg_payload += "\"mdl\":\"P1 Dongle Pro\",\"mf\":\"Smartstuff\"}}";
+//  Debugln(msg_payload);
+  if (!MQTTclient.publish(msg_topic, msg_payload.c_str(), true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", msg_topic, msg_payload, ( strlen(msg_topic) + msg_payload.length() ));
 }
 
 void AutoDiscoverHA(){
   if (!EnableHAdiscovery) return;
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/power_delivered/config" -m '{"dev_cla": "gas", "name": "Power Delivered", "stat_t": "DSMR-API/power_delivered", "unit_of_meas": "Wh", "val_tpl": "{{ value_json.power_delivered[0].value | round(3) }}" }'
 
-  SendAutoDiscoverHA("timestamp", "", "DSMR Last Update", "", "{{ strptime(value[0:12], \'%y%m%d%H%M%S\') }}","measurement", ",\"icon\": \"mdi:clock\"");
+  SendAutoDiscoverHA("timestamp", "timestamp", "DSMR Last Update", "", "{{ strptime(value[:-1] + '-+0200' if value[12] == 'S' else value[:-1] + '-+0100', '%y%m%d%H%M%S-%z') }}","", "\"icon\": \"mdi:clock\",");
   
   SendAutoDiscoverHA("power_delivered", "power", "Power Delivered", "W", "{{ value | round(3) * 1000 }}","measurement","");
   SendAutoDiscoverHA("power_returned" , "power", "Power Returned" , "W", "{{ value | round(3) * 1000 }}","measurement","");  
@@ -67,7 +82,7 @@ void AutoDiscoverHA(){
 
   SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(2) }}","total_increasing","");
   
-  SendAutoDiscoverHA("water", "water", "Waterverbruik", "m³", "{{ value | round(3) }}","total_increasing",",\"icon\": \"mdi:water\"");
+  SendAutoDiscoverHA("water", "water", "Waterverbruik", "m³", "{{ value | round(3) }}","total_increasing","\"icon\": \"mdi:water\",");
 
 }
 
