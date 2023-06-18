@@ -37,6 +37,7 @@ TODO
 √ static ip / dns te kiezen bij Wifi Setup
 √ fix: H2O pro+ watersensor not detected
 √ fix: HA auto discovery 23.6.x issue with timestamp 
+√ fix: dsmr 2.2 chars in gas obis (dsmr2lib)
 
 4.9.0
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
