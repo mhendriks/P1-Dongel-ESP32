@@ -53,7 +53,7 @@ void handleSlimmemeter()
       CapTelegram = "/" + slimmeMeter.raw() + "!" + slimmeMeter.GetCRC_str(); //capture last telegram
       if (showRaw) {
         //-- process telegrams in raw mode
-        Debugf("Telegram Raw (%d)\n%s\n", slimmeMeter.raw().length(), CapTelegram ); 
+        Debugf("Telegram Raw (%d)\n%s\n", slimmeMeter.raw().length(), CapTelegram.c_str() ); 
         showRaw = false; //only 1 reading
       } else processSlimmemeter();
       ToggleLED(LED_OFF);
