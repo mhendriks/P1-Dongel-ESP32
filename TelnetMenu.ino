@@ -128,7 +128,7 @@ void handleKeyInput()
     inChar = (char)TelnetStream.read();
     
     switch(inChar) {
-//      case 'n': NTPTest();break;
+      case 'm': PostEnergyID();break;
       case 'a':     
       case 'A':     { char c;
                       while (TelnetStream.available() > 0) { 
