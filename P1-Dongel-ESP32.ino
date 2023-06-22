@@ -29,15 +29,6 @@ TODO
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
 - #18 water en gas ook in de enkele json string (mqtt)
 
-4.8.4
-√ issue initial setup, wrong slots write (Leo)
-√ fix: startup led blink
-√ crc hex issue (no leading 0) solves errors Domoticz integration
-√ Watermeter pin always pullup (non floating)
-√ static ip / dns te kiezen bij Wifi Setup
-√ fix: H2O pro+ watersensor not detected
-√ fix: HA auto discovery 23.6.x issue with timestamp 
-√ fix: dsmr 2.2 chars in gas obis (dsmr2lib)
 
 4.9.0
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
