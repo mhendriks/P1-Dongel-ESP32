@@ -174,7 +174,7 @@ void processTelegram(){
   if ( DUE(publishMQTTtimer) ) sendMQTTData();
   
   // handle rawport
-  if ( bRawPort ) ws_raw.print( CapTelegram ); //print telegram to dongle port
+  if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
   
 #ifdef VOLTAGE
   ProcessVoltage();
