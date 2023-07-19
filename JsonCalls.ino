@@ -199,11 +199,13 @@ void sendDeviceInfo()
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
 
+#ifndef ENERGYID
   snprintf(cMsg, sizeof(cMsg), "%s:%04d", settingMQTTbroker, settingMQTTbrokerPort);
   doc["mqttbroker"] = cMsg;
   doc["mqttinterval"] = settingMQTTinterval;
   if (mqttIsConnected) doc["mqttbroker_connected"] = "yes";
   else  doc["mqttbroker_connected"] = "no";
+#endif
 
   doc["reboots"] = (int)P1Status.reboots;
   doc["lastreset"] = lastReset;  
@@ -268,7 +270,8 @@ void sendDeviceSettings()
   doc["IndexPage"]["value"] = settingIndexPage;
   doc["IndexPage"]["type"] = "s";
   doc["IndexPage"]["maxlen"] = sizeof(settingIndexPage) -1;
-  
+
+#ifndef ENERGYID  
   doc["mqtt_broker"]["value"]  = settingMQTTbroker;
   doc["mqtt_broker"]["type"] = "s";
   doc["mqtt_broker"]["maxlen"] = sizeof(settingMQTTbroker) -1;
@@ -294,6 +297,7 @@ void sendDeviceSettings()
   doc["mqtt_interval"]["type"] = "i";
   doc["mqtt_interval"]["min"] = 0;
   doc["mqtt_interval"]["max"] = 600;
+#endif
 
 if (WtrMtr) {
   doc["water_m3"]["value"] = P1Status.wtr_m3;

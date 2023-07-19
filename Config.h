@@ -57,6 +57,10 @@
   #define OTAURL              "http://ota.smart-stuff.nl/v5-q/"
 #endif  
 
+#ifdef ENERGYID
+  #define ALL_OPTIONS BASE_OPTIONS "[EnergyID]"
+#endif
+
 #ifdef SE_VERSION
   #define ALL_OPTIONS BASE_OPTIONS "[SE]"
 #endif

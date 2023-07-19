@@ -170,8 +170,10 @@ void processTelegram(){
   // has the hour changed write ringfiles
   if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) writeRingFiles();
   
+#ifndef ENERGYID
   //handle mqtt
   if ( DUE(publishMQTTtimer) ) sendMQTTData();
+#endif
   
   // handle rawport
   if ( bRawPort ) ws_raw.print( CapTelegram ); //print telegram to dongle port

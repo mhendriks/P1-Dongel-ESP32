@@ -1,24 +1,50 @@
-//WiFiClientSecure client;
-//  client.setInsecure(); //no cert validation
+String eid_token;
+DECLARE_TIMER_SEC(EID, 10);
 
-void GETEnergyID(){
+void handleEnergyID(){  
 
-  HTTPClient http;
-  snprintf( cMsg, sizeof( cMsg ), "%s%s","https://hooks.energyid.eu/services/WebhookIn/efc5f121-f40e-476f-a518-efc592f77226/NEBTZX5WDKR6", "" );
-  http.begin( cMsg );
-  
-  int httpResponseCode = http.GET();
-  if ( httpResponseCode<=0 ) { 
-    Debug(F("Error code: "));Debugln(httpResponseCode);
-    return;
+#ifdef ENERGYID 
+  if ( DUE(EID) ) {
+    if ( !eid_token.length() ) ReadEIDToken();
+    else PostEnergyID();
   }
-  
-  Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
-  String payload = http.getString();
-  Debugln(payload);
-  http.end();
+#endif  
 
 }
+
+#ifdef ENERGYID
+
+#define EID_BASE_URL "https://hooks.energyid.eu/services/WebhookIn/"
+
+void ReadEIDToken(){
+  if (!FSmounted) return;
+  File TokenFile = LittleFS.open("/eid-token.txt", "r"); // open for appending  
+  if (!TokenFile) {
+    DebugTln(F("open eid-token.txt FAILED!!!--> Bailout\r\n"));
+    return;
+  }
+  eid_token = TokenFile.readStringUntil('\r');
+  CHANGE_INTERVAL_SEC(EID, 300); //after succesfull read set interval on 300sec
+}
+  
+//void GETEnergyID(){
+//
+//  HTTPClient http;
+//  snprintf( cMsg, sizeof( cMsg ), "%s%s",EID_BASE_URL, eid_token );
+//  http.begin( cMsg );
+//  
+//  int httpResponseCode = http.GET();
+//  if ( httpResponseCode<=0 ) { 
+//    Debug(F("Error code: "));Debugln(httpResponseCode);
+//    return;
+//  }
+//  
+//  Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
+//  String payload = http.getString();
+//  Debugln(payload);
+//  http.end();
+//
+//}
 
 String IsoTS () {
   // convert to this format -> 2023-06-16T08:01+0200
@@ -63,7 +89,7 @@ String JsonEnergyID ( const char* id, const char* metric, double sm_value, const
   Json +="[\"" + IsoTS() + "\"," + sm_value + "]";
   Json += "]}";
 
-  Debug("JsonEnergyID : "); Debugln(Json);
+  //Debug("JsonEnergyID : "); Debugln(Json);
   
   return Json;
 
@@ -81,7 +107,7 @@ void PostEnergyID(){
   String httpRequestData;
   int httpResponseCode;
   HTTPClient http;
-  snprintf( cMsg, sizeof( cMsg ), "%s%s","https://hooks.energyid.eu/services/WebhookIn/efc5f121-f40e-476f-a518-efc592f77226/NEBTZX5WDKR6", "" );
+  snprintf( cMsg, sizeof( cMsg ), "%s%s",EID_BASE_URL, eid_token );  
   http.begin( cMsg );
   http.addHeader("Content-Type", "application/json");
 
@@ -132,3 +158,5 @@ void PostEnergyID(){
   
   http.end();
 }
+
+#endif

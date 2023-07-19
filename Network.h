@@ -115,6 +115,7 @@ void startWiFi(const char* hostname, int timeOut)
   manageWiFi.setDebugOutput(false);
   manageWiFi.setShowStaticFields(true); // force show static ip fields
   manageWiFi.setShowDnsFields(true);    // force show dns field always  
+  manageWiFi.setRemoveDuplicateAPs(false);
       
   //add custom html at inside <head> for all pages -> show password function
 //  manageWiFi.setCustomHeadElement("<script>function f() {var x = document.getElementById('p');x.type==='password'?x.type='text':x.type='password';}</script>");

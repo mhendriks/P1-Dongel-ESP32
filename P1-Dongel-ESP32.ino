@@ -29,14 +29,9 @@ TODO
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
 - #18 water en gas ook in de enkele json string (mqtt)
 
-4.8.4
-√ issue initial setup, wrong slots write (Leo)
-√ fix: startup led blink
-√ crc hex issue (no leading 0) solves errors Domoticz integration
-√ Watermeter pin always pullup (non floating)
-√ static ip / dns te kiezen bij Wifi Setup
-√ fix: H2O pro+ watersensor not detected
-√ fix: HA auto discovery 23.6.x issue with timestamp 
+EnergyID implementatie
+- inlezen token uit bestand eid-token.txt
+- uitzetten MQTT indien EID aan staat
 
 4.9.0
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
@@ -64,12 +59,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
-#define ETHERNET
+//#define ETHERNET
 //#define STUB            //test only
 //#define HEATLINK        //first draft
 //#define INSIGHT         
 //#define AP_ONLY
 //#define VOLTAGE
+#define ENERGYID
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
@@ -203,9 +199,7 @@ void loop () {
   handleRemoteUpdate();
   handleButton();
   handleWater();
-  
-  //TEST
-  if ( DUE(EID) ) PostEnergyID();
+  handleEnergyID();
   
 } // loop()
 
