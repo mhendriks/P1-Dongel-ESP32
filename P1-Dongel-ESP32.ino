@@ -28,12 +28,11 @@ TODO
 - ondersteuning ISTA devices (868MHz) - Jan Winder
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
 - #18 water en gas ook in de enkele json string (mqtt)
-
-4.8.5
-√ fix: crc to upper case (dsmr2lib)
-
+- spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
+- loadbalancing bijhouden over de fases
 
 4.9.0
+- RNG files openen en niet meer sluiten.
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
