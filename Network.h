@@ -115,8 +115,10 @@ void startWiFi(const char* hostname, int timeOut)
   manageWiFi.setDebugOutput(false);
   manageWiFi.setShowStaticFields(true); // force show static ip fields
   manageWiFi.setShowDnsFields(true);    // force show dns field always  
-      
-  //add custom html at inside <head> for all pages -> show password function
+  manageWiFi.setRemoveDuplicateAPs(false);
+  manageWiFi.setScanDispPerc(true); // display percentages instead of graphs for RSSI
+
+  //add custom html at inside <head> for all pages -> show pasessword function
 //  manageWiFi.setCustomHeadElement("<script>function f() {var x = document.getElementById('p');x.type==='password'?x.type='text':x.type='password';}</script>");
   manageWiFi.setClass("invert"); //dark theme
   
