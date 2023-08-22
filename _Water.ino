@@ -9,10 +9,10 @@ void sendMQTTWater(){
   if (!WtrMtr && !mbusWater) return;
   if ( mbusWater ){
     MQTTSend( "water_delivered", waterDelivered );
-    MQTTSend( "water_delivered_ts", waterDeliveredTimestamp );    
+    MQTTSend( "water_delivered_ts", waterDeliveredTimestamp, true );    
   } else {
     sprintf(cMsg,"%d.%3.3d",P1Status.wtr_m3,P1Status.wtr_l);
-    MQTTSend("water",cMsg);    
+    MQTTSend("water",cMsg, true);    
   }
 }
 

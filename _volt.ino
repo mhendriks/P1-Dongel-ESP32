@@ -1,5 +1,14 @@
 #ifdef VOLTAGE
 
+/*
+ * Bijhouden spanning
+ * overspanning situatie per fase
+ * opgeven maximale spanning (cut off = 253 default)
+ * balancing ook meenemen balancing eens per 5 minuten ... per uur, per dag
+ * verloop van afgelopen 400 samples onthouden (eens per 30 sec een sample)
+ * 
+ */
+
 int iVSlots = 0;
 DECLARE_TIMER_SEC(VTimer, 30); 
 

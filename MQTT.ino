@@ -290,10 +290,10 @@ struct buildJsonMQTT {
 
 //===========================================================================================
 
-void MQTTSend(const char* item, String value){
+void MQTTSend(const char* item, String value, bool ret){
   if (value.length()==0) return;
   sprintf(cMsg,"%s%s", settingMQTTtopTopic,item);
-  if (!MQTTclient.publish(cMsg, value.c_str(),true )) {
+  if (!MQTTclient.publish(cMsg, value.c_str(), ret )) {
     DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, value.c_str(), (strlen(cMsg) + value.length()));
     StaticInfoSend = false; //probeer het later nog een keer
   }
@@ -303,22 +303,22 @@ void MQTTSend(const char* item, String value){
 void MQTTSend(const char* item, float value){
   char temp[10];
   sprintf(temp,"%.3f",value);
-  MQTTSend( item, temp );
+  MQTTSend( item, temp, true );
 }
 
 //===========================================================================================
 void MQTTSentStaticInfo(){
   if ((settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   StaticInfoSend = true;
-  MQTTSend( "identification",DSMRdata.identification );
-  MQTTSend( "mac",String(WiFi.macAddress()) );
-  MQTTSend( "p1_version",DSMRdata.p1_version );
-  MQTTSend( "equipment_id",DSMRdata.equipment_id );
-  MQTTSend( "firmware",_VERSION_ONLY );
-  MQTTSend( "ip_address",WiFi.localIP().toString());
-  MQTTSend( "wifi_rssi",String( WiFi.RSSI() ) );
-//  if (DSMRdata.mbus1_device_type_present){ MQTTSend("gas_device_type", String(DSMRdata.mbus1_device_type) ); } // always 3
-  if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc); }  
+  MQTTSend( "identification",DSMRdata.identification, true );
+  MQTTSend( "mac",String(WiFi.macAddress()), true );
+  MQTTSend( "p1_version",DSMRdata.p1_version, true );
+  MQTTSend( "equipment_id",DSMRdata.equipment_id, true );
+  MQTTSend( "firmware",_VERSION_ONLY, true );
+  MQTTSend( "ip_address",WiFi.localIP().toString(), true);
+  MQTTSend( "wifi_rssi",String( WiFi.RSSI() ), true );
+
+  if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc, true); }  
 }
 
 //---------------------------------------------------------------
@@ -329,7 +329,7 @@ void MQTTsendGas(){
 //  MQTTSend( "heat_delivered_ts", gasDeliveredTimestamp ); // double: because device timestamp is equal
 #else
   MQTTSend( "gas_delivered", gasDelivered );
-  MQTTSend( "gas_delivered_timestamp", gasDeliveredTimestamp );
+  MQTTSend( "gas_delivered_timestamp", gasDeliveredTimestamp, true );
 #endif
 }
 
@@ -381,9 +381,9 @@ void sendMQTTData()
   if ( bActJsonMQTT ) {
     String buffer;
     serializeJson(jsonDoc,buffer);
-    MQTTSend("all",buffer);
+    MQTTSend("all", buffer, false);
   }
-  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp));
+  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
 
   MQTTsendGas();
   sendMQTTWater();

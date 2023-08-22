@@ -1,4 +1,4 @@
-/*
+ /*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
 **  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
@@ -30,6 +30,9 @@ TODO
 - #18 water en gas ook in de enkele json string (mqtt)
 - spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
 - loadbalancing bijhouden over de fases
+
+4.8.6
+√ mqtt all topic -> retianed ... 
 
 4.9.0
 - RNG files openen en niet meer sluiten.
