@@ -5,6 +5,7 @@ void handleEnergyID(){
 
 #ifdef ENERGYID 
   if ( DUE(EID) ) {
+    DebugTln(F("handleEnergyID: DUE"));
     if ( !eid_token.length() ) ReadEIDToken();
     else PostEnergyID();
   }
@@ -25,6 +26,8 @@ void ReadEIDToken(){
   }
   eid_token = TokenFile.readStringUntil('\r');
   CHANGE_INTERVAL_SEC(EID, 300); //after succesfull read set interval on 300sec
+  
+  DebugT(F("token read:"));Debugln(eid_token);
 }
   
 //void GETEnergyID(){
@@ -89,7 +92,7 @@ String JsonEnergyID ( const char* id, const char* metric, double sm_value, const
   Json +="[\"" + IsoTS() + "\"," + sm_value + "]";
   Json += "]}";
 
-  //Debug("JsonEnergyID : "); Debugln(Json);
+  Debug("JsonEnergyID : "); Debugln(Json);
   
   return Json;
 
@@ -104,12 +107,16 @@ void PostEnergyID(){
 5- gas
 6- water
 */
+
+  
   String httpRequestData;
   int httpResponseCode;
   HTTPClient http;
-  snprintf( cMsg, sizeof( cMsg ), "%s%s",EID_BASE_URL, eid_token );  
+  snprintf( cMsg, sizeof( cMsg ), "%s%s",EID_BASE_URL, eid_token.c_str() );  
   http.begin( cMsg );
   http.addHeader("Content-Type", "application/json");
+
+  DebugT(F("Post URL:"));Debugln(cMsg);
 
   if ( DSMRdata.energy_returned_tariff1 ) {
     httpRequestData = JsonEnergyID ("e-ex-1", "electricityExport", DSMRdata.energy_returned_tariff1, "kWh","low");           
