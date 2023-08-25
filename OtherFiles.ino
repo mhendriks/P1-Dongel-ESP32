@@ -172,7 +172,7 @@ void readSettings(bool show)
   strcpy(settingMQTTtopTopic, doc["MQTTtopTopic"]);
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
   
-  CHANGE_INTERVAL_SEC(publishMQTTtimer, settingMQTTinterval);
+  CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
   CHANGE_INTERVAL_MIN(reconnectMQTTtimer, 1);
   LEDenabled = doc["LED"];
   if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
@@ -335,7 +335,7 @@ void updateSetting(const char *field, const char *newValue)
   }
   if (!stricmp(field, "mqtt_interval")) {
     settingMQTTinterval   = String(newValue).toInt();  
-    CHANGE_INTERVAL_SEC(publishMQTTtimer, settingMQTTinterval);
+    CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
   }
   if (!stricmp(field, "mqtt_toptopic"))     strCopy(settingMQTTtopTopic, 20, newValue);  
   
