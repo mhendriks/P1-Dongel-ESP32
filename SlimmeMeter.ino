@@ -171,7 +171,7 @@ void processTelegram(){
   if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) writeRingFiles();
   
   //handle mqtt
-  if ( DUE(publishMQTTtimer) ) sendMQTTData();
+  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1) sendMQTTData();
   
   // handle rawport
   if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
@@ -211,6 +211,8 @@ void modifySmFaseInfo()
 
 //==================================================================================
 byte MbusTypeAvailable(byte type){
+
+  // return first type which is available
   if      ( DSMRdata.mbus1_device_type == type ) return 1;
   else if ( DSMRdata.mbus2_device_type == type ) return 2;
   else if ( DSMRdata.mbus3_device_type == type ) return 3;
