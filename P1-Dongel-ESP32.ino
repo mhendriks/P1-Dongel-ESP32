@@ -33,6 +33,7 @@ TODO
 
 4.8.6
 √ mqtt all topic -> retianed ... 
+√ mqtt interval klopt niet. Fix: bij 1 sec instelling zal de mqtt direct verzonden worden na het inlezen van een P1 bericht (dat is eens per 1 of 10 seconde afhankelijk van de slimme meter).
 
 4.9.0
 - RNG files openen en niet meer sluiten.
@@ -59,7 +60,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
-//#define ETHERNET
+#define ETHERNET
 //#define STUB            //test only
 //#define HEATLINK        //first draft
 //#define INSIGHT         
