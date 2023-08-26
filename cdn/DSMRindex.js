@@ -2463,7 +2463,7 @@ function formatFailureLog(svalue) {
   {
     for(var i in data)
     {
-	  if ( i == "conf") continue;
+	  if ( i == "conf" || document.getElementById("setFld_"+i ) == undefined ) continue;
 	  var fldId  = i;
       var newVal = document.getElementById("setFld_"+fldId).value;
 	  if ( data[i].value === undefined ) {

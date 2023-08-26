@@ -82,6 +82,8 @@ void SMCheckOnce(){
   } //p1_version_be_present
   
   mbusWater = MbusTypeAvailable(7);  
+  if ( mbusWater ) WtrMtr = true;
+  
   mbusGas = MbusTypeAvailable(3);  
   DebugTf("mbusWater: %d\r\n",mbusWater);
   DebugTf("mbusGas: %d\r\n",mbusGas);
@@ -172,7 +174,8 @@ void processTelegram(){
   
 #ifndef ENERGYID
   //handle mqtt
-  if ( DUE(publishMQTTtimer) ) sendMQTTData();
+  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1) sendMQTTData();
+
 #endif
   
   // handle rawport
