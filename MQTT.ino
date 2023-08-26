@@ -296,7 +296,9 @@ void MQTTSend(const char* item, String value, bool ret){
   if (!MQTTclient.publish(cMsg, value.c_str(), ret )) {
     DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, value.c_str(), (strlen(cMsg) + value.length()));
     StaticInfoSend = false; //probeer het later nog een keer
+    return;
   }
+  if ( strcmp(item,"all") ==0 ) mqttCount++; //counts the number of succesfull all topics send.
 }
 //===========================================================================================
 

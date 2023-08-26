@@ -193,7 +193,7 @@ bool        DSTactive;
 time_t      actT, newT;
 char        actTimestamp[20] = "";
 char        newTimestamp[20] = "";
-uint32_t    telegramCount = 0, telegramErrors = 0;
+uint32_t    telegramCount = 0, telegramErrors = 0, mqttCount = 0;
 bool        showRaw = false;
 bool        LEDenabled    = true;
 bool        DSMR_NL       = true;
@@ -207,7 +207,6 @@ bool        bRawPort = false;
 bool        bLED_PRT = true;
 
 String      CapTelegram;
-//uint16_t    CRCTelegram;
 char        cMsg[150];
 String      lastReset           = "";
 bool      FSNotPopulated      = false;
@@ -229,7 +228,8 @@ bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;
 
 //MQTT
-char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[26] = _DEFAULT_MQTT_TOPIC;
+
+char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[40] = _DEFAULT_MQTT_TOPIC;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;

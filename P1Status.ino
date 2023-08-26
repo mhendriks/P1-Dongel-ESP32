@@ -74,5 +74,6 @@ void P1StatusClear(){
   P1Status.FirstUse   = false;
   telegramCount       = 0;
   telegramErrors      = 0;
+  mqttCount           = 0;
   P1StatusWrite();
 }
