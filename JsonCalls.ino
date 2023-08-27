@@ -392,10 +392,7 @@ void handleSmApi()
     break;  
     
   case 't': //telegram
-    if ( CapTelegram.length() ) {
-      String payload = "/" + CapTelegram + "!" + String(CRCTelegram, HEX);
-      sendJsonBuffer( payload.c_str() );
-    }
+    if ( CapTelegram.length() ) sendJsonBuffer( CapTelegram.c_str() );
     else sendJsonBuffer( "no telegram available" );
     return;
     

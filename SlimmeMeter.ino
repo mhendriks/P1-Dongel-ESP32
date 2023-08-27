@@ -52,16 +52,42 @@ void handleSlimmemeter()
     slimmeMeter.loop();
     if (slimmeMeter.available()) {
       ToggleLED(LED_ON);
-      CapTelegram = slimmeMeter.raw(); //capture last telegram
+      CapTelegram = "/" + slimmeMeter.raw() + "!" + slimmeMeter.GetCRC_str(); //capture last telegram
       if (showRaw) {
         //-- process telegrams in raw mode
-        Debugf("Telegram Raw (%d)\n/%s!%x\n", slimmeMeter.raw().length(), slimmeMeter.raw().c_str(), slimmeMeter.GetCRC() ); 
+        Debugf("Telegram Raw (%d)\n%s\n", slimmeMeter.raw().length(), CapTelegram.c_str() ); 
         showRaw = false; //only 1 reading
       } else processSlimmemeter();
       ToggleLED(LED_OFF);
     } //available
 } // handleSlimmemeter()
 
+//==================================================================================
+void SMCheckOnce(){
+  DebugTln(F("first time check"));
+  if (DSMRdata.identification_present) {
+    //--- this is a hack! The identification can have a backslash in it
+    //--- that will ruin javascript processing :-(
+    for(int i=0; i<DSMRdata.identification.length(); i++)
+    {
+      if (DSMRdata.identification[i] == '\\') DSMRdata.identification[i] = '=';
+      yield();
+    }
+    smID = DSMRdata.identification;
+  } // check id 
+
+  if (DSMRdata.p1_version_be_present) {
+    DSMRdata.p1_version = DSMRdata.p1_version_be;
+    DSMRdata.p1_version_be_present  = false;
+    DSMRdata.p1_version_present     = true;
+    DSMR_NL = false;
+  } //p1_version_be_present
+  
+  mbusWater = MbusTypeAvailable(7);  
+  mbusGas = MbusTypeAvailable(3);  
+  DebugTf("mbusWater: %d\r\n",mbusWater);
+  DebugTf("mbusGas: %d\r\n",mbusGas);
+}
 //==================================================================================
 void processSlimmemeter()
 {
@@ -151,12 +177,10 @@ void processTelegram(){
     writeRingFiles();
   }
 
-  if ( DUE(publishMQTTtimer) ) sendMQTTDataEV();
+  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1) sendMQTTDataEV();
 
-  if ( bRawPort ) {
-    ws_raw.print("/" + CapTelegram + "!" ); //print telegram to dongle port
-    ws_raw.println(CRCTelegram, HEX);
-  }
+
+  if ( bRawPort ) ws_raw.println(CapTelegram);
 
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
