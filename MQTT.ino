@@ -209,9 +209,14 @@ void sendMQTTDataEV() {
     jsonDoc["gas"] = gasDelivered;
     jsonDoc["gas_ts"] = gasDeliveredTimestamp;
   }
+  if ( waterDelivered ) {
+    jsonDoc["water"] = waterDelivered;
+    jsonDoc["water_ts"] = waterDeliveredTimestamp;
+  }
   if ( DSMRdata.highest_peak_pwr_present ) jsonDoc["highest_peak_pwr_ts"] = DSMRdata.highest_peak_pwr.timestamp;
   String buffer;
   serializeJson(jsonDoc,buffer);
+//  DebugTln(buffer);
   MQTTSend("grid",buffer);
   } 
 }

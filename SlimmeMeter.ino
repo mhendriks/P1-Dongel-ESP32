@@ -3,7 +3,7 @@
 **  Program  : handleSlimmeMeter - part of DSMRloggerAPI
 **  Version  : v4.2.1
 **
-**  Copyright (c) 2021 Willem Aandewiel / Martijn Hendriks
+**  Copyright (c) 2023 Martijn Hendriks
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -35,9 +35,6 @@ struct showValues {
       TelnetStream.print(F(": "));
       TelnetStream.print(i.val());
       TelnetStream.println(Item::unit());
-    //} else 
-    //{
-    //  TelnetStream.print(F("<no value>"));
     }
   }
 };
@@ -47,6 +44,7 @@ void handleSlimmemeter()
 {
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
 #ifdef STUB
+  _handleSTUB();
   return; //escape when stub is active
 #endif
     slimmeMeter.loop();
@@ -89,8 +87,7 @@ void SMCheckOnce(){
   DebugTf("mbusGas: %d\r\n",mbusGas);
 }
 //==================================================================================
-void processSlimmemeter()
-{
+void processSlimmemeter() {
     telegramCount++;
     
     // Voorbeeld: [21:00:11][   9880/  8960] loop        ( 997): read telegram [28] => [140307210001S]
@@ -99,38 +96,31 @@ void processSlimmemeter()
       DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
     }
         
+#ifndef STUB
     DSMRdata = {};
     String    DSMRerror;
         
-    if (slimmeMeter.parse(&DSMRdata, &DSMRerror))   // Parse succesful, print result
+    if (slimmeMeter.parse(&DSMRdata, &DSMRerror))   // Parse succesful
     {
-      if (DSMRdata.identification_present)
-      {
-        //--- this is a hack! The identification can have a backslash in it
-        //--- that will ruin javascript processing :-(
-        for(int i=0; i<DSMRdata.identification.length(); i++)
-        {
-          if (DSMRdata.identification[i] == '\\') DSMRdata.identification[i] = '=';
-          yield();
-        }
+#endif      
+      if ( telegramCount == 1) SMCheckOnce(); //only the first telegram
+      else {
+        //use the keys from the initial check; saves processing power
+        DSMRdata.identification = smID;
+        if ( !DSMR_NL ){
+          DSMRdata.p1_version = DSMRdata.p1_version_be;
+          DSMRdata.p1_version_be_present  = false;
+          DSMRdata.p1_version_present     = true;
+        } 
       }
-
-//      DebugT("CRC:");Debugln(slimmeMeter.GetCRC(), HEX);
-//      TelnetStream.print("CRC:");TelnetStream.println(slimmeMeter.GetCRC(), HEX);
-      CRCTelegram = slimmeMeter.GetCRC();
-
-      if (DSMRdata.p1_version_be_present)
-      {
-        DSMRdata.p1_version = DSMRdata.p1_version_be;
-        DSMRdata.p1_version_be_present  = false;
-        DSMRdata.p1_version_present     = true;
-        DSMR_NL = false;
-      }
-
+        
       modifySmFaseInfo();
-#ifndef USE_NTP_TIME
+#ifdef HEATLINK
+//        DSMRdata.timestamp         = cMsg;
+        DSMRdata.timestamp = DSMRdata.mbus1_delivered.timestamp;
+        DSMRdata.timestamp_present = true;
+#else
   if (!DSMRdata.timestamp_present) { 
-#endif
         if (Verbose2) DebugTln(F("NTP Time set"));
       if ( getLocalTime(&tm) ) {
           DSTactive = tm.tm_isdst;
@@ -141,46 +131,54 @@ void processSlimmemeter()
       }
         DSMRdata.timestamp         = cMsg;
         DSMRdata.timestamp_present = true;
-
-#ifndef USE_NTP_TIME
   } //!timestamp present
-#endif  
+#endif //HEATLINK
+
       //-- handle mbus delivered values
-      gasDelivered = modifyMbusDelivered();
-      
+      if (mbusWater) {
+        waterDelivered = MbusDelivered(mbusWater);
+        waterDeliveredTimestamp = mbusDeliveredTimestamp;
+      }
+      if (mbusGas) {
+        gasDelivered = MbusDelivered(mbusGas);
+        gasDeliveredTimestamp = mbusDeliveredTimestamp;
+      }
+        
       processTelegram();
       if (Verbose2) DSMRdata.applyEach(showValues());
+#ifndef STUB
     } 
     else // Parser error, print error
     {
       telegramErrors++;
       DebugTf("Parse error\r\n%s\r\n\r\n", DSMRerror.c_str());
+      DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
       slimmeMeter.clear(); //on errors clear buffer
     }
+#endif    
   
 } // handleSlimmeMeter()
 
 //==================================================================================
 void processTelegram(){
-//  DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());  
-                                                    
+//  DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());                                                
 //  strcpy(newTimestamp, DSMRdata.timestamp.c_str()); 
 
   newT = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), true); // update system time
-//  actT = epoch(actTimestamp, strlen(actTimestamp), false); //niet nodig ... is al gezet initieel en in vorige processing
+  DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
 
-      DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
-
-  // has the hour changed
-  if (     ( hour(actT) != hour(newT) ) || P1Status.FirstUse )  {
-//    DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
-    writeRingFiles();
-  }
-
+  // has the hour changed write ringfiles
+  if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) writeRingFiles();
+  
+  //handle mqtt
   if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1) sendMQTTDataEV();
-
-
-  if ( bRawPort ) ws_raw.println(CapTelegram);
+  
+  // handle rawport
+  if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
+  
+#ifdef VOLTAGE
+  ProcessVoltage();
+#endif  
 
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
@@ -212,67 +210,61 @@ void modifySmFaseInfo()
 } //  modifySmFaseInfo()
 
 //==================================================================================
-float modifyMbusDelivered()
-{
-  float tmpGasDelivered = 0;
-  
-  if ( DSMRdata.mbus1_device_type == MBUS_TYPE )  { //gasmeter
-    if (DSMRdata.mbus1_delivered_ntc_present) 
-        DSMRdata.mbus1_delivered = DSMRdata.mbus1_delivered_ntc;
-  else if (DSMRdata.mbus1_delivered_dbl_present) 
-        DSMRdata.mbus1_delivered = DSMRdata.mbus1_delivered_dbl;
-  DSMRdata.mbus1_delivered_present     = true;
-  DSMRdata.mbus1_delivered_ntc_present = false;
-  DSMRdata.mbus1_delivered_dbl_present = false;
-//  if (settingMbus1Type > 0) DebugTf("mbus1_delivered [%.3f]\r\n", (float)DSMRdata.mbus1_delivered);
-//  if ( (settingMbus1Type == 3) && (DSMRdata.mbus1_device_type == 3) )
-  
-    tmpGasDelivered = (float)(DSMRdata.mbus1_delivered * 1.0);
-    gasDeliveredTimestamp = DSMRdata.mbus1_delivered.timestamp;
-//    DebugTf("gasDelivered .. [%.3f]\r\n", tmpGasDelivered);
-    mbusGas = 1;
-  } else if ( DSMRdata.mbus2_device_type == MBUS_TYPE ){ //gasmeter
-    if (DSMRdata.mbus2_delivered_ntc_present) DSMRdata.mbus2_delivered = DSMRdata.mbus2_delivered_ntc;
-    else if (DSMRdata.mbus2_delivered_dbl_present) DSMRdata.mbus2_delivered = DSMRdata.mbus2_delivered_dbl;
-    DSMRdata.mbus2_delivered_present     = true;
-    DSMRdata.mbus2_delivered_ntc_present = false;
-    DSMRdata.mbus2_delivered_dbl_present = false;
-  //  if (settingMbus2Type > 0) DebugTf("mbus2_delivered [%.3f]\r\n", (float)DSMRdata.mbus2_delivered);
-  //  if ( (settingMbus2Type == 3) && (DSMRdata.mbus2_device_type == 3) )
-      tmpGasDelivered = (float)(DSMRdata.mbus2_delivered * 1.0);
-      gasDeliveredTimestamp = DSMRdata.mbus2_delivered.timestamp;
-  //    DebugTf("gasDelivered .. [%.3f]\r\n", tmpGasDelivered);
-    mbusGas = 2;
-  } else  if ( (DSMRdata.mbus3_device_type == MBUS_TYPE) ){ //gasmeter
-    if (DSMRdata.mbus3_delivered_ntc_present) DSMRdata.mbus3_delivered = DSMRdata.mbus3_delivered_ntc;
-    else if (DSMRdata.mbus3_delivered_dbl_present) DSMRdata.mbus3_delivered = DSMRdata.mbus3_delivered_dbl;
-    DSMRdata.mbus3_delivered_present     = true;
-    DSMRdata.mbus3_delivered_ntc_present = false;
-    DSMRdata.mbus3_delivered_dbl_present = false;
-  //  if (settingMbus3Type > 0) DebugTf("mbus3_delivered [%.3f]\r\n", (float)DSMRdata.mbus3_delivered);
-  //  if ( (settingMbus3Type == 3) && (DSMRdata.mbus3_device_type == 3) )
-      tmpGasDelivered = (float)(DSMRdata.mbus3_delivered * 1.0);
-      gasDeliveredTimestamp = DSMRdata.mbus3_delivered.timestamp;
-  //    DebugTf("gasDelivered .. [%.3f]\r\n", tmpGasDelivered);
-    mbusGas = 3;
-  } else if ( (DSMRdata.mbus4_device_type == MBUS_TYPE) ){ //gasmeter
-    if (DSMRdata.mbus4_delivered_ntc_present) DSMRdata.mbus4_delivered = DSMRdata.mbus4_delivered_ntc;
-    else if (DSMRdata.mbus4_delivered_dbl_present) DSMRdata.mbus4_delivered = DSMRdata.mbus4_delivered_dbl;
-    DSMRdata.mbus4_delivered_present     = true;
-    DSMRdata.mbus4_delivered_ntc_present = false;
-    DSMRdata.mbus4_delivered_dbl_present = false;
-  //  if (settingMbus4Type > 0) DebugTf("mbus4_delivered [%.3f]\r\n", (float)DSMRdata.mbus4_delivered);
-  //  if ( (settingMbus4Type == 3) && (DSMRdata.mbus4_device_type == 3) )
-      tmpGasDelivered = (float)(DSMRdata.mbus4_delivered * 1.0);
-      gasDeliveredTimestamp = DSMRdata.mbus4_delivered.timestamp;
-  //    DebugTf("gasDelivered .. [%.3f]\r\n", tmpGasDelivered);
-    mbusGas = 4;
+byte MbusTypeAvailable(byte type){
+
+  // return first type which is available
+  if      ( DSMRdata.mbus1_device_type == type ) return 1;
+  else if ( DSMRdata.mbus2_device_type == type ) return 2;
+  else if ( DSMRdata.mbus3_device_type == type ) return 3;
+  else if ( DSMRdata.mbus4_device_type == type ) return 4;
+  return 0;
+}
+
+//==================================================================================
+float MbusDelivered(byte mbusPort){
+  switch ( mbusPort ){
+    case 1: 
+            if (DSMRdata.mbus1_delivered_ntc_present) DSMRdata.mbus1_delivered = DSMRdata.mbus1_delivered_ntc;
+            else if (DSMRdata.mbus1_delivered_dbl_present) DSMRdata.mbus1_delivered = DSMRdata.mbus1_delivered_dbl;
+            DSMRdata.mbus1_delivered_present     = true;
+            DSMRdata.mbus1_delivered_ntc_present = false;
+            DSMRdata.mbus1_delivered_dbl_present = false;
+            mbusDeliveredTimestamp = DSMRdata.mbus1_delivered.timestamp;   
+            return (float)(DSMRdata.mbus1_delivered * 1.0);
+            break;
+    case 2: 
+            if (DSMRdata.mbus2_delivered_ntc_present) DSMRdata.mbus2_delivered = DSMRdata.mbus2_delivered_ntc;
+            else if (DSMRdata.mbus2_delivered_dbl_present) DSMRdata.mbus2_delivered = DSMRdata.mbus2_delivered_dbl;
+            DSMRdata.mbus2_delivered_present     = true;
+            DSMRdata.mbus2_delivered_ntc_present = false;
+            DSMRdata.mbus2_delivered_dbl_present = false;
+            mbusDeliveredTimestamp = DSMRdata.mbus2_delivered.timestamp;   
+            return (float)(DSMRdata.mbus2_delivered * 1.0);
+            break;      
+    case 3: 
+            if (DSMRdata.mbus3_delivered_ntc_present) DSMRdata.mbus3_delivered = DSMRdata.mbus3_delivered_ntc;
+            else if (DSMRdata.mbus3_delivered_dbl_present) DSMRdata.mbus3_delivered = DSMRdata.mbus3_delivered_dbl;
+            DSMRdata.mbus3_delivered_present     = true;
+            DSMRdata.mbus3_delivered_ntc_present = false;
+            DSMRdata.mbus3_delivered_dbl_present = false;
+            mbusDeliveredTimestamp = DSMRdata.mbus3_delivered.timestamp;   
+            return (float)(DSMRdata.mbus3_delivered * 1.0);
+            break;    
+    case 4: 
+            if (DSMRdata.mbus4_delivered_ntc_present) DSMRdata.mbus4_delivered = DSMRdata.mbus4_delivered_ntc;
+            else if (DSMRdata.mbus4_delivered_dbl_present) DSMRdata.mbus4_delivered = DSMRdata.mbus4_delivered_dbl;
+            DSMRdata.mbus4_delivered_present     = true;
+            DSMRdata.mbus4_delivered_ntc_present = false;
+            DSMRdata.mbus4_delivered_dbl_present = false;
+            mbusDeliveredTimestamp = DSMRdata.mbus4_delivered.timestamp;   
+            return (float)(DSMRdata.mbus4_delivered * 1.0);
+            break;
+    default:
+            DebugTln(F("default"));
+            return 0;
+            break;
   }
-
-  return tmpGasDelivered;
-    
-} //  modifyMbusDelivered()
-
+}
 
 /***************************************************************************
 *

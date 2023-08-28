@@ -220,6 +220,10 @@ bool        FSNotPopulated      = false;
 bool        mqttIsConnected     = false;
 bool        Verbose1 = false, Verbose2 = false;
 uint32_t    unixTimestamp;
+byte        mbusGas = 0;
+byte        mbusWater = 0;
+String      smID;
+
 
 IPAddress ipDNS, ipGateWay, ipSubnet;
 float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5;
@@ -239,9 +243,11 @@ bool      bNewVersionAvailable = false;
 char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[45] = _DEFAULT_MQTT_TOPIC;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
+float     waterDelivered;
+String    waterDeliveredTimestamp;
+String    mbusDeliveredTimestamp;
 String    gasDeliveredTimestamp;
 bool      UpdateRequested = false;
-byte      mbusGas = 0;
 bool      StaticInfoSend = false;
 
 //===========================================================================================
