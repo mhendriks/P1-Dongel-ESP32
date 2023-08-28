@@ -82,6 +82,7 @@ void SMCheckOnce(){
   } //p1_version_be_present
   
   mbusWater = MbusTypeAvailable(7);  
+  if (mbusWater) WtrMtr = true;
   mbusGas = MbusTypeAvailable(3);  
   DebugTf("mbusWater: %d\r\n",mbusWater);
   DebugTf("mbusGas: %d\r\n",mbusGas);
