@@ -38,9 +38,12 @@ TODO
 √ mqtt interval: adjustment of timing ...
 √ mqtt toptopic length = 40
 √ mqtt count succesfull published all topics
+√ major refactoring MQTT logic
+- voorbereidingen bijhouden van overspanning
+- remove old voltage monitoring option
 
 4.9.0
-- RNG files openen en niet meer sluiten.
+- RNG files continu open
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
@@ -64,7 +67,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
-#define ETHERNET
+//#define ETHERNET
 //#define STUB            //test only
 //#define HEATLINK        //first draft
 //#define INSIGHT         
@@ -128,8 +131,6 @@ void setup()
   startNTP();
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
 
-//================ Start MQTT  ======================================
-if ( (strlen(settingMQTTbroker) > 3) && (settingMQTTinterval != 0) ) connectMQTT();
 #endif
 //================ Check necessary files ============================
   if (!DSMRfileExist(settingIndexPage, false) ) {

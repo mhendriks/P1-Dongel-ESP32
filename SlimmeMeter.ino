@@ -180,10 +180,11 @@ void processTelegram(){
 #ifdef VOLTAGE
   ProcessVoltage();
 #endif  
+  ProcessMaxVoltage();
 
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
-  actT = newT; //epoch(actTimestamp, strlen(actTimestamp), true);   // update system time
+  actT = newT;
   
 } // processTelegram()
 

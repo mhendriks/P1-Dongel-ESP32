@@ -1,7 +1,6 @@
 /*
 ***************************************************************************  
 **  Program  : settings_status_files, part of DSMRloggerAPI
-**  Version  : v4.2.1
 **
 **  Copyright (c) 2023 Martijn Hendriks
 **
@@ -104,6 +103,7 @@ void writeSettings()
   doc["act-json-mqtt"] = bActJsonMQTT;
   doc["raw-port"] = bRawPort;
   doc["led-prt"] = bLED_PRT;
+  doc["max-volt"] = MaxVoltage;
   writeToJsonFile(doc, SettingsFile);
   
 } // writeSettings()
@@ -112,7 +112,8 @@ void writeSettings()
 //=======================================================================
 void readSettings(bool show) 
 {
-  StaticJsonDocument<1024> doc; 
+  
+  StaticJsonDocument<1200> doc; 
   File SettingsFile;
   if (!FSmounted) return;
 
@@ -186,6 +187,7 @@ void readSettings(bool show)
   if (doc.containsKey("pre40")) bPre40 = doc["pre40"];
   if (doc.containsKey("raw-port")) bRawPort = doc["raw-port"];
   if (doc.containsKey("led-prt")) bLED_PRT = doc["led-prt"];
+  if (doc.containsKey("max-volt")) MaxVoltage = doc["max-volt"];
   
   if (doc.containsKey("act-json-mqtt")) bActJsonMQTT = doc["act-json-mqtt"];
 
@@ -301,12 +303,6 @@ void updateSetting(const char *field, const char *newValue)
     else                            settingSmHasFaseInfo = 0;  
   }
 
-//  if (!stricmp(field, "tlgrm_interval"))    
-//  {
-//    settingTelegramInterval     = String(newValue).toInt();  
-//    CHANGE_INTERVAL_SEC(nextTelegram, settingTelegramInterval)
-//  }
-
   if (!stricmp(field, "IndexPage"))        strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), newValue);  
 
   if (!stricmp(field, "mqtt_broker"))  {
@@ -314,30 +310,26 @@ void updateSetting(const char *field, const char *newValue)
     memset(settingMQTTbroker, '\0', sizeof(settingMQTTbroker));
     strCopy(settingMQTTbroker, 100, newValue);
     Debugf("[%s]\r\n", settingMQTTbroker);
-    mqttIsConnected = false;
-    CHANGE_INTERVAL_MS(reconnectMQTTtimer, 100); // try reconnecting cyclus timer
-    MQTTclient.disconnect();
+//    mqttIsConnected = false;
   }
-  if (!stricmp(field, "mqtt_broker_port")) {
-    settingMQTTbrokerPort = String(newValue).toInt();  
-    mqttIsConnected = false;
-    CHANGE_INTERVAL_MS(reconnectMQTTtimer, 100); // try reconnecting cyclus timer
+  if (!stricmp(field, "mqtt_broker_port"))settingMQTTbrokerPort = String(newValue).toInt();  
+  if (!stricmp(field, "mqtt_user")) strCopy(settingMQTTuser    ,35, newValue);  
+  if (!stricmp(field, "mqtt_passwd")) strCopy(settingMQTTpasswd  ,25, newValue);  
+  
+  if (!stricmp(field, "mqtt_broker") || !stricmp(field, "mqtt_broker_port") || !stricmp(field, "mqtt_passwd") || !stricmp(field, "mqtt_user") )  {
+   //disconnect and set fast reconnect timing
+   MQTTclient.disconnect();
+   CHANGE_INTERVAL_MS(reconnectMQTTtimer, 100); // try reconnecting cyclus time
   }
-  if (!stricmp(field, "mqtt_user")) {
-    strCopy(settingMQTTuser    ,35, newValue);  
-    mqttIsConnected = false;
-    CHANGE_INTERVAL_MS(reconnectMQTTtimer, 100); // try reconnecting cyclus timer
-  }
-  if (!stricmp(field, "mqtt_passwd")) {
-    strCopy(settingMQTTpasswd  ,25, newValue);  
-    mqttIsConnected = false;
-    CHANGE_INTERVAL_MS(reconnectMQTTtimer, 100); // try reconnecting cyclus timer
-  }
+  
   if (!stricmp(field, "mqtt_interval")) {
     settingMQTTinterval   = String(newValue).toInt();  
     CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
   }
-  if (!stricmp(field, "mqtt_toptopic"))     strCopy(settingMQTTtopTopic, 20, newValue);  
+  if (!stricmp(field, "mqtt_toptopic")) {
+    strCopy(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), newValue);  
+  }
+  if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
   
   if (!stricmp(field, "b_auth_user")) strCopy(bAuthUser,25, newValue);  
   if (!stricmp(field, "b_auth_pw")) strCopy(bAuthPW,25, newValue); 
@@ -403,7 +395,6 @@ void LogFile(const char* payload, bool toDebug = false) {
     //closing the file
     LogFile.close(); 
 }
-
 /***************************************************************************
 *
 * Permission is hereby granted, free of charge, to any person obtaining a

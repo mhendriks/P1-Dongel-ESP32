@@ -42,19 +42,30 @@ typedef struct {
     int f_len;
   } S_ringfile;
 
+
+//Store over Voltage situations
+
+#define     VmaxSlots 100
+//                       ts       ,L1 ,L2 ,L3 ,MaxV, Overß
+#define DATA_FORMAT_V    "%-12.12s,%4d,%4d,%4d,%3d,%c"
+#define DATA_RECLEN_V    34  //total length incl comma and new line
+
+//sMaxV consist of 12 + 3x2 + 2 = 20 bytes
+struct sMaxV {
+  char      ts[12];
+  uint16_t     L1;
+  uint16_t     L2;
+  uint16_t     L3;
+  uint16_t     MaxV;
+  char         Over;
+  } MaxVarr[VmaxSlots]; //50 x 20 = 1.000 bytes 
+
 #define JSON_HEADER_LEN   23  //total length incl new line
 #define DATA_CLOSE        2   //length last row of datafile
 #define DATA_FORMAT      "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}"
 #define DATA_RECLEN      98  //total length incl comma and new line
 
-#ifdef VOLTAGE
-  #define DATA_FORMAT_V    "%-12.12s,%3.3f,%3.3f,%3.3f"
-  #define DATA_RECLEN_V    37  //total length incl comma and new line
-  #define V_SLOTS          400 //# of samples
-  const S_ringfile RingFiles[4] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, (14+1)*(DATA_RECLEN)+DATA_CLOSE+JSON_HEADER_LEN-1 },{"/RNGmonths.json",24+1,0,2474},{"/RNGvoltage.txt",V_SLOTS,0,V_SLOTS*DATA_RECLEN_V}}; 
-#else
-  const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, (14+1)*(DATA_RECLEN)+DATA_CLOSE+JSON_HEADER_LEN-1 },{"/RNGmonths.json",24+1,0,2474}}; //+1 voor de vergelijking, laatste record wordt niet getoond 
-#endif
+const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, (14+1)*(DATA_RECLEN)+DATA_CLOSE+JSON_HEADER_LEN-1 },{"/RNGmonths.json",24+1,0,2474}}; //+1 voor de vergelijking, laatste record wordt niet getoond 
 
 #include "Debug.h"
 
@@ -206,11 +217,16 @@ bool        bActJsonMQTT = false;
 bool        bRawPort = false;
 bool        bLED_PRT = true;
 
+//Voltage
+uint16_t    MaxVoltage = 253;
+bool        bMaxV = false;
+uint8_t     Vcount = 0;
+
 String      CapTelegram;
 char        cMsg[150];
 String      lastReset           = "";
 bool      FSNotPopulated      = false;
-bool      mqttIsConnected     = false;
+//bool      mqttIsConnected     = false;
 bool      Verbose1 = false, Verbose2 = false;
 uint32_t  unixTimestamp;
 

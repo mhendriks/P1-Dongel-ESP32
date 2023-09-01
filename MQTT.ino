@@ -1,7 +1,6 @@
 /* 
 ***************************************************************************  
 **  Program  : MQTTstuff, part of DSMRloggerAPI
-**  Version  : v4.2.1
 **
 **  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
@@ -13,14 +12,14 @@
 
 // Declare some variables within global scope
 
-  static IPAddress    MQTTbrokerIP;
-  static char         MQTTbrokerIPchar[20];
-  int8_t              reconnectAttempts = 0;
-  char                lastMQTTtimestamp[15] = "-";
-  char                mqttBuff[100];
+//  static IPAddress    MQTTbrokerIP;
+//  static char         MQTTbrokerIPchar[20];
+//  int8_t              reconnectAttempts = 0;
+//  char                lastMQTTtimestamp[15] = "-";
+//  char                mqttBuff[100]
 
-  enum states_of_MQTT { MQTT_STATE_INIT, MQTT_STATE_TRY_TO_CONNECT, MQTT_STATE_IS_CONNECTED, MQTT_STATE_ERROR };
-  enum states_of_MQTT stateMQTT = MQTT_STATE_INIT;
+//  enum states_of_MQTT { MQTT_STATE_INIT, MQTT_STATE_TRY_TO_CONNECT, MQTT_STATE_IS_CONNECTED, MQTT_STATE_ERROR };
+//  enum states_of_MQTT stateMQTT = MQTT_STATE_INIT;
 
   String            MQTTclientId;
 
@@ -87,30 +86,6 @@ void AutoDiscoverHA(){
 }
 
 //===========================================================================================
-void connectMQTT() {
-  
-  if (Verbose2) DebugTf("MQTTclient.connected(%d), mqttIsConnected[%d], stateMQTT [%d]\r\n", MQTTclient.connected(), mqttIsConnected, stateMQTT);
-
-  if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) {
-    mqttIsConnected = false;
-    return;
-  }
-
-  if (!MQTTclient.connected() || stateMQTT != MQTT_STATE_IS_CONNECTED)
-  {
-    mqttIsConnected = false;
-    stateMQTT = MQTT_STATE_INIT;
-  }
-
-  mqttIsConnected = connectMQTT_FSM();
-  
-  if (Verbose1) DebugTf("connected()[%d], mqttIsConnected[%d], stateMQTT [%d]\r\n", MQTTclient.connected(), mqttIsConnected, stateMQTT);
-
-  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
-
-}
-
-//===========================================================================================
 
 static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
   if (length > 24) return;
@@ -125,150 +100,41 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 
 
 //===========================================================================================
-void MQTTConnectEV() {
+void MQTTConnect() {
+  char MqttID[30];
+  char StrMac[13];
   
   if ( DUE( reconnectMQTTtimer) ){ 
     LogFile("MQTT Starting",true);
 
   //try to with ip or url
-    WiFi.hostByName(settingMQTTbroker, MQTTbrokerIP);  
+//     WiFi.hostByName(settingMQTTbroker, MQTTbrokerIP);  
     DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbroker, settingMQTTbrokerPort);
-    MQTTclient.setServer(MQTTbrokerIP, settingMQTTbrokerPort);
+    MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
     
-    DebugT(F("MQTT Connection"));
-    if (isValidIP(MQTTbrokerIP)) DebugT(F(" ... Connected"));else DebugT(F(" ... Failed"));
-    Debug(F("MQTTbrokerIP: "));Debugln(MQTTbrokerIP);
-          
+//     DebugT(F("MQTT Connection"));
+//     if (isValidIP(MQTTbrokerIP)) DebugT(F(" ... Connected"));else DebugT(F(" ... Failed"));
+//     Debug(F("MQTTbrokerIP: "));Debugln(MQTTbrokerIP);
+    snprintf(StrMac, sizeof(StrMac), "%c%c%c%c%c%c%c%c%c%c%c%c",WiFi.macAddress()[0],WiFi.macAddress()[1],WiFi.macAddress()[3],WiFi.macAddress()[4],WiFi.macAddress()[6],WiFi.macAddress()[7],WiFi.macAddress()[9],WiFi.macAddress()[10],WiFi.macAddress()[12],WiFi.macAddress()[13],WiFi.macAddress()[15],WiFi.macAddress()[16]);
+    snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, StrMac);
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
-    if ( MQTTclient.connect( MqttID, EVERGI_USER, EVERGI_TOKEN, cMsg, 1, true, "Offline" ) ) {
+    if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
 //      reconnectAttempts = 0;  
       LogFile("MQTT: Attempting connection... connected", true);
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
-//      MQTTclient.setCallback(MQTTcallback); //set listner update callback
+      MQTTclient.setCallback(MQTTcallback); //set listner update callback
+  	  sprintf(cMsg,"%supdate",settingMQTTtopTopic);
+	  MQTTclient.subscribe(cMsg); //subscribe mqtt update
+//	  sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
+//	  MQTTclient.subscribe(cMsg); //subscribe mqtt update
     } else {
       LogFile("MQTT: Attempting connection... connection FAILED", true);
+//      mqttIsConnected = false;
     }
   CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 10);
   }
 }
-
-
-//===========================================================================================
-bool connectMQTT_FSM() 
-{  
-  switch(stateMQTT) 
-  {
-    case MQTT_STATE_INIT:  
-          {
-        LogFile("MQTT Starting",true);
-//        DebugTln(F("MQTT State: MQTT Initializing"));
-//        MQTTbrokerIP = MDNS.queryHost(settingMQTTbroker);
-//        DebugT(F("queryHost MQTTbrokerIP: "));Debugln(MQTTbrokerIP);
-        WiFi.hostByName(settingMQTTbroker, MQTTbrokerIP);  // try to connect directly with ip
-        DebugT(F("MQTTbrokerIP: "));Debugln(MQTTbrokerIP);
-        if (!isValidIP(MQTTbrokerIP)) {
-//          DebugT("queryHost: IP address of server: ");Debugln(MQTTbrokerIP.toString());
-//        } else {
-          DebugTln(F("MQTT Connection failed"));
-//          WiFi.hostByName(settingMQTTbroker, MQTTbrokerIP);  // try to connect directly with ip
-//            if (MQTTbrokerIP.fromString(settingMQTTbroker)) DebugTln(F("MQTT ip setting = valid ip-address"));
-        }
- 
-          snprintf(MQTTbrokerIPchar, sizeof(MQTTbrokerIPchar), "%d.%d.%d.%d", MQTTbrokerIP[0], MQTTbrokerIP[1], MQTTbrokerIP[2], MQTTbrokerIP[3]);
-          if (!isValidIP(MQTTbrokerIP))  
-          {
-            DebugTf("ERROR: [%s] => is not a valid URL\r\n", settingMQTTbroker);
-            settingMQTTinterval = 0;
-            stateMQTT = MQTT_STATE_ERROR;
-            LogFile("MQTT Error : not connected",false);
-            return false;
-          }
-          
-          //MQTTclient.disconnect();
-          //DebugTf("disconnect -> MQTT status, rc=%d \r\n", MQTTclient.state());
-          DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, MQTTbrokerIPchar, settingMQTTbrokerPort);
-          MQTTclient.disconnect();
-          MQTTclient.setServer(MQTTbrokerIPchar, settingMQTTbrokerPort);
-          DebugTf("setServer  -> MQTT status, rc=%d \r\n", MQTTclient.state());
-          MQTTclientId  = String(settingHostname) + "-" + WiFi.macAddress();
-          stateMQTT = MQTT_STATE_TRY_TO_CONNECT;
-          reconnectAttempts = 0;
-          }
-    case MQTT_STATE_TRY_TO_CONNECT:
-//          DebugTln(F("MQTT State: MQTT try to connect"));
-          LogFile("MQTT State: MQTT try to connect",false);
-          DebugTf("MQTT server is [%s], IP[%s]\r\n", settingMQTTbroker, MQTTbrokerIPchar);
-          
-          DebugTf("Attempting MQTT connection as [%s] .. \r\n", MQTTclientId.c_str());
-          reconnectAttempts++;
-
-          //--- If no username, then anonymous connection to broker, otherwise assume username/password.
-          sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
-          if (String(settingMQTTuser).length() == 0) 
-          {
-            DebugT(F("without a Username/Password "));
-            MQTTclient.connect(MQTTclientId.c_str(),"","",cMsg,1,true,"Offline");
-          } 
-          else 
-          {
-            DebugTf("with Username [%s] and password ", settingMQTTuser);
-            MQTTclient.connect(MQTTclientId.c_str(), settingMQTTuser, settingMQTTpasswd,cMsg,1,true,"Offline");
-          }
-          //--- If connection was made succesful, move on to next state...
-          if (MQTTclient.connected())
-          {
-            reconnectAttempts = 0;  
-            Debugf(" .. connected -> MQTT status, rc=%d\r\n", MQTTclient.state());
-
-            AutoDiscoverHA();
-
-            //subscribe mqtt update topics
-            MQTTclient.publish(cMsg,"Online", true);
-            MQTTclient.setCallback(MQTTcallback); //set listner update callback
-            sprintf(cMsg,"%supdate",settingMQTTtopTopic);
-            MQTTclient.subscribe(cMsg); //subscribe mqtt update
-            sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
-            MQTTclient.subscribe(cMsg); //subscribe mqtt update
-
-            LogFile("MQTT connected",false);
-            MQTTclient.loop();
-            stateMQTT = MQTT_STATE_IS_CONNECTED;
-            return true;
-          }
-          Debugf(" -> MQTT status, rc=%d \r\n", MQTTclient.state());
-          MQTTclient.disconnect(); //hard disconnect to be sure
-          //--- After 3 attempts... go wait for a while.
-          if (reconnectAttempts >= 3)
-          {
-            DebugTln(F("3 attempts have failed. Retry wait for next reconnect in 10 minutes\r"));
-            stateMQTT = MQTT_STATE_ERROR;  // if the re-connect did not work, then return to wait for reconnect
-          }   
-          break;
-          
-    case MQTT_STATE_IS_CONNECTED:
-          LogFile("MQTT connected",false);
-          MQTTclient.loop();
-          return true;
-
-    case MQTT_STATE_ERROR:
-//          DebugTln(F("MQTT State: MQTT ERROR, wait for 5 sec, before trying again"));
-          LogFile("MQTT Error: retry after 5 seconds",true);
-          //--- next retry in 10 minutes.
-          CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
-          break;
-    default:
-          DebugTln(F("MQTT State: default, this should NEVER happen!"));
-          //--- do nothing, this state should not happen
-          stateMQTT = MQTT_STATE_INIT;
-          CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 5);
-          DebugTln(F("Next State: MQTT_STATE_INIT"));
-          break;
-  }
-
-  return false; 
-  
-} // connectMQTT_FSM()
 
 //=======================================================================
 
@@ -358,7 +224,7 @@ void MQTTSentStaticInfo(){
   if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc, true); }  
 }
 
-//---------------------------------------------------------------
+//===========================================================================================
 void MQTTsendGas(){
   if (!gasDelivered) return;
 #ifdef HEATLINK
@@ -370,19 +236,19 @@ void MQTTsendGas(){
 #endif
 }
 
-
 //===========================================================================================
-void sendMQTTDataNEW() {
+void sendMQTTData() {
 
 //TODO: log to file on error or reconnect
+    if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
+    if (!MQTTclient.connected()) MQTTConnect();
+    if ( MQTTclient.connected() ) {   
+//      mqttIsConnected = true;      
+      DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
   
-    if (!MQTTclient.connected()) MQTTConnectNEW();
-    if ( MQTTclient.connected() ) {         
-     DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
-  
-  if ( !StaticInfoSend )  { 
+      if ( !StaticInfoSend )  { 
 #ifndef EVERGI    
-    MQTTSentStaticInfo(); 
+        MQTTSentStaticInfo(); 
 #else    
     //MQTTSentStaticInfoEvergi(); 
 #endif
@@ -390,82 +256,27 @@ void sendMQTTDataNEW() {
     
   fieldsElements = ACTUALELEMENTS;
   
-  jsonDoc.clear();
-
-  DSMRdata.applyEach(buildJsonMQTT());
-  //check if gas and peak is available
-  if ( gasDelivered ) {
-    jsonDoc["gas"] = gasDelivered;
-    jsonDoc["gas_ts"] = gasDeliveredTimestamp;
-  }
-  if ( DSMRdata.highest_peak_pwr_present ) jsonDoc["highest_peak_pwr_ts"] = DSMRdata.highest_peak_pwr.timestamp;
-  String buffer;
-  serializeJson(jsonDoc,buffer);
-  MQTTSend("grid",buffer);
-  } 
-}
-
-//---------------------------------------------------------------
-void sendMQTTData() 
-{
-//  String dateTime, topicId, json;
-    if (!MQTTclient.connected()) MQTTConnectEV();
-    else {       
-      DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
-
-
-  if ((settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) || bailout() ) return;
-
-  //make proper TopTopic
-  if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') snprintf(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), "%s/",  settingMQTTtopTopic);
-  
-  if (MQTTclient.connected() && !mqttIsConnected) {
-    sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
-    MQTTclient.publish(cMsg,"Offline", true); //LWT status update
-    MQTTclient.disconnect(); //disconnect when connection is not allowed
-  }
-  
-  if (!MQTTclient.connected() || !mqttIsConnected) DebugTf("MQTTclient.connected(%d), mqttIsConnected[%d], stateMQTT [%d]\r\n", MQTTclient.connected(), mqttIsConnected, stateMQTT);
-
-  if (!MQTTclient.connected())  
-  {
-    if ( DUE( reconnectMQTTtimer) || mqttIsConnected)
-    {
-      mqttIsConnected = false;
-      StaticInfoSend = false; //zorg voor resend retained info
-      connectMQTT();
-    }
-    else
-    {
-      DebugTf("trying to reconnect in less than %d seconds\r\n", (TIME_LEFT_SEC(reconnectMQTTtimer) +1) );
-    }
-    if ( !mqttIsConnected ) 
-    {
-      DebugTln(F("no connection with a MQTT broker .."));
-      return;
-    }
-  }
-
-  DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
-  if (!StaticInfoSend)  MQTTSentStaticInfo();
-  fieldsElements = ACTUALELEMENTS;
-  
   if ( bActJsonMQTT ) jsonDoc.clear();
-  
+
   DSMRdata.applyEach(buildJsonMQTT());
   
   if ( bActJsonMQTT ) {
     String buffer;
+    if ( gasDelivered ) {
+      jsonDoc["gas"] = gasDelivered;
+      jsonDoc["gas_ts"] = gasDeliveredTimestamp;
+    }
     serializeJson(jsonDoc,buffer);
     MQTTSend("all", buffer, false);
-  }
+  } //bActJsonMQTT
+  
   if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
 
   MQTTsendGas();
   sendMQTTWater();
 
-    } //!connected else
-} // sendMQTTData()
+  }
+}
 
 /***************************************************************************
 *

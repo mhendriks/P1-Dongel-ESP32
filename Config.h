@@ -1,3 +1,5 @@
+// Boardsconfig
+
 // Device Types
 #define PRO         0
 #define PRO_BRIDGE  1
@@ -16,7 +18,7 @@
   #define LED_ON              LOW
   #define LED_OFF             HIGH
   #define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
-  //#define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
+//  #define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
   volatile unsigned long      Tpressed = 0;
   volatile byte               pressed = 0;
 #ifdef ETHERNET

@@ -129,7 +129,7 @@ void handleKeyInput()
     inChar = (char)TelnetStream.read();
     
     switch(inChar) {
-//      case 'n': NTPTest();break;
+      case 'n': PrintVarr();break;
       case 'a':     
       case 'A':     { char c;
                       while (TelnetStream.available() > 0) { 
