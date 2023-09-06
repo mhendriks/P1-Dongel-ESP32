@@ -177,9 +177,6 @@ void processTelegram(){
   // handle rawport
   if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
   
-#ifdef VOLTAGE
-  ProcessVoltage();
-#endif  
   ProcessMaxVoltage();
 
   //update actual time

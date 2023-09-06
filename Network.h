@@ -29,8 +29,7 @@ bool WifiConnected       = false;
 bool WifiBoot            = true;
 char APIurl[42]          = "http://api.smart-stuff.nl/v1/register.php";
 
-#define   MaxWifiReconnect  10
-DECLARE_TIMER_SEC(WifiReconnect, 5); //try after x sec
+DECLARE_TIMER_SEC(WifiReconnect, 5); //try after 5 sec
 
 void LogFile(const char*, bool);
 void P1Reboot();

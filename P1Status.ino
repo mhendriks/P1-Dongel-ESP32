@@ -25,7 +25,7 @@ void P1StatusDefType(){
   
 void P1StatusRead(){
     P1Status.reboots = preferences.getUInt("reboots", 0);
-    P1Status.sloterrors = preferences.getUInt("sloterrors", 0);
+//    P1Status.sloterrors = preferences.getUInt("sloterrors", 0);
     preferences.getString("timestamp",P1Status.timestamp,14);
     P1Status.wtr_m3 = preferences.getShort("wtr_m3", 0);
     P1Status.wtr_l = preferences.getUInt("wtr_l", 0);
@@ -53,7 +53,7 @@ void P1SetDevType(){
 void P1StatusWrite(){
     strcpy(P1Status.timestamp, actTimestamp);
     preferences.putUInt("reboots", P1Status.reboots);
-    preferences.putUInt("sloterrors", P1Status.sloterrors);
+//    preferences.putUInt("sloterrors", P1Status.sloterrors);
     preferences.putString("timestamp",P1Status.timestamp);
     preferences.putShort("wtr_m3", P1Status.wtr_m3);
     preferences.putUInt("wtr_l", P1Status.wtr_l);
@@ -67,7 +67,7 @@ void P1StatusReset(){
 }
 
 void P1StatusClear(){
-  P1Status.sloterrors = 0;
+//  P1Status.sloterrors = 0;
   P1Status.reboots    = 0;
   P1Status.wtr_m3     = 0;
   P1Status.wtr_l      = 0;

@@ -1,4 +1,4 @@
- /*
+/*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
 **  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
@@ -30,6 +30,7 @@ TODO
 - #18 water en gas ook in de enkele json string (mqtt)
 - spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
 - loadbalancing bijhouden over de fases
+- mqtt client in task proces
 
 4.8.6
 √ mqtt all topic -> retianed ... 
@@ -39,15 +40,15 @@ TODO
 √ mqtt toptopic length = 40
 √ mqtt count succesfull published all topics
 √ major refactoring MQTT logic
-- voorbereidingen bijhouden van overspanning
-- remove old voltage monitoring option
+√ voorbereidingen bijhouden van overspanning
+√ remove old voltage monitoring option
+x endless retry Wifi connection
 
 4.9.0
 - RNG files continu open
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
-- MQTT refactor
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - support https / http mqtt link extern
 - issue: wegvallen wifi geen reconnect / reconnect mqtt
@@ -72,7 +73,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define HEATLINK        //first draft
 //#define INSIGHT         
 //#define AP_ONLY
-//#define VOLTAGE
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
@@ -166,12 +166,6 @@ void setup()
 //create a task that will be executed in the fP1Reader() function, with priority 2
   if( xTaskCreate( fP1Reader, "p1-reader", 30000, NULL, 2, &tP1Reader ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
 
-#ifdef VOLTAGE
-  //reset at every startup
-  CreateRingVoltage();
-#endif
-
-  
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
   
 } // setup()
