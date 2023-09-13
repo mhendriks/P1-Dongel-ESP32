@@ -8,11 +8,11 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-#include <WiFi.h>        // Core WiFi Library         
-#include <ESPmDNS.h>        // part of Core https://github.com/esp8266/Arduino
+#include <WiFi.h>        
+#include <ESPmDNS.h>        
 #include <Update.h>
 #include "Html.h"
-#include <WiFiManager.h>        // version 0.16.0 - https://github.com/tzapu/WiFiManager
+#include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager
 #include <HTTPClient.h>
 #include "NetTypes.h"
 
