@@ -327,11 +327,10 @@ ul ul ul {
 ul:after { clear: both; }
 #myTopnav .iconify{font-size:130%;}
 
-#DashTab h1 svg.iconify , #DashTab h1 svg.iconify path  {
+#DashTab h1 span, #DashTab h1 svg.iconify , #DashTab h1 svg.iconify path  {
     background-color: transparent;
 	color: white!important;
-}
-	
+	}
 nav {
 	position: fixed;
     left: 0;
@@ -525,9 +524,9 @@ body > div.bottom.right-0 {
 }
 
 section#DashTab .chart-container {
-    height: 90px!important;
-    width: 180px!important;
- }
+  height: 90px!important;
+  width: 180px!important;
+}
 
 .chart-container {
 	display: block;
@@ -584,6 +583,17 @@ svg{position:inherit!important}
 #btnYear, #btnMonth {
   	color:black;
   }
+  
+/*** EID styles ***/
+.align-c {text-align:center}
+.iconify {margin-left:5px;margin-top:4px}
+h1.align-c img {height:40px}
+#eid-setup {background:#ddd;max-width:450px;padding:30px;border-radius:5px;margin:0 10px}
+#st, #claim{margin:20px auto;}
+a {color: #fff;text-decoration: none;}
+a.eid_link {display: flex; justify-content: flex-end; color:rgb(112,172,77)}
+button { background-color: rgb(112,172,77);padding: 8px 16px;border-radius: 15px;margin-right: 10px; color:#fff;border: none;  box-shadow: 0 1px 4px rgba(0, 0, 0, .6)}
+a.eid_link:hover, button:hover {filter: brightness(75%);}  
   
 /*
 ***************************************************************************

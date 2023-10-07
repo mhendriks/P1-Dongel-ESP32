@@ -1,7 +1,7 @@
 <!--
 ***************************************************************************  
 **  Program  : DSMRindex_body.html, part of DSMRloggerAPI
-**  Version  : v4.3.0
+**  Version  : v4.9.0
 **
 **  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
@@ -15,27 +15,28 @@
    	<div class="nav-clock topcorner"><span id="theTime">2023-01-01 00:31:49</span></div>
     <ul class="main-navigation" id="myTopnav">
       <li><a id='Home'   		class='nav-img' href="#DashTab" onclick="activeTab='bDashTab';openTab()"><span class="iconify" data-icon="mdi-chart-box-outline"></span></a></li>
-	  <li><a id='bDashTab'    	class='tabButton nav-item active' href="#DashTab">Dash</a></li>
-	  <li><a id='bActualTab'    class='tabButton nav-item' href="#ActualTab" >Actueel</a></li>
-      <li><a id='bHoursTab'     class='tabButton nav-item' href="#HoursTab" >Uur</a></li>
-      <li><a id='bDaysTab'      class='tabButton nav-item' href="#DaysTab" >Dag</a></li>
-      <li><a id='bMonthsTab'    class='tabButton nav-item' href="#MonthsTab" >Maand</a></li>
-      <li><a id='bPlafondTab'   class='tabButton nav-item' href="#PlafondTab" >PrijsPlafond</a></li>
+	  <li><a id='bDashTab'    	data-i18n-key="mnu-dash" class='tabButton nav-item active' href="#DashTab">Dash</a></li>
+	  <li><a id='bActualTab'    data-i18n-key="mnu-actual" class='tabButton nav-item' href="#ActualTab" >Actueel</a></li>
+      <li><a id='bHoursTab'     data-i18n-key="mnu-hour" class='tabButton nav-item' href="#HoursTab" >Uur</a></li>
+      <li><a id='bDaysTab'      data-i18n-key="mnu-day" class='tabButton nav-item' href="#DaysTab" >Dag</a></li>
+      <li><a id='bMonthsTab'    data-i18n-key="mnu-month" class='tabButton nav-item' href="#MonthsTab" >Maand</a></li>
+      <li><a id='bPlafondTab'   data-i18n-key="mnu-plafond" class='tabButton nav-item' href="#PlafondTab" >PrijsPlafond</a></li>
 	  <li>
 	  	<a id='bSysInfoTab' class='nav-img nav-item' href="#SysInfoTab" ><span class="iconify" data-icon="mdi-information-outline"></span></a>
 		<ul>
-			<li><a id='bInfo_SysInfo'   class='tabButton nav-item' href="#SysInfoTab" >Systeeminformatie</a></li>
-			<li><a id='bInfo_frontend'  class='tabButton nav-item' href="#FrontendTab" >Webpagina</a></li>
-			<li><a id='bInfo_Telegram'  class='tabButton nav-item' href="#TelegramTab" >Telegram</a></li>
-			<li><a id='bInfo_Fields'    class='tabButton nav-item' href="#FieldsTab" >Alle Velden</a></li>
-			<li><a id='bInfo_APIdoc'    class='tabButton nav-item' href="#APIdocTab" >API Docs</a></li>
+			<li><a id='bInfo_SysInfo'   data-i18n-key="mnu-sysinfo" class='tabButton nav-item' href="#SysInfoTab" >Systeeminformatie</a></li>
+			<li><a id='bInfo_frontend'  data-i18n-key="mnu-frontend" class='tabButton nav-item' href="#FrontendTab" >Webpagina</a></li>
+			<li><a id='bInfo_Telegram'  data-i18n-key="mnu-telegram" class='tabButton nav-item' href="#TelegramTab" >Telegram</a></li>
+			<li><a id='bInfo_Fields'    data-i18n-key="mnu-fields" class='tabButton nav-item' href="#FieldsTab" >Alle Velden</a></li>
+			<li><a id='bInfo_APIdoc'    data-i18n-key="mnu-api" class='tabButton nav-item' href="#APIdocTab" >API Docs</a></li>
 		</ul></li>
       <li><a id='bFSExplorer'    class='nav-img nav-item' href="#FSExplorer" ><span class="iconify" data-icon="mdi-folder-outline"></span></a></li>
       <li><a id='bSettings'      class='nav-img nav-item' href="#Settings" ><span class="iconify" data-icon="mdi-cog"></span></a>    
 		<ul>
-			<li><a id='bEditSettings' class='tabButton nav-item' href="#Settings" >Settings</a></li>
-			<li><a id='bEditMonths'   class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
-			<li><a id='bReset'   	  class='tabButton nav-item' href="#Reset" >Reset & Update</a></li>
+			<li><a id='bEditSettings' data-i18n-key="mnu-settings" class='tabButton nav-item' href="#Settings" >Settings</a></li>
+			<li><a id='bEditMonths'   data-i18n-key="mnu-editmonths" class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
+			<li><a id='bReset'   	  data-i18n-key="mnu-reset" class='tabButton nav-item' href="#Reset" >Reset & Update</a></li>
+			<li><a id='bEid'   	 	  data-i18n-key="mnu-eid" class='tabButton nav-item' href="#EID" style="display:none">Setup EnergyID</a></li>
 <!-- 			<li><a id='bAbout'   	  class='tabButton nav-item' href="#About" >About</a></li> -->
 		</ul></li>
 	  <li><a href="javascript:void(0);" class="icon" onclick="menu()"><i id="menuid" class="iconify" data-icon="mdi-menu"></i></a></li>
@@ -46,13 +47,13 @@
 <div id="mainPage" style="display:block">
     <!-- START HoursTab -->
   <section id="HoursTab" class="tabName">
-    <h2>Afgelopen Uren</h2>
+    <h2 data-i18n-key="tle-hours">Afgelopen Uren</h2>
 	<div>
-      <label for="pType"><b>Presentatie: </b></label>
-      Tabel
+      <label for="pType"><b data-i18n-key="lbl-presentation">Presentatie: </b></label>
+      <span data-i18n-key="lbl-table">Tabel</span>
       <input type="radio" id="hTAB" onchange="setPresentationType('TAB')" checked/>
       &nbsp;&nbsp;
-      Grafisch
+      <span data-i18n-key="lbl-graphical">Grafisch</span>
       <input type="radio" id="hGRAPH" onchange="setPresentationType('GRAPH')"/>
       &nbsp;&nbsp;
     </div>
@@ -67,11 +68,11 @@
 		</colgroup>
 		<thead>
           <tr>
-            <th>Datum/Tijd</th>
-            <th class=th-energy>Energie<br>Verbruik<br>(Wh)</th>
-            <th class=th-energy-r>Energie<br>Teruglevering<br>(Wh)</th>
-            <th class=mbus-name>Gas-<br>verbruik<br>(m3)</th>
-			<th class=water>Water-<br>verbruik<br>(m3)</th>
+            <th data-i18n-key="lbl-date-time">Datum/Tijd</th>
+            <th class=th-energy data-i18n-key="lbl-energy-use">Energie<br>Verbruik<br>(Wh)</th>
+            <th class=th-energy-r data-i18n-key="lbl-energy-return">Energie<br>Teruglevering<br>(Wh)</th>
+            <th class=mbus-name data-i18n-key="lbl-gas-use">Gas-<br>verbruik<br>(m3)</th>
+			<th class=water data-i18n-key="lbl-water-use">Water-<br>verbruik<br>(m3)</th>
           </tr>
           </thead>
       <tbody>
@@ -82,13 +83,13 @@
 
   <!-- START DaysTab -->
   <section id="DaysTab" class="tabName">
-    <h2>Afgelopen Dagen</h2>
+    <h2 data-i18n-key="tle-days">Afgelopen Dagen</h2>
     <div>
-      <label for="pType"><b>Presentatie: </b></label>
-      Tabel
+      <label for="pType"><b data-i18n-key="lbl-presentation">Presentatie: </b></label>
+            <span data-i18n-key="lbl-table">Tabel</span>
       <input type="radio" id="dTAB" onchange="setPresentationType('TAB')" checked/>
       &nbsp;&nbsp;
-      Grafisch
+	  <span data-i18n-key="lbl-graphical">Grafisch</span>
       <input type="radio" id="dGRAPH" onchange="setPresentationType('GRAPH')"/>
       &nbsp;&nbsp;
     </div>
@@ -103,12 +104,12 @@
 		</colgroup>
       <thead>
         <tr>
-            <th>Datum/Tijd</th>
-            <th>Energie<br>Verbruik<br>(Wh)</th>
-            <th>Energie<br>Teruglevering<br>(Wh)</th>
-            <th class=mbus-name>Gas-<br>verbruik<br>(m3)</th>
-			<th>Water-<br>verbruik<br>(m3)</th>
-            <th>Kosten</th>
+            <th data-i18n-key="lbl-date-time">Datum/Tijd</th>
+            <th data-i18n-key="lbl-energy-use">Energie<br>Verbruik<br>(Wh)</th>
+            <th data-i18n-key="lbl-energy-return">Energie<br>Teruglevering<br>(Wh)</th>
+            <th class=mbus-name data-i18n-key="lbl-gas-use">Gas-<br>verbruik<br>(m3)</th>
+			<th data-i18n-key="lbl-water-use">Water-<br>verbruik<br>(m3)</th>
+            <th data-i18n-key="lbl-costs">Kosten</th>
         </tr>
       </thead>
       <tbody>
@@ -119,16 +120,16 @@
 
   <!-- START MonthsTab -->
   <section id="MonthsTab" class="tabName">
-	<h2>Afgelopen Maanden</h2>
+	<h2 data-i18n-key="tle-months">Afgelopen Maanden</h2>
 	<div>
-      <label for="pType"><b>Presentatie: </b></label>
-      Tabel
+      <label for="pType"><b data-i18n-key="lbl-presentation">Presentatie: </b></label>
+     <span data-i18n-key="lbl-table">Tabel</span>
       <input type="radio" id="mTAB" onchange="setPresentationType('TAB')" checked/>
       &nbsp;&nbsp;
-      Kosten
+      <span data-i18n-key="lbl-costs">Kosten</span>
       <input type="checkbox" id="mCOST" onchange="setMonthTableType()"/>
       &nbsp;&nbsp;
-      Grafisch
+     <span data-i18n-key="lbl-graphical">Grafisch</span>
       <input type="radio" id="mGRAPH" onchange="setPresentationType('GRAPH')"/>
       &nbsp;&nbsp;
     </div>
@@ -156,32 +157,32 @@
       <thead>
         <tr>
             <th></th>
-            <th colspan=4>Afgenomen</th>
-            <th style="text-align:center" colspan=4>Teruggeleverd</th>
-            <th colspan=4 class=mbus-name>Gasverbruik</th>
-			<th style="text-align:center" colspan=4>Waterverbruik</th>
+            <th colspan=4 data-i18n-key="lbl-p-used">Afgenomen</th>
+            <th style="text-align:center" colspan=4 data-i18n-key="lbl-p-returned">Teruggeleverd</th>
+            <th colspan=4 class=mbus-name data-i18n-key="lbl-gas-used">Gasverbruik</th>
+			<th style="text-align:center" colspan=4 data-i18n-key="lbl-water-used">Waterverbruik</th>
         </tr>
         <tr>
-            <th>Maand</th>
-            <th>Jaar</th>
-            <th>(kWh)</th>
-            <th>Jaar</th>
-            <th>(kWh)</th>
+            <th data-i18n-key="lbl-month">Maand</th>
+            <th data-i18n-key="lbl-year">Jaar</th>
+            <th data-i18n-key="lbl-kwh">(kWh)</th>
+            <th data-i18n-key="lbl-year">Jaar</th>
+            <th data-i18n-key="lbl-kwh">(kWh)</th>
 
-            <th>Jaar</th>
-            <th>(kWh)</th>
-            <th>Jaar</th>
-            <th>(kWh)</th>
+            <th data-i18n-key="lbl-year">Jaar</th>
+            <th data-i18n-key="lbl-kwh">(kWh)</th>
+            <th data-i18n-key="lbl-year">Jaar</th>
+            <th data-i18n-key="lbl-kwh">(kWh)</th>
             
-            <th>Jaar</th>
-            <th class=mbus-unit>(m3)</th>
-            <th>Jaar</th>
-            <th class=mbus-unit>(m3)</th>
+            <th data-i18n-key="lbl-year">Jaar</th>
+            <th class=mbus-unit data-i18n-key="lbl-m3">(m3)</th>
+            <th data-i18n-key="lbl-year">Jaar</th>
+            <th class=mbus-unit data-i18n-key="lbl-m3">(m3)</th>
             
-            <th>Jaar</th>
-            <th>(m3)</th>
-            <th>Jaar</th>
-            <th class=mbus-unit>(m3)</th></tr>
+            <th data-i18n-key="lbl-year">Jaar</th>
+            <th data-i18n-key="lbl-m3">(m3)</th>
+            <th data-i18n-key="lbl-year">Jaar</th>
+            <th class=mbus-unit data-i18n-key="lbl-m3">(m3)</th></tr>
       </thead>
       <tbody>
 	  </tbody>
@@ -224,7 +225,7 @@
   </section> <!-- END MonthsTab -->
   
   <section id="PlafondTab" class="tabName">
-	<h2>Prijsplafond (NL)</h2>
+	<h2 data-i18n-key="tle-cap">Prijsplafond (NL)</h2>
 	<p>Deze grafiek laat verbruik zien t.o.v. prijsplafond om een idee te geven hoe het verbruik zich ontwikkeld.<br>
 	In de jaar grafieken is de seizoensinvloed meegenomen. In de maand grafieken is de verdeling linear.<br>
 	Het is een hulpmiddel om een beeld te krijgen van het gebruik ten opzichte van het prijsplafond.</p>
@@ -244,7 +245,7 @@
 
   <!-- START SysInfo Tab -->
   <section id="SysInfoTab" class="tabName subTab">
-    <h2>Systeeminformatie</h2>
+    <h2 data-i18n-key="tle-sysinfo"> Systeeminformatie</h2>
     <div id='devInfo'>
       <table id="devInfoTable">
       <thead>
@@ -257,9 +258,11 @@
       <tbody id="tb_info">
       </tbody>
       <tfoot>
+<!-- 
         <tr>
             <td colspan=3>Data uit de Dongle</td>
         </tr>
+ -->
       </tfoot>
       </table>
     </div>
@@ -268,7 +271,7 @@
 
   <!-- START TelegramTab -->
   <section id="TelegramTab" class="tabName subTab">
-    <h2>Ruwe Telegram data</h2>
+    <h2 data-i18n-key="tle-telegram">Ruwe Telegram data</h2>
     <div id="rawTelegram">
     </div>
     
@@ -277,7 +280,7 @@
   <!-- START Fields Tab -->
   <section id="FieldsTab" class="tabName subTab">
     <!-- START fieldsTab Dummy -->
-    <h2>Alle Velden</h2>
+    <h2 data-i18n-key="tle-all-fields">Alle Velden</h2>
     <div id='fields'>
       <table id="fieldsTable">
       <thead>
@@ -292,7 +295,7 @@
       </tbody>
       <tfoot>
         <tr>
-            <td colspan=4>Data uit de Slimme Meter</td>
+            <td colspan=4 data-i18n-key="lbl-sm-data">Data uit de Slimme Meter</td>
         </tr>
       <tfoot>
       </table>
@@ -302,7 +305,7 @@
   <!-- START Frontend Tab -->
   <section id="FrontendTab" class="tabName subTab">
     <!-- START Frontend Dummy -->
-    <h2>Instellingen Webpagina</h2>
+    <h2 data-i18n-key="tle-web-settings">Instellingen Webpagina</h2>
     <div id='frontend'>
       <table id="frontendTable">
       <thead>
@@ -326,7 +329,7 @@
   <!-- START Api Docs Tab -->
   <section id="APIdocTab" class="tabName subTab">
     <!-- START APIdocTab Dummy -->
-    <h2>API documentatie</h2>
+    <h2 data-i18n-key="tle-api-docs">API documentatie</h2>
     <table id=ApiDocTable>
   <tr>
     <th>url</th>
@@ -365,11 +368,9 @@
     <td><a href="api/v2/sm/fields/{fieldName}" target="_blank">api/v2/sm/fields/{fieldName}</a></td>
     <td>Smart Meter one field data in JSON format</td>
   </tr>
-  </tr>
     <tr>
     <td><a href="api/v2/sm/telegram" target="_blank">api/v2/sm/telegram</a></td>
     <td>raw telegram as send by the Smart Meter including all \"\\r\\n\" line endings</td>
-  </tr>
   </tr>
     <tr>
     <td><a href="api/v2/hist/hours" target="_blank">api/v2/hist/hours</a></td>
@@ -391,13 +392,12 @@
     <td>History data file structure (month, day, hour)</td>
 	<td>{"actSlot":&lt;actual slot#&gt;,"data":[{"date":&lt;YYMMDDHH&gt;,"values":[&lt;EDT1&gt;,&lt;EDT2&gt;,&lt;ERT1&gt;,&lt;ERT2&gt;,&lt;GDT&gt;]}, ...]}</td>
   </tr>  
-  
 </table>
   </section>  <!-- END API docs Tab -->
     
   <section id="Settings" class="tabName">
       <!-- START Tabbladen -->
-  <h2>Instellingen</h2>
+  <h2 data-i18n-key="tle-settings">Instellingen</h2>
   <div id="tabEditSettings" class="outer-div"">
     <!-- START settingsTab Settings -->
       <div id="settings_table" class="inner-div"></div>          
@@ -409,9 +409,9 @@
   </section> <!-- end Settings Page -->
  
   <section id="EditMonths" class="tabName"> 
-   <h2>Meterstanden invoeren</h2>
+   <h2 data-i18n-key="tle-input-mtr-reading">Meterstanden invoeren</h2>
   <div id="tabEditMonths" class="tabName">
-    <label for="Period"><b>Meterstand: </b></label>
+    <label for="Period"><b data-i18n-key="tbl-mtr-readering">Meterstand: </b></label>
       Energy Delivered
       <input type="radio" name="editType" id="MED" onchange="setEditType('ED')" checked/>
       Energy Returned
@@ -430,7 +430,7 @@
   </section> <!-- end tabEditMonths Page -->
   
   <!-- START FileExplorer Tab -->
-  <section id="FSExplorer" class="tabName"><h2>Bestandsbeheer</h2>
+  <section id="FSExplorer" class="tabName"><h2 data-i18n-key="tle-file-mng">Bestandsbeheer</h2>
       <div>
          <main id="FSmain"></main>
       </div>
@@ -445,10 +445,10 @@
   
 <section id="Reset" class="tabName">
       <!-- START Tabbladen -->
-  <h2>Reset en Update</h2>
+  <h2 data-i18n-key="tle-reset-update">Reset en Update</h2>
       <hr>
             <div id="btnReboot" class="act_btn">
-      	<p>Na het indrukken van de REBOOT knop zal de Dongel opnieuw opstarten.</p>
+      	<p data-i18n-key="txt-reboot">Na het indrukken van de REBOOT knop zal de Dongel opnieuw opstarten.</p>
         <span>
         <form  action='/ReBoot'>
           <input type='submit' class='button' name='SUBMIT' value='Reboot'>
@@ -456,7 +456,7 @@
       </div> 
       <hr>
       <div id="btnFirmware" class="act_btn">
-		<p>Na het indrukken van de UPDATE FIRMWARE knop zal het updatescherm worden getoond. Hiermee kan een firmware of data update worden uitgevoerd.</p>
+		<p data-i18n-key="txt-update-firmware">Na het indrukken van de UPDATE FIRMWARE knop zal het updatescherm worden getoond. Hiermee kan een firmware of data update worden uitgevoerd.</p>
         <span>
         <form  action='/updates' method='GET'>
           <input id="update" type='submit' class='button' name='SUBMIT' value='Update Firmware...' hidden/>
@@ -465,7 +465,7 @@
       </div>
             <hr>
       <div id="btnResetWifi" class="act_btn">
-		<p>Na het indrukken van de RESET WIFI knop zal de module herstarten en vragen om het wifi-netwerk opnieuw in te stellen. Zie initiële setup van de module.</p>
+		<p data-i18n-key="txt-reset-wifi">Na het indrukken van de RESET WIFI knop zal de module herstarten en vragen om het wifi-netwerk opnieuw in te stellen. Zie initiële setup van de module.</p>
         <span>
         <form action='/ResetWifi' >
           <input id="resetWifi" type='submit' class='button' name='SUBMIT' value='Reset Wifi' hidden/>
@@ -484,22 +484,44 @@
   
   
 	<section id="Redirect" class="tabName">
-	<h2>Opnieuw opstarten</h2>
+	<h2 data-i18n-key="tle-reboot">Opnieuw opstarten</h2>
 	<h3><div id="RedirectMessage"></div></h3>
 	<div><b>Redirect over <span id='counter'>45</span> seconden.</b>
 	<hr>Indien de pagina niet automatisch getoond wordt klik dan op <a href='/'>Home pagina</a></div>
     </section>  
-   
+
+	<section id="EID" class="tabName">
+		<!-- 	<h2 data-i18n-key="tle-eid">Setup EnergyID</h2> -->
+		<div id=eid-setup>
+		<h1 class=align-c><img src="https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@master/cdn/assets/eid.png" alt="EnergyID"></h1><br>
+		<div>P1 Dongle Pro koppelen aan EnergyID monitoring systeem.</div><div> Dit geeft uw inzichten in uw verbruik en mogelijkheid om dit te vergelijken met andere gelijke profielen.<br>
+		<br>
+		<a class="eid_link" href="https://energyid.eu" target="_blank">Over EnergyID<i class="iconify" data-icon="mdi-external-link"></i></a>
+		</div>
+		<hr>
+		<div id=st>Status van de koppeling: <b><span id=status>Status ophalen...</span></b></div>
+		<div class=align-c><button type="button" onclick="getclaim()">Update Status</button></div>
+		<div id=claim style="display:none">
+		<hr>
+		U dient de koppeling in EnergyID dashboard te activeren via onderstaande link.</br>
+		</br>
+		<b>Let op! knopt opent de EnergyID pagina in een apart tabblad. Keer terug na activatie.</b>
+		<br>
+		<br>
+		<div class=align-c><b><button><span id=claimurl></span></button></b></div>
+		</div>
+    </section>  
+
 <!-- START ActualTab Tab -->
   <section id="ActualTab" class="tabName">
     <!-- START actueelTab Dummy -->
-        <h2>Actueel</h2>
+        <h2 data-i18n-key="tle-actual">Actueel</h2>
     <div>
-        <label for="pType"><b>Presentatie: </b></label>
-        Tabel
+        <label for="pType"><b data-i18n-key="lbl-presentation">Presentatie: </b></label>
+        <span data-i18n-key="lbl-table">Tabel</span>
         <input type="radio" id="aTAB" onchange="setPresentationType('TAB')" checked/>
         &nbsp;&nbsp;
-        Grafisch
+        <span data-i18n-key="lbl-graphical">Grafisch</span>
         <input type="radio" id="aGRAPH" onchange="setPresentationType('GRAPH')"/>
         &nbsp;&nbsp;
     </div>
@@ -507,16 +529,16 @@
       <table id="actualTable">
       <thead>
         <tr>
-            <th>Naam</th>
-            <th>Waarde</th>
-            <th style="text-align: center;">Eenheid</th>
+            <th data-i18n-key="lbl-name">Naam</th>
+            <th data-i18n-key="lbl-value">Waarde</th>
+            <th style="text-align: center;" data-i18n-key="lbl-unit">Eenheid</th>
         </tr>
       </thead>
       <tbody>
       </tbody>
       <tfoot>
         <tr>
-            <td colspan=3>Data uit de Slimme Meter</td>
+            <td colspan=3 data-i18n-key="lbl-sm-data">Data uit de Slimme Meter</td>
         </tr>
       <tfoot>
       </table>
@@ -526,14 +548,13 @@
   
   <!-- START Dash Tab -->
   <section id="DashTab" class="tabName default">
-        <h2>Dashboard</h2>
-    <h3 id=w8api style="margin-top:50%">Wacht op gegevens van Slimme Meter</h3>
+        <h2 data-i18n-key="dsh-dash">Dashboard</h2>
+    <h3 id=w8api style="margin-top:50%" data-i18n-key="lbl-sm-data-wait">Wacht op gegevens van Slimme Meter</h3>
     <div class=outer id="inner-dash" style="display:none">
 
         <a href="#ActualTab" style="display:flex">
         <div class=card id=l1 style="display:block">
-			<h1 id=power_delivered_l1h i18n-key="Actueel"><span class="iconify" data-icon="mdi-gauge"></span>Actueel</h1>
-<!-- 	        <div class="chart-container" id="gauge"></div> -->
+			<h1 id=power_delivered_l1h><span class="iconify" data-icon="mdi-gauge"></span><span data-i18n-key="dsh-actual">Actueel</span></h1>
 	        <canvas class="chart-container" id="gauge3f"></canvas>
 	        <div id=legenda>
 				<div id=f1 class="lblVerbuik vandaag">1<span class="tooltiptext">fase 1</span></div>
@@ -541,7 +562,7 @@
 				<div id=f3 class="lblVerbuik eergisteren" style="display:none">3<span class="tooltiptext">fase 3</span></div>
 			</div>
             <hr/>
-            <div style="text-align:center">Actueel [<span name="power">kW</span>]</div>
+            <div style="text-align:center" data-i18n-key="lbl-actual-kwh">Actueel [<span name="power">kW</span>]</div>
             <h2 id="power_delivered">0.0</h2>
             <h3>max: <span id="power_delivered_1max">0.0</span> <span name="power">kW</span></h3>
             <h3>min: <span id="power_delivered_1min">0.0</span> <span name="power">kW</span></h3>
@@ -549,78 +570,74 @@
 		</a>
 		<a href="#HoursTab" style="display:flex">
         <div class=card id=l3 style="display:block">
-            <h1 id=Ph ><span class="iconify" data-icon="mdi-lightning-bolt"></span>Electra</h1>
+            <h1 id=Ph><span class="iconify" data-icon="mdi-lightning-bolt"></span><span data-i18n-key="dsh-energy">Elektra</span></h1>
             <canvas class="chart-container" id="container-3"></canvas>
-<!--             <div class="label">ELECTRA</div>         -->
 			<div id=legenda>
-				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
-				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
-				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext" data-i18n-key="lbl-today">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext" data-i18n-key="lbl-yesterday">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext" data-i18n-key="lbl-2daysago">Eergisteren</span></div>
 			</div>
     		<hr/>
-            <div style="text-align:center">Vandaag [kWh]</div>
+            <div style="text-align:center" data-i18n-key="lbl-today-kwh">Vandaag [kWh]</div>
             <h2 id=P>0.0</h2>
             <!--h3>max: <span id="Pmax">0.0</span></h3>
             <h3>min: <span id="Pmin">0.0</span></h3-->
         </div>
     	</a>
     	<div class=card id=l6 style="display:none">
-            <h1 id=Ph ><span class="iconify" data-icon="mdi-home-import-outline"></span>Afname</h1>
+            <h1 id=Ph><span class="iconify" data-icon="mdi-home-import-outline"></span><span data-i18n-key="dsh-delivered">Afname</span></h1>
             <canvas class="chart-container" id="container-6"></canvas>
-<!--             <div class="label">ELECTRA</div>         -->
 			<div id=legenda>
-				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
-				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
-				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext" data-i18n-key="lbl-today">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext" data-i18n-key="lbl-yesterday">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext" data-i18n-key="lbl-2daysago">Eergisteren</span></div>
 			</div>
     		<hr/>
-            <div style="text-align:center">Vandaag [kWh]</div>
+            <div style="text-align:center" data-i18n-key="lbl-today-kwh">Vandaag [kWh]</div>
             <h2 id=Pa>0.0</h2>
             <!--h3>max: <span id="Pamax">0.0</span></h3>
             <h3>min: <span id="Pamin">0.0</span></h3-->
         </div>
         <div class=card id=l5 style="display:none">
-            <h1 id=Ph ><span class="iconify" data-icon="mdi-home-export-outline"></span>Teruglevering</h1>
+            <h1 id=Ph><span class="iconify" data-icon="mdi-home-export-outline"></span><span data-i18n-key="dsh-returned">Teruglevering<span></h1>
             <canvas class="chart-container" id="container-5"></canvas>
-<!--             <div class="label">ELECTRA</div>         -->
 			<div id=legenda>
-				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
-				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
-				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext" data-i18n-key="lbl-today">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext" data-i18n-key="lbl-yesterday">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext" data-i18n-key="lbl-2daysago">Eergisteren</span></div>
 			</div>
     		<hr/>
-            <div style="text-align:center">Vandaag [kWh]</div>
+            <div style="text-align:center" data-i18n-key="lbl-today-kwh">Vandaag [kWh]</div>
             <h2 id=Pi>0.0</h2>
             <!--h3>max: <span id="Pimax">0.0</span></h3>
             <h3>min: <span id="Pimin">0.0</span></h3-->
         </div>
         <div class=card id=l4 style="display:none">
-            <h1 id=Gh ><span class="iconify" data-icon="mdi-fire"></span>Gas</h1>
+            <h1 id=Gh ><span class="iconify" data-icon="mdi-fire"></span><span data-i18n-key="dsh-gas">Gas<span></h1>
             <canvas class="chart-container" id="container-4"></canvas>
-<!-- 			<div class="label stroom">GAS</div> -->
 			<div id=legenda>
-				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
-				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
-				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext" data-i18n-key="lbl-today">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext" data-i18n-key="lbl-yesterday">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext" data-i18n-key="lbl-2daysago">Eergisteren</span></div>
 			</div>
             <hr/>
-            <div style="text-align:center">Vandaag [㎥]</div>
+            <div style="text-align:center" data-i18n-key="lbl-today-m3">Vandaag [㎥]</div>
             <h2 id="G">0.0</h2>
         </div>
                 <div class=card id=l7 style="display:none">
-            <h1 id=Gh ><span class="iconify" data-icon="mdi-water"></span>Water</h1>
+            <h1 id=Gh ><span class="iconify" data-icon="mdi-water"></span><span data-i18n-key="dsh-water">Water<span></h1>
             <canvas class="chart-container" id="container-7"></canvas>
 			<div id=legenda>
-				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
-				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
-				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext" data-i18n-key="lbl-today">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext" data-i18n-key="lbl-yesterday">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext" data-i18n-key="lbl-2daysago">Eergisteren</span></div>
 			</div>
             <hr/>
-            <div style="text-align:center">Vandaag [liter]</div>
+            <div style="text-align:center" data-i18n-key="lbl-today-l">Vandaag [liter]</div>
             <h2 id="W">0.0</h2>
         </div>
         <div class=card id=l2 style="display:none">
-            <h1 id=power_delivered_l2h ><span class="iconify" data-icon="mdi-sine-wave"></span>Spanning</h1>
+            <h1 id=power_delivered_l2h ><span class="iconify" data-icon="mdi-sine-wave"></span><span data-i18n-key="dsh-voltage">Spanning<span></h1>
 	        <canvas class="chart-container" id="gauge-v"></canvas>
 	        <div id=legenda>
 				<div id=v1 class="lblVerbuik vandaag">1<span class="tooltiptext">fase 1</span></div>
@@ -628,18 +645,18 @@
 				<div id=v3 class="lblVerbuik eergisteren" style="display:none">3<span class="tooltiptext">fase 3</span></div>
 			</div>
             <hr/>
-            <div style="text-align:center">Aantal fases</div>
+            <div style="text-align:center" data-i18n-key="lbl-nbr-phases">Aantal fases</div>
             <h2 id="fases">1</h2>
             <h3>max: <span id="power_delivered_2max">0.0</span> Volt</h3>
             <h3>min: <span id="power_delivered_2min">0.0</span> Volt</h3>
         </div>
          <div class=card id=l8 style="display:none">
-            <h1 id=Qh ><span class="iconify" data-icon="mdi-heat-wave"></span>Warmte</h1>
+            <h1 id=Qh ><span class="iconify" data-icon="mdi-heat-wave"></span><span data-i18n-key="dsh-heat">Warmte<span></h1>
             <canvas class="chart-container" id="container-q"></canvas>
 			<div id=legenda>
-				<div class="lblVerbuik vandaag">v<span class="tooltiptext">Vandaag</span></div>
-				<div class="lblVerbuik gisteren">g<span class="tooltiptext">Gisteren</span></div>
-				<div class="lblVerbuik eergisteren">e<span class="tooltiptext">Eergisteren</span></div>
+				<div class="lblVerbuik vandaag">v<span class="tooltiptext" data-i18n-key="lbl-today">Vandaag</span></div>
+				<div class="lblVerbuik gisteren">g<span class="tooltiptext" data-i18n-key="lbl-yesterday">Gisteren</span></div>
+				<div class="lblVerbuik eergisteren">e<span class="tooltiptext" data-i18n-key="lbl-2daysago">Eergisteren</span></div>
 			</div>
             <hr/>
             <div style="text-align:center">Vandaag [kJ]</div>
@@ -649,7 +666,6 @@
 
     </div> <!-- outer -->  
   </section>  <!-- END Dash Tab --> 
-  
   
   <div hidden id="loader"></div>
   <!-- REST -->

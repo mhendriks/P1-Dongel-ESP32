@@ -10,7 +10,9 @@
 ***************************************************************************      
 */
 // const APIGW='http://localhost/dsmr-api/v5/local/api/'; //test only
-const APIGW=window.location.protocol+'//'+window.location.host+'/api/';
+const APIHOST = window.location.protocol+'//'+window.location.host;
+const APIGW = APIHOST+'/api/';
+
 
 const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
 const URL_DEVICE_INFO   = APIGW + "v2/dev/info";
@@ -162,7 +164,10 @@ const MONTHS_IN_YEAR_NL    = ["Januari","Februari","Maart","April","Mei","Juni",
   var IgnoreInjection		= false 
   var IgnoreGas				= false 
   var Dongle_Config			= ""
-  
+  var eid_enabled			= false
+  var locale
+  let translations 			= {}; //json storage translations
+
 //---- Version globals
   var LastVersion = "", 
   LastVersionMajor = 0, 
@@ -279,6 +284,9 @@ cfgGaugeWATER.options.plugins.labels.render = renderLabelWater;
 function loadIcons(){
 Iconify.addCollection({
    icons: {
+       "mdi-external-link": {
+           body: '<path d="M12 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6m-7 1l9-9m-5 0h5v5M10 6v2H5v11h11v-5h2v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6Zm11-3v8h-2V6.413l-7.793 7.794l-1.414-1.414L17.585 5H13V3h8Z" fill="currentColor"/>',
+       },
        "mdi-folder-outline": {
            body: '<path d="M20 18H4V8h16m0-2h-8l-2-2H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z" fill="currentColor"/>',
        },
@@ -341,7 +349,9 @@ function visibilityListener() {
 	  timeTimer = setInterval(refreshDevTime, 10 * 1000); // repeat every 10s
 	  refreshDevTime();
 	  openTab();
+	  if ( activeTab == "bEID") getclaim();
       break;
+      
     default:
       console.log("visibilityListener() - unknown visibiltyState");
   }
@@ -431,6 +441,32 @@ function SetOnSettings(json){
 // 		document.getElementById("gasChart").style.height = "250px";
 	}
 }
+//============================================================================  
+
+function getclaim(){
+	document.getElementById('status').innerHTML = "Status ophalen...";  
+	
+	fetch(APIHOST+"/eid/getclaim", {"setTimeout": 5000})
+      .then(response => response.json())
+      .then(json => {
+          console.log("parsed response: ["+ JSON.stringify(json)+"]");
+
+        if ( "webhookUrl" in json ) {
+        	document.getElementById('status').innerHTML = "<FONT COLOR='#70ac4d'>GEKOPPELD";
+        	document.getElementById('claim').style.display = 'none';
+        }	
+        if ( "claimUrl" in json ) {
+        	document.getElementById('status').innerHTML = "<FONT COLOR='RED'>Waiting for Activation";
+        	document.getElementById('claimurl').innerHTML = "<a href='" + json.claimUrl +"'target='_blank'>Activeer koppeling<i class='iconify' data-icon='mdi-external-link'></i></a>";
+        	document.getElementById('claim').style.display = 'block';
+        }
+      })
+      .catch(function(error) {
+      	document.getElementById('status').innerHTML = "Fout - Probeer opnieuw!";
+      });
+}
+
+//============================================================================  
 
 function parseVersionManifest(json)
 {
@@ -443,8 +479,8 @@ function parseVersionManifest(json)
   LastVersionNotes = json.notes;
   LastVersionOTA = json.ota_url;
 }
-  
 //============================================================================  
+  
 function ReadVersionManifest() {
   console.log("ReadVersionManifest");
   Spinner(true);
@@ -998,6 +1034,9 @@ function show_hide_column2(table, col_no, do_show) {
 			refreshDevInfo();
 			tabTimer = setInterval(refreshDevInfo, 10 * 1000); // repeat every 10s
 			break;
+		case "bEID":
+			getclaim();
+			break;
 		case "bInfo_frontend":
 			data = {};
 			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
@@ -1192,6 +1231,8 @@ function show_hide_column2(table, col_no, do_show) {
 		  "AvoidSpikes" in json ? AvoidSpikes = json.AvoidSpikes : AvoidSpikes = false;
           "IgnoreInjection" in json ? IgnoreInjection = json.IgnoreInjection : IgnoreInjection = false;
           "IgnoreGas" in json ? IgnoreGas = json.IgnoreGas : IgnoreGas = false;
+// 		  "i18n" in json ? setLocale(json.i18n) : setLocale("nl");
+
           for (var item in data) 
           {
 //           	console.log("config item: " +item);
@@ -1395,6 +1436,7 @@ function formatFailureLog(svalue) {
           break;
 
         case 'timestamp':
+        case 'water_delivered_ts':
         case 'gas_delivered_timestamp':
           tableCells[2].innerHTML = formatTimestamp(data[item].value);
           break;
@@ -1404,6 +1446,10 @@ function formatFailureLog(svalue) {
         case 'mbus2_equipment_id_tc':
         case 'mbus3_equipment_id_tc':
         case 'mbus4_equipment_id_tc':
+        case 'mbus1_equipment_id_ntc':
+        case 'mbus2_equipment_id_ntc':
+        case 'mbus3_equipment_id_ntc':
+        case 'mbus4_equipment_id_ntc':
           tableCells[2].innerHTML = formatIdentifier(data[item].value);
           break;
 
@@ -2040,6 +2086,12 @@ function formatFailureLog(svalue) {
         "gd_tariff" in json ? gd_tariff = json.gd_tariff.value : gd_tariff = 0;
 	  	"conf" in json ? Dongle_Config = json.conf : Dongle_Config = "";
         "electr_netw_costs" in json ? electr_netw_costs = json.electr_netw_costs.value : electr_netw_costs = 0;
+        "eid-enabled" in json ? eid_enabled = json["eid-enabled"]: eid_enabled = false;
+
+        console.log("eid_enabled: " + eid_enabled);
+
+        if ( eid_enabled ) document.getElementById("bEid").style.display = "block"; else document.getElementById("bEid").style.display = "none";
+        
         gas_netw_costs = json.gas_netw_costs.value;
         hostName = json.hostname.value;
         EnableHist =  "hist" in json ? json.hist : true;
@@ -2218,6 +2270,7 @@ function formatFailureLog(svalue) {
       });     
 
       document.getElementById('message').innerHTML = newVersionMsg;
+      
   } // refreshSettings()
   
   
@@ -2484,7 +2537,7 @@ function formatFailureLog(svalue) {
     setTimeout(function() {
       refreshSettings();
     }, 1000);
-    
+    getDevSettings();
   } // saveSettings()
   
   
@@ -3070,6 +3123,9 @@ function formatFailureLog(svalue) {
       ,[ "peak_pwr_last_q",       "Gemiddelde Elektra laatste kwartier"]
       ,[ "highest_peak_pwr",      "Piek Elektra huidige maand"]
       ,[ "highest_peak_pwr_13mnd","Piek Elektra over 13 maanden"]
+      ,[ "water_delivered_ts",	  "Tijdcode Watermeterstand"]
+	  ,[ "eid-enabled",	  		  "EnergyID aan/uit"]
+      
 		  		  		  
   ];
 
