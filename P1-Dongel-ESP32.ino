@@ -32,17 +32,10 @@ TODO
 - loadbalancing bijhouden over de fases
 - mqtt client in task proces
 
-4.8.6
-√ mqtt all topic -> retianed ... 
-√ mqtt interval klopt niet. Fix: bij 1 sec instelling zal de mqtt direct verzonden worden na het inlezen van een P1 bericht (dat is eens per 1 of 10 seconde afhankelijk van de slimme meter).
-√ frontend fix: settings error when some items are missing
-√ mqtt interval: adjustment of timing ...
-√ mqtt toptopic length = 40
-√ mqtt count succesfull published all topics
-√ major refactoring MQTT logic
-√ voorbereidingen bijhouden van overspanning
-√ remove old voltage monitoring option
+4.8.7
 x endless retry Wifi connection
+- issue met wifi connection lost ... geen reboot (h van Akker, P Brand)
+- lengte credentials vermelden  (Rob G)
 
 4.9.0
 - RNG files continu open
@@ -73,7 +66,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define HEATLINK        //first draft
 //#define INSIGHT         
 //#define AP_ONLY
-
+//#define MBUS
+//#define MQTT_DISABLE
+//#define EID
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
 
@@ -167,7 +162,10 @@ void setup()
   if( xTaskCreate( fP1Reader, "p1-reader", 30000, NULL, 2, &tP1Reader ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
 
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
-  
+
+#ifdef MBUS
+  mbusSetup();
+#endif  
 } // setup()
 
 
@@ -198,6 +196,7 @@ void loop () {
        handleRemoteUpdate();
        handleButton();
        handleWater();
+       handleEnergyID();
   
 } // loop()
 

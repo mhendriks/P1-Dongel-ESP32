@@ -63,6 +63,10 @@ void setupFSexplorer()
   httpServer.on(UriBraces("/api/v2/dev/{}"),[]() { auth(); handleDevApi(); });
   httpServer.on(UriBraces("/api/v2/sm/{}"),[](){ auth(); handleSmApi(); });
   httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){ auth(); handleSmApiField(); });
+
+#ifdef EID
+  httpServer.on("/eid/getclaim",[](){ auth(); EIDGetClaim(); });
+#endif
   
   httpServer.on("/api/listfiles", HTTP_GET, [](){ checkauth(); APIlistFiles(); });
   httpServer.on("/FSformat", [](){ checkauth();formatFS; });

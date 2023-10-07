@@ -138,6 +138,7 @@ void startWiFi(const char* hostname, int timeOut)
   Insights.begin(insights_auth_key);
 #endif
   PostMacIP(); //post mac en ip 
+  USBSerial.print("ip-adres: ");USBSerial.println(WiFi.localIP().toString());
 
 } // startWiFi()
 

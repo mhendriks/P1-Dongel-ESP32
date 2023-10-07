@@ -1,4 +1,4 @@
-  /*
+    /*
 ***************************************************************************  
 **  Program  : DSMRloggerAPI.h - definitions for DSMRloggerAPI
 **
@@ -24,6 +24,10 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git
+
+#ifdef MBUS
+#include "ModbusServerWiFi.h"
+#endif
 
 #define JSON_BUFF_MAX     255
 #define MQTT_BUFF_MAX     800
@@ -194,8 +198,11 @@ struct Status {
    char               timestamp[14];
    volatile uint32_t  wtr_m3;
    volatile uint16_t  wtr_l;
-   uint16_t           dev_type;
+   uint16_t           dev_type;   
    bool               FirstUse;
+#ifdef EID   
+   E_eid_states       eid_state;
+#endif   
 } P1Status;
   
 MyData      DSMRdata;
@@ -225,10 +232,10 @@ uint8_t     Vcount = 0;
 String      CapTelegram;
 char        cMsg[150];
 String      lastReset           = "";
-bool      FSNotPopulated      = false;
+bool        FSNotPopulated      = false;
 //bool      mqttIsConnected     = false;
-bool      Verbose1 = false, Verbose2 = false;
-uint32_t  unixTimestamp;
+bool        Verbose1 = false, Verbose2 = false;
+uint32_t    unixTimestamp;
 
 IPAddress ipDNS, ipGateWay, ipSubnet;
 float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5;

@@ -59,6 +59,19 @@
   #define OTAURL              "http://ota.smart-stuff.nl/v5-q/"
 #endif  
 
+#ifdef EID
+
+  bool    bEID_enabled = false;
+  #define ALL_OPTIONS BASE_OPTIONS "[EnergyID]"
+  #undef MQTT_DISABLE
+  #define MQTT_DISABLE
+  #undef OTAURL
+  #define OTAURL "http://ota.smart-stuff.nl/v5-eid/"
+  enum E_eid_states : uint16_t { EID_IDLE, EID_CLAIMING, EID_ENROLLED };
+
+#endif
+
+
 #ifdef SE_VERSION
   #define ALL_OPTIONS BASE_OPTIONS "[SE]"
 #endif

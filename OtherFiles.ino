@@ -104,6 +104,9 @@ void writeSettings()
   doc["raw-port"] = bRawPort;
   doc["led-prt"] = bLED_PRT;
   doc["max-volt"] = MaxVoltage;
+#ifdef EID    
+  doc["eid-enabled"] = bEID_enabled;
+#endif  
   writeToJsonFile(doc, SettingsFile);
   
 } // writeSettings()
@@ -187,6 +190,9 @@ void readSettings(bool show)
   if (doc.containsKey("pre40")) bPre40 = doc["pre40"];
   if (doc.containsKey("raw-port")) bRawPort = doc["raw-port"];
   if (doc.containsKey("led-prt")) bLED_PRT = doc["led-prt"];
+#ifdef EID    
+  if (doc.containsKey("eid-enabled")) bEID_enabled = doc["eid-enabled"];
+ #endif
   if (doc.containsKey("max-volt")) MaxVoltage = doc["max-volt"];
   
   if (doc.containsKey("act-json-mqtt")) bActJsonMQTT = doc["act-json-mqtt"];
@@ -359,7 +365,11 @@ void updateSetting(const char *field, const char *newValue)
   }
   if (!stricmp(field, "raw-port")) bRawPort = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "act-json-mqtt")) bActJsonMQTT = (stricmp(newValue, "true") == 0?true:false);  
-  
+
+#ifdef EID 
+  if (!stricmp(field, "eid-enabled")) bEID_enabled = (stricmp(newValue, "true") == 0?true:false);  
+#endif  
+
   writeSettings();
   
 } // updateSetting()

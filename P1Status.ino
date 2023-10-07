@@ -37,6 +37,9 @@ void P1StatusRead(){
     P1Status.FirstUse = preferences.getBool("first_use", false);
     if (strlen(P1Status.timestamp)!=13) strcpy(P1Status.timestamp,"010101010101X"); 
     strcpy(actTimestamp, P1Status.timestamp);
+#ifdef EID
+    P1Status.eid_state = (E_eid_states) preferences.getUShort("eid_state", EID_IDLE);
+#endif
     P1StatusPrint();
 }
 
@@ -57,7 +60,9 @@ void P1StatusWrite(){
     preferences.putString("timestamp",P1Status.timestamp);
     preferences.putShort("wtr_m3", P1Status.wtr_m3);
     preferences.putUInt("wtr_l", P1Status.wtr_l);
-    
+#ifdef EID    
+    preferences.putUShort("eid_state", (uint16_t)P1Status.eid_state);
+#endif
     DebugTln(F("P1Status successfully writen"));
 }
 
@@ -75,5 +80,8 @@ void P1StatusClear(){
   telegramCount       = 0;
   telegramErrors      = 0;
   mqttCount           = 0;
+#ifdef EID
+  P1Status.eid_state  = EID_IDLE;
+#endif  
   P1StatusWrite();
 }

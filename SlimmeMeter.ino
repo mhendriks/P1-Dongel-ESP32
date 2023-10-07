@@ -172,8 +172,9 @@ void processTelegram(){
   if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) writeRingFiles();
   
   //handle mqtt
+#ifndef MQTT_DISABLE
   if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1) sendMQTTData();
-  
+#endif  
   // handle rawport
   if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
   
