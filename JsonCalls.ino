@@ -37,7 +37,12 @@ void JsonGas(){
 void JsonWater(){
 
   if (!WtrMtr) return;  
-  jsonDoc["water"]["value"] =  (float)P1Status.wtr_m3 + (P1Status.wtr_l?P1Status.wtr_l/1000.0:0);
+  if ( mbusWater) {
+    jsonDoc["water"]["value"] =  (int)(waterDelivered*1000)/1000.0;
+    jsonDoc["water_delivered_ts"]["value"] = waterDeliveredTimestamp;
+  } else {
+    jsonDoc["water"]["value"] =  (float)P1Status.wtr_m3 + (P1Status.wtr_l?P1Status.wtr_l/1000.0:0);
+  } 
   jsonDoc["water"]["unit"]  = "m3";
   
 }
