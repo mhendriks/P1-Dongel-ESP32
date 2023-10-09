@@ -54,7 +54,7 @@ void writeToJsonFile(const TSource &doc, File &_file)
 //=======================================================================
 void writeSettings() 
 {
-  StaticJsonDocument<1200> doc; 
+  StaticJsonDocument<2100> doc; 
   if (!FSmounted) return;
 
   DebugT(F("Writing to [")); Debug(SETTINGS_FILE); Debugln(F("] ..."));
@@ -116,7 +116,7 @@ void writeSettings()
 void readSettings(bool show) 
 {
   
-  StaticJsonDocument<1200> doc; 
+  StaticJsonDocument<2100> doc; 
   File SettingsFile;
   if (!FSmounted) return;
 
@@ -202,7 +202,6 @@ void readSettings(bool show)
   
   temp = doc["basic-auth"]["pass"];
   if (temp) strcpy(bAuthPW, temp);
-
   
   SettingsFile.close();
   //end json
@@ -269,6 +268,7 @@ if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
 //=======================================================================
 void updateSetting(const char *field, const char *newValue)
 {
+  bool mqtt_reconnect = false;
   DebugTf("-> field[%s], newValue[%s]\r\n", field, newValue);
 
   if (!FSmounted) return;
@@ -282,8 +282,8 @@ void updateSetting(const char *field, const char *newValue)
       byte dotPos = (dotPntr-settingHostname);
       if (dotPos > 0)  settingHostname[dotPos] = '\0';
     }
-    Debugln();
-    DebugTf("Need reboot before new %s.local will be available!\r\n\n", settingHostname);
+//    Debugln();
+//    DebugTf("Need reboot before new %s.local will be available!\r\n\n", settingHostname);
   }
   if (!stricmp(field, "ed_tariff1"))        settingEDT1         = String(newValue).toFloat();  
   if (!stricmp(field, "ed_tariff2"))        settingEDT2         = String(newValue).toFloat();  
@@ -316,15 +316,25 @@ void updateSetting(const char *field, const char *newValue)
     memset(settingMQTTbroker, '\0', sizeof(settingMQTTbroker));
     strCopy(settingMQTTbroker, 100, newValue);
     Debugf("[%s]\r\n", settingMQTTbroker);
-//    mqttIsConnected = false;
+    mqtt_reconnect = true;
   }
-  if (!stricmp(field, "mqtt_broker_port"))settingMQTTbrokerPort = String(newValue).toInt();  
-  if (!stricmp(field, "mqtt_user")) strCopy(settingMQTTuser    ,35, newValue);  
-  if (!stricmp(field, "mqtt_passwd")) strCopy(settingMQTTpasswd  ,25, newValue);  
+
+  if (!stricmp(field, "mqtt_broker_port")) {
+    settingMQTTbrokerPort = String(newValue).toInt();  
+    mqtt_reconnect = true;
+  }
+  if (!stricmp(field, "mqtt_user")) {
+    strCopy(settingMQTTuser    ,35, newValue);  
+    mqtt_reconnect = true;
+  }
+  if (!stricmp(field, "mqtt_passwd")) {
+    strCopy(settingMQTTpasswd  ,25, newValue);  
+    mqtt_reconnect = true;
+  }
   
-  if (!stricmp(field, "mqtt_broker") || !stricmp(field, "mqtt_broker_port") || !stricmp(field, "mqtt_passwd") || !stricmp(field, "mqtt_user") )  {
+  if ( mqtt_reconnect )  {
    //disconnect and set fast reconnect timing
-   MQTTclient.disconnect();
+   if ( MQTTclient.connected() ) MQTTclient.disconnect();
    CHANGE_INTERVAL_MS(reconnectMQTTtimer, 100); // try reconnecting cyclus time
   }
   
