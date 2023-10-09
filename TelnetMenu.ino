@@ -151,7 +151,8 @@ void handleKeyInput()
       case 'b':
       case 'B':     displayBoardInfo();
                     break;
-      case 'T':   {        
+      case 'c':     PrintVarr(); break;              
+      case 'T':     {        
                       char c;
                       while (TelnetStream.available() > 0) { 
                         c = (char)TelnetStream.read();

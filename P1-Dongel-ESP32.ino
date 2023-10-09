@@ -32,13 +32,18 @@ TODO
 - loadbalancing bijhouden over de fases
 - mqtt client in task proces
 
+
 4.8.7
-x endless retry Wifi connection
-- issue met wifi connection lost ... geen reboot (h van Akker, P Brand)
+√ use autoreconnect from wifimanager
+√ bugfix mqtt
+
+4.8.8
+- issue met wifi connection lost ...  (h van Akker, P Brand)
 - lengte credentials vermelden  (Rob G)
 
 4.9.0
 - RNG files continu open
+- uren RNG files vergroten bv naar 14 dagen (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
