@@ -47,8 +47,8 @@ typedef struct {
   } S_ringfile;
 
 
+#ifdef VOLTAGE_MON
 //Store over Voltage situations
-
 #define     VmaxSlots 100
 //                       ts       ,L1 ,L2 ,L3 ,MaxV, Overß
 #define DATA_FORMAT_V    "%-12.12s,%4d,%4d,%4d,%3d,%c"
@@ -63,6 +63,13 @@ struct sMaxV {
   uint16_t     MaxV;
   char         Over;
   } MaxVarr[VmaxSlots]; //50 x 20 = 1.000 bytes 
+
+//Voltage
+uint16_t    MaxVoltage = 253;
+bool        bMaxV = false;
+uint8_t     Vcount = 0;
+
+#endif
 
 #define JSON_HEADER_LEN   23  //total length incl new line
 #define DATA_CLOSE        2   //length last row of datafile
@@ -183,8 +190,11 @@ void delayms(unsigned long);
 
 //===========================GLOBAL VAR'S======================================
 WiFiClient  wifiClient;
-#include <PubSubClient.h>           // MQTT client publish and subscribe functionality
-static PubSubClient MQTTclient(wifiClient);
+
+#ifndef MQTT_DISABLE 
+  #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
+  static PubSubClient MQTTclient(wifiClient);
+#endif
 
 #include "Network.h"
 
@@ -223,11 +233,6 @@ bool        bPre40 = false;
 bool        bActJsonMQTT = false;
 bool        bRawPort = false;
 bool        bLED_PRT = true;
-
-//Voltage
-uint16_t    MaxVoltage = 253;
-bool        bMaxV = false;
-uint8_t     Vcount = 0;
 
 String      CapTelegram;
 char        cMsg[150];

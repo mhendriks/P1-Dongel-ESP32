@@ -1,3 +1,5 @@
+#ifdef VOLTAGE_MON
+
 void PrintVarr(){
   char buffer[DATA_RECLEN_V+1];    
   DebugT(F("Current Max Voltage: "));Debugln(MaxVoltage);
@@ -44,3 +46,7 @@ void ProcessMaxVoltage(){
     StoreVoltage(false);
   }
 } //ProcessMaxVoltage
+#else
+void PrintVarr(){}
+void ProcessMaxVoltage(){}
+#endif

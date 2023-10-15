@@ -99,8 +99,10 @@ const char* getResetReason(){
 //===========================================================================================
 
 void ShutDownHandler(){
+#ifndef MQTT_DISABLE 
   sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
   MQTTclient.publish(cMsg,"Offline", true); //LWT status update
+#endif  
   P1StatusWrite();
   P1StatusEnd();
   DebugTln(F("/!\\ SHUTDOWN /!\\"));

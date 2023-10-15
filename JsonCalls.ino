@@ -44,23 +44,23 @@ void JsonWater(){
   jsonDoc["water"]["unit"]  = "m3";
 }
 //--------------------------
-void JsonGasID(){
-  switch (mbusGas) {
-    case 1: if ( DSMRdata.mbus1_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus1_equipment_id_tc;
-            else if (DSMRdata.mbus1_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus1_equipment_id_ntc;
-            break;
-    case 2: if ( DSMRdata.mbus2_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus2_equipment_id_tc;
-            else if (DSMRdata.mbus2_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus2_equipment_id_ntc;
-            break;
-    case 3: if ( DSMRdata.mbus3_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus3_equipment_id_tc;
-            else if (DSMRdata.mbus3_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus3_equipment_id_ntc;
-            break;
-    case 4: if ( DSMRdata.mbus4_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus4_equipment_id_tc;
-            else if (DSMRdata.mbus4_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus4_equipment_id_ntc;
-            break;
-    default: break; //do nothing 
-  }
-}
+//void JsonGasID(){
+//  switch (mbusGas) {
+//    case 1: if ( DSMRdata.mbus1_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus1_equipment_id_tc;
+//            else if (DSMRdata.mbus1_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus1_equipment_id_ntc;
+//            break;
+//    case 2: if ( DSMRdata.mbus2_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus2_equipment_id_tc;
+//            else if (DSMRdata.mbus2_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus2_equipment_id_ntc;
+//            break;
+//    case 3: if ( DSMRdata.mbus3_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus3_equipment_id_tc;
+//            else if (DSMRdata.mbus3_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus3_equipment_id_ntc;
+//            break;
+//    case 4: if ( DSMRdata.mbus4_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus4_equipment_id_tc;
+//            else if (DSMRdata.mbus4_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus4_equipment_id_ntc;
+//            break;
+//    default: break; //do nothing 
+//  }
+//}
 //--------------------------
 
 struct buildJson {
@@ -139,8 +139,8 @@ void sendDeviceInfo()
 {
   DynamicJsonDocument doc(1500);
   doc["fwversion"] = _VERSION;
-  snprintf(cMsg, sizeof(cMsg), "%s %s", __DATE__, __TIME__);
-  doc["compiled"] = cMsg;
+//  snprintf(cMsg, sizeof(cMsg), "%s %s", __DATE__, __TIME__);
+  doc["compiled"] = __DATE__ " " __TIME__;
 
 #ifndef HEATLINK
   doc["smr_version"] = DSMR_NL?"NL":"BE";
@@ -157,7 +157,7 @@ void sendDeviceInfo()
   
   esp_chip_info_t chip_info;
   esp_chip_info(&chip_info);
-  
+
   doc["chipid"] = WIFI_getChipId();
   snprintf(cMsg, sizeof(cMsg), "model %x rev: %x cores: %x", chip_info.model, chip_info.revision, chip_info.cores);
   doc["coreversion"] = cMsg;

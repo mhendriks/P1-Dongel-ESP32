@@ -103,7 +103,9 @@ void writeSettings()
   doc["act-json-mqtt"] = bActJsonMQTT;
   doc["raw-port"] = bRawPort;
   doc["led-prt"] = bLED_PRT;
+#ifdef VOLTAGE_MON
   doc["max-volt"] = MaxVoltage;
+#endif
 #ifdef EID    
   doc["eid-enabled"] = bEID_enabled;
 #endif  
@@ -180,8 +182,11 @@ void readSettings(bool show)
   CHANGE_INTERVAL_MIN(reconnectMQTTtimer, 1);
   LEDenabled = doc["LED"];
   if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
+#ifdef NO_STORAGE
+  EnableHistory = false;
+#else  
   if (doc.containsKey("enableHistory")) EnableHistory = doc["enableHistory"];
-
+#endif
   if (doc.containsKey("watermeter")) WtrMtr = doc["watermeter"];
   if (doc.containsKey("waterfactor")) WtrFactor = doc["waterfactor"];
 
@@ -193,8 +198,9 @@ void readSettings(bool show)
 #ifdef EID    
   if (doc.containsKey("eid-enabled")) bEID_enabled = doc["eid-enabled"];
  #endif
+#ifdef VOLTAGE_MON
   if (doc.containsKey("max-volt")) MaxVoltage = doc["max-volt"];
-  
+#endif  
   if (doc.containsKey("act-json-mqtt")) bActJsonMQTT = doc["act-json-mqtt"];
 
   const char* temp = doc["basic-auth"]["user"];
@@ -237,7 +243,7 @@ if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
 //  Debugf("   Telegram Process Interval : %d\r\n",     settingTelegramInterval);
   
   Debugf("                  Index Page : %s\r\n",     settingIndexPage);
-
+#ifndef MQTT_DISABLE 
   Debugln(F("\r\n==== MQTT settings ==============================================\r"));
   Debugf("          MQTT broker URL/IP : %s:%d", settingMQTTbroker, settingMQTTbrokerPort);
   if (MQTTclient.connected()) Debugln(F(" (is Connected!)\r"));
@@ -250,6 +256,7 @@ if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
 #endif
   Debugf("          MQTT send Interval : %d\r\n", settingMQTTinterval);
   Debugf("              MQTT top Topic : %s\r\n", settingMQTTtopTopic);
+#endif //MQTT  
   Debugln(F("\r\n==== Other settings =============================================\r"));
   Debug(F("                 LED enabled : ")); Debugln(LEDenabled);
   Debug(F("                Base OTA url : ")); Debugln(BaseOTAurl);
@@ -311,6 +318,7 @@ void updateSetting(const char *field, const char *newValue)
 
   if (!stricmp(field, "IndexPage"))        strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), newValue);  
 
+#ifndef MQTT_DISABLE 
   if (!stricmp(field, "mqtt_broker"))  {
     DebugT("settingMQTTbroker! to : ");
     memset(settingMQTTbroker, '\0', sizeof(settingMQTTbroker));
@@ -346,6 +354,7 @@ void updateSetting(const char *field, const char *newValue)
     strCopy(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), newValue);  
   }
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+#endif
   
   if (!stricmp(field, "b_auth_user")) strCopy(bAuthUser,25, newValue);  
   if (!stricmp(field, "b_auth_pw")) strCopy(bAuthPW,25, newValue); 

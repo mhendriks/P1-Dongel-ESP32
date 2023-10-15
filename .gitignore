@@ -7,3 +7,4 @@ debug.cfg
 esp32.svd
 debug_custom.json
 /*.bin
+launch.json

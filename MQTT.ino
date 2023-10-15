@@ -21,8 +21,13 @@
 //  enum states_of_MQTT { MQTT_STATE_INIT, MQTT_STATE_TRY_TO_CONNECT, MQTT_STATE_IS_CONNECTED, MQTT_STATE_ERROR };
 //  enum states_of_MQTT stateMQTT = MQTT_STATE_INIT;
 
+#ifndef MQTT_DISABLE 
+
   String            MQTTclientId;
 
+void handleMQTT(){
+        MQTTclient.loop();
+}
 String AddPayload(const char* key, const char* value ){
   if ( strlen(value) == 0 ) return "";
   return "\"" + String(key) + "\":\"" + String(value) + "\",";
@@ -101,6 +106,7 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 
 //===========================================================================================
 void MQTTConnect() {
+ 
   char MqttID[30];
   char StrMac[13];
   
@@ -125,7 +131,8 @@ void MQTTConnect() {
       StaticInfoSend = false; //resend
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
   	  sprintf(cMsg,"%supdate",settingMQTTtopTopic);
-	  MQTTclient.subscribe(cMsg); //subscribe mqtt update
+	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
+      if ( EnableHAdiscovery ) AutoDiscoverHA();
 //	  sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
 //	  MQTTclient.subscribe(cMsg); //subscribe mqtt update
     } else {
@@ -134,6 +141,7 @@ void MQTTConnect() {
     }
   CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 10);
   }
+
 }
 
 //=======================================================================
@@ -277,6 +285,13 @@ void sendMQTTData() {
 
   }
 }
+#else
+void MQTTSentStaticInfo(){}
+void MQTTSend(const char* item, String value, bool ret){}
+void MQTTSend(const char* item, float value){}
+void MQTTConnect() {}
+void handleMQTT(){}
+#endif
 
 /***************************************************************************
 *

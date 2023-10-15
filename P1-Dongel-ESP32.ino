@@ -32,10 +32,17 @@ TODO
 - loadbalancing bijhouden over de fases
 - mqtt client in task proces
 
+  • grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
+  • Consistentie tijd-assen, links oud, rechts nieuw
+    • in Actueel staat de laatste meting rechts en de oudste meting links
+    • in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
+
 
 4.8.7
 √ use autoreconnect from wifimanager
-√ bugfix mqtt
+√ bugfix mqtt issue #23
+√ mbus integration (ID=1)
+√ HA auto detect missing ... fixed
 
 4.8.8
 - issue met wifi connection lost ...  (h van Akker, P Brand)
@@ -73,7 +80,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define AP_ONLY
 //#define MBUS
 //#define MQTT_DISABLE
+//#define NO_STORAGE
+//#define VOLTAGE_MON
 //#define EID
+
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
 
@@ -129,7 +139,9 @@ void setup()
 #ifndef AP_ONLY
   startMDNS(settingHostname);
   startNTP();
+#ifndef MQTT_DISABLE 
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
+#endif
 
 #endif
 //================ Check necessary files ============================
@@ -187,8 +199,7 @@ void fP1Reader( void * pvParameters ){
 void loop () { 
         
         httpServer.handleClient();
-        MQTTclient.loop();
-        
+        handleMQTT();   
         yield();
       
        if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
