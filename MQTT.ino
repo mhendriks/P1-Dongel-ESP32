@@ -160,10 +160,15 @@ struct buildJsonMQTT {
      char Name[25];
      strncpy(Name,String(Item::name).c_str(),sizeof(Name));
     if ( isInFieldsArray(Name) && i.present() ) {
-          if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
-          else {
-          sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
-          MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
+          // add value to '/all' topic
+          if ( bActJsonMQTT ) {
+            jsonDoc[Name] = value_to_json_mqtt(i.val());
+          }
+
+          // Send normal MQTT message when not sending '/all' topic, except when HA auto discovery is on
+          if ( !bActJsonMQTT || EnableHAdiscovery) {
+            sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
+            MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
 //        if ( !MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() ) ) DebugTf("Error publish(%s)\r\n", String(value_to_json(i.val())), strlen(cMsg) );
           }
     } // if isInFieldsArray && present
