@@ -61,7 +61,7 @@ TODO
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
-  - Board: "ESP32 Dev Module"
+  - Board: "ESP32C3 Dev Module"
   - Flash mode: "QIO"
   - Flash size: "4MB (32Mb)"
   - CorenDebug Level: "None"

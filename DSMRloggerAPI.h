@@ -23,7 +23,7 @@
 #include "version.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
-#include <dsmr2.h>               //  https://github.com/mrWheel/dsmr2Lib.git
+#include <dsmr2.h>               // https://github.com/mhendriks/dsmr2Lib
 
 #ifdef MBUS
 #include "ModbusServerWiFi.h"
