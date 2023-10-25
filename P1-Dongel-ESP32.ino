@@ -37,13 +37,6 @@ TODO
     • in Actueel staat de laatste meting rechts en de oudste meting links
     • in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
 
-
-4.8.7
-√ use autoreconnect from wifimanager
-√ bugfix mqtt issue #23
-√ mbus integration (ID=1)
-√ HA auto detect missing ... fixed
-
 4.8.8
 - issue met wifi connection lost ...  (h van Akker, P Brand)
 - lengte credentials vermelden  (Rob G)

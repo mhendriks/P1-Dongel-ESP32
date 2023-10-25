@@ -2,28 +2,15 @@
 ***************************************************************************  
 **  Program  : MQTTstuff, part of DSMRloggerAPI
 **
-**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2023 Martijn Hendriks 
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
-**  RvdB  changed MQTT stuff to FSM 
-**  AaW   simplified and restructured the FSM 
 */
-
-// Declare some variables within global scope
-
-//  static IPAddress    MQTTbrokerIP;
-//  static char         MQTTbrokerIPchar[20];
-//  int8_t              reconnectAttempts = 0;
-//  char                lastMQTTtimestamp[15] = "-";
-//  char                mqttBuff[100]
-
-//  enum states_of_MQTT { MQTT_STATE_INIT, MQTT_STATE_TRY_TO_CONNECT, MQTT_STATE_IS_CONNECTED, MQTT_STATE_ERROR };
-//  enum states_of_MQTT stateMQTT = MQTT_STATE_INIT;
 
 #ifndef MQTT_DISABLE 
 
-  String            MQTTclientId;
+String MQTTclientId;
 
 void handleMQTT(){
         MQTTclient.loop();
@@ -104,11 +91,12 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 }
 
 
+
 //===========================================================================================
 void MQTTConnect() {
  
-  char MqttID[30];
   char StrMac[13];
+  char MqttID[30+13];
   
   if ( DUE( reconnectMQTTtimer) ){ 
     LogFile("MQTT Starting",true);
@@ -124,6 +112,7 @@ void MQTTConnect() {
     snprintf(StrMac, sizeof(StrMac), "%c%c%c%c%c%c%c%c%c%c%c%c",WiFi.macAddress()[0],WiFi.macAddress()[1],WiFi.macAddress()[3],WiFi.macAddress()[4],WiFi.macAddress()[6],WiFi.macAddress()[7],WiFi.macAddress()[9],WiFi.macAddress()[10],WiFi.macAddress()[12],WiFi.macAddress()[13],WiFi.macAddress()[15],WiFi.macAddress()[16]);
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, StrMac);
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
+    DebugTf("connect %s %s %s %s 1 true offline \r\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
     if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
 //      reconnectAttempts = 0;  
       LogFile("MQTT: Attempting connection... connected", true);
@@ -205,7 +194,7 @@ struct buildJsonMQTT {
 //===========================================================================================
 
 void MQTTSend(const char* item, String value, bool ret){
-  if (value.length()==0) return;
+  if ( value.length()==0 || !MQTTclient.connected() ) return;
   sprintf(cMsg,"%s%s", settingMQTTtopTopic,item);
   if (!MQTTclient.publish(cMsg, value.c_str(), ret )) {
     DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, value.c_str(), (strlen(cMsg) + value.length()));
@@ -256,8 +245,7 @@ void sendMQTTData() {
     if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
     if (!MQTTclient.connected()) MQTTConnect();
     if ( MQTTclient.connected() ) {   
-//      mqttIsConnected = true;      
-      DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
+    DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
   
       if ( !StaticInfoSend )  { 
 #ifndef EVERGI    

@@ -179,7 +179,7 @@ void readSettings(bool show)
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
   
   CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
-  CHANGE_INTERVAL_MIN(reconnectMQTTtimer, 1);
+  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, MQTT_RECONNECT_DEFAULT_TIME);
   LEDenabled = doc["LED"];
   if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
 #ifdef NO_STORAGE

@@ -30,7 +30,8 @@
 #endif
 
 #define JSON_BUFF_MAX     255
-#define MQTT_BUFF_MAX     800
+#define MQTT_BUFF_MAX     1024
+#define MQTT_RECONNECT_DEFAULT_TIME 10 //seconds
 
 P1Reader    slimmeMeter(&Serial1, DTR_IO);
 
@@ -274,7 +275,7 @@ bool      StaticInfoSend = false;
 //===========================================================================================
 // setup timers 
 DECLARE_TIMER_SEC(synchrNTP,          30);
-DECLARE_TIMER_SEC(reconnectMQTTtimer,  5); // try reconnecting cyclus timer
+DECLARE_TIMER_SEC(reconnectMQTTtimer,  MQTT_RECONNECT_DEFAULT_TIME); // try reconnecting cyclus timer
 DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time between MQTT messages  
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);
 DECLARE_TIMER_SEC(StatusTimer,        10); //first time = 10 sec usual 10min (see loop)
