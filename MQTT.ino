@@ -14,7 +14,9 @@ String MQTTclientId;
 
 void handleMQTT(){
         MQTTclient.loop();
+        if ( bSendMQTT ) sendMQTTData();
 }
+
 String AddPayload(const char* key, const char* value ){
   if ( strlen(value) == 0 ) return "";
   return "\"" + String(key) + "\":\"" + String(value) + "\",";
@@ -77,6 +79,20 @@ void AutoDiscoverHA(){
 
 }
 
+void MQTTsetServer(){
+
+#ifdef MQTT_DISABLE 
+  return;
+#else
+  if ( MQTTclient.connected() ) MQTTclient.disconnect();
+  MQTTclient.setBufferSize(MQTT_BUFF_MAX);
+  DebugTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
+  MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
+  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 1);
+  
+#endif
+}
+
 //===========================================================================================
 
 static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
@@ -90,6 +106,7 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
   UpdateRequested = true;
 }
 
+  
 
 
 //===========================================================================================
@@ -100,21 +117,12 @@ void MQTTConnect() {
   
   if ( DUE( reconnectMQTTtimer) ){ 
     LogFile("MQTT Starting",true);
-
-  //try to with ip or url
-//     WiFi.hostByName(settingMQTTbroker, MQTTbrokerIP);  
-    DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbroker, settingMQTTbrokerPort);
-    MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
-    
-//     DebugT(F("MQTT Connection"));
-//     if (isValidIP(MQTTbrokerIP)) DebugT(F(" ... Connected"));else DebugT(F(" ... Failed"));
-//     Debug(F("MQTTbrokerIP: "));Debugln(MQTTbrokerIP);
     snprintf(StrMac, sizeof(StrMac), "%c%c%c%c%c%c%c%c%c%c%c%c",WiFi.macAddress()[0],WiFi.macAddress()[1],WiFi.macAddress()[3],WiFi.macAddress()[4],WiFi.macAddress()[6],WiFi.macAddress()[7],WiFi.macAddress()[9],WiFi.macAddress()[10],WiFi.macAddress()[12],WiFi.macAddress()[13],WiFi.macAddress()[15],WiFi.macAddress()[16]);
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, StrMac);
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
-    DebugTf("connect %s %s %s %s 1 true offline \r\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
+    DebugTf("connect %s %s %s %s\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
+    
     if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
-//      reconnectAttempts = 0;  
       LogFile("MQTT: Attempting connection... connected", true);
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
@@ -122,16 +130,13 @@ void MQTTConnect() {
   	  sprintf(cMsg,"%supdate",settingMQTTtopTopic);
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
       if ( EnableHAdiscovery ) AutoDiscoverHA();
-//	  sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
-//	  MQTTclient.subscribe(cMsg); //subscribe mqtt update
     } else {
       LogFile("MQTT: Attempting connection... connection FAILED", true);
-//      mqttIsConnected = false;
+      DebugT("error code: ");Debugln(MQTTclient.state());
     }
-  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 10);
-  }
-
-}
+  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, MQTT_RECONNECT_DEFAULT_TIME);
+  } // due reconnect
+} //mqttconnect
 
 //=======================================================================
 
@@ -153,7 +158,6 @@ struct buildJsonMQTT {
           if ( bActJsonMQTT ) {
             jsonDoc[Name] = value_to_json_mqtt(i.val());
           }
-
           // Send normal MQTT message when not sending '/all' topic, except when HA auto discovery is on
           if ( !bActJsonMQTT || EnableHAdiscovery) {
             sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
@@ -245,6 +249,7 @@ void sendMQTTData() {
     if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
     if (!MQTTclient.connected()) MQTTConnect();
     if ( MQTTclient.connected() ) {   
+      
     DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
   
       if ( !StaticInfoSend )  { 
@@ -275,6 +280,7 @@ void sendMQTTData() {
 
   MQTTsendGas();
   sendMQTTWater();
+  bSendMQTT = false; 
 
   }
 }
@@ -284,6 +290,7 @@ void MQTTSend(const char* item, String value, bool ret){}
 void MQTTSend(const char* item, float value){}
 void MQTTConnect() {}
 void handleMQTT(){}
+void SetupMQTT(){}
 #endif
 
 /***************************************************************************

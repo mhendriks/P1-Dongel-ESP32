@@ -164,16 +164,17 @@ void processSlimmemeter() {
 void processTelegram(){
 //  DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());                                                
 //  strcpy(newTimestamp, DSMRdata.timestamp.c_str()); 
+//!!! DO NOT REFER TO CPU CONSUMING FUNCTIONS ... THIS PROCES SHOULD NOT BLOCK OR TAKES LOTS OP CPU TIME
 
   newT = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), true); // update system time
   DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
 
   // has the hour changed write ringfiles
-  if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) writeRingFiles();
+  if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) writeRingFiles();//bWriteFiles = true; //handled in main flow
   
   //handle mqtt
 #ifndef MQTT_DISABLE
-  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1) sendMQTTData();
+  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1) bSendMQTT = true; //handled in main flow
 #endif  
   // handle rawport
   if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port

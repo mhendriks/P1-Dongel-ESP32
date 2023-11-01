@@ -234,6 +234,7 @@ bool        bPre40 = false;
 bool        bActJsonMQTT = false;
 bool        bRawPort = false;
 bool        bLED_PRT = true;
+bool        bWriteFiles = false;
 
 String      CapTelegram;
 char        cMsg[150];
@@ -270,7 +271,7 @@ String    waterDeliveredTimestamp;
 String    mbusDeliveredTimestamp;
 String    smID;
 bool      StaticInfoSend = false;
-
+bool      bSendMQTT = false;
 
 //===========================================================================================
 // setup timers 

@@ -2,8 +2,8 @@
  todo
   - apart proces van maken
   - UI: check expire claimcode + url (frontend)
-
 */
+
 #ifndef EID
 void handleEnergyID(){ }
 #else
@@ -325,7 +325,7 @@ void PostEnergyID(){
   http.addHeader("x-twin-id", eid_header_twinid);
 
   DebugT(F("Post URL:"));Debugln(eid_webhook);
-  uint16_t utc_comp = 3200;
+  uint16_t utc_comp = 3600;
   if ( actTimestamp[12] == 'S') utc_comp = 7200;
   
   Json += "\"ts\":" + String( actT - utc_comp );
@@ -378,7 +378,6 @@ void PostEnergyID(){
       DebugTln(F("Response Error"));
       P1Status.eid_state = EID_CLAIMING; //try /hello within 5min
     }
-  
   
   http.end();
 }

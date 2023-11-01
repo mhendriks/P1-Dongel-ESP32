@@ -179,7 +179,6 @@ void readSettings(bool show)
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
   
   CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
-  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, MQTT_RECONNECT_DEFAULT_TIME);
   LEDenabled = doc["LED"];
   if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
 #ifdef NO_STORAGE
@@ -289,7 +288,6 @@ void updateSetting(const char *field, const char *newValue)
       byte dotPos = (dotPntr-settingHostname);
       if (dotPos > 0)  settingHostname[dotPos] = '\0';
     }
-//    Debugln();
 //    DebugTf("Need reboot before new %s.local will be available!\r\n\n", settingHostname);
   }
   if (!stricmp(field, "ed_tariff1"))        settingEDT1         = String(newValue).toFloat();  
@@ -340,11 +338,7 @@ void updateSetting(const char *field, const char *newValue)
     mqtt_reconnect = true;
   }
   
-  if ( mqtt_reconnect )  {
-   //disconnect and set fast reconnect timing
-   if ( MQTTclient.connected() ) MQTTclient.disconnect();
-   CHANGE_INTERVAL_MS(reconnectMQTTtimer, 100); // try reconnecting cyclus time
-  }
+  if ( mqtt_reconnect ) MQTTsetServer();
   
   if (!stricmp(field, "mqtt_interval")) {
     settingMQTTinterval   = String(newValue).toInt();  

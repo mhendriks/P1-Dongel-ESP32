@@ -132,9 +132,7 @@ void setup()
 #ifndef AP_ONLY
   startMDNS(settingHostname);
   startNTP();
-#ifndef MQTT_DISABLE 
-  MQTTclient.setBufferSize(MQTT_BUFF_MAX);
-#endif
+  MQTTsetServer();
 
 #endif
 //================ Check necessary files ============================
@@ -206,6 +204,7 @@ void loop () {
        handleButton();
        handleWater();
        handleEnergyID();
+//       writeRingFiles();
   
 } // loop()
 
