@@ -43,24 +43,7 @@ void JsonWater(){
   } 
   jsonDoc["water"]["unit"]  = "m3";
 }
-//--------------------------
-//void JsonGasID(){
-//  switch (mbusGas) {
-//    case 1: if ( DSMRdata.mbus1_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus1_equipment_id_tc;
-//            else if (DSMRdata.mbus1_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus1_equipment_id_ntc;
-//            break;
-//    case 2: if ( DSMRdata.mbus2_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus2_equipment_id_tc;
-//            else if (DSMRdata.mbus2_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus2_equipment_id_ntc;
-//            break;
-//    case 3: if ( DSMRdata.mbus3_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus3_equipment_id_tc;
-//            else if (DSMRdata.mbus3_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus3_equipment_id_ntc;
-//            break;
-//    case 4: if ( DSMRdata.mbus4_equipment_id_tc_present ) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus4_equipment_id_tc;
-//            else if (DSMRdata.mbus4_equipment_id_ntc_present) jsonDoc["gas_equipment_id"]["value"] =  DSMRdata.mbus4_equipment_id_ntc;
-//            break;
-//    default: break; //do nothing 
-//  }
-//}
+
 //--------------------------
 
 struct buildJson {
@@ -149,7 +132,7 @@ void sendDeviceInfo()
   doc["hostname"] = settingHostname;
   doc["ipaddress"] = IP_Address();
   doc["indexfile"] = settingIndexPage;
-  doc["macaddress"] = MAC_Address();
+  doc["macaddress"] = macStr;
   doc["freeheap"] ["value"] = ESP.getFreeHeap();
   doc["freeheap"]["unit"] = "bytes";
   doc["maxfreeblock"] ["value"] = ESP.getMaxAllocHeap(); 
@@ -402,8 +385,6 @@ void handleSmApi()
     
   case 't': //telegram
     if ( CapTelegram.length() ) {
-//      String payload = "/" + CapTelegram + "!" + String(CRCTelegram, HEX);
-//      sendJsonBuffer( payload.c_str() );
         sendJsonBuffer( CapTelegram.c_str() );
     }
     else sendJsonBuffer( "no telegram available" );

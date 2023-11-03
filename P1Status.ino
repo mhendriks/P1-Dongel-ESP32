@@ -1,3 +1,5 @@
+#ifndef _P1STATUS_H
+#define _P1STATUS_H
 #include <Preferences.h>
 Preferences preferences;
 
@@ -19,8 +21,8 @@ void P1StatusPrint(){
 
 void P1StatusDefType(){
   Debugln(F("Devices types:\n0 = Pro\n1 = Pro Bridge\n2 = Pro Ethernet\n3 = Pro H2O+"));
-  DebugT(F("P1 Status Device Type: "));Debugln(P1Status.dev_type);
-  DebugT(F("P1 Status Device Fist Use: "));Debugln(P1Status.FirstUse);
+  Debug(F("Device Type     : "));Debugln(P1Status.dev_type);
+  Debug(F("Device First Use: "));Debugln(P1Status.FirstUse);
 }
   
 void P1StatusRead(){
@@ -67,7 +69,7 @@ void P1StatusWrite(){
 }
 
 void P1StatusReset(){
-    if (preferences.clear()) DebugTln(F("P1Status successfully written to preferences"));
+    if (preferences.clear()) DebugTln(F("P1Status cleared"));
     else DebugTln(F("ERROR! EEPROM commit failed"));   
 }
 
@@ -85,3 +87,5 @@ void P1StatusClear(){
 #endif  
   P1StatusWrite();
 }
+
+#endif

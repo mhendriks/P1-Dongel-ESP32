@@ -84,12 +84,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 void setup() 
 {
   SerialOut.begin(115200); //debug stream  
-  USBSerial.begin(115200); //cdc stream
+//  USBSerial.begin(115200); //cdc stream
 
-  Debug("\n\n ----> BOOTING....[" _VERSION "] <-----\n\n");
-  DebugTln("The board name is: " ARDUINO_BOARD);
+  Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
+  GetMacAddress();
+  
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
   
@@ -108,9 +109,9 @@ void setup()
 //================ File System =====================================
   if (LittleFS.begin(true)) 
   {
-    DebugTln(F("File System Mount succesfull\r"));
+    DebugTln(F("FS Mount OK\r"));
     FSmounted = true;     
-  } else DebugTln(F("!!!! File System Mount failed\r"));   // Serious problem with File System 
+  } else DebugTln(F("!!!! FS Mount ERROR\r"));   // Serious problem with File System 
   
 //================ Status update ===================================
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
@@ -158,7 +159,7 @@ void setup()
   esp_register_shutdown_handler(ShutDownHandler);
 
   setupWater();
-  setupAuxButton(); //esp32c3 only
+//  setupAuxButton(); //esp32c3 only
 
   if (EnableHistory) CheckRingExists();
 
@@ -201,7 +202,7 @@ void loop () {
        
        handleKeyInput();
        handleRemoteUpdate();
-       handleButton();
+       AuxButton.handler();
        handleWater();
        handleEnergyID();
 //       writeRingFiles();

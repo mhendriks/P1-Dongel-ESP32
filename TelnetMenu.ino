@@ -29,7 +29,7 @@ void P1Update(bool sketch){
   while (TelnetStream.available() > 0) { (char)TelnetStream.read(); yield(); }
   
   Debugln(F("\n/!\\ UPDATE MODULE /!\\"));
-  Debugf("Geef update %s versie op (bv. 4.5.1): ",sketch?"SKETCH":"FILE");
+  Debugf("Enter firmware version (eg. 4.5.1): ");
   TelnetStream.setTimeout(10000);
   TelnetStream.readBytesUntil('\n', versie, sizeof(versie)); 
   TelnetStream.setTimeout(1000);
@@ -38,7 +38,7 @@ void P1Update(bool sketch){
   
   if (strcmp(versie,"latest") == 0) RemoteUpdate("4-sketch-latest",sketch);
   else if (strlen(versie)>4) RemoteUpdate(versie,sketch); 
-  else Debugln(F("Fout in versie opgave: formaat = x.x.x")); 
+  else Debugln(F("Version number Error: format = x.x.x")); 
   bHideP1Log = false; //unhide
 }
 //--------------------------------
@@ -65,7 +65,7 @@ void displayBoardInfo()
   Debug(F("]\r\n              #defines "));   Debug(F(ALL_OPTIONS));
   Debug(F(" \r\n   Telegrams Processed ["));  Debug( telegramCount );
   Debug(F("]\r\n           With Errors ["));  Debug( telegramErrors );
-  Debug(F("]\r\n MQTT All topic Proces ["));  Debug( mqttCount );
+//  Debug(F("]\r\n MQTT All topic Proces ["));  Debug( mqttCount );
   Debug(F("]\r\n              FreeHeap ["));  Debug( ESP.getFreeHeap() );
   Debug(F("]\r\n             max.Block ["));  Debug( ESP.getMaxAllocHeap() );
   Debug(F("]\r\n               Chip ID ["));  Debug( WIFI_getChipId() );
@@ -76,13 +76,11 @@ void displayBoardInfo()
   Debug(F("]\r\nFree Sketch Space (kB) ["));  Debug( ESP.getFreeSketchSpace() / 1024.0 );
   Debug(F("]\r\n  Flash Chip Size (kB) ["));  Debug( ESP.getFlashChipSize() / 1024 );
   Debug(F("]\r\n          FS Size (kB) ["));  Debug( LittleFS.totalBytes() / 1024 );
-  Debug(F("]\r\n      Flash Chip Speed ["));  Debug( ESP.getFlashChipSpeed() / 1000 / 1000 );
+//  Debug(F("]\r\n      Flash Chip Speed ["));  Debug( ESP.getFlashChipSpeed() / 1000 / 1000 );
   
   FlashMode_t ideMode = ESP.getFlashChipMode();
-  Debug(F("]\r\n       Flash Chip Mode ["));  Debug( flashMode[ideMode] );
-
-  Debugln(F("]\r"));
-
+//  Debug(F("]\r\n       Flash Chip Mode ["));  Debug( flashMode[ideMode] );
+//  Debugln(F("]\r"));
   Debugln(F("==================================================================\r"));
   Debug(F(" \r\n            Board type ["));
 #ifdef ESP32_DEV
@@ -201,9 +199,6 @@ void handleKeyInput()
                     P1Reboot();
                     break;
                     
-      case 'S':     P1Update(false);
-                    break;
-                    
       case 'U':     P1Update(true);
                     break;
                     
@@ -235,7 +230,7 @@ void handleKeyInput()
       case 'Z':     P1StatusClear();
                     break;
                     
-      default:      Debugf("Dongle version %s | mac address %s\n\r",_VERSION, MAC_Address().c_str() );
+      default:      Debugf("Dongle version %s | mac address %s\n\r",_VERSION, macStr );
                     Debugln(F("\r\nCommands are:"));
                     Debugln(F("   A  - P1 Status info a=available|r=read|w=write|p=print|z=erase\r"));
                     Debugln(F("  *E  - erase file from FS\r"));
@@ -245,7 +240,6 @@ void handleKeyInput()
                     Debugln(F("   P  - No Parsing (show RAW data from Smart Meter)\r"));
                     Debugln(F("  *W  - Force Re-Config WiFi\r"));
                     Debugln(F("  *R  - Reboot\r"));
-                    Debugln(F("  *S+ - Update File System\r"));
                     Debugln(F("  *U+ - Update Remote\r"));
                     Debugln(F("   X  - Watermeter reading\r"));
                     Debugln(F("  *Z  - Zero counters\r"));

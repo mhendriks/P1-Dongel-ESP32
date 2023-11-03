@@ -73,7 +73,7 @@ void AutoDiscoverHA(){
   SendAutoDiscoverHA("current_l2", "current", "Current l2", "A", "{{ value | round(0) }}","measurement","");
   SendAutoDiscoverHA("current_l3", "current", "Current l3", "A", "{{ value | round(0) }}","measurement","");
 
-  SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(2) }}","total_increasing","");
+  SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(3) }}","total_increasing","");
   
   SendAutoDiscoverHA("water", "water", "Waterverbruik", "m³", "{{ value | round(3) }}","total_increasing","\"icon\": \"mdi:water\",");
 
@@ -102,23 +102,20 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
   else bUpdateSketch = true;
   
   for (int i=0;i<length;i++) UpdateVersion[i] = (char)payload[i];
-  DebugT("Message arrived [");Debug(topic);Debug("] ");Debugln(UpdateVersion);
+//  DebugT("Message arrived [");Debug(topic);Debug("] ");Debugln(UpdateVersion);
   UpdateRequested = true;
 }
-
-  
-
 
 //===========================================================================================
 void MQTTConnect() {
  
-  char StrMac[13];
   char MqttID[30+13];
   
   if ( DUE( reconnectMQTTtimer) ){ 
     LogFile("MQTT Starting",true);
-    snprintf(StrMac, sizeof(StrMac), "%c%c%c%c%c%c%c%c%c%c%c%c",WiFi.macAddress()[0],WiFi.macAddress()[1],WiFi.macAddress()[3],WiFi.macAddress()[4],WiFi.macAddress()[6],WiFi.macAddress()[7],WiFi.macAddress()[9],WiFi.macAddress()[10],WiFi.macAddress()[12],WiFi.macAddress()[13],WiFi.macAddress()[15],WiFi.macAddress()[16]);
-    snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, StrMac);
+    String MacStr = MAC_Address();
+    MacStr.replace(":","");
+    snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
     DebugTf("connect %s %s %s %s\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
     
@@ -129,7 +126,7 @@ void MQTTConnect() {
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
   	  sprintf(cMsg,"%supdate",settingMQTTtopTopic);
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
-      if ( EnableHAdiscovery ) AutoDiscoverHA();
+//      if ( EnableHAdiscovery ) AutoDiscoverHA();
     } else {
       LogFile("MQTT: Attempting connection... connection FAILED", true);
       DebugT("error code: ");Debugln(MQTTclient.state());
@@ -220,7 +217,7 @@ void MQTTSentStaticInfo(){
   if ((settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   StaticInfoSend = true;
   MQTTSend( "identification",DSMRdata.identification, true );
-  MQTTSend( "mac",String(WiFi.macAddress()), true );
+  MQTTSend( "mac",macStr, true );
   MQTTSend( "p1_version",DSMRdata.p1_version, true );
   MQTTSend( "equipment_id",DSMRdata.equipment_id, true );
   MQTTSend( "firmware",_VERSION_ONLY, true );
@@ -246,19 +243,13 @@ void MQTTsendGas(){
 void sendMQTTData() {
 
 //TODO: log to file on error or reconnect
-    if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
-    if (!MQTTclient.connected()) MQTTConnect();
-    if ( MQTTclient.connected() ) {   
-      
-    DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
+  if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
+  if (!MQTTclient.connected()) MQTTConnect();
+  if ( MQTTclient.connected() ) {   
+    
+  DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
   
-      if ( !StaticInfoSend )  { 
-#ifndef EVERGI    
-        MQTTSentStaticInfo(); 
-#else    
-    //MQTTSentStaticInfoEvergi(); 
-#endif
-  }
+  if ( !StaticInfoSend )  MQTTSentStaticInfo();
     
   fieldsElements = ACTUALELEMENTS;
   
@@ -284,13 +275,16 @@ void sendMQTTData() {
 
   }
 }
+
 #else
+
 void MQTTSentStaticInfo(){}
 void MQTTSend(const char* item, String value, bool ret){}
 void MQTTSend(const char* item, float value){}
 void MQTTConnect() {}
 void handleMQTT(){}
 void SetupMQTT(){}
+
 #endif
 
 /***************************************************************************

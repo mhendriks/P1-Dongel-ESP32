@@ -55,8 +55,6 @@ void RemoteUpdate(const char* versie, bool sketch){
   t_httpUpdate_return ret;
 
   Debugln(F("\n!!! OTA UPDATE !!!"));
-  Debugln(sketch ? "Update type: Sketch" : "Update type: File"); 
-
 
   if (bWebUpdate) {
     if (httpServer.argName(0) != "version") {
@@ -77,8 +75,7 @@ void RemoteUpdate(const char* versie, bool sketch){
   vTaskSuspend(tP1Reader);
 
   otaFile = strcmp(versie,"4-sketch-latest") == 0 ? "" : "DSMR-API-V";
-  otaFile += _versie + "_" + flashSize; 
-  otaFile+= sketch ? "Mb.bin" : "Mb.spiffs.bin";
+  otaFile += _versie + "_" + flashSize + "Mb.bin"; 
   path = String(BaseOTAurl) + otaFile;
   Debugf("OTA versie: %s | flashsize: %i Mb\n", _versie.c_str(), flashSize);
   Debugln("OTA path: " + path);
@@ -91,8 +88,7 @@ void RemoteUpdate(const char* versie, bool sketch){
   httpUpdate.rebootOnUpdate(false); 
   
   //start update proces
-  if ( sketch ) ret = httpUpdate.update(client, path.c_str());
-  else ret = httpUpdate.updateSpiffs(client,path.c_str());
+  ret = httpUpdate.update(client, path.c_str());
   switch (ret) {
       case HTTP_UPDATE_FAILED:
         Debugf("OTA ERROR: (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
@@ -135,16 +131,6 @@ void ReadManifest() {
   // Parse JSON object in response
   DynamicJsonDocument manifest(256);
 
-  // Parse JSON object
-//  DeserializationError error = deserializeJson(manifest, payload);
-//  if (error) Debugln(F("Error deserialisation Json"));
-//  Debugf("version: %s\n\r",manifest["version"]);
-//  Debugf("major: %i\n\r",manifest["major"]);
-//  Debugf("minor: %i\n\r",manifest["minor"]);
-//  Debug(F("build: "));Debugln(String(manifest["build"]).c_str());
-//  Debug(F("notes: "));Debugln(String(manifest["notes"]).c_str());
-//  Debug(F("ota_url: "));Debugln(String(manifest["ota_url"]).c_str());
-    
 } //ReadManifest
 
 

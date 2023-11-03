@@ -188,6 +188,7 @@ const PROGMEM char *flashMode[]    { "QIO", "QOUT", "DIO", "DOUT", "Unknown" };
 //===========================prototype's=======================================
 int strcicmp(const char *a, const char *b);
 void delayms(unsigned long);
+void SetConfig();
 
 //===========================GLOBAL VAR'S======================================
 WiFiClient  wifiClient;
@@ -196,8 +197,6 @@ WiFiClient  wifiClient;
   #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
   static PubSubClient MQTTclient(wifiClient);
 #endif
-
-#include "Network.h"
 
 //config
 int8_t IOWater = 0;
@@ -236,6 +235,10 @@ bool        bRawPort = false;
 bool        bLED_PRT = true;
 bool        bWriteFiles = false;
 
+//vitals
+char      macStr[18] = { 0 };
+char      macID[13];
+
 String      CapTelegram;
 char        cMsg[150];
 String      lastReset           = "";
@@ -272,6 +275,9 @@ String    mbusDeliveredTimestamp;
 String    smID;
 bool      StaticInfoSend = false;
 bool      bSendMQTT = false;
+
+#include "_Button.h"
+#include "Network.h"
 
 //===========================================================================================
 // setup timers 

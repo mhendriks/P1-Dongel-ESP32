@@ -1,4 +1,5 @@
-
+#ifndef _NETWORK_H
+#define _NETWORK_H
 /*
 ***************************************************************************  
 **  Program  : network.h, part of DSMRloggerAPI
@@ -34,6 +35,17 @@ DECLARE_TIMER_SEC(WifiReconnect, 5); //try after 5 sec
 void LogFile(const char*, bool);
 void P1Reboot();
 void SwitchLED( byte mode, byte color);
+String MAC_Address();
+
+void GetMacAddress(){
+
+  String _mac = MAC_Address();
+  strcpy( macStr, _mac.c_str() );
+  _mac.replace( ":","" );
+  strcpy( macID, _mac.c_str() );
+  USBSerial.print( "MacStr: " );USBSerial.println( macStr );
+//  USBSerial.print( "MacID: " );USBSerial.println( macID );
+}
 
 /***===========================================================================================
     POST MAC + IP
@@ -46,9 +58,9 @@ void PostMacIP() {
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
 
 #ifndef AP_ONLY
-  String httpRequestData = "mac=" + WiFi.macAddress() + "&ip=" + WiFi.localIP().toString() + "&version=" + _VERSION_ONLY;           
+  String httpRequestData = "mac=" + String(macStr) + "&ip=" + WiFi.localIP().toString() + "&version=" + _VERSION_ONLY;           
 #else
-  String httpRequestData = "mac=" + WiFi.macAddress() + "&ip=" + IPAddress()+ "&version=" + _VERSION_ONLY;           
+  String httpRequestData = "mac=" + String(macStr) + "&ip=" + IPAddress()+ "&version=" + _VERSION_ONLY;           
 #endif  
 //  DebugT(F("HTTP RequestData: "));Debugln(httpRequestData);
   int httpResponseCode = http.POST(httpRequestData);
@@ -67,9 +79,10 @@ static void onWifiEvent (WiFiEvent_t event) {
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
         LogFile("Wifi Connected",true);
         SwitchLED( LED_ON, BLUE );
-        Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
+//        Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
-        Debug (F(" ( gateway: " ));  Debug (WiFi.gatewayIP());Debug(" )\n\n");
+//        Debug (F(" ( gateway: " ));  Debug (WiFi.gatewayIP());
+        Debug(" )\n\n");
         WifiBoot = false;
         WifiConnected = true;
         break;
@@ -134,7 +147,7 @@ void startWiFi(const char* hostname, int timeOut)
     return;
   } 
   //  phy_bbpll_en_usb(true); 
-  DebugTf("Took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
+//  DebugTf("Took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
 #ifdef INSIGHT 
   Insights.begin(insights_auth_key);
 #endif
@@ -159,12 +172,12 @@ void startTelnet()
 void startMDNS(const char *Hostname) 
 {
   DebugTf("[1] mDNS setup as [%s.local]\r\n", Hostname);
-  if (MDNS.begin(Hostname)) DebugTf("[2] mDNS responder started as [%s.local]\r\n", Hostname);    
-  else  DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
+  if ( !MDNS.begin(Hostname) ) DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
   MDNS.addService("http", "tcp", 80);
   
 } // startMDNS()
 
+#endif
 /***************************************************************************
 *
 * Permission is hereby granted, free of charge, to any person obtaining a

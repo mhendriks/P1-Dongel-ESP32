@@ -38,18 +38,6 @@ void auth(){
     }
 }
 
-void procestelegram(){
-  checkauth(); 
-
-//  if (PrevTelegram.length() ) {
-//      DebugTln("send previous telegram");
-//      httpServer.sendHeader( "Access-Control-Allow-Origin", "*" );
-//      httpServer.setContentLength( PrevTelegram.length() );
-//      httpServer.send( 200, "application/json", PrevTelegram );      
-//      PrevTelegram = "";
-//  }
-}
-
 //=====================================================================================
 void setupFSexplorer()
 { 

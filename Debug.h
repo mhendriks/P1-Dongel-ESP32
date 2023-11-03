@@ -1,3 +1,5 @@
+#ifndef _DEBUG_H
+#define _DEBUG_H
 /* 
 ***************************************************************************  
 **  Program  : Debug.h, part of DSMRloggerAPI
@@ -51,3 +53,5 @@ void _debugBOL(const char *fn, int line)
   SerialOut.print (_bol);
   TelnetStream.print (_bol);
 }
+
+#endif

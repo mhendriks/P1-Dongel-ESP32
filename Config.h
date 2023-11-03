@@ -67,7 +67,7 @@
   #define MQTT_DISABLE
   #undef OTAURL
   #define OTAURL "http://ota.smart-stuff.nl/v5-eid/"
-  enum E_eid_states : uint16_t { EID_IDLE, EID_CLAIMING, EID_ENROLLED };
+  enum E_eid_states : uint8_t { EID_IDLE, EID_CLAIMING, EID_ENROLLED };
 
 #endif
 

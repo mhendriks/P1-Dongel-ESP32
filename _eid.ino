@@ -90,12 +90,11 @@ States
   String _hostname = String(settingHostname);
   _hostname.toLowerCase();
   
-  json_data  = "{\"claimCode\": \"\"";
-  json_data += ",\"deviceId\": \"p1-dongle-pro-" + String(WIFI_getChipId()) + "\"";
+  json_data  = "{\"deviceId\": \"p1-dongle-pro-" + String(WIFI_getChipId()) + "\"";
   json_data += ",\"deviceName\": \"" + String(settingHostname) + "\"";
   json_data += ",\"firmwareVersion\": \"" _VERSION_ONLY  "\"";
   json_data += ",\"ipAddress\": \"" + String(IP_Address()) + "\"";
-  json_data += ",\"macAddress\": \"" + WiFi.macAddress() + "\"";  
+  json_data += ",\"macAddress\": \"" + macStr + "\"";  
   json_data += ",\"localDeviceUrl\": \"http://" + _hostname + ".local\"";  
   json_data += "}";
   

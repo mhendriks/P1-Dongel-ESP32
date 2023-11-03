@@ -147,7 +147,6 @@ void readSettings(bool show)
   DeserializationError error = deserializeJson(doc, SettingsFile);
   if (error) {
     Debugln();
-//    DebugTln(F("read():Failed to read DSMRsettings.json file"));
     LogFile("read():Failed to read DSMRsettings.json file",true);
     SettingsFile.close();
     writeSettings();
@@ -211,16 +210,11 @@ void readSettings(bool show)
   SettingsFile.close();
   //end json
 
-  //--- this will take some time to settle in
-  //--- probably need a reboot before that to happen :-(
-//  MDNS.setHostname(settingHostname);    // start advertising with new(?) settingHostname
-  //set hostname
     mdns_hostname_set(settingHostname);
-    //set default instance
     mdns_instance_name_set(_DEFAULT_HOSTNAME);
 if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
 
-  Debug(F(".. done\r"));
+//  Debug(F(".. done\r"));
 
 
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), "DSMRindexEDGE.html");
@@ -228,45 +222,39 @@ if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
   if (settingMQTTbrokerPort    < 1) settingMQTTbrokerPort   = 1883;
 
   if (!show) return;
-  
-  Debugln(F("\r\n==== Settings ===================================================\r"));
-  Debugf("                    Hostname : %s\r\n",     settingHostname);
-  Debugf("   Energy Delivered Tarief 1 : %9.7f\r\n",  settingEDT1);
-  Debugf("   Energy Delivered Tarief 2 : %9.7f\r\n",  settingEDT2);
-  Debugf("   Energy Delivered Tarief 1 : %9.7f\r\n",  settingERT1);
-  Debugf("   Energy Delivered Tarief 2 : %9.7f\r\n",  settingERT2);
-  Debugf("        Gas Delivered Tarief : %9.7f\r\n",  settingGDT);
-  Debugf("     Energy Netbeheer Kosten : %9.2f\r\n",  settingENBK);
-  Debugf("        Gas Netbeheer Kosten : %9.2f\r\n",  settingGNBK);
-  Debugf("  SM Fase Info (0=No, 1=Yes) : %d\r\n",     settingSmHasFaseInfo);
-//  Debugf("   Telegram Process Interval : %d\r\n",     settingTelegramInterval);
-  
-  Debugf("                  Index Page : %s\r\n",     settingIndexPage);
-#ifndef MQTT_DISABLE 
-  Debugln(F("\r\n==== MQTT settings ==============================================\r"));
-  Debugf("          MQTT broker URL/IP : %s:%d", settingMQTTbroker, settingMQTTbrokerPort);
-  if (MQTTclient.connected()) Debugln(F(" (is Connected!)\r"));
-  else                 Debugln(F(" (NOT Connected!)\r"));
-  Debugf("                   MQTT user : %s\r\n", settingMQTTuser);
-#ifdef SHOW_PASSWRDS
-  Debugf("               MQTT password : %s\r\n", settingMQTTpasswd);
-#else
-  Debug( "               MQTT password : *************\r\n");
-#endif
-  Debugf("          MQTT send Interval : %d\r\n", settingMQTTinterval);
-  Debugf("              MQTT top Topic : %s\r\n", settingMQTTtopTopic);
-#endif //MQTT  
-  Debugln(F("\r\n==== Other settings =============================================\r"));
-  Debug(F("                 LED enabled : ")); Debugln(LEDenabled);
-  Debug(F("                Base OTA url : ")); Debugln(BaseOTAurl);
-  Debug(F("              History Enabled: ")); Debugln(EnableHistory);
-  Debug(F("          Water Meter Enabled: ")); Debugln(WtrMtr);
-  Debug(F("    HA Auto Discovery Enabled: ")); Debugln(EnableHAdiscovery);
-  Debug(F("   Support 2.x and 3.x meters: ")); Debugln(bPre40);
-  Debug(F("      Raw Telegram on port 82: ")); Debugln(bRawPort);
-  Debug(F("  Enables actual json in mqtt: ")); Debugln(bActJsonMQTT);
-    
-  Debugln(F("-\r"));
+
+//  serializeJsonPretty(doc,SerialOut);
+//  serializeJsonPretty(doc,TelnetStream);
+//  
+//  Debugln(F("\r\n==== Settings ===================================================\r"));
+//  Debugf("                    Hostname : %s\r\n",     settingHostname);
+//   Debugf("  SM Fase Info (0=No, 1=Yes) : %d\r\n",     settingSmHasFaseInfo);
+//  Debugf("                  Index Page : %s\r\n",     settingIndexPage);
+//#ifndef MQTT_DISABLE 
+//  Debugln(F("\r\n==== MQTT settings ==============================================\r"));
+//  Debugf("          MQTT broker URL/IP : %s:%d", settingMQTTbroker, settingMQTTbrokerPort);
+//  if (MQTTclient.connected()) Debugln(F(" (is Connected!)\r"));
+//  else                 Debugln(F(" (NOT Connected!)\r"));
+//  Debugf("                   MQTT user : %s\r\n", settingMQTTuser);
+//#ifdef SHOW_PASSWRDS
+//  Debugf("               MQTT password : %s\r\n", settingMQTTpasswd);
+//#else
+//  Debug( "               MQTT password : *************\r\n");
+//#endif
+//  Debugf("          MQTT send Interval : %d\r\n", settingMQTTinterval);
+//  Debugf("              MQTT top Topic : %s\r\n", settingMQTTtopTopic);
+//#endif //MQTT  
+//  Debugln(F("\r\n==== Other settings =============================================\r"));
+//  Debug(F("                 LED enabled : ")); Debugln(LEDenabled);
+//  Debug(F("                Base OTA url : ")); Debugln(BaseOTAurl);
+//  Debug(F("              History Enabled: ")); Debugln(EnableHistory);
+//  Debug(F("          Water Meter Enabled: ")); Debugln(WtrMtr);
+//  Debug(F("    HA Auto Discovery Enabled: ")); Debugln(EnableHAdiscovery);
+//  Debug(F("   Support 2.x and 3.x meters: ")); Debugln(bPre40);
+//  Debug(F("      Raw Telegram on port 82: ")); Debugln(bRawPort);
+//  Debug(F("  Enables actual json in mqtt: ")); Debugln(bActJsonMQTT);
+//    
+//  Debugln(F("-\r"));
 
 } // readSettings()
 
