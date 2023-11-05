@@ -37,7 +37,7 @@ TODO
     • in Actueel staat de laatste meting rechts en de oudste meting links
     • in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
 
-4.8.8
+4.8.9
 - issue met wifi connection lost ...  (h van Akker, P Brand)
 - lengte credentials vermelden  (Rob G)
 
