@@ -104,7 +104,7 @@ void processSlimmemeter() {
     if (slimmeMeter.parse(&DSMRdata, &DSMRerror))   // Parse succesful
     {
 #endif      
-      if ( telegramCount == 1) SMCheckOnce(); //only the first telegram
+      if ( (telegramCount - telegramErrors) == 1) SMCheckOnce(); //only the first succesfull telegram
       else {
         //use the keys from the initial check; saves processing power
         DSMRdata.identification = smID;
@@ -167,7 +167,7 @@ void processTelegram(){
 //!!! DO NOT REFER TO CPU CONSUMING FUNCTIONS ... THIS PROCES SHOULD NOT BLOCK OR TAKES LOTS OF CPU TIME
 
   newT = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), true); // update system time
-//  DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
+  DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
 
   // has the hour changed write ringfiles
   if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) writeRingFiles(); //bWriteFiles = true; //handled in main flow
