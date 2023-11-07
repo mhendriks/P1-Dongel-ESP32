@@ -237,7 +237,7 @@ void writeRingFiles() {
   writeRingFile(RINGDAYS, "", false);
   yield();
   writeRingFile(RINGMONTHS, "", false);
-  bWriteFiles = false;
+//  bWriteFiles = false;
   
 } // writeRingFiles()
  

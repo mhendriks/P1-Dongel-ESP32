@@ -233,7 +233,7 @@ bool        bPre40 = false;
 bool        bActJsonMQTT = false;
 bool        bRawPort = false;
 bool        bLED_PRT = true;
-bool        bWriteFiles = false;
+//bool        bWriteFiles = false;
 
 //vitals
 char      macStr[18] = { 0 };
@@ -243,7 +243,6 @@ String      CapTelegram;
 char        cMsg[150];
 String      lastReset           = "";
 bool        FSNotPopulated      = false;
-//bool      mqttIsConnected     = false;
 bool        Verbose1 = false, Verbose2 = false;
 uint32_t    unixTimestamp;
 

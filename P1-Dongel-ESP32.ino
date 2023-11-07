@@ -39,7 +39,8 @@ TODO
 
 4.8.9
 - issue met wifi connection lost ...  (h van Akker, P Brand)
-- lengte credentials vermelden  (Rob G)
+- Rob G: lengte credentials vermelden
+- Rob van D: zodra 'Actueel' groen is, wordt 'Elektra' dat ook. Waarom is dat? En nog vreemder: als die eenmaal groen is, blijft die ten eeuwige dage groen (tenzij ik handmatig de browserpagina ververs).
 
 4.9.0
 - RNG files continu open
@@ -75,7 +76,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-//#define EID
+#define EID
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
@@ -133,7 +134,10 @@ void setup()
 #ifndef AP_ONLY
   startMDNS(settingHostname);
   startNTP();
+
+#ifndef EID  
   MQTTsetServer();
+#endif  
 
 #endif
 //================ Check necessary files ============================
