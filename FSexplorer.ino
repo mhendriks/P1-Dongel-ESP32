@@ -45,7 +45,7 @@ void setupFSexplorer()
   httpServer.serveStatic("/api/v2/hist/days"  , LittleFS, RingFiles[RINGDAYS].filename );
   httpServer.serveStatic("/api/v2/hist/months", LittleFS, RingFiles[RINGMONTHS].filename );
   httpServer.on("/api/v2/hist/months", HTTP_POST, [](){ writeRingFile(RINGMONTHS, httpServer.arg(0).c_str(), false); });
-  
+
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
   httpServer.on("/login", HTTP_GET, []() { auth(); });
   httpServer.on(UriBraces("/api/v2/dev/{}"),[]() { auth(); handleDevApi(); });
@@ -55,7 +55,10 @@ void setupFSexplorer()
 #ifdef EID
   httpServer.on("/eid/getclaim",[](){ auth(); EIDGetClaim(); });
 #endif
-  
+#ifdef DEV_PAIRING
+  httpServer.on("/pair",[](){ HandlePairing(); });
+#endif
+
   httpServer.on("/api/listfiles", HTTP_GET, [](){ checkauth(); APIlistFiles(); });
   httpServer.on("/FSformat", [](){ checkauth();formatFS; });
   httpServer.on("/upload", HTTP_POST, []() { checkauth(); }, handleFileUpload );

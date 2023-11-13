@@ -24,6 +24,7 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <dsmr2.h>               // https://github.com/mhendriks/dsmr2Lib
+#include <esp_now.h>             //https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
 
 #ifdef MBUS
 #include "ModbusServerWiFi.h"

@@ -82,6 +82,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 //#define EID
+#define DEV_PAIRING
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
@@ -184,6 +185,7 @@ void setup()
 #ifdef MBUS
   mbusSetup();
 #endif  
+
 } // setup()
 
 
