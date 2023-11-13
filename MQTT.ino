@@ -36,7 +36,7 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
   msg_payload += AddPayload( "stat_cla"       , state_class);
   msg_payload += extrapl;
   msg_payload += "\"dev\":{";
-  msg_payload += AddPayload("ids"             , String(WIFI_getChipId()).c_str() );
+  msg_payload += AddPayload("ids"             , String(_getChipId()).c_str() );
   msg_payload += AddPayload("name"            , settingHostname);
   msg_payload += "\"mdl\":\"P1 Dongle Pro\",\"mf\":\"Smartstuff\"}}";
 //  Debugln(msg_payload);
@@ -126,7 +126,7 @@ void MQTTConnect() {
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
   	  sprintf(cMsg,"%supdate",settingMQTTtopTopic);
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
-//      if ( EnableHAdiscovery ) AutoDiscoverHA();
+      if ( EnableHAdiscovery ) AutoDiscoverHA();
     } else {
       LogFile("MQTT: Attempting connection... connection FAILED", true);
       DebugT("error code: ");Debugln(MQTTclient.state());

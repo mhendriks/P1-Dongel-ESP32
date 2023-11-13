@@ -37,6 +37,11 @@ TODO
     • in Actueel staat de laatste meting rechts en de oudste meting links
     • in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
 
+- Harold B: Dark-mode frontend
+- Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
+
+- Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
+
 4.8.9
 - issue met wifi connection lost ...  (h van Akker, P Brand)
 - Rob G: lengte credentials vermelden
@@ -76,7 +81,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-#define EID
+//#define EID
 
 /******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"

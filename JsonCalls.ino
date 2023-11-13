@@ -141,7 +141,7 @@ void sendDeviceInfo()
   esp_chip_info_t chip_info;
   esp_chip_info(&chip_info);
 
-  doc["chipid"] = WIFI_getChipId();
+  doc["chipid"] = _getChipId();
   snprintf(cMsg, sizeof(cMsg), "model %x rev: %x cores: %x", chip_info.model, chip_info.revision, chip_info.cores);
   doc["coreversion"] = cMsg;
   doc["sdkversion"] = String( ESP.getSdkVersion() );

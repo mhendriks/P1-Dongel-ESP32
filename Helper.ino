@@ -7,10 +7,12 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
+#ifndef _HELPER
+#define _HELPER
 
 #include "rom/rtc.h"
 
-#define WIFI_getChipId() (uint64_t)ESP.getEfuseMac()
+#define _getChipId() (uint64_t)ESP.getEfuseMac()
 
 const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unknown","Software reset digital core", "Legacy watch dog reset digital core", 
 "Deep Sleep reset digital core", "Reset by SLC module, reset digital core","Timer Group0 Watch dog reset digital core","Timer Group1 Watch dog reset digital core",
@@ -415,6 +417,7 @@ float typecastValue(FixedValue i)
   return i;
 }
 
+#endif
 /***************************************************************************
 *
 * Permission is hereby granted, free of charge, to any person obtaining a

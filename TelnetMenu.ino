@@ -68,7 +68,7 @@ void displayBoardInfo()
 //  Debug(F("]\r\n MQTT All topic Proces ["));  Debug( mqttCount );
   Debug(F("]\r\n              FreeHeap ["));  Debug( ESP.getFreeHeap() );
   Debug(F("]\r\n             max.Block ["));  Debug( ESP.getMaxAllocHeap() );
-  Debug(F("]\r\n               Chip ID ["));  Debug( WIFI_getChipId() );
+  Debug(F("]\r\n               Chip ID ["));  Debug( _getChipId() );
   Debug(F("]\r\n             Chip Info ["));  Debug( cMsg );
   Debug(F("]\r\n           SDK Version ["));  Debug( ESP.getSdkVersion() );
   Debug(F("]\r\n        CPU Freq (MHz) ["));  Debug( ESP.getCpuFreqMHz() );
