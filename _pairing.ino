@@ -9,6 +9,7 @@
  * 6- server closed the service
  * 
  * based on; https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
+ * docs:https://demo-dijiudu.readthedocs.io/en/latest/api-reference/wifi/esp_now.html
  * 
  */
 
@@ -21,6 +22,9 @@
 
 esp_now_peer_info_t slave;
 enum MessageType { PAIRING, DATA, CONFIRMED, } messageType;
+enum _pairStatus { _INACTIVE, _WAITING, _PAIRING, _CONFIRMED, } PairingStatus = _INACTIVE;
+
+char PeerHostname[30];
 
 int chan;
 
@@ -37,8 +41,7 @@ struct_pairing pairingData, recvdata;
 // ---------------------------- esp_ now -------------------------
 void printMAC(const uint8_t * mac_addr){
   char macStr[18];
-  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
-           mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
   Debug(macStr);
 }
 
@@ -82,17 +85,18 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *incomingData, int len) 
   Debugf("%i bytes of data received from : ",len);printMAC(mac_addr);Debugln();
     switch ( (uint8_t)incomingData[0] ){
       case CONFIRMED:
+        PairingStatus = _CONFIRMED;
         Debugln("Confirmed");
         StopPairing();
         break;
       case PAIRING:
+        PairingStatus = _PAIRING;
         memcpy(&recvdata, incomingData, sizeof(recvdata));
         Debug("pw: ");Debugln(recvdata.pw);
         if ( strcmp(recvdata.pw, CONFIGPW ) == 0 ){
-        Debug("msgType: ");Debugln(pairingData.msgType);
-  //    Debugln(pairingData.ssid);
-  //    Debugln(pairingData.host);
-  //    Debugln("send response");
+        Debug("msgType: ");Debugln(recvdata.msgType);
+        Debug("host: ");Debugln(recvdata.host);
+        strncpy(PeerHostname,recvdata.host,sizeof(PeerHostname));
         addPeer(mac_addr);
         esp_err_t result = esp_now_send(mac_addr, (uint8_t *) &pairingData, sizeof(pairingData));
       }  else Debugln("Incorrect pw");
@@ -112,13 +116,18 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 }
 
 void HandlePairing() {
-  if ( httpServer.arg("action") == "stop" ) {
+  if ( httpServer.arg("cmd") == "stop" ) {
     StopPairing();
     httpServer.send(200, "text/plain", "Pairing Stoped" );
   }
-  if ( httpServer.arg("action") == "start" ) {
+  if ( httpServer.arg("cmd") == "start" ) {
     StartPairing();
     httpServer.send(200, "text/plain", "Pairing Started" );
+  }
+  if ( httpServer.arg("cmd") == "status" ) {
+    char _status[50];
+    snprintf(_status, sizeof(_status),"{\"status\":%d,\"client\":\"%s\"}",PairingStatus,PeerHostname);
+    httpServer.send(200, "application/json", _status );
   }
 }
 
@@ -156,7 +165,9 @@ void StartPairing() {
     esp_now_register_recv_cb(OnDataRecv);
     
     Debugln("Pairing started");
+    PeerHostname[0] = '\0'; //clear
+    PairingStatus = _WAITING;
 }
 
 #endif //_PAIRING
-#endif //PAIRING
+#endif //DEV_PAIRING
