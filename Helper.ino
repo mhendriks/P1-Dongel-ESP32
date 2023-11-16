@@ -28,6 +28,7 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 //Pro h2o+    : {0,1}
 
 void SetConfig(){
+  //defaults
   switch ( P1Status.dev_type ) {
     case PRO       : UseRGB = false; 
                      IOWater = 5;
@@ -43,16 +44,11 @@ void SetConfig(){
                      break;
   }
   Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);
-  if ( UseRGB ){
-    RGBLED.begin();           
-    RGBLED.clear();
-    RGBLED.show();            
-    RGBLED.setBrightness(BRIGHTNESS);
-  }
+  if ( UseRGB ) rgb.begin();
   // sign of life = ON during setup or change config
-  SwitchLED( LED_ON, BLUE );
+  SwitchLED( LED_ON, LED_BLUE );
   delay(2000);
-  SwitchLED( LED_OFF, BLUE );
+  SwitchLED( LED_OFF, LED_BLUE );
 }
 
 void FacReset() {
@@ -64,30 +60,26 @@ void FacReset() {
 }
 
 void ToggleLED(byte mode) {
-
   if ( UseRGB ) { 
-    if ( LEDenabled ) SwitchLED( mode, GREEN ); 
-    else { RGBLED.setPixelColor(0,0,0,0);RGBLED.show(); }; 
+    if ( LEDenabled ) SwitchLED( mode, LED_GREEN ); 
+    else { rgb.setPixel(LED_BLACK); }; 
   } // PRO_BRIDGE
   else if ( LEDenabled ) digitalWrite(LED, !digitalRead(LED)); else digitalWrite(LED, LED_OFF);
-
 }
 
-void SwitchLED( byte mode, byte color) {
+void SwitchLED( byte mode, uint32_t color) {
 if ( UseRGB ) {
     if ( LEDenabled ) {
-      byte value = 0;
-      if ( mode == LED_ON ) value = 255;
+      uint32_t value = 0; //off mode
+      if ( mode == LED_ON ) value = color;
       
       switch ( color ) {
-      case RED:   R_value = value; break;
-      case GREEN: G_value = value; break;
-      case BLUE:  B_value = value; break;  
+      case LED_RED:   R_value = value; break;
+      case LED_GREEN: G_value = value; break;
+      case LED_BLUE:  B_value = value; break;  
       } 
-    } 
-
-    RGBLED.setPixelColor(0,R_value,G_value,B_value);
-    RGBLED.show(); 
+    }
+    rgb.setPixel(R_value+G_value+B_value);
    } else digitalWrite(LED, mode);
 }
 

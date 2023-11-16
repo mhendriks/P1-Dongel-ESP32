@@ -25,6 +25,9 @@
 #include <LittleFS.h>
 #include <dsmr2.h>               // https://github.com/mhendriks/dsmr2Lib
 #include <esp_now.h>             //https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
+#include <SingleNeoPixel.h>      //https://github.com/mhendriks/NeoPixel
+
+SingleNeoPixel rgb(RGBLED_PIN);
 
 #ifdef MBUS
 #include "ModbusServerWiFi.h"

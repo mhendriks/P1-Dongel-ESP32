@@ -42,7 +42,7 @@ void startETH(){
   USBSerial.print(F("ETH MAC: ")); //CDC output
   USBSerial.println(macStr);
   
-  SwitchLED( LED_ON, BLUE ); //Ethernet available = RGB LED Blue
+  SwitchLED( LED_ON, LED_BLUE ); //Ethernet available = RGB LED Blue
 }
 
 #endif

@@ -80,18 +80,17 @@
  #define ALL_OPTIONS BASE_OPTIONS
 #endif
 
-  #define _DEFAULT_MQTT_TOPIC _DEFAULT_HOSTNAME "/"
+#define _DEFAULT_MQTT_TOPIC _DEFAULT_HOSTNAME "/"
 
-  #define RGBLED_PIN        8
-  #define PRT_LED           0
-  #include <Adafruit_NeoPixel.h>
-  Adafruit_NeoPixel RGBLED(1, RGBLED_PIN, NEO_GRB + NEO_KHZ800);
-  #define BRIGHTNESS 50 // Set BRIGHTNESS to about 1/5 (max = 255)
-  //LED COLORS
-  #define BLUE  3
-  #define RED   1
-  #define GREEN 2
-  byte R_value = 0, B_value = 0, G_value = 0;
+  
+//LED STUFF
+#define RGBLED_PIN        8
+#define PRT_LED           0
+#define LED_BLUE  0x07
+#define LED_RED   0x070000
+#define LED_GREEN 0x0700
+#define LED_BLACK 0x0  
+uint32_t R_value = 0, B_value = 0, G_value = 0;
 
 #ifdef AP_ONLY  
   #define _DEFAULT_HOMEPAGE  "/DSMRindexLOCAL.html"
