@@ -8,7 +8,7 @@
 void handleEnergyID(){ }
 #else
 
-#include "development/energyid.h"
+#include "./../../_secrets/energyid.h"
 
 String  eid_webhook;
 String  eid_header_auth;
