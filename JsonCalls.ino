@@ -94,12 +94,13 @@ void sendJson(const TSource &doc)
 //  char buffer[strsize];
   String buffer;
   
-  if (Verbose1) serializeJsonPretty(doc,buffer); 
-  else serializeJson(doc,buffer);
+//  if (Verbose1) serializeJsonPretty(doc,buffer); 
+//  else 
+  serializeJson(doc,buffer);
 //  DebugT(F("Sending json: ")); Debugln(buffer);
 //  DebugT("strsize:"); Debugln(strsize);
   sendJsonBuffer(buffer.c_str());
-  if (Verbose1) DebugTln(F("sendJson: json sent .."));
+//  if (Verbose1) DebugTln(F("sendJson: json sent .."));
     
 }
 

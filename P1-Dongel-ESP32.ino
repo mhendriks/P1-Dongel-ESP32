@@ -30,26 +30,27 @@ TODO
 - #18 water en gas ook in de enkele json string (mqtt)
 - spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
 - loadbalancing bijhouden over de fases
-- mqtt client in task proces
 
-  • grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
-  • Consistentie tijd-assen, links oud, rechts nieuw
-    • in Actueel staat de laatste meting rechts en de oudste meting links
-    • in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
+- grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
+- Consistentie tijd-assen, links oud, rechts nieuw
+  - in Actueel staat de laatste meting rechts en de oudste meting links
+  - in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
 
 - Harold B: Dark-mode frontend
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
-
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 
 4.8.9
+√ Neoled library replaced by simple/compact one
+√ Added: auto discovery HA (was broken)
+
+4.8.10
 - issue met wifi connection lost ...  (h van Akker, P Brand)
 - Rob G: lengte credentials vermelden
 - Rob van D: zodra 'Actueel' groen is, wordt 'Elektra' dat ook. Waarom is dat? En nog vreemder: als die eenmaal groen is, blijft die ten eeuwige dage groen (tenzij ik handmatig de browserpagina ververs).
 
 4.9.0
-- RNG files continu open
-- uren RNG files vergroten bv naar 14 dagen (nu 48h -> 336h) (Broes)
+- RNG files vergroten (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
@@ -65,7 +66,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Flash size: "4MB (32Mb)"
   - CorenDebug Level: "None"
   - Flash Frequency: "80MHz"
-  - CPU Frequency: "240MHz"
+  - CPU Frequency: "160MHz"
   - Upload Speed: "961600"                                                                                                                                                                                                                                                 
   - Port: <select correct port>
 */
@@ -82,12 +83,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 //#define EID
-#define DEV_PAIRING
+//#define DEV_PAIRING
 
-/******************** don't change anything below this comment **********************/
 #include "DSMRloggerAPI.h"
 
-//===========================================================================================
 void setup() 
 {
   SerialOut.begin(115200); //debug stream  
@@ -100,7 +99,6 @@ void setup()
   
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
-  
   SetConfig();
   
   if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP); //Setconfig first
