@@ -329,6 +329,9 @@ if (WtrMtr) {
 #ifdef EID  
   doc["eid-enabled"] = bEID_enabled;
 #endif
+#ifdef DEV_PAIRING  
+  doc["dev-pairing"] = true;
+#endif
 
   doc["ha_disc_enabl"] = EnableHAdiscovery;
 if ( P1Status.dev_type == PRO_BRIDGE ) doc["led-prt"] = bLED_PRT;
