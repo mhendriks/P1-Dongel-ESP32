@@ -10,9 +10,7 @@ TODO
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
 - feature: nieuwe meter = beginstand op 0
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
-- front-end: functie toevoegen die de beschikbare versies toont (incl release notes) en je dan de keuze geeft welke te flashen. (Erik)
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
-- issue met reconnect dns name mqtt (Eric)
 - auto switch 3 - 1 fase max fuse
 - issue met basic auth afscherming rng bestanden
 - temparatuur ook opnemen in grafieken (A van Dijken)
@@ -38,16 +36,10 @@ TODO
 
 - Harold B: Dark-mode frontend
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
-- Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
-
-4.8.9
-√ Neoled library replaced by simple/compact one
-√ Added: auto discovery HA (was broken)
 
 4.8.10
 - issue met wifi connection lost ...  (h van Akker, P Brand)
-- Rob G: lengte credentials vermelden
-- Rob van D: zodra 'Actueel' groen is, wordt 'Elektra' dat ook. Waarom is dat? En nog vreemder: als die eenmaal groen is, blijft die ten eeuwige dage groen (tenzij ik handmatig de browserpagina ververs).
+- Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 
 4.9.0
 - RNG files vergroten (nu 48h -> 336h) (Broes)
@@ -73,7 +65,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
-//#define ETHERNET
+#define ETHERNET
 //#define STUB            //test only
 //#define HEATLINK        //first draft
 //#define INSIGHT         
