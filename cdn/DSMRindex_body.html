@@ -1,7 +1,7 @@
 <!--
 ***************************************************************************  
 **  Program  : DSMRindex_body.html, part of DSMRloggerAPI
-**  Version  : v4.9.0
+**  Version  : v4.8.9
 **
 **  Copyright (c) 2021 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
@@ -33,10 +33,11 @@
       <li><a id='bFSExplorer'    class='nav-img nav-item' href="#FSExplorer" ><span class="iconify" data-icon="mdi-folder-outline"></span></a></li>
       <li><a id='bSettings'      class='nav-img nav-item' href="#Settings" ><span class="iconify" data-icon="mdi-cog"></span></a>    
 		<ul>
+			<li><a id='bEid'   	 	  data-i18n-key="mnu-eid" class='tabButton nav-item' href="#EID" style="display:none">Setup EnergyID</a></li>
+			<li><a id='bNRGM'   	  data-i18n-key="mnu-nrgm" class='tabButton nav-item' href="#NRGM" style="display:none">Koppelen...</a></li>
 			<li><a id='bEditSettings' data-i18n-key="mnu-settings" class='tabButton nav-item' href="#Settings" >Settings</a></li>
 			<li><a id='bEditMonths'   data-i18n-key="mnu-editmonths" class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
 			<li><a id='bReset'   	  data-i18n-key="mnu-reset" class='tabButton nav-item' href="#Reset" >Reset & Update</a></li>
-			<li><a id='bEid'   	 	  data-i18n-key="mnu-eid" class='tabButton nav-item' href="#EID" style="display:none">Setup EnergyID</a></li>
 <!-- 			<li><a id='bAbout'   	  class='tabButton nav-item' href="#About" >About</a></li> -->
 		</ul></li>
 	  <li><a href="javascript:void(0);" class="icon" onclick="menu()"><i id="menuid" class="iconify" data-icon="mdi-menu"></i></a></li>
@@ -482,7 +483,6 @@
       <p>Laatste software versie :</p><div id="latest_verion"></div>
   </section> <!-- end Settings Page -->
   
-  
 	<section id="Redirect" class="tabName">
 	<h2 data-i18n-key="tle-reboot">Opnieuw opstarten</h2>
 	<h3><div id="RedirectMessage"></div></h3>
@@ -490,8 +490,23 @@
 	<hr>Indien de pagina niet automatisch getoond wordt klik dan op <a href='/'>Home pagina</a></div>
     </section>  
 
+
+	<section id="NRGM" class="tabName">
+		<div id=eid-setup>
+		<i id=pulse_ico class="iconify" data-icon="mdi-pulse"></i>
+		<h1 class=align-c>NRG Monitor Koppelen</h1><br>
+		<div>Koppel de NRG Monitor met 1 druk op de knop.<br>
+		<br>
+		</div>
+		<hr>
+		<div>Status : <b><span id=nrgstatus>ophalen...</span></b></div>
+		<div>Laatste gekoppeld met : <b><span id=nrghost></span></b></div>
+		<br>
+		<div class=align-c><button type="button" onclick="nrgm_start_stop('start')">START</button></div>
+		</div>
+    </section>  
+
 	<section id="EID" class="tabName">
-		<!-- 	<h2 data-i18n-key="tle-eid">Setup EnergyID</h2> -->
 		<div id=eid-setup>
 		<h1 class=align-c><img src="https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@master/cdn/assets/eid.png" alt="EnergyID"></h1><br>
 		<div>P1 Dongle Pro koppelen aan EnergyID monitoring systeem.</div><div> Dit geeft uw inzichten in uw verbruik en mogelijkheid om dit te vergelijken met andere gelijke profielen.<br>

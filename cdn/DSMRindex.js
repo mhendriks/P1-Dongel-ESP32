@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : DSMRindex.js, part of DSMRfirmwareAPI
-**  Version  : v4.3.0
+**  Version  : v4.8.0
 **
 **  Copyright (c) 2023 Smartstuff
 **  Authors  : Martijn Hendriks / Mar10us
@@ -42,6 +42,7 @@ const MONTHS_IN_YEAR_NL    = ["Januari","Februari","Maart","April","Mei","Juni",
   var firmwareVersion       = 0;
   var firmwareVersion_dspl  = "-";
   var newVersionMsg         = "";
+  let NRGStatusTimer		= 0;
   
   var tlgrmInterval         = 10;
   var ed_tariff1            = 0;
@@ -165,6 +166,8 @@ const MONTHS_IN_YEAR_NL    = ["Januari","Februari","Maart","April","Mei","Juni",
   var IgnoreGas				= false 
   var Dongle_Config			= ""
   var eid_enabled			= false
+  var pairing_enabled    	= false
+  
   var locale
   let translations 			= {}; //json storage translations
 
@@ -322,7 +325,10 @@ Iconify.addCollection({
        }, 
        "mdi-chart-box-outline": {
            body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
-       },   
+       },
+       "mdi-pulse": {
+           body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
+       },        
     },
    width: 24,
    height: 24,
@@ -443,6 +449,52 @@ function SetOnSettings(json){
 }
 //============================================================================  
 
+function nrgm_start_stop(cmd){	
+	fetch(APIHOST+"/pair?cmd="+cmd, {"setTimeout": 5000})
+      .then(response => response.json())
+      .then()
+    nrgm_getstatus();
+	NRGStatusTimer = setInterval(nrgm_getstatus, 5000); //every 5 sec
+}
+
+
+function nrgm_getstatus(){
+	document.getElementById('nrgstatus').innerHTML = "ophalen...";  
+	
+	fetch(APIHOST+"/pair?cmd=status", {"setTimeout": 5000})
+      .then(response => response.json())
+      .then(json => {
+        console.log("parsed response: "+ JSON.stringify(json));
+		var nrgstatus;
+        if ( "status" in json ) {
+        	switch(json.status) {
+			  case 0: //_INACTIVE
+				nrgstatus = "INACTIEF";
+				break;
+			  case 1: //_WAITING
+				nrgstatus = "GESTART ... WACHT OP AANMELDING";
+				break;
+			  case 2://_PAIRING
+				nrgstatus = "BEZIG MET AANMELDEN";
+				break;
+			  case 3://_CONFIRMED
+				nrgstatus = "<FONT COLOR='#70ac4d'>GEKOPPELD";
+				clearInterval(NRGStatusTimer);
+				break;
+			}
+        
+        	document.getElementById('nrgstatus').innerHTML = nrgstatus;
+        }	
+        if ( "client" in json && json.client.length) {
+        	document.getElementById('nrghost').innerHTML = json.client;
+        }
+      })
+      .catch(function(error) {
+      console.log(error);
+      	document.getElementById('nrgstatus').innerHTML = "Fout - Probeer opnieuw!";
+      });
+}
+
 function getclaim(){
 	document.getElementById('status').innerHTML = "Status ophalen...";  
 	
@@ -535,7 +587,7 @@ function UpdateDash()
 // json = JSON.parse('{"identification":{"value":"ISk5=2MT382-1000"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"highest_peak_pwr_13mnd":{"value":"-"},"timestamp":{"value":"230329093336S"},"equipment_id":{"value":"-"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":12},"mbus1_equipment_id_tc":{"value":"303030304B414D32"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":35.819,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":6329.819,"unit":"m3"},"gas_delivered_timestamp":{"value":"230329073338S"},"water":{"value":517.916,"unit":"m3"}}');
 
 //others
-//    	  json = JSON.parse('{"timestamp":{"value":"220606085610S"},"energy_delivered_tariff1":{"value":55.026,"unit":"kWh"},"energy_delivered_tariff2":{"value":53.923,"unit":"kWh"},"energy_returned_tariff1":{"value":1,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0.398,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"voltage_l1":{"value":232.5,"unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":0,"unit":"A"},"power_delivered_l1":{"value":0.114,"unit":"kW"},"power_delivered_l2":{"value":0.284,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":5471.227,"unit":"m3"},"gas_delivered_timestamp":{"value":"220606085510S"},"water":{"value":379.782,"unit":"m3"}}');	   	  
+//    	  json = JSON.parse('{"timestamp":{"value":"220606085610S"},"energy_delivered_tariff1":{"value":55.026,"unit":"kWh"},"energy_delivered_tariff2":{"value":53.923,"unit":"kWh"},"energy_returned_tariff1":{"value":1,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.107,"unit":"kW"},"power_returned":{"value":1200,"unit":"kW"},"voltage_l1":{"value":232.5,"unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":0,"unit":"A"},"power_delivered_l1":{"value":0.114,"unit":"kW"},"power_delivered_l2":{"value":0.284,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":5471.227,"unit":"m3"},"gas_delivered_timestamp":{"value":"220606085510S"},"water":{"value":379.782,"unit":"m3"}}');	   	  
 //  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.102,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
 //  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.123,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
 //no voltage
@@ -561,7 +613,7 @@ function UpdateDash()
 		if (Injection) {		
 			document.getElementById("l5").style.display = "block";
 			document.getElementById("l6").style.display = "block";
-			document.getElementById("Ph").innerHTML = "<span class='iconify' data-icon='mdi-lightning-bolt'></span>Afname-Terug";
+			document.getElementById("Ph").innerHTML = "<span class='iconify' data-icon='mdi-lightning-bolt'></span>Netto Verbr";
 		}
 		if (HeeftGas && EnableHist && (Dongle_Config != "p1-q") && !IgnoreGas) document.getElementById("l4").style.display = "block";
 		if (HeeftWater && EnableHist) { 
@@ -606,13 +658,13 @@ function UpdateDash()
 		if ( TotalKW <= 0 ) { 
 // 			TotalKW = -1.0 * json.power_returned.value;
 			document.getElementById("power_delivered_l1h").style.backgroundColor = "green";
-			document.getElementById("Ph").style.backgroundColor = "green";
+// 			document.getElementById("Ph").style.backgroundColor = "green";
 		} else
 		{
 // 			TotalKW = json.power_delivered.value;
 			if (Injection) {
 				document.getElementById("power_delivered_l1h").style.backgroundColor = "red";
-				document.getElementById("Ph").style.backgroundColor = "red";
+// 				document.getElementById("Ph").style.backgroundColor = "red";
 			}
 			else document.getElementById("power_delivered_l1h").style.backgroundColor = "#314b77";
 		}
@@ -649,7 +701,7 @@ function UpdateDash()
 
 		//update actuele vermogen			
 		if (Act_Watt) {
-			document.getElementById("power_delivered").innerHTML = Number(TotalKW.toFixed(3))  * 1000.0;
+			document.getElementById("power_delivered").innerHTML = Number(TotalKW  * 1000).toFixed(0);
 		} else {
 			document.getElementById("power_delivered").innerHTML = Number(TotalKW).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} ) ;
 		}
@@ -660,8 +712,8 @@ function UpdateDash()
 		if (nvKW> maxKW){ maxKW = nvKW; }
 		
 		if (Act_Watt){		
-			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)) * 1000;                    
-			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)) * 1000;           
+			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW * 1000).toFixed(0);                    
+			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW * 1000).toFixed(0);           
 			document.getElementsByName('power').forEach(function(ele, idx) { ele.innerHTML = 'Watt'; }) //for all elements
 		} else {
 			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );                    
@@ -948,7 +1000,8 @@ function show_hide_column2(table, col_no, do_show) {
     console.log("openTab : " + activeTab );
     document.getElementById("myTopnav").className = "main-navigation"; //close dropdown menu 
     clearInterval(tabTimer);  
-    clearInterval(actualTimer);  
+    clearInterval(actualTimer);
+    clearInterval(NRGStatusTimer);
 
     hideAllCharts();
 
@@ -1037,6 +1090,9 @@ function show_hide_column2(table, col_no, do_show) {
 		case "bEID":
 			getclaim();
 			break;
+		case "bNRGM":
+			nrgm_getstatus();
+			break;			
 		case "bInfo_frontend":
 			data = {};
 			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
@@ -2087,11 +2143,14 @@ function formatFailureLog(svalue) {
 	  	"conf" in json ? Dongle_Config = json.conf : Dongle_Config = "";
         "electr_netw_costs" in json ? electr_netw_costs = json.electr_netw_costs.value : electr_netw_costs = 0;
         "eid-enabled" in json ? eid_enabled = json["eid-enabled"]: eid_enabled = false;
+        "dev-pairing" in json ? pairing_enabled = json["dev-pairing"]: pairing_enabled = false;
 
         console.log("eid_enabled: " + eid_enabled);
-
-        if ( eid_enabled ) document.getElementById("bEid").style.display = "block"; else document.getElementById("bEid").style.display = "none";
-        
+		console.log("dev-pairing: " + pairing_enabled);
+		
+        if ( eid_enabled ) document.getElementById("bEID").style.display = "block"; else document.getElementById("bEid").style.display = "none";
+        if ( pairing_enabled ) document.getElementById("bNRGM").style.display = "block"; else document.getElementById("bNRGM").style.display = "none";
+                
         gas_netw_costs = json.gas_netw_costs.value;
         hostName = json.hostname.value;
         EnableHist =  "hist" in json ? json.hist : true;
@@ -2223,6 +2282,7 @@ function formatFailureLog(svalue) {
 					case "s":
 						sInput.setAttribute("type", "text");
 						sInput.setAttribute("maxlength", data[i].maxlen);
+						sInput.setAttribute("placeholder", "<max " + data[i].maxlen +" tekens>");
 						break;
 					case "f":
 						sInput.setAttribute("type", "number");

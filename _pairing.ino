@@ -118,11 +118,11 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 void HandlePairing() {
   if ( httpServer.arg("cmd") == "stop" ) {
     StopPairing();
-    httpServer.send(200, "text/plain", "Pairing Stoped" );
+    httpServer.send(200, "application/json", "{\"Pairing\":\"Stoped\"}" );
   }
   if ( httpServer.arg("cmd") == "start" ) {
     StartPairing();
-    httpServer.send(200, "text/plain", "Pairing Started" );
+    httpServer.send(200, "application/json", "{\"Pairing\":\"Started\"}" );
   }
   if ( httpServer.arg("cmd") == "status" ) {
     char _status[50];
@@ -149,10 +149,6 @@ void StartPairing() {
   strcpy( pairingData.pw, manageWiFi.getWiFiPass().c_str() );
   strcpy( pairingData.host, settingHostname );
   pairingData.msgType = DATA;
-
-//wifi manager zo doen:
-//    String        manageWiFi.getWiFiPass();
-//    String        manageWiFi.getWiFiSSID();
 
   // Set the device as a Station and Soft Access Point simultaneously
   WiFi.mode(WIFI_AP_STA);
