@@ -472,7 +472,7 @@ function nrgm_getstatus(){
 				nrgstatus = "INACTIEF";
 				break;
 			  case 1: //_WAITING
-				nrgstatus = "GESTART ... WACHT OP AANMELDING";
+				nrgstatus = "WACHT OP AANMELDEN...";
 				break;
 			  case 2://_PAIRING
 				nrgstatus = "BEZIG MET AANMELDEN";
@@ -2148,7 +2148,7 @@ function formatFailureLog(svalue) {
         console.log("eid_enabled: " + eid_enabled);
 		console.log("dev-pairing: " + pairing_enabled);
 		
-        if ( eid_enabled ) document.getElementById("bEID").style.display = "block"; else document.getElementById("bEid").style.display = "none";
+        if ( eid_enabled ) document.getElementById("bEid").style.display = "block"; else document.getElementById("bEid").style.display = "none";
         if ( pairing_enabled ) document.getElementById("bNRGM").style.display = "block"; else document.getElementById("bNRGM").style.display = "none";
                 
         gas_netw_costs = json.gas_netw_costs.value;
