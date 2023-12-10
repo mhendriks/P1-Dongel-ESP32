@@ -59,7 +59,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
   
   // Prepare response
   response.add(request.getServerID(), request.getFunctionCode(), (uint8_t)(wrds * 2));
-  uint16_t utc_comp = 3200;
+  uint16_t utc_comp = 3600;
   if ( actTimestamp[12] == 'S') utc_comp = 7200;
 
   for ( int i = 0; i < wrds; i=i+2 ) {

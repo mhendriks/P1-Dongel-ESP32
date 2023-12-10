@@ -41,6 +41,9 @@ TODO
 - issue met wifi connection lost ...  (h van Akker, P Brand)
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 
+4.8.11
+- fix; aantal bestanden altijd 1 te hoog
+
 4.9.0
 - RNG files vergroten (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
@@ -65,11 +68,11 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
-#define ETHERNET
+//#define ETHERNET
 //#define STUB            //test only
 //#define HEATLINK        //first draft
 //#define INSIGHT         
-//#define AP_ONLY
+#define AP_ONLY
 //#define MBUS
 //#define MQTT_DISABLE
 //#define NO_STORAGE
@@ -206,7 +209,6 @@ void loop () {
        AuxButton.handler();
        handleWater();
        handleEnergyID();
-//       writeRingFiles();
   
 } // loop()
 
