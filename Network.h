@@ -92,7 +92,7 @@ static void onWifiEvent (WiFiEvent_t event) {
         if (DUE(WifiReconnect)) {
           if ( WifiConnected ) LogFile("Wifi connection lost",true); //log only once 
           WifiConnected = false;                 
-//          WiFi.reconnect();
+          WiFi.reconnect();
         }
         break;
     default:
@@ -130,7 +130,7 @@ void startWiFi(const char* hostname, int timeOut)
   manageWiFi.setShowDnsFields(true);    // force show dns field always  
   manageWiFi.setRemoveDuplicateAPs(false);
   manageWiFi.setScanDispPerc(true); // display percentages instead of graphs for RSSI
-  manageWiFi.setWiFiAutoReconnect(true);
+//  manageWiFi.setWiFiAutoReconnect(true); //buggy
 
   //add custom html at inside <head> for all pages -> show pasessword function
 //  manageWiFi.setCustomHeadElement("<script>function f() {var x = document.getElementById('p');x.type==='password'?x.type='text':x.type='password';}</script>");
