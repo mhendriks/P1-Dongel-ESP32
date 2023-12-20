@@ -80,6 +80,7 @@ if ( UseRGB ) {
       } 
     }
     rgb.setPixel(R_value+G_value+B_value);
+//    neopixelWrite(RGBLED_PIN,20,20,20); ///white
    } else digitalWrite(LED, mode);
 }
 

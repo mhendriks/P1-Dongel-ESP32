@@ -30,6 +30,7 @@ const MONTHS_IN_YEAR_NL    = ["Januari","Februari","Maart","April","Mei","Juni",
   
 "use strict";
 
+  var ota_url 				= "";
   let activeTab             = "bDashTab";
   let PauseAPI				= false; //pause api call when browser is inactive
   let presentationType      = "TAB";
@@ -771,7 +772,7 @@ function UpdateDash()
 		{
       Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1000);
       updateGaugeTrend(trend_q, Garr);
-			document.getElementById("Q").innerHTML = Number(Garr[0]);
+			document.getElementById("Q").innerHTML = Number(Garr[0]).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0} );
 		}
 								
 		Spinner(false);
@@ -2144,6 +2145,7 @@ function formatFailureLog(svalue) {
         "electr_netw_costs" in json ? electr_netw_costs = json.electr_netw_costs.value : electr_netw_costs = 0;
         "eid-enabled" in json ? eid_enabled = json["eid-enabled"]: eid_enabled = false;
         "dev-pairing" in json ? pairing_enabled = json["dev-pairing"]: pairing_enabled = false;
+        "ota_url" in json ? ota_url = json["ota_url"]: ota_url = "ota.smart-stuff.nl/v5/";
 
         console.log("eid_enabled: " + eid_enabled);
 		console.log("dev-pairing: " + pairing_enabled);

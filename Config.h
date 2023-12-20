@@ -50,7 +50,7 @@
   #define ALL_OPTIONS BASE_OPTIONS "[Q]"
 
   #undef MBUS_TYPE
-  #define MBUS_TYPE 3
+  #define MBUS_TYPE 4
   
   #undef _DEFAULT_HOSTNAME
   #define _DEFAULT_HOSTNAME   "Q-Dongle-Pro" 

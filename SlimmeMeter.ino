@@ -140,10 +140,15 @@ void processSlimmemeter() {
         waterDelivered = MbusDelivered(mbusWater);
         waterDeliveredTimestamp = mbusDeliveredTimestamp;
       }
+#ifdef HEATLINK
+      gasDelivered = MbusDelivered(1); //always 1ste
+      gasDeliveredTimestamp = mbusDeliveredTimestamp;
+#else
       if (mbusGas) {
         gasDelivered = MbusDelivered(mbusGas);
         gasDeliveredTimestamp = mbusDeliveredTimestamp;
       }
+#endif
         
       processTelegram();
       if (Verbose2) DSMRdata.applyEach(showValues());
