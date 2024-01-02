@@ -65,10 +65,11 @@ void setupFSexplorer()
   httpServer.on("/ReBoot", [](){ checkauth();reBootESP(); });
   httpServer.on("/ResetWifi", [](){ checkauth(); resetWifi() ;});
   httpServer.on("/remote-update", [](){ checkauth(); RemoteUpdate(); });
-  httpServer.on("/updates", HTTP_GET, []() {
+  
+/*  httpServer.on("/updates", HTTP_GET, []() {
     checkauth();
     httpServer.sendHeader("Connection", "close");
-    httpServer.send(200, "text/html", UpdateHTML);
+//    httpServer.send(200, "text/html", UpdateHTML);
   });
   httpServer.on("/update", HTTP_POST, []() {
     checkauth();
@@ -87,7 +88,7 @@ void setupFSexplorer()
         Update.printError(TelnetStream);
       }
     } else if (upload.status == UPLOAD_FILE_WRITE) {
-      /* flashing firmware to ESP*/
+      // flashing firmware to ESP
       if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
         Update.printError(SerialOut);
         Update.printError(TelnetStream);
@@ -102,7 +103,7 @@ void setupFSexplorer()
       }
     }
   });
-  
+  */
   httpServer.onNotFound([]() 
   {
     checkauth();
