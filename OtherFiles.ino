@@ -77,8 +77,10 @@ void writeSettings()
   doc["EnergyReturnedT1"] = settingERT1;
   doc["EnergyReturnedT2"] = settingERT2;
   doc["GASDeliveredT"] = settingGDT;
+  doc["WaterDelivered"] = settingWDT;
   doc["EnergyVasteKosten"] = settingENBK;
   doc["GasVasteKosten"] = settingGNBK;
+  doc["WaterVasteKosten"] = settingWNBK;
   doc["SmHasFaseInfo"] = settingSmHasFaseInfo;
 //  doc["TelegramInterval"] = settingTelegramInterval;
   doc["IndexPage"] = settingIndexPage;
@@ -161,8 +163,10 @@ void readSettings(bool show)
   settingERT1 = doc["EnergyReturnedT1"];
   settingERT2 = doc["EnergyReturnedT2"];
   settingGDT = doc["GASDeliveredT"];
+  if (doc.containsKey("WaterDelivered")) settingWDT = doc["WaterDelivered"];
   settingENBK = doc["EnergyVasteKosten"];
   settingGNBK = doc["GasVasteKosten"];
+  if (doc.containsKey("WaterVasteKosten")) settingWNBK = doc["WaterVasteKosten"];
   settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
 //  settingTelegramInterval = doc["TelegramInterval"];
@@ -286,6 +290,10 @@ void updateSetting(const char *field, const char *newValue)
 
   if (!stricmp(field, "gd_tariff"))         settingGDT          = String(newValue).toFloat();  
   if (!stricmp(field, "gas_netw_costs"))    settingGNBK         = String(newValue).toFloat();
+
+  if (!stricmp(field, "w_tariff"))          settingWDT          = String(newValue).toFloat();  
+  if (!stricmp(field, "water_netw_costs"))  settingWNBK         = String(newValue).toFloat(); 
+
   if (!stricmp(field, "water_m3")){
     P1Status.wtr_m3         = String(newValue).toInt();
     CHANGE_INTERVAL_MS(StatusTimer, 100);

@@ -251,8 +251,8 @@ bool        Verbose1 = false, Verbose2 = false;
 uint32_t    unixTimestamp;
 
 IPAddress ipDNS, ipGateWay, ipSubnet;
-float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5;
-float     settingENBK = 15.15, settingGNBK = 11.11;
+float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5, settingWDT = 1.04;
+float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
 uint8_t   settingSmHasFaseInfo = 1;
 char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;

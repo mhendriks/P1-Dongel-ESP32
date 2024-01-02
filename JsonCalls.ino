@@ -233,6 +233,12 @@ void sendDeviceSettings()
   doc["gd_tariff"]["type"] = "f";
   doc["gd_tariff"]["min"] = 0;
   doc["gd_tariff"]["max"] = 10;
+
+  doc["w_tariff"]["value"] = settingWDT;
+  doc["w_tariff"]["type"] = "f";
+  doc["w_tariff"]["min"] = 0;
+  doc["w_tariff"]["max"] = 10;
+  
 #ifndef HEATLINK  
   doc["electr_netw_costs"]["value"] = settingENBK;
   doc["electr_netw_costs"]["type"] = "f";
@@ -243,6 +249,11 @@ void sendDeviceSettings()
   doc["gas_netw_costs"]["type"] = "f";
   doc["gas_netw_costs"]["min"] = 0;
   doc["gas_netw_costs"]["max"] = 100;
+
+  doc["water_netw_costs"]["value"] = settingWNBK;
+  doc["water_netw_costs"]["type"] = "f";
+  doc["water_netw_costs"]["min"] = 0;
+  doc["water_netw_costs"]["max"] = 100;
 
 #ifndef HEATLINK  
   doc["sm_has_fase_info"]["value"] = settingSmHasFaseInfo;
