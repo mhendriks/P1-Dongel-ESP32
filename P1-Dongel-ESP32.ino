@@ -5,7 +5,7 @@
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
-*      
+*
 TODO
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
 - feature: nieuwe meter = beginstand op 0
@@ -39,8 +39,7 @@ TODO
 
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
 
-4.8.12
-- issue met wifi connection lost ...  (h van Akker, P Brand)
+4.8.13
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 - NeoPixelwrite implementeren ipv eigen oplossing
 
@@ -70,7 +69,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define SE_VERSION
 //#define ETHERNET
 //#define STUB            //test only
-#define HEATLINK        //first draft
+//#define HEATLINK        //first draft
 //#define INSIGHT         
 //#define AP_ONLY
 //#define MBUS
@@ -78,7 +77,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 //#define EID
-//#define DEV_PAIRING
+#define DEV_PAIRING
 
 #include "DSMRloggerAPI.h"
 
