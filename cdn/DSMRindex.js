@@ -537,8 +537,8 @@ function parseVersionManifest(json)
 function ReadVersionManifest() {
   console.log("ReadVersionManifest");
   Spinner(true);
-  fetch("http://" + ota_url + "version-manifest.json?dummy=" + Date.now(), { "setTimeout": 5000 })
-//   fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
+//   fetch("http://" + ota_url + "version-manifest.json?dummy=" + Date.now(), { "setTimeout": 5000 })
+  fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
     .then(function (response) {
       return response.json();})
     .then(function (json) {
