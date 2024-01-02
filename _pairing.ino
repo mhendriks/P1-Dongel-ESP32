@@ -131,22 +131,63 @@ void HandlePairing() {
   }
 }
 
+
+//=======================================================================
+
+
+#ifdef ETHERNET
+bool readWifiCredentials(){
+  if ( !FSmounted || !LittleFS.exists("/wifi.json") ) return false;
+  Debugln("wifi.json exists");
+  
+  StaticJsonDocument<200> doc; 
+  File SettingsFile = LittleFS.open("/wifi.json", "r");
+  if (!SettingsFile) return false;
+  Debugln("wifi.json read");
+  
+  DeserializationError error = deserializeJson(doc, SettingsFile);
+  if (error) {
+    SettingsFile.close();
+    return false;
+  }
+  SettingsFile.close();
+  Debugln("wifi.json Deserialised");
+  if ( !doc.containsKey("ssid") || !doc.containsKey("pw") ) return false;
+
+  strcpy( pairingData.ssid, doc["ssid"] );
+  strcpy( pairingData.pw, doc["pw"] );
+  Debug("ssid: ");Debugln(pairingData.ssid);
+  Debug("pw  : ");Debugln(pairingData.pw);
+  
+  return true;
+ 
+}
+#endif
+
 void StartPairing() {
   
   WiFiManager manageWiFi;
-  
   Debug("Server MAC Address:  ");Debugln(WiFi.macAddress());
-
   Debug("Server SOFT AP MAC Address:  "); Debugln(WiFi.softAPmacAddress());
-
   chan = WiFi.channel();
   Debug("Station IP Address: "); Debugln(WiFi.localIP());
   Debug("Wi-Fi Channel: ");  Debugln(WiFi.channel());
   
   //prepair the hostdata
+#ifdef ETHERNET  
+  for ( int i=0 ; i<4 ; i++ ) pairingData.ipAddr[i] = ETH.localIP()[i]; 
+  if ( !readWifiCredentials() ) {
+    Debugln("Pairing Aborted - no wifi credentials");
+    httpServer.send(200, "application/json", "{\"Pairing\":\"Stoped\"}" );
+    return;
+  }
+  
+#else  
   for ( int i=0 ; i<4 ; i++ ) pairingData.ipAddr[i] = WiFi.localIP()[i];
   strcpy( pairingData.ssid, WiFi.SSID().c_str() );
   strcpy( pairingData.pw, manageWiFi.getWiFiPass().c_str() );
+#endif
+  
   strcpy( pairingData.host, settingHostname );
   pairingData.msgType = DATA;
 
