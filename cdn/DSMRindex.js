@@ -537,7 +537,8 @@ function parseVersionManifest(json)
 function ReadVersionManifest() {
   console.log("ReadVersionManifest");
   Spinner(true);
-  fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
+  fetch("http://" + ota_url + "version-manifest.json?dummy=" + Date.now(), { "setTimeout": 5000 })
+//   fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
     .then(function (response) {
       return response.json();})
     .then(function (json) {
@@ -2264,8 +2265,8 @@ function formatFailureLog(svalue) {
             rowDiv.setAttribute("id", "settingR_"+i);
             //--- field Name ---
               var fldDiv = document.createElement("div");
-              	  if ( (i == "gd_tariff") && (Dongle_Config == "p1-q") ) fldDiv.textContent = "Warmte tarief (GJ)Warmte tarief (GJ)";
-              	  else if ( i == "gas_netw_costs") fldDiv.textContent = "Netwerkkosten Warmte/maand";
+              	  if ( (i == "gd_tariff") && (Dongle_Config == "p1-q") ) fldDiv.textContent = "Warmte tarief (GJ)";
+              	  else if ( i == "gas_netw_costs") fldDiv.textContent = "Netwerkkosten Gas/maand";
                   else fldDiv.textContent = translateToHuman(i);
                   rowDiv.appendChild(fldDiv);
             //--- input ---
@@ -3096,6 +3097,8 @@ function formatFailureLog(svalue) {
           ,[ "gd_tariff" ,                "Gas Tarief/m3" ]
           ,[ "electr_netw_costs",         "Netwerkkosten Energie/maand" ]
           ,[ "gas_netw_costs",            "Netwerkkosten Gas/maand" ]
+		  ,[ "water_netw_costs",	  	  "Netwerkkosten Water/maand"]
+		  ,[ "w_tariff",	  		  	  "Water Tarief/m3"]  
           
           ,[ "smhasfaseinfo",             "SM Has Fase Info (0=No, 1=Yes)" ]
           ,[ "sm_has_fase_info",          "SM Has Fase Info (0=No, 1=Yes)" ]
@@ -3186,9 +3189,7 @@ function formatFailureLog(svalue) {
       ,[ "highest_peak_pwr",      "Piek Elektra huidige maand"]
       ,[ "highest_peak_pwr_13mnd","Piek Elektra over 13 maanden"]
       ,[ "water_delivered_ts",	  "Tijdcode Watermeterstand"]
-	  ,[ "eid-enabled",	  		  "EnergyID aan/uit"]
-      
-		  		  		  
+	  ,[ "eid-enabled",	  		  "EnergyID aan/uit"]		  		  		  
   ];
 
 /*
