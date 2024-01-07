@@ -12,7 +12,6 @@
 #include <WiFi.h>        
 #include <ESPmDNS.h>        
 #include <Update.h>
-#include "Html.h"
 #include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager
 #include <HTTPClient.h>
 #include "NetTypes.h"
