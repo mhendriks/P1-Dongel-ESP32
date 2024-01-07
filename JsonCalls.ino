@@ -136,8 +136,8 @@ void sendDeviceInfo()
   doc["macaddress"] = macStr;
   doc["freeheap"] ["value"] = ESP.getFreeHeap();
   doc["freeheap"]["unit"] = "bytes";
-  doc["maxfreeblock"] ["value"] = ESP.getMaxAllocHeap(); 
-  doc["maxfreeblock"]["unit"] = "bytes";
+//  doc["maxfreeblock"] ["value"] = ESP.getMaxAllocHeap(); 
+//  doc["maxfreeblock"]["unit"] = "bytes";
   
   esp_chip_info_t chip_info;
   esp_chip_info(&chip_info);
@@ -156,12 +156,12 @@ void sendDeviceInfo()
   doc["flashchipsize"]["unit"] = "MB";
   doc["FSsize"] ["value"] = formatFloat( (LittleFS.totalBytes() / (1024.0 * 1024.0)), 0);
   doc["FSsize"]["unit"] = "MB";
-  doc["flashchipspeed"] ["value"] = formatFloat((ESP.getFlashChipSpeed() / 1000.0 / 1000.0), 0);
-  doc["flashchipspeed"]["unit"] = "MHz";
+//  doc["flashchipspeed"] ["value"] = formatFloat((ESP.getFlashChipSpeed() / 1000.0 / 1000.0), 0);
+//  doc["flashchipspeed"]["unit"] = "MHz";
  
-  FlashMode_t ideMode = ESP.getFlashChipMode();
-  doc["flashchipmode"] = flashMode[ideMode];
-  doc["boardtype"] = ARDUINO_BOARD;
+//  FlashMode_t ideMode = ESP.getFlashChipMode();
+//  doc["flashchipmode"] = flashMode[ideMode];
+//  doc["boardtype"] = ARDUINO_BOARD;
   doc["compileoptions"] = ALL_OPTIONS;
 
 #ifndef ETHERNET
@@ -228,32 +228,34 @@ void sendDeviceSettings()
   doc["er_tariff2"]["type"] = "f";
   doc["er_tariff2"]["min"] = 0;
   doc["er_tariff2"]["max"] = 10;
-#endif  
-  doc["gd_tariff"]["value"] = settingGDT;
-  doc["gd_tariff"]["type"] = "f";
-  doc["gd_tariff"]["min"] = 0;
-  doc["gd_tariff"]["max"] = 10;
 
   doc["w_tariff"]["value"] = settingWDT;
   doc["w_tariff"]["type"] = "f";
   doc["w_tariff"]["min"] = 0;
   doc["w_tariff"]["max"] = 10;
   
+#endif  
+  doc["gd_tariff"]["value"] = settingGDT;
+  doc["gd_tariff"]["type"] = "f";
+  doc["gd_tariff"]["min"] = 0;
+  doc["gd_tariff"]["max"] = 10;
+
 #ifndef HEATLINK  
   doc["electr_netw_costs"]["value"] = settingENBK;
   doc["electr_netw_costs"]["type"] = "f";
   doc["electr_netw_costs"]["min"] = 0;
   doc["electr_netw_costs"]["max"] = 100;
-#endif  
-  doc["gas_netw_costs"]["value"] = settingGNBK;
-  doc["gas_netw_costs"]["type"] = "f";
-  doc["gas_netw_costs"]["min"] = 0;
-  doc["gas_netw_costs"]["max"] = 100;
 
   doc["water_netw_costs"]["value"] = settingWNBK;
   doc["water_netw_costs"]["type"] = "f";
   doc["water_netw_costs"]["min"] = 0;
   doc["water_netw_costs"]["max"] = 100;
+#endif  
+
+  doc["gas_netw_costs"]["value"] = settingGNBK;
+  doc["gas_netw_costs"]["type"] = "f";
+  doc["gas_netw_costs"]["min"] = 0;
+  doc["gas_netw_costs"]["max"] = 100;
 
 #ifndef HEATLINK  
   doc["sm_has_fase_info"]["value"] = settingSmHasFaseInfo;
