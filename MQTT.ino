@@ -126,10 +126,7 @@ void MQTTConnect() {
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
   	  sprintf(cMsg,"%supdate",settingMQTTtopTopic);
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
-
-#ifndef DEV_PAIRING     
       if ( EnableHAdiscovery ) AutoDiscoverHA();
-#endif      
     } else {
       LogFile("MQTT: Attempting connection... connection FAILED", true);
       DebugT("error code: ");Debugln(MQTTclient.state());
