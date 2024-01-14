@@ -7,6 +7,7 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */  
+
 #include "Config.h"
 
 // water sensor
@@ -202,9 +203,11 @@ WiFiClient  wifiClient;
   static PubSubClient MQTTclient(wifiClient);
 #endif
 
-//config
+//config + button
 int8_t IOWater = 0;
 bool UseRGB = false; 
+volatile unsigned long      Tpressed = 0;
+volatile bool bButtonPressed = false;
 
 struct Status {
    uint32_t           reboots;
@@ -258,13 +261,12 @@ char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 
 //update
-char      BaseOTAurl[35] = OTAURL;
+char      BaseOTAurl[45] = OTAURL;
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;
 
 //MQTT
-
 char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[40] = _DEFAULT_MQTT_TOPIC;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
@@ -284,11 +286,11 @@ bool      bSendMQTT = false;
 
 //===========================================================================================
 // setup timers 
-DECLARE_TIMER_SEC(synchrNTP,          30);
+//DECLARE_TIMER_SEC(synchrNTP,          30);
 DECLARE_TIMER_SEC(reconnectMQTTtimer,  MQTT_RECONNECT_DEFAULT_TIME); // try reconnecting cyclus timer
 DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time between MQTT messages  
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);
-DECLARE_TIMER_SEC(StatusTimer,        10); //first time = 10 sec usual 10min (see loop)
+DECLARE_TIMER_SEC(StatusTimer,        10); //first time = 10 sec usual 30min (see loop)
 
 /***************************************************************************
 *
