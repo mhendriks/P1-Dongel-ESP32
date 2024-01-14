@@ -28,7 +28,6 @@ TODO
 - #18 water en gas ook in de enkele json string (mqtt)
 - spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
 - loadbalancing bijhouden over de fases
-
 - grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
 - Consistentie tijd-assen, links oud, rechts nieuw
   - in Actueel staat de laatste meting rechts en de oudste meting links
@@ -38,15 +37,23 @@ TODO
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
 
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
-
-4.8.14
-- remove some device info
-
-4.8.15
-- Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
-- NeoPixelwrite implementeren ipv eigen oplossing
+- zip RNG + settingfiles, download + update (R. van der Does)
 
 4.9.0
+√ remove some device info
+√ add Ultra support
+√ rewrite button impl. long / short press
+√ hw profiles in separate files
+√ mqtt auto discovery voltage 1 decimal
+√ remove manual update
+√ fix broken HA auto dicovery 
+- HEATLink mbus selection clean
+- bridge P1 output
+- S0 counter
+
+4.9.1
+- Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
+- NeoPixelwrite implementeren ipv eigen oplossing
 - RNG files vergroten (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
@@ -69,10 +76,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
-//#define SE_VERSION
-//#define ETHERNET
+#define ETHERNET
 //#define STUB            //test only
-//#define HEATLINK        //first draft
+//#define HEATLINK
 //#define INSIGHT         
 //#define AP_ONLY
 //#define MBUS
@@ -81,6 +87,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define VOLTAGE_MON
 //#define EID
 #define DEV_PAIRING
+#define ULTRA
 
 #include "DSMRloggerAPI.h"
 
@@ -90,9 +97,8 @@ void setup()
 //  USBSerial.begin(115200); //cdc stream
 
   Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
-
+  PushButton.begin(IO_BUTTON);
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
-  GetMacAddress();
   
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
@@ -104,6 +110,10 @@ void setup()
     pinMode(PRT_LED, OUTPUT);
     digitalWrite(PRT_LED, true); //default on
   }
+
+  #ifdef ULTRA
+    pinMode(DTR_IO, OUTPUT);
+  #endif 
 
   lastReset = getResetReason();
   DebugT(F("Last reset reason: ")); Debugln(lastReset);
@@ -130,6 +140,7 @@ void setup()
 #else
   startETH();
 #endif
+  GetMacAddress();
   delay(100);
   startTelnet();
 #ifndef AP_ONLY
@@ -188,6 +199,9 @@ void setup()
 void fP1Reader( void * pvParameters ){
     DebugTln(F("Enable slimme meter..."));
     slimmeMeter.enable(false);
+#ifdef ULTRA
+    digitalWrite(DTR_IO, LOW); //default on
+#endif   
     while(true) {
       handleSlimmemeter();
       vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -208,7 +222,7 @@ void loop () {
        
        handleKeyInput();
        handleRemoteUpdate();
-       AuxButton.handler();
+       PushButton.handler();
        handleWater();
        handleEnergyID();
   
