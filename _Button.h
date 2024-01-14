@@ -1,48 +1,47 @@
 #ifndef _BUTTON_H
 #define _BUTTON_H
 
-void writeRingFiles();
 void P1Reboot();
-void resetWifi();
 void FacReset();
-void RemoteUpdate(const char* versie, bool sketch);
+
+void  IRAM_ATTR isrButton() {
+    if ( digitalRead(IO_BUTTON) == LOW ) {
+  //    Serial.println("Button PRESSED");
+      Tpressed = millis();
+      bButtonPressed =  false;
+    } else {
+  //    Serial.println("Button RELEASED");
+      Tpressed = (millis() - Tpressed);
+      bButtonPressed =  true;  
+    }
+  }
 
 class Button {
 
 public: 
-    Button(uint8_t pin){
+   void begin(uint8_t pin){
       pinMode(pin, INPUT_PULLUP);
-      attachInterrupt(AUX_BUTTON, []{ pressed++; Tpressed = millis(); }, FALLING);
+      attachInterrupt(pin, isrButton, CHANGE);
+      DebugTln(F("BUTTON setup completed"));
     }
-   
+  
   void handler(){
-    if ( Tpressed && ((millis() - Tpressed) > 1500 ) ) {
-    DebugTf("Button %d times pressed\n", pressed );
-    switch(pressed){
-    case 1: DebugTln(F("Update ringfiles"));
-            writeRingFiles();
-            break;
-    case 2: DebugTln(F("Reboot"));
-            P1Reboot();
-            break;
-    case 3: DebugTln(F("Reset wifi"));
-            resetWifi();
-            break;
-    case 5: DebugTln(F("/!\\ Factory reset"));
-            FacReset();
-            break;
-    case 8: DebugTln(F("Firmware update naar laaste versie"));
-            RemoteUpdate("4-sketch-latest", true);
-            break;
+    if ( !bButtonPressed ) return;
+    bButtonPressed =  false;
+    Serial.print("Button pressed: ");Serial.println(Tpressed);
+    if ( Tpressed  > 5000 ) {   
+      DebugTln(F("Button LONG Press = Factory Reset"));
+      FacReset();
     }
-    Tpressed = 0;
-    pressed = 0;
+    else {
+      DebugTln(F("Button SHORT Press = Reboot"));
+      P1Reboot();
     }
   }
   
 private:
   
-} AuxButton(AUX_BUTTON);
+} PushButton;
 
 /*
 
