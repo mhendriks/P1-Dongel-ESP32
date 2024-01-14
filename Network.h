@@ -38,12 +38,11 @@ void SwitchLED( byte mode, uint32_t color);
 String MAC_Address();
 
 void GetMacAddress(){
-
   String _mac = MAC_Address();
   strcpy( macStr, _mac.c_str() );
   _mac.replace( ":","" );
   strcpy( macID, _mac.c_str() );
-  USBSerial.print( "MacStr: " );USBSerial.println( macStr );
+  USBSerial.print( "MacStr: " );USBSerial.println( macStr );USBSerial.println();
 //  USBSerial.print( "MacID: " );USBSerial.println( macID );
 }
 

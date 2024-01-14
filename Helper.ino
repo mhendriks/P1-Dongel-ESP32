@@ -29,6 +29,11 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 
 void SetConfig(){
   //defaults
+#ifdef ULTRA
+ UseRGB = true; 
+ IOWater = IO_WATER;
+ WtrMtr = false;
+#else    
   switch ( P1Status.dev_type ) {
     case PRO       : UseRGB = false; 
                      IOWater = 5;
@@ -42,8 +47,9 @@ void SetConfig(){
     case PRO_H20_B:  UseRGB = true; 
                      IOWater = 0;
                      WtrMtr = true;
-                     break;
+                     break;                    
   }
+#endif  
   Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);
   if ( UseRGB ) rgb.begin();
   // sign of life = ON during setup or change config
