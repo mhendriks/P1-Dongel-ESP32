@@ -1244,7 +1244,7 @@ function show_hide_column2(table, col_no, do_show) {
 
 	  tlgrmInterval = obj.telegraminterval;
       if (firmwareVersion > 20000) document.getElementById("resetWifi").removeAttribute('hidden');
-      if (firmwareVersion > 20102) document.getElementById("update").removeAttribute('hidden');
+//       if (firmwareVersion > 20102) document.getElementById("update").removeAttribute('hidden');
 		
 	  //check if update is needed
 	  if (LastVersion != "") {
