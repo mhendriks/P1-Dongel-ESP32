@@ -220,7 +220,7 @@ void WritePrevRingRecord(E_ringfiletype ringfiletype){
 
 //===========================================================================================
 void writeRingFiles() {
-  if (!EnableHistory ) return; //do nothing
+  if (!EnableHistory || telegramCount == 0 ) return; //do nothing
 
   if ( P1Status.FirstUse ) {
     // write previous slot first because of the current act_slot in the file

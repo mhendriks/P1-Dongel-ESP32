@@ -393,7 +393,7 @@ void LogFile(const char* payload, bool toDebug = false) {
     return;
   }
   //log rotate
-  if (LogFile.size() > 8000){ 
+  if (LogFile.size() > 12000){ 
 //    DebugT(F("LogFile filesize: "));Debugln(RebootFile.size());
     LittleFS.remove("/P1_log.old");     //remove .old if existing 
     //rename file

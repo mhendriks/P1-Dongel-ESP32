@@ -71,9 +71,13 @@ void PostMacIP() {
 #ifndef ETHERNET
 
 static void onWifiEvent (WiFiEvent_t event) {
+    sprintf(cMsg,"WiFi-event : %d | rssi: %d | channel : %i",event, WiFi.RSSI(), WiFi.channel());
+    LogFile(cMsg, true);
     switch (event) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-        DebugTf ("Connected to %s. Asking for IP address.\r\n", WiFi.BSSIDstr().c_str());
+//        DebugTf ("Connected to %s. Asking for IP address.\r\n", WiFi.BSSIDstr().c_str());
+        sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
+        LogFile(cMsg, true);
         SwitchLED( LED_ON, LED_BLUE );
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
@@ -95,7 +99,7 @@ static void onWifiEvent (WiFiEvent_t event) {
         }
         break;
     default:
-        DebugT(F("[WiFi-event] event: ")); Debugln(event);
+//        DebugT(F("[WiFi-event] event: ")); Debugln(event);
         break;
     }
 }

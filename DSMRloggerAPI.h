@@ -288,7 +288,7 @@ DECLARE_TIMER_SEC(synchrNTP,          30);
 DECLARE_TIMER_SEC(reconnectMQTTtimer,  MQTT_RECONNECT_DEFAULT_TIME); // try reconnecting cyclus timer
 DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time between MQTT messages  
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);
-DECLARE_TIMER_SEC(StatusTimer,        10); //first time = 10 sec usual 10min (see loop)
+DECLARE_TIMER_SEC(StatusTimer,        10); //first time = 10 sec usual 30min (see loop)
 
 /***************************************************************************
 *

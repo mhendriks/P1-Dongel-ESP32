@@ -39,9 +39,6 @@ TODO
 
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
 
-4.8.14
-- remove some device info
-
 4.8.15
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 - NeoPixelwrite implementeren ipv eigen oplossing
