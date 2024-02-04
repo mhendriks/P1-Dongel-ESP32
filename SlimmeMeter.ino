@@ -114,7 +114,10 @@ void processSlimmemeter() {
           DSMRdata.p1_version_present     = true;
         } 
       }
-        
+
+      //check of probleem met terugleveren en afnemen gelijktijdig speelt 
+      if ( DSMRdata.power_delivered && DSMRdata.power_returned ) LogFile("P+ and P- beide > 0",true);
+      
       modifySmFaseInfo();
 #ifdef HEATLINK
 //        DSMRdata.timestamp         = cMsg;

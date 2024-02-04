@@ -188,139 +188,61 @@ void sendDeviceInfo()
 } // sendDeviceInfo()
 
 //=======================================================================
-void sendDeviceSettings() 
-{
+void sendDeviceSettings() {
   DebugTln(F("sending device settings ...\r"));
   DynamicJsonDocument doc(2100);
 
-  doc["hostname"]["value"] = settingHostname;
-  doc["hostname"]["type"] = "s";
-  doc["hostname"]["maxlen"] = sizeof(settingHostname) -1;
-  
+  // Helper macro to add a setting to the JSON document
+#define ADD_SETTING(name, type, min, max, value) \
+  doc[name]["value"] = value;                     \
+  doc[name]["type"] = type;                       \
+  doc[name]["min"] = min;                         \
+  doc[name]["max"] = max
+
+  ADD_SETTING("hostname", "s", 0, sizeof(settingHostname) - 1, settingHostname);
 #ifndef HEATLINK
-  doc["ed_tariff1"]["value"] = settingEDT1;
-  doc["ed_tariff1"]["type"] = "f";
-  doc["ed_tariff1"]["min"] = 0;
-  doc["ed_tariff1"]["max"] = 10;
-  
-  doc["ed_tariff2"]["value"] = settingEDT2;
-  doc["ed_tariff2"]["type"] = "f";
-  doc["ed_tariff2"]["min"] = 0;
-  doc["ed_tariff2"]["max"] = 10;
-  
-  doc["er_tariff1"]["value"] = settingERT1;
-  doc["er_tariff1"]["type"] = "f";
-  doc["er_tariff1"]["min"] = 0;
-  doc["er_tariff1"]["max"] = 10;
-  
-  doc["er_tariff2"]["value"] = settingERT2;
-  doc["er_tariff2"]["type"] = "f";
-  doc["er_tariff2"]["min"] = 0;
-  doc["er_tariff2"]["max"] = 10;
+  ADD_SETTING("ed_tariff1", "f", 0, 10, settingEDT1);
+  ADD_SETTING("ed_tariff2", "f", 0, 10, settingEDT2);
+  ADD_SETTING("er_tariff1", "f", 0, 10, settingERT1);
+  ADD_SETTING("er_tariff2", "f", 0, 10, settingERT2);
+  ADD_SETTING("w_tariff", "f", 0, 10, settingWDT);
+#endif
+  ADD_SETTING("gd_tariff", "f", 0, 10, settingGDT);
+#ifndef HEATLINK
+  ADD_SETTING("electr_netw_costs", "f", 0, 100, settingENBK);
+  ADD_SETTING("water_netw_costs", "f", 0, 100, settingWNBK);
+#endif
+  ADD_SETTING("gas_netw_costs", "f", 0, 100, settingGNBK);
+#ifndef HEATLINK
+  ADD_SETTING("sm_has_fase_info", "i", 0, 1, settingSmHasFaseInfo);
+#endif
+  ADD_SETTING("IndexPage", "s", 0, sizeof(settingIndexPage) - 1, settingIndexPage);
 
-  doc["w_tariff"]["value"] = settingWDT;
-  doc["w_tariff"]["type"] = "f";
-  doc["w_tariff"]["min"] = 0;
-  doc["w_tariff"]["max"] = 10;
-  
-#endif  
-  doc["gd_tariff"]["value"] = settingGDT;
-  doc["gd_tariff"]["type"] = "f";
-  doc["gd_tariff"]["min"] = 0;
-  doc["gd_tariff"]["max"] = 10;
-
-#ifndef HEATLINK  
-  doc["electr_netw_costs"]["value"] = settingENBK;
-  doc["electr_netw_costs"]["type"] = "f";
-  doc["electr_netw_costs"]["min"] = 0;
-  doc["electr_netw_costs"]["max"] = 100;
-
-  doc["water_netw_costs"]["value"] = settingWNBK;
-  doc["water_netw_costs"]["type"] = "f";
-  doc["water_netw_costs"]["min"] = 0;
-  doc["water_netw_costs"]["max"] = 100;
-#endif  
-
-  doc["gas_netw_costs"]["value"] = settingGNBK;
-  doc["gas_netw_costs"]["type"] = "f";
-  doc["gas_netw_costs"]["min"] = 0;
-  doc["gas_netw_costs"]["max"] = 100;
-
-#ifndef HEATLINK  
-  doc["sm_has_fase_info"]["value"] = settingSmHasFaseInfo;
-  doc["sm_has_fase_info"]["type"] = "i";
-  doc["sm_has_fase_info"]["min"] = 0;
-  doc["sm_has_fase_info"]["max"] = 1;
-#endif  
-  
-  doc["IndexPage"]["value"] = settingIndexPage;
-  doc["IndexPage"]["type"] = "s";
-  doc["IndexPage"]["maxlen"] = sizeof(settingIndexPage) -1;
- 
- #ifndef MQTT_DISABLE 
-  doc["mqtt_broker"]["value"]  = settingMQTTbroker;
-  doc["mqtt_broker"]["type"] = "s";
-  doc["mqtt_broker"]["maxlen"] = sizeof(settingMQTTbroker) -1;
-  
-  doc["mqtt_broker_port"]["value"] = settingMQTTbrokerPort;
-  doc["mqtt_broker_port"]["type"] = "i";
-  doc["mqtt_broker_port"]["min"] = 1;
-  doc["mqtt_broker_port"]["max"] = 9999;
-  
-  doc["mqtt_user"]["value"] = settingMQTTuser;
-  doc["mqtt_user"]["type"] = "s";
-  doc["mqtt_user"]["maxlen"] = sizeof(settingMQTTuser) -1;
-  
-  doc["mqtt_passwd"]["value"] = settingMQTTpasswd;
-  doc["mqtt_passwd"]["type"] = "s";
-  doc["mqtt_passwd"]["maxlen"] = sizeof(settingMQTTpasswd) -1;
-  
-  doc["mqtt_toptopic"]["value"] = settingMQTTtopTopic;
-  doc["mqtt_toptopic"]["type"] = "s";
-  doc["mqtt_toptopic"]["maxlen"] = sizeof(settingMQTTtopTopic) -1;
-  
-  doc["mqtt_interval"]["value"] = settingMQTTinterval;
-  doc["mqtt_interval"]["type"] = "i";
-  doc["mqtt_interval"]["min"] = 0;
-  doc["mqtt_interval"]["max"] = 600;
+#ifndef MQTT_DISABLE
+  ADD_SETTING("mqtt_broker", "s", 0, sizeof(settingMQTTbroker) - 1, settingMQTTbroker);
+  ADD_SETTING("mqtt_broker_port", "i", 1, 9999, settingMQTTbrokerPort);
+  ADD_SETTING("mqtt_user", "s", 0, sizeof(settingMQTTuser) - 1, settingMQTTuser);
+  ADD_SETTING("mqtt_passwd", "s", 0, sizeof(settingMQTTpasswd) - 1, settingMQTTpasswd);
+  ADD_SETTING("mqtt_toptopic", "s", 0, sizeof(settingMQTTtopTopic) - 1, settingMQTTtopTopic);
+  ADD_SETTING("mqtt_interval", "i", 0, 600, settingMQTTinterval);
 #endif
 
-if (WtrMtr) {
-  doc["water_m3"]["value"] = P1Status.wtr_m3;
-  doc["water_m3"]["type"] = "i";
-  doc["water_m3"]["min"] = 0;
-  doc["water_m3"]["max"] = 99999;  
-  
-  doc["water_l"]["value"] = P1Status.wtr_l;
-  doc["water_l"]["type"] = "i";
-  doc["water_l"]["min"] = 0;
-  doc["water_l"]["max"] = 999;  
-
-  doc["water_fact"]["value"] = WtrFactor;
-  doc["water_fact"]["type"] = "f";
-  doc["water_fact"]["min"] = 0;
-  doc["water_fact"]["max"] = 10;  
-
-}
-  
-  if ( strncmp(BaseOTAurl, "http://", 7) == 0 ){
-    char ota_url[sizeof(BaseOTAurl)];
-    strncpy( ota_url, BaseOTAurl + 7, strlen(BaseOTAurl) );
-    doc["ota_url"]["value"] = ota_url;
-    doc["ota_url"]["maxlen"] = sizeof(ota_url) - 1;  
-  } else {
-    doc["ota_url"]["value"] = BaseOTAurl;
-    doc["ota_url"]["maxlen"] = sizeof(BaseOTAurl) -1;  
+  if (WtrMtr) {
+    ADD_SETTING("water_m3", "i", 0, 99999, P1Status.wtr_m3);
+    ADD_SETTING("water_l", "i", 0, 999, P1Status.wtr_l);
+    ADD_SETTING("water_fact", "f", 0, 10, WtrFactor);
   }
-  doc["ota_url"]["type"] = "s";
-  
-  doc["b_auth_user"]["value"] = bAuthUser;
-  doc["b_auth_user"]["type"] = "s";
-  doc["b_auth_user"]["maxlen"] = sizeof(bAuthUser) -1;
-  
-  doc["b_auth_pw"]["value"] = bAuthPW;
-  doc["b_auth_pw"]["type"] = "s";
-  doc["b_auth_pw"]["maxlen"] = sizeof(bAuthPW) -1;
+
+  if (strncmp(BaseOTAurl, "http://", 7) == 0) {
+    char ota_url[sizeof(BaseOTAurl)];
+    strncpy(ota_url, BaseOTAurl + 7, strlen(BaseOTAurl));
+    ADD_SETTING("ota_url", "s", 0, sizeof(ota_url) - 1, ota_url);
+  } else {
+    ADD_SETTING("ota_url", "s", 0, sizeof(BaseOTAurl) - 1, BaseOTAurl);
+  }
+
+  ADD_SETTING("b_auth_user", "s", 0, sizeof(bAuthUser) - 1, bAuthUser);
+  ADD_SETTING("b_auth_pw", "s", 0, sizeof(bAuthPW) - 1, bAuthPW);
 
   //booleans
   doc["hist"] = EnableHistory;
@@ -328,29 +250,27 @@ if (WtrMtr) {
   doc["led"] = LEDenabled;
   doc["raw-port"] = bRawPort;
 
-#ifdef EID  
+#ifdef EID
   doc["eid-enabled"] = bEID_enabled;
 #endif
-#ifdef DEV_PAIRING  
+#ifdef DEV_PAIRING
   doc["dev-pairing"] = true;
 #endif
 
   doc["ha_disc_enabl"] = EnableHAdiscovery;
-if ( P1Status.dev_type == PRO_BRIDGE ) doc["led-prt"] = bLED_PRT;
-
+  if (P1Status.dev_type == PRO_BRIDGE) doc["led-prt"] = bLED_PRT;
 
 #ifdef HEATLINK
-  doc["conf"] = "p1-q";  
+  doc["conf"] = "p1-q";
 #else
   doc["pre40"] = bPre40;
-  doc["conf"] = "p1-p";  
-#endif 
- 
-  // doc["auto_update"] = bAutoUpdate;  TO DO ... 
-  
-  sendJson(doc);
+  doc["conf"] = "p1-p";
+#endif
 
-} // sendDeviceSettings()
+  // doc["auto_update"] = bAutoUpdate;  TO DO ...
+
+  sendJson(doc);
+}
 
 //====================================================
 void sendApiNotFound() {

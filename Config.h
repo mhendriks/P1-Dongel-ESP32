@@ -10,8 +10,8 @@
 #define PRO_H20_B   3
 
 #define BASE_OPTIONS "[CORE]"
-//#define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
-#define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
+#define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
+//#define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
  
 #define LED_ON              LOW
 #define LED_OFF             HIGH
