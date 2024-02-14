@@ -29,6 +29,17 @@ void GetFile(String filename){
   }
 }
 
+//refactor settingsfile
+/*
+  1) check is settingsfile exists
+  2) ifnot of parsefout maak nieuwe file op basis van template
+  3) ifexists read contents
+  twee opties: 
+  a) alles eerst valideren <---- deze wel het prettigst maar tijdens gebruik aanpassingen worden wellicht niet opgemerkt 
+  b) valideren op moment dat het nodig is -> niet aanwezig dan default waarde opnemen in model
+
+ */
+
 template <typename TSource>
 void writeToJsonFile(const TSource &doc, File &_file) 
 {
@@ -82,7 +93,6 @@ void writeSettings()
   doc["GasVasteKosten"] = settingGNBK;
   doc["WaterVasteKosten"] = settingWNBK;
   doc["SmHasFaseInfo"] = settingSmHasFaseInfo;
-//  doc["TelegramInterval"] = settingTelegramInterval;
   doc["IndexPage"] = settingIndexPage;
   yield();
   doc["MQTTbroker"] = settingMQTTbroker;

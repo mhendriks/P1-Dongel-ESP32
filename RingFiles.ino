@@ -76,7 +76,7 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, bool prev_slot)
 uint8_t CalcSlot(E_ringfiletype ringfiletype, char* Timestamp) 
 {
   //slot positie bepalen
-  uint32_t  nr=0;
+  uint32_t  nr = 0;
   time_t    t1 = epoch(Timestamp, strlen(Timestamp), false);
   if (ringfiletype == RINGMONTHS ) nr = ( (year(t1) -1) * 12) + month(t1);    // eg: year(2023) * 12 = 24276 + month(9) = 202309
   else nr = t1 / RingFiles[ringfiletype].seconds;
@@ -101,6 +101,7 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev)
   return;
 #else  
   if ( !EnableHistory || !FSmounted ) return; //do nothing
+  time_t start = millis();
   char key[9] = "";
   byte slot = 0;
   uint8_t actSlot = CalcSlot(ringfiletype, bPrev);
@@ -171,6 +172,8 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev)
 //    String log_temp = "Ringfile " + String(RingFiles[ringfiletype].filename) + " writen. actT:[" + String(actT) + "] newT:[" + String(newT) +"] ActSlot:[" + String(slot) + "]";
 //    LogFile(log_temp.c_str(),true);
 #endif //NO_STORAGE
+  Debugf( "Time consumed writing RNGFile %s : %d\n", RingFiles[ringfiletype].filename, millis()-start);
+
 } // writeRingFile()
 
 /*
