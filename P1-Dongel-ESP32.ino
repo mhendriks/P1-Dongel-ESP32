@@ -38,6 +38,7 @@ TODO
 
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
 - zip RNG + settingfiles, download + update (R. van der Does)
+- mqtt over ssl
 
 4.9.0
 √ remove some device info
@@ -76,7 +77,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
-#define ETHERNET
+//#define ETHERNET
 //#define STUB            //test only
 //#define HEATLINK
 //#define INSIGHT         
@@ -85,9 +86,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-//#define EID
+#define EID
 #define DEV_PAIRING
-#define ULTRA
+//#define ULTRA
 
 #include "DSMRloggerAPI.h"
 

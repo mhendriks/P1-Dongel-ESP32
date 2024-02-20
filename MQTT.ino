@@ -265,12 +265,12 @@ void sendMQTTData() {
     }
     serializeJson(jsonDoc,buffer);
     MQTTSend("all", buffer, false);
-  } //bActJsonMQTT
+  } else {
+    if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
+    MQTTsendGas();
+    sendMQTTWater();  
+  }
   
-  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
-
-  MQTTsendGas();
-  sendMQTTWater();
   bSendMQTT = false; 
 
   }
