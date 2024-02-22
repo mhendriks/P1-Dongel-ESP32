@@ -79,7 +79,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-#define EID
+//#define EID
 #define DEV_PAIRING
 
 #include "DSMRloggerAPI.h"

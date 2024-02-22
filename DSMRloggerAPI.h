@@ -237,6 +237,8 @@ bool        bPre40 = false;
 bool        bActJsonMQTT = false;
 bool        bRawPort = false;
 bool        bLED_PRT = true;
+bool        P1Out = false;
+byte        RxP1 = RXP1;
 //bool        bWriteFiles = false;
 
 //vitals
