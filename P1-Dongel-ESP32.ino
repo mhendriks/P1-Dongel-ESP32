@@ -38,9 +38,12 @@ TODO
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
 - MQTT over ssl ( J Steenhuis) 
+- Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
 
-4.8.15 
+
+4.8.15
 - #33 watersensor data
+- fix endless wait -> GET IP Address Wifi ... (Marco P).
 
 4.8.16
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
@@ -205,7 +208,7 @@ void loop () {
           MQTTSentStaticInfo();
           CHANGE_INTERVAL_MIN(StatusTimer, 30);
        }
-       
+       handleReconnectWifi();
        handleKeyInput();
        handleRemoteUpdate();
        AuxButton.handler();
