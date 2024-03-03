@@ -54,7 +54,7 @@ void writeToJsonFile(const TSource &doc, File &_file)
     {
       DebugTln(F("Save to json file:"));
       serializeJson(doc, TelnetStream); //print settingsfile to telnet output
-      serializeJson(doc, SerialOut); //print settingsfile to serial output    
+//      serializeJson(doc, SerialOut); //print settingsfile to serial output    
     } // Verbose1  
   }
     

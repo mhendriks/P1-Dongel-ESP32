@@ -39,11 +39,12 @@ TODO
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
 - MQTT over ssl ( J Steenhuis) 
 - Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
-
+- issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering ) x§x
 
 4.8.15
 - #33 watersensor data
 - fix endless wait -> GET IP Address Wifi ... (Marco P).
+- H20+ v2 bridged p1 output implemented
 
 4.8.16
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
@@ -89,8 +90,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 void setup() 
 {
-  SerialOut.begin(115200); //debug stream  
-//  USBSerial.begin(115200); //cdc stream
+  USBSerial.begin(115200); //cdc stream
 
   Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
 
@@ -190,9 +190,11 @@ void setup()
 //P1 reader task
 void fP1Reader( void * pvParameters ){
     DebugTln(F("Enable slimme meter..."));
+    SetupP1Out();
     slimmeMeter.enable(false);
     while(true) {
       handleSlimmemeter();
+      P1OutBridge();
       vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }

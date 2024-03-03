@@ -2,10 +2,10 @@
 #define _VERSION_MAJOR 4
 #define _VERSION_MINOR 8
 #define _VERSION_PATCH 15
-#define _VERSION_BUILD 2834
-#define _VERSION_DATE "24/02/2024"
-#define _VERSION_TIME "11:17:55"
+#define _VERSION_BUILD 2850
+#define _VERSION_DATE "03/03/2024"
+#define _VERSION_TIME "11:43:37"
 #define _VERSION_ONLY "4.8.15"
-#define _VERSION_NOBUILD "4.8.15 (24/02/2024)"
-#define _VERSION "4.8.15+2834 (24/02/2024)"
+#define _VERSION_NOBUILD "4.8.15 (03/03/2024)"
+#define _VERSION "4.8.15+2850 (03/03/2024)"
 //The version information is created automatically, more information here: https://github.com/rvdbreemen/autoinc-semver
