@@ -12,20 +12,30 @@
 */
 
 /*---- start macro's ------------------------------------------------------------------*/
+#ifdef DEBUG
+  //DEBUG MODE
+  #define Debug(...)      ({ USBSerial.print(__VA_ARGS__);\
+                             TelnetStream.print(__VA_ARGS__);\
+                          })
+  #define Debugln(...)    ({ USBSerial.println(__VA_ARGS__); \
+                             TelnetStream.println(__VA_ARGS__); \
+                          })
+  #define Debugf(...)     ({ USBSerial.printf(__VA_ARGS__); \
+                             TelnetStream.printf(__VA_ARGS__); \
+                          })
+  
+  #define DebugFlush()    ({ USBSerial.flush(); \
+                             TelnetStream.flush(); \
+                          })
 
-#define Debug(...)      ({ SerialOut.print(__VA_ARGS__);         \
-                           TelnetStream.print(__VA_ARGS__);   \
-                        })
-#define Debugln(...)    ({ SerialOut.println(__VA_ARGS__);       \
-                           TelnetStream.println(__VA_ARGS__); \
-                        })
-#define Debugf(...)     ({ SerialOut.printf(__VA_ARGS__);        \
-                           TelnetStream.printf(__VA_ARGS__);  \
-                        })
+#else
+  //NORMAL MODE
+  #define Debug(...)      ({ TelnetStream.print(__VA_ARGS__); })
+  #define Debugln(...)    ({ TelnetStream.println(__VA_ARGS__); })
+  #define Debugf(...)     ({ TelnetStream.printf(__VA_ARGS__); })
+  #define DebugFlush()    ({ TelnetStream.flush(); })
 
-#define DebugFlush()    ({ SerialOut.flush(); \
-                           TelnetStream.flush(); \
-                        })
+#endif
 
 
 #define DebugT(...)     ({ _debugBOL(__FUNCTION__, __LINE__);  \
@@ -50,7 +60,9 @@ void _debugBOL(const char *fn, int line)
                 ESP.getFreeHeap(), ESP.getMaxAllocHeap(),\
                 fn, line);
                  
-  SerialOut.print (_bol);
+#ifdef DEBUG
+  USBSerial.print (_bol);
+#endif  
   TelnetStream.print (_bol);
 }
 

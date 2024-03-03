@@ -8,6 +8,7 @@
 #define PRO_H20_2   4
 
 #define BASE_OPTIONS "[CORE]"
+//#define DEBUG
  
 #ifdef ESP32
   #define MBUS_TYPE 3
@@ -18,8 +19,6 @@
   #define AUX_BUTTON          9 //download knop bij startup - multifunctional tijdens runtime
   #define LED_ON              LOW
   #define LED_OFF             HIGH
-  #define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
-//  #define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
   volatile unsigned long      Tpressed = 0;
   volatile byte               pressed = 0;
 #ifdef ETHERNET
