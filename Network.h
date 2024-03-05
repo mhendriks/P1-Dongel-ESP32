@@ -9,7 +9,6 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-#include <WiFi.h>        
 #include <ESPmDNS.h>        
 #include <Update.h>
 #include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager

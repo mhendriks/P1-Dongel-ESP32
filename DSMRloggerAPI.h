@@ -16,7 +16,8 @@
   volatile time_t      WtrPrevReading = 0;
   bool                 WtrMtr         = false;
   #define              DEBOUNCETIMER 1700
- 
+
+#include <WiFiClientSecure.h>        
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
@@ -195,7 +196,7 @@ void delayms(unsigned long);
 void SetConfig();
 
 //===========================GLOBAL VAR'S======================================
-WiFiClient  wifiClient;
+WiFiClient wifiClient;
 
 #ifndef MQTT_DISABLE 
   #include <PubSubClient.h>           // MQTT client publish and subscribe functionality

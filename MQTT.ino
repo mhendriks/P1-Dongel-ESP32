@@ -81,15 +81,13 @@ void AutoDiscoverHA(){
 
 void MQTTsetServer(){
 
-#ifdef MQTT_DISABLE 
-  return;
-#else
+#ifndef MQTT_DISABLE 
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
   DebugTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
   MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
+//  wifiClient.setInsecure();
   CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 1);
-  
 #endif
 }
 
