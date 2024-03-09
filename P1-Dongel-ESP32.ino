@@ -77,7 +77,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
-//#define ETHERNET
+#define ETHERNET
 //#define STUB            //test only
 //#define HEATLINK
 //#define INSIGHT         
@@ -88,14 +88,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define VOLTAGE_MON
 #define EID
 #define DEV_PAIRING
-//#define ULTRA
+#define ULTRA
 
 #include "DSMRloggerAPI.h"
 
 void setup() 
 {
-  SerialOut.begin(115200); //debug stream  
-//  USBSerial.begin(115200); //cdc stream
+  USBSerial.begin(115200); //cdc stream = debug only
 
   Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
   PushButton.begin(IO_BUTTON);
@@ -199,12 +198,14 @@ void setup()
 //P1 reader task
 void fP1Reader( void * pvParameters ){
     DebugTln(F("Enable slimme meter..."));
+    SetupP1Out();
     slimmeMeter.enable(false);
 #ifdef ULTRA
     digitalWrite(DTR_IO, LOW); //default on
 #endif   
     while(true) {
       handleSlimmemeter();
+      P1OutBridge();
       vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }

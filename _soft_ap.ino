@@ -6,8 +6,8 @@ void startAP(){
   WiFi.softAP(settingHostname, bAuthPW);
 
   IPAddress IP = WiFi.softAPIP();
-  Serial.print("AP IP address: ");
-  Serial.println(IP);
+  Debug("AP IP address: ");
+  Debuglnln(IP);
 }
 
 #endif

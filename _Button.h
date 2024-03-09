@@ -28,7 +28,7 @@ public:
   void handler(){
     if ( !bButtonPressed ) return;
     bButtonPressed =  false;
-    Serial.print("Button pressed: ");Serial.println(Tpressed);
+    Debug("Button pressed: ");Debugln(Tpressed);
     if ( Tpressed  > 5000 ) {   
       DebugTln(F("Button LONG Press = Factory Reset"));
       FacReset();

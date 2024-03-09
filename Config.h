@@ -3,6 +3,8 @@
   #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.
 #endif
 
+//#define DEBUG
+
 // Device Types
 #define PRO         0
 #define PRO_BRIDGE  1
@@ -10,7 +12,7 @@
 #define PRO_H20_B   3
 
 #define BASE_OPTIONS "[CORE]"
-#define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
+//#define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
 //#define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
  
 #define LED_ON              LOW
@@ -34,14 +36,16 @@
   #define OTAURL              "http://ota.smart-stuff.nl/v5-q/"
 #endif  
 
-#ifdef EID
 
+#ifdef EID
   bool    bEID_enabled = false;
   #define ALL_OPTIONS BASE_OPTIONS "[EnergyID]"
   #undef MQTT_DISABLE
   #define MQTT_DISABLE
+#ifndef ULTRA
   #undef OTAURL
   #define OTAURL "http://ota.smart-stuff.nl/v5-eid/"
+#endif  
   enum E_eid_states : uint8_t { EID_IDLE, EID_CLAIMING, EID_ENROLLED };
 
 #endif
