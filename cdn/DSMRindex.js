@@ -389,6 +389,7 @@ function SetOnSettings(json){
 	if (!HeeftWater) HeeftWater =  "water" in json ? !isNaN(json.water.value) : false ;
 	//check of teruglevering actief is 
 	if (!Injection) Injection = isNaN(json.energy_returned_tariff1.value)?false:json.energy_returned_tariff1.value;
+	if (!Injection) Injection = isNaN(json.energy_returned_tariff2.value)?false:json.energy_returned_tariff2.value;
 	Injection = Injection && !IgnoreInjection;
 	
 	if (!Phases && (Dongle_Config != "p1-q") ) {
@@ -537,8 +538,8 @@ function parseVersionManifest(json)
 function ReadVersionManifest() {
   console.log("ReadVersionManifest");
   Spinner(true);
-//   fetch("http://" + ota_url + "version-manifest.json?dummy=" + Date.now(), { "setTimeout": 5000 })
-  fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
+  fetch("http://" + ota_url + "version-manifest.json?dummy=" + Date.now(), { "setTimeout": 5000 })
+//   fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
     .then(function (response) {
       return response.json();})
     .then(function (json) {
@@ -1248,11 +1249,17 @@ function show_hide_column2(table, col_no, do_show) {
 		
 	  //check if update is needed
 	  if (LastVersion != "") {
-		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' href='/remote-update?version=" + LastVersion + "'>Klik voor update</a>";
+		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>Klik voor update</a>";
 		  else VerCel3.innerHTML = "laatste versie";
 	  }
   }
     
+    
+  function RemoteUpdate() {
+  	let text = "Press a button!\nEither OK or Cancel.";
+  if (confirm("Heeft u eerst de RNG Files gedownload?\n\nKlik OK om door te gaan") == true) location.href = '/remote-update?version=' + LastVersion;
+  }
+  
   //get new devinfo==============================================================  
   function refreshDevInfo()
   { Spinner(true);
@@ -2146,7 +2153,7 @@ function formatFailureLog(svalue) {
         "electr_netw_costs" in json ? electr_netw_costs = json.electr_netw_costs.value : electr_netw_costs = 0;
         "eid-enabled" in json ? eid_enabled = json["eid-enabled"]: eid_enabled = false;
         "dev-pairing" in json ? pairing_enabled = json["dev-pairing"]: pairing_enabled = false;
-        "ota_url" in json ? ota_url = json["ota_url"]: ota_url = "ota.smart-stuff.nl/v5/";
+        "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
 
         console.log("eid_enabled: " + eid_enabled);
 		console.log("dev-pairing: " + pairing_enabled);
