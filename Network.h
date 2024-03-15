@@ -27,6 +27,7 @@ NetServer ws_raw(82);
 bool FSmounted           = false; 
 bool WifiConnected       = false;
 bool WifiBoot            = true;
+time_t tWifiReconnect    = 0;
 char APIurl[42]          = "http://api.smart-stuff.nl/v1/register.php";
 
 DECLARE_TIMER_SEC(WifiReconnect, 5); //try after 5 sec
@@ -77,17 +78,17 @@ static void onWifiEvent (WiFiEvent_t event) {
 //        DebugTf ("Connected to %s. Asking for IP address.\r\n", WiFi.BSSIDstr().c_str());
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
         LogFile(cMsg, true);
-        SwitchLED( LED_ON, LED_BLUE );
+        tWifiReconnect = millis();
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP:
         LogFile("Wifi Connected",true);
         SwitchLED( LED_ON, LED_BLUE );
-//        Debug (F("\nConnected to " )); Debugln (WiFi.SSID());
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
 //        Debug (F(" ( gateway: " ));  Debug (WiFi.gatewayIP());
         Debug(" )\n\n");
         WifiBoot = false;
         WifiConnected = true;
+        tWifiReconnect = 0;
         break;
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
         SwitchLED( LED_OFF, LED_BLUE );
@@ -112,6 +113,13 @@ void configModeCallback (WiFiManager *myWiFiManager)
   //if you used auto generated SSID, print it
   DebugTln(myWiFiManager->getConfigPortalSSID());
 } // configModeCallback()
+
+//===========================================================================================
+void handleReconnectWifi(){
+  if ( !tWifiReconnect || (tWifiReconnect - millis()) < 5000 ) return;
+  WiFi.reconnect(); // every 5000
+  tWifiReconnect = millis();
+}
 
 //===========================================================================================
 void startWiFi(const char* hostname, int timeOut) 

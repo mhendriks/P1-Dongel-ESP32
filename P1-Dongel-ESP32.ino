@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
-**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2024 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -28,6 +28,7 @@ TODO
 - #18 water en gas ook in de enkele json string (mqtt)
 - spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
 - loadbalancing bijhouden over de fases
+
 - grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
 - Consistentie tijd-assen, links oud, rechts nieuw
   - in Actueel staat de laatste meting rechts en de oudste meting links
@@ -35,17 +36,15 @@ TODO
 
 - Harold B: Dark-mode frontend
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
-
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
-<<<<<<< HEAD
-- zip RNG + settingfiles, download + update (R. van der Does)
-- mqtt over ssl
-=======
+- MQTT over ssl ( J Steenhuis) 
+- Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
+- issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering ) x§x
+- support https mqtt connection
 
-4.8.15
+4.8.16
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 - NeoPixelwrite implementeren ipv eigen oplossing
->>>>>>> 4.8.14
 
 4.9.0
 √ remove some device info
@@ -228,7 +227,9 @@ void loop () {
           MQTTSentStaticInfo();
           CHANGE_INTERVAL_MIN(StatusTimer, 30);
        }
-       
+#ifndef ETHERNET       
+       handleReconnectWifi();
+#endif
        handleKeyInput();
        handleRemoteUpdate();
        PushButton.handler();

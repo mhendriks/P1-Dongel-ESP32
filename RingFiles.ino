@@ -76,7 +76,7 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, bool prev_slot)
 uint8_t CalcSlot(E_ringfiletype ringfiletype, char* Timestamp) 
 {
   //slot positie bepalen
-  uint32_t  nr=0;
+  uint32_t  nr = 0;
   time_t    t1 = epoch(Timestamp, strlen(Timestamp), false);
   if (ringfiletype == RINGMONTHS ) nr = ( (year(t1) -1) * 12) + month(t1);    // eg: year(2023) * 12 = 24276 + month(9) = 202309
   else nr = t1 / RingFiles[ringfiletype].seconds;
