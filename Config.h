@@ -10,10 +10,9 @@
 #define PRO_BRIDGE  1
 #define PRO_ETH     2
 #define PRO_H20_B   3
+#define PRO_H20_2   4
 
 #define BASE_OPTIONS "[CORE]"
-//#define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
-//#define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
  
 #define LED_ON              LOW
 #define LED_OFF             HIGH
@@ -42,7 +41,7 @@
   #define ALL_OPTIONS BASE_OPTIONS "[EnergyID]"
   #undef MQTT_DISABLE
   #define MQTT_DISABLE
-#ifndef ULTRA
+#ifndef ETHERNET
   #undef OTAURL
   #define OTAURL "http://ota.smart-stuff.nl/v5-eid/"
 #endif  

@@ -14,11 +14,11 @@ void SetupSMRport(){
   delay(100); //give it some time
   DebugT(F("P1 serial set to ")); 
   if(bPre40){
-    Serial1.begin(9600, SERIAL_7E1, RXP1, TXP1, true); //p1 serial input
+    Serial1.begin(9600, SERIAL_7E1, RxP1, TXP1, true); //p1 serial input
     slimmeMeter.doChecksum(false);
     Debugln(F("9600 baud / 7E1"));  
   } else {
-    Serial1.begin(115200, SERIAL_8N1, RXP1, TXP1, true); //p1 serial input
+    Serial1.begin(115200, SERIAL_8N1, RxP1, TXP1, true); //p1 serial input
     slimmeMeter.doChecksum(true);
     Debugln(F("115200 baud / 8N1"));
   }
@@ -39,10 +39,16 @@ struct showValues {
   }
 };
 
-// PRO_H20_2 pinout
-#define P1_LED     16
-#define O1_DTR_IO  15
-#define TXO1       21
+
+#ifdef ULTRA
+	#define P1_LED     16
+	#define O1_DTR_IO  15
+	#define TXO1       21
+#else // PRO_H20_2 pinout
+	#define P1_LED     0
+	#define O1_DTR_IO  1
+	#define TXO1      10
+#endif
 volatile bool dtr1         = false;
 bool Out1Avail    = false;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
@@ -61,7 +67,9 @@ void IRAM_ATTR dtr_out_int() {
 
 //==================================================================================
 void SetupP1Out(){
-//  if ( P1Status.dev_type == PRO_H20_2 ) {
+#ifndef ULTRA
+  if ( P1Status.dev_type == PRO_H20_2 ) {
+#endif
   //setup ports
   pinMode(O1_DTR_IO, INPUT);
   pinMode(P1_LED, OUTPUT);
@@ -80,7 +88,9 @@ void SetupP1Out(){
   Serial.begin(115200, SERIAL_8N1, -1, TXO1, false);
 
   Debugln("SetupP1Out executed");
-//  }
+#ifndef ULTRA  
+  }
+#endif  
 }
 //==================================================================================
 void P1OutBridge(){

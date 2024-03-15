@@ -47,7 +47,13 @@ void SetConfig(){
     case PRO_H20_B:  UseRGB = true; 
                      IOWater = 0;
                      WtrMtr = true;
-                     break;                    
+                     break;
+    case PRO_H20_2:  UseRGB = false; 
+                     IOWater = 3;
+                     RxP1 = 4;
+                     P1Out = true;
+                     WtrMtr = true;
+                     break;                     
   }
 #endif  
   Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);
