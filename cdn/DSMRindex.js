@@ -1249,11 +1249,17 @@ function show_hide_column2(table, col_no, do_show) {
 		
 	  //check if update is needed
 	  if (LastVersion != "") {
-		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' href='/remote-update?version=" + LastVersion + "'>Klik voor update</a>";
+		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>Klik voor update</a>";
 		  else VerCel3.innerHTML = "laatste versie";
 	  }
   }
     
+    
+  function RemoteUpdate() {
+  	let text = "Press a button!\nEither OK or Cancel.";
+  if (confirm("Heeft u eerst de RNG Files gedownload?\n\nKlik OK om door te gaan") == true) location.href = '/remote-update?version=' + LastVersion;
+  }
+  
   //get new devinfo==============================================================  
   function refreshDevInfo()
   { Spinner(true);
