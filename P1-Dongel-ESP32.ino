@@ -37,8 +37,15 @@ TODO
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
 
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
+<<<<<<< HEAD
 - zip RNG + settingfiles, download + update (R. van der Does)
 - mqtt over ssl
+=======
+
+4.8.15
+- Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
+- NeoPixelwrite implementeren ipv eigen oplossing
+>>>>>>> 4.8.14
 
 4.9.0
 √ remove some device info
