@@ -10,7 +10,7 @@
     	{ "path": "firmware/nrgm/ui.ino.bootloader.bin", "offset": 0 },
         { "path": "firmware/nrgm/ui.ino.partitions.bin", "offset": 32768 },
         { "path": "firmware/nrgm/boot_app0.bin", "offset": 57344 },
-        { "path": "firmware/nrgm/nrgm-V1.2.2_16Mb.bin", "offset": 65536 }        
+        { "path": "firmware/nrgm/nrgm-V1.2.2a_16Mb.bin", "offset": 65536 }        
       ]
     }
   ]
