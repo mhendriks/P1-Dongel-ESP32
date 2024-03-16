@@ -8,7 +8,7 @@
 #define PRO_H20_2   4
 
 #define BASE_OPTIONS "[CORE]"
-#define DEBUG
+//#define DEBUG
  
 #ifdef ESP32
   #define MBUS_TYPE 3
