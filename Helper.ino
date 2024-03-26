@@ -19,14 +19,6 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 "RTC Watch dog Reset digital core","Instrusion tested to reset CPU","Time Group reset CPU","Software reset CPU","RTC Watch dog Reset CPU","for APP CPU, reseted by PRO CPU",
 "Reset when the vdd voltage is not stable","RTC Watch dog reset digital core and rtc module"};
 
-
-
-//config Pro / Pro bridge / Pro h2o+ (all use same firmware version)
-// IOWater, USERGB
-//Pro         : {5,0}
-//Pro bridge  : {0,1}
-//Pro h2o+    : {0,1}
-
 void SetConfig(){
   //defaults
   switch ( P1Status.dev_type ) {

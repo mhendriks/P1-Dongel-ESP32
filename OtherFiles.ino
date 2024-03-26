@@ -125,7 +125,6 @@ void writeSettings()
   
 } // writeSettings()
 
-
 //=======================================================================
 void readSettings(bool show) 
 {

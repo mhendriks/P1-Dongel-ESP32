@@ -8,7 +8,7 @@
 #define PRO_H20_2   4
 
 #define BASE_OPTIONS "[CORE]"
-//#define DEBUG
+#define DEBUG
  
 #ifdef ESP32
   #define MBUS_TYPE 3
@@ -51,7 +51,7 @@
 
   #undef MBUS_TYPE
   #define MBUS_TYPE 4
-  
+
   #undef _DEFAULT_HOSTNAME
   #define _DEFAULT_HOSTNAME   "Q-Dongle-Pro" 
   
@@ -65,10 +65,15 @@
   #define ALL_OPTIONS BASE_OPTIONS "[EnergyID]"
   #undef MQTT_DISABLE
   #define MQTT_DISABLE
-#ifndef ETHERNET
+#ifndef ULTRA
   #undef OTAURL
   #define OTAURL "http://ota.smart-stuff.nl/v5-eid/"
 #endif
+#ifdef ETHERNET
+  #undef OTAURL
+  #define OTAURL "http://ota.smart-stuff.nl/eth-eid/"
+#endif
+
   enum E_eid_states : uint8_t { EID_IDLE, EID_CLAIMING, EID_ENROLLED };
 
 #endif

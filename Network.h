@@ -124,6 +124,7 @@ void handleReconnectWifi(){
 void startWiFi(const char* hostname, int timeOut) 
 {
   WiFi.setHostname(hostname);
+//  WiFi.setMinSecurity(WIFI_AUTH_WEP);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   WiFiManager manageWiFi;
   uint32_t lTime = millis();

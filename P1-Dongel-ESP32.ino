@@ -79,7 +79,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-//#define EID
+#define EID
 #define DEV_PAIRING
 
 #include "DSMRloggerAPI.h"
@@ -91,7 +91,7 @@ void setup()
   Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
-  GetMacAddress();
+
   
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
@@ -129,6 +129,7 @@ void setup()
 #else
   startETH();
 #endif
+  GetMacAddress();
   delay(100);
   startTelnet();
 #ifndef AP_ONLY
