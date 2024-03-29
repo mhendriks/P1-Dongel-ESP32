@@ -42,7 +42,10 @@ TODO
 - issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering ) x§x
 - support https mqtt connection
 
-4.8.16
+4.8.17
+- eid toevoeging 1 minuut resolutie
+
+4.8.18
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 - NeoPixelwrite implementeren ipv eigen oplossing
 
@@ -70,7 +73,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
-//#define ETHERNET
+#define ETHERNET
 //#define STUB            //test only
 //#define HEATLINK        //first draft
 //#define INSIGHT         
