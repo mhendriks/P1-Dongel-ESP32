@@ -276,10 +276,10 @@ void modifySmFaseInfo()
 byte MbusTypeAvailable(byte type){
 
   // return first type which is available
-  if      ( DSMRdata.mbus1_device_type == type ) return 1;
-  else if ( DSMRdata.mbus2_device_type == type ) return 2;
+  if      ( DSMRdata.mbus4_device_type == type ) return 4;
   else if ( DSMRdata.mbus3_device_type == type ) return 3;
-  else if ( DSMRdata.mbus4_device_type == type ) return 4;
+  else if ( DSMRdata.mbus2_device_type == type ) return 2;
+  else if ( DSMRdata.mbus1_device_type == type ) return 1;
   return 0;
 }
 

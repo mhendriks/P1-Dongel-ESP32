@@ -1,6 +1,6 @@
 {
-  "name": " : P1 Pro DSMR-API ETHERNET",
-  "version": "4.8.12",
+  "name": " : P1 Tunnel",
+  "version": "1.0.6",
   "funding_url": "https://esphome.io/guides/supporters.html",
   "new_install_prompt_erase": true,
   "builds": [

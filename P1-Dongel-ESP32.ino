@@ -73,7 +73,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
-#define ETHERNET
+//#define ETHERNET
 //#define STUB            //test only
 //#define HEATLINK        //first draft
 //#define INSIGHT         
@@ -82,8 +82,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-#define EID
+//#define EID
 #define DEV_PAIRING
+//#define DEBUG
 
 #include "DSMRloggerAPI.h"
 
