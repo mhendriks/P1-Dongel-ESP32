@@ -8,7 +8,7 @@
   bool                 WtrMtr         = false;
   #define              DEBOUNCETIMER 1700
 
-#include "development/secrets.h"
+#include <secrets.h>
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
@@ -49,7 +49,7 @@ const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {
 #ifdef EVERGI
 
 //#define EVERGI_TEST
-#include "development/evergi.h"
+#include "evergi.h"
 static char MqttID[30];
 static char StrMac[13]; 
 

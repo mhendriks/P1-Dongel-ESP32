@@ -5,37 +5,8 @@
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
-*      
-TODO
-- detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
-- feature: nieuwe meter = beginstand op 0
-- front-end: splitsen dashboard / eenmalige instellingen bv fases 
-- front-end: functie toevoegen die de beschikbare versies toont (incl release notes) en je dan de keuze geeft welke te flashen. (Erik)
-- remote-update: redirect  na succesvolle update (Erik)
-- verbruik - teruglevering lijn door maandgrafiek (Erik)
-- automatische update
-- influxdb koppeling onderzoeken
-- auto update check + update every night 3:<random> hour
-- issue met reconnect dns name mqtt (Eric)
-- auto switch 3 - 1 fase max fuse
-- localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
-- issue met basic auth afscherming rng bestanden
-- temparatuur ook opnemen in grafieken (A van Dijken)
-- websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
-- 90 dagen opslaan van uur gegevens ( R de Grijs )
-- eigen NTP server instellen ( P. bij de Leij )
-- fixed ip kunnen opgeven ( P. bij de Leij )
-- eigen NTP kunnen opgeven of juist niet (stopt pollen)
-- Roberto: P1 H2O watersensor gegevens apart versturen (MQTT) van P1 
-- Sluipverbruik bijhouden
-- issue: wegvallen wifi geen reconnect / reconnect mqtt
-- RNGDays 31 days
-- Modbus TCP (a3) Vrij slave adres. Sommige systemen kennen alleen uniek slave adres/id. Maken geen onderscheid in IP adres omdat soms meer RS485/RTU devices achter 1 TCP naar RTU converter (bijvoorbeeld Moxa M-gate) zitten.
-- Modbus Registers van de "Actueel" pagina lijkt me in eerste instantie voldoende. Wel mis ik zo iets als m3 (of liters) gas per uur. Belangrijk bij hybride warmteopwekking (ketel en warmtepomp), waarbij elke liter gas er één te veel is :-). Is natuurlijk ook softwarematig te maken.
-- Spanning bijhouden ivm overspanningssituaties (Hans Vink)
-
-WiP
-
+*   
+*   
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Board: "ESP32 Dev Module"
