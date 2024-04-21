@@ -204,8 +204,10 @@ WiFiClient wifiClient;
 #endif
 
 //config
-int8_t IOWater = 0;
-bool UseRGB = false; 
+int8_t                      IOWater = 0;
+bool                        UseRGB = false; 
+volatile unsigned long      Tpressed = 0;
+volatile bool               bButtonPressed = false;
 
 struct Status {
    uint32_t           reboots;

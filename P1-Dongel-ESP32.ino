@@ -217,7 +217,7 @@ void loop () {
 #endif
        handleKeyInput();
        handleRemoteUpdate();
-       AuxButton.handler();
+       PushButton.handler();
        handleWater();
        handleEnergyID();
   

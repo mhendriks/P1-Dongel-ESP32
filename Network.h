@@ -34,6 +34,7 @@ DECLARE_TIMER_SEC(WifiReconnect, 5); //try after 5 sec
 void LogFile(const char*, bool);
 void P1Reboot();
 void SwitchLED( byte mode, uint32_t color);
+void P1StatusWrite();
 
 String MAC_Address();
 
@@ -105,14 +106,14 @@ static void onWifiEvent (WiFiEvent_t event) {
 
 void SmartConfigBegin() {
   SwitchLED( LED_OFF, LED_BLUE );
-  WiFi.setHostname(hostname);
+  WiFi.setHostname(settingHostname);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   WifiBoot = true;
   WiFi.onEvent(onWifiEvent);
 
-  if ( P1Status.wifi_psk.length() > 0 ) {
+  if ( strlen(P1Status.wifi_psk) > 0 ) {
     //wifi pw available
-    WiFi.begin(P1Status.wifi_ssid.c_str(), P1Status.wifi_psk.c_str());
+    WiFi.begin(P1Status.wifi_ssid, P1Status.wifi_psk);
     
   } else {
 
@@ -123,8 +124,8 @@ void SmartConfigBegin() {
     Serial.println("SmartConfig received.");
     
     //store ssid and pw
-    P1Status.wifi_ssid = WiFi.SSID();
-    P1Status.wifi_psk  = WiFi.psk();
+    strncpy(P1Status.wifi_ssid, WiFi.SSID().c_str(), sizeof(P1Status.wifi_ssid));
+    strncpy(P1Status.wifi_psk, WiFi.psk().c_str(), sizeof(P1Status.wifi_psk));
     P1StatusWrite();
   }
 
