@@ -1,4 +1,4 @@
-    /*
+/*
 ***************************************************************************  
 **  Program  : DSMRloggerAPI.h - definitions for DSMRloggerAPI
 **
@@ -16,7 +16,8 @@
   volatile time_t      WtrPrevReading = 0;
   bool                 WtrMtr         = false;
   #define              DEBOUNCETIMER 1700
- 
+
+#include <WiFiClientSecure.h>        
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
@@ -195,18 +196,16 @@ void delayms(unsigned long);
 void SetConfig();
 
 //===========================GLOBAL VAR'S======================================
-WiFiClient  wifiClient;
+WiFiClient wifiClient;
 
 #ifndef MQTT_DISABLE 
   #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
   static PubSubClient MQTTclient(wifiClient);
 #endif
 
-//config + button
+//config
 int8_t IOWater = 0;
 bool UseRGB = false; 
-volatile unsigned long      Tpressed = 0;
-volatile bool bButtonPressed = false;
 
 struct Status {
    uint32_t           reboots;
@@ -216,9 +215,9 @@ struct Status {
    volatile uint16_t  wtr_l;
    uint16_t           dev_type;   
    bool               FirstUse;
-#ifdef EID   
+   char               wifi_psk[63+1];
+   char               wifi_ssid[32+1];
    E_eid_states       eid_state;
-#endif   
 } P1Status;
   
 MyData      DSMRdata;
@@ -262,12 +261,13 @@ char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 
 //update
-char      BaseOTAurl[45] = OTAURL;
+char      BaseOTAurl[35] = OTAURL;
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;
 
 //MQTT
+
 char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[40] = _DEFAULT_MQTT_TOPIC;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
@@ -287,7 +287,7 @@ bool      bSendMQTT = false;
 
 //===========================================================================================
 // setup timers 
-//DECLARE_TIMER_SEC(synchrNTP,          30);
+DECLARE_TIMER_SEC(synchrNTP,          30);
 DECLARE_TIMER_SEC(reconnectMQTTtimer,  MQTT_RECONNECT_DEFAULT_TIME); // try reconnecting cyclus timer
 DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time between MQTT messages  
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);

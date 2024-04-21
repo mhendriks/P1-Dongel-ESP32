@@ -42,6 +42,8 @@ void P1StatusRead(){
 #ifdef EID
     P1Status.eid_state = (E_eid_states) preferences.getUShort("eid_state", EID_IDLE);
 #endif
+    preferences.getString("psk",P1Status.wifi_psk,63+1);
+    preferences.getString("ssid",P1Status.wifi_ssid,32+1);
     P1StatusPrint();
 }
 
@@ -65,6 +67,8 @@ void P1StatusWrite(){
 #ifdef EID    
     preferences.putUShort("eid_state", (uint16_t)P1Status.eid_state);
 #endif
+    preferences.putString("psk",P1Status.wifi_psk);
+    preferences.putString("ssid",P1Status.wifi_ssid);
     DebugTln(F("P1Status successfully writen"));
 }
 

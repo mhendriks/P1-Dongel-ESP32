@@ -9,7 +9,6 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-#include <WiFi.h>        
 #include <ESPmDNS.h>        
 #include <Update.h>
 #include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager
@@ -39,11 +38,12 @@ void SwitchLED( byte mode, uint32_t color);
 String MAC_Address();
 
 void GetMacAddress(){
+
   String _mac = MAC_Address();
   strcpy( macStr, _mac.c_str() );
   _mac.replace( ":","" );
   strcpy( macID, _mac.c_str() );
-  USBSerial.print( "MacStr: " );USBSerial.println( macStr );USBSerial.println();
+  USBSerial.print( "MacStr: " );USBSerial.println( macStr );
 //  USBSerial.print( "MacID: " );USBSerial.println( macID );
 }
 
@@ -75,7 +75,6 @@ static void onWifiEvent (WiFiEvent_t event) {
     LogFile(cMsg, true);
     switch (event) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED:
-//        DebugTf ("Connected to %s. Asking for IP address.\r\n", WiFi.BSSIDstr().c_str());
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
         LogFile(cMsg, true);
         tWifiReconnect = millis();
@@ -104,6 +103,36 @@ static void onWifiEvent (WiFiEvent_t event) {
     }
 }
 
+void SmartConfigBegin() {
+  SwitchLED( LED_OFF, LED_BLUE );
+  WiFi.setHostname(hostname);
+  WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
+  WifiBoot = true;
+  WiFi.onEvent(onWifiEvent);
+
+  if ( P1Status.wifi_psk.length() > 0 ) {
+    //wifi pw available
+    WiFi.begin(P1Status.wifi_ssid.c_str(), P1Status.wifi_psk.c_str());
+    
+  } else {
+
+    WiFi.beginSmartConfig();
+    Serial.println("Waiting for SmartConfig.");
+    while (!WiFi.smartConfigDone()) { delay(500); Serial.print(".");}
+    Serial.println("");
+    Serial.println("SmartConfig received.");
+    
+    //store ssid and pw
+    P1Status.wifi_ssid = WiFi.SSID();
+    P1Status.wifi_psk  = WiFi.psk();
+    P1StatusWrite();
+  }
+
+  PostMacIP(); //post mac en ip 
+  USBSerial.print("ip-adres: ");USBSerial.println(WiFi.localIP().toString());
+
+}
+
 //gets called when WiFiManager enters configuration mode
 //===========================================================================================
 void configModeCallback (WiFiManager *myWiFiManager) 
@@ -125,6 +154,8 @@ void handleReconnectWifi(){
 void startWiFi(const char* hostname, int timeOut) 
 {
   WiFi.setHostname(hostname);
+//  WiFi.setMinSecurity(WIFI_AUTH_WEP);
+  WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   WiFiManager manageWiFi;
   uint32_t lTime = millis();
 
