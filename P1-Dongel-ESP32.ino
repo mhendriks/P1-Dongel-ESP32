@@ -90,13 +90,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 void setup() 
 {
-  USBSerial.begin(115200); //cdc stream
+  SERIALOUT.begin(115200); //cdc stream
 
   Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
-
-  
+  PushButton.begin(IO_BUTTON);
+  if( xTaskCreate( fBlink, "blink", 2048, NULL, 2, &tBlink ) == pdPASS ) DebugTln(F("Task Blinker succesfully created"));
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
   SetConfig();
@@ -179,7 +179,7 @@ void setup()
   
 //create a task that will be executed in the fP1Reader() function, with priority 2
   if( xTaskCreate( fP1Reader, "p1-reader", 30000, NULL, 2, &tP1Reader ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
-
+  
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
 
 #ifdef MBUS
@@ -187,6 +187,14 @@ void setup()
 #endif  
 
 } // setup()
+
+
+void fBlink( void * pvParameters ){ 
+    while(true) {
+      digitalWrite(LED, !digitalRead(LED));
+      vTaskDelay(250 / portTICK_PERIOD_MS);
+    }
+}
 
 
 //P1 reader task

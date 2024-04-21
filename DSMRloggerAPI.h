@@ -41,6 +41,7 @@ SingleNeoPixel rgb(RGBLED_PIN);
 P1Reader    slimmeMeter(&Serial1, DTR_IO);
 
 TaskHandle_t tP1Reader; //  own proces for P1 reading
+TaskHandle_t tBlink;
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS, RINGVOLTAGE};

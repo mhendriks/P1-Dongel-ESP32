@@ -10,21 +10,23 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
+#define SERIALOUT USBSerial //using dongle
+//#define SERIALOUT Serial //using dev board
 
 /*---- start macro's ------------------------------------------------------------------*/
 
 #ifdef DEBUG
-  #define Debug(...)      ({ USBSerial.print(__VA_ARGS__);         \
+  #define Debug(...)      ({ SERIALOUT.print(__VA_ARGS__);         \
                              TelnetStream.print(__VA_ARGS__);   \
                           })
-  #define Debugln(...)    ({ USBSerial.println(__VA_ARGS__);       \
+  #define Debugln(...)    ({ SERIALOUT.println(__VA_ARGS__);       \
                              TelnetStream.println(__VA_ARGS__); \
                           })
-  #define Debugf(...)     ({ USBSerial.printf(__VA_ARGS__);        \
+  #define Debugf(...)     ({ SERIALOUT.printf(__VA_ARGS__);        \
                              TelnetStream.printf(__VA_ARGS__);  \
                           })
   
-  #define DebugFlush()    ({ USBSerial.flush(); \
+  #define DebugFlush()    ({ SERIALOUT.flush(); \
                              TelnetStream.flush(); \
                           })
 #else
@@ -59,7 +61,7 @@ void _debugBOL(const char *fn, int line)
                 fn, line);
                  
 #ifdef DEBUG  
-  USBSerial.print (_bol);
+  SERIALOUT.print (_bol);
 #endif  
   TelnetStream.print (_bol);
 }

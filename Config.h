@@ -3,8 +3,6 @@
   #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.
 #endif
 
-//#define DEBUG
-
 // Device Types
 #define PRO         0
 #define PRO_BRIDGE  1

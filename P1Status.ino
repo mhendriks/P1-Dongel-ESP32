@@ -17,6 +17,8 @@ void P1StatusEnd(){
 
 void P1StatusPrint(){
       DebugTf("P1 Status: reboots[%i] | sloterrors [%i] | Timestamp [%s] | water [%i] m3 [%i] liter\n",P1Status.reboots, P1Status.sloterrors, P1Status.timestamp, P1Status.wtr_m3, P1Status.wtr_l);
+//      Debugln(P1Status.wifi_ssid);
+//      Debugln(P1Status.wifi_psk);
   }
 
 void P1StatusDefType(){
@@ -79,15 +81,19 @@ void P1StatusReset(){
 
 void P1StatusClear(){
 //  P1Status.sloterrors = 0;
-  P1Status.reboots    = 0;
-  P1Status.wtr_m3     = 0;
-  P1Status.wtr_l      = 0;
-  P1Status.FirstUse   = false;
-  telegramCount       = 0;
-  telegramErrors      = 0;
-  mqttCount           = 0;
+//  preferences.remove("psk");
+//  preferences.remove("ssid");
+  P1Status.reboots        = 0;
+  P1Status.wtr_m3         = 0;
+  P1Status.wtr_l          = 0;
+  P1Status.wifi_psk[0]    = '\0';
+  P1Status.wifi_ssid[0]   = '\0';
+  P1Status.FirstUse       = false;
+  telegramCount           = 0;
+  telegramErrors          = 0;
+  mqttCount               = 0;
 #ifdef EID
-  P1Status.eid_state  = EID_IDLE;
+  P1Status.eid_state      = EID_IDLE;
 #endif  
   P1StatusWrite();
 }

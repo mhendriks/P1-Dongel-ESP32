@@ -106,32 +106,48 @@ static void onWifiEvent (WiFiEvent_t event) {
 
 void SmartConfigBegin() {
   SwitchLED( LED_OFF, LED_BLUE );
-  WiFi.setHostname(settingHostname);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   WifiBoot = true;
-  WiFi.onEvent(onWifiEvent);
+//  vTaskResume(tP1Reader);
 
   if ( strlen(P1Status.wifi_psk) > 0 ) {
     //wifi pw available
+    Debugln("Wifi credentials stored, starting to connect");
     WiFi.begin(P1Status.wifi_ssid, P1Status.wifi_psk);
     
   } else {
-
-    WiFi.beginSmartConfig();
-    Serial.println("Waiting for SmartConfig.");
-    while (!WiFi.smartConfigDone()) { delay(500); Serial.print(".");}
-    Serial.println("");
-    Serial.println("SmartConfig received.");
+    WiFi.mode(WIFI_AP_STA);
+//    esp_smartconfig_fast_mode(true); 
+    if ( !WiFi.beginSmartConfig() ) P1Reboot();
+    Debugln("Waiting for SmartConfig.");
+    while (!WiFi.smartConfigDone()) { delay(500); Debug(".");}
+    Debugln("");
+    Debugln("SmartConfig received.");
     
     //store ssid and pw
     strncpy(P1Status.wifi_ssid, WiFi.SSID().c_str(), sizeof(P1Status.wifi_ssid));
     strncpy(P1Status.wifi_psk, WiFi.psk().c_str(), sizeof(P1Status.wifi_psk));
     P1StatusWrite();
   }
-
+  WiFi.onEvent(onWifiEvent);
+  WiFi.setHostname(settingHostname);
+  Debugln("Waiting for Wifi connection.");
+    uint8_t timeout = 0;
+    while (WiFi.status() != WL_CONNECTED && timeout < 100) { 
+      delay(100); 
+      Debug(".");
+      timeout++;
+      };
+    if ( timeout > 99 ) {
+      Debugln("Wifi timeout"); 
+      P1Reboot();
+    }
+    Debugln("Wifi connected");
+  vTaskSuspend(tBlink);
+  SwitchLED( LED_ON, LED_BLUE );
   PostMacIP(); //post mac en ip 
   USBSerial.print("ip-adres: ");USBSerial.println(WiFi.localIP().toString());
-
+  
 }
 
 //gets called when WiFiManager enters configuration mode
