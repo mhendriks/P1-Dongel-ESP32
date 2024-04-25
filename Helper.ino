@@ -59,9 +59,9 @@ void SetConfig(){
   Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);
   if ( UseRGB ) rgb.begin();
   // sign of life = ON during setup or change config
-  SwitchLED( LED_ON, LED_BLUE );
-  delay(2000);
-  SwitchLED( LED_OFF, LED_BLUE );
+//  SwitchLED( LED_ON, LED_BLUE );
+//  delay(2000);
+//  SwitchLED( LED_OFF, LED_BLUE );
 }
 
 void FacReset() {
