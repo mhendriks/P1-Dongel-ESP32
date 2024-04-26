@@ -278,13 +278,13 @@ void sendDeviceSettings()
   doc["mqtt_broker_port"]["min"] = 1;
   doc["mqtt_broker_port"]["max"] = 9999;
   
-  doc["mqtt_user"]["value"] = settingMQTTuser;
-  doc["mqtt_user"]["type"] = "s";
-  doc["mqtt_user"]["maxlen"] = sizeof(settingMQTTuser) -1;
-  
-  doc["mqtt_passwd"]["value"] = settingMQTTpasswd;
-  doc["mqtt_passwd"]["type"] = "s";
-  doc["mqtt_passwd"]["maxlen"] = sizeof(settingMQTTpasswd) -1;
+//  doc["mqtt_user"]["value"] = settingMQTTuser;
+//  doc["mqtt_user"]["type"] = "s";
+//  doc["mqtt_user"]["maxlen"] = sizeof(settingMQTTuser) -1;
+//  
+//  doc["mqtt_passwd"]["value"] = settingMQTTpasswd;
+//  doc["mqtt_passwd"]["type"] = "s";
+//  doc["mqtt_passwd"]["maxlen"] = sizeof(settingMQTTpasswd) -1;
   
   doc["mqtt_toptopic"]["value"] = settingMQTTtopTopic;
   doc["mqtt_toptopic"]["type"] = "s";

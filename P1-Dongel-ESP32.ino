@@ -1,3 +1,5 @@
+//BIGUP VERSION
+
 /*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
@@ -39,7 +41,7 @@ TODO
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
 - MQTT over ssl ( J Steenhuis) 
 - Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
-- issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering ) x§x
+- issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering )
 - support https mqtt connection
 
 4.8.17
@@ -83,7 +85,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 //#define EID
-#define DEV_PAIRING
+//#define DEV_PAIRING
 //#define DEBUG
 
 #include "DSMRloggerAPI.h"

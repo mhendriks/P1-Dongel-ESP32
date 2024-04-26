@@ -97,8 +97,8 @@ void writeSettings()
   yield();
   doc["MQTTbroker"] = settingMQTTbroker;
   doc["MQTTbrokerPort"] = settingMQTTbrokerPort;
-  doc["MQTTUser"] = settingMQTTuser;
-  doc["MQTTpasswd"] = settingMQTTpasswd;
+//  doc["MQTTUser"] = settingMQTTuser;
+//  doc["MQTTpasswd"] = settingMQTTpasswd;
   doc["MQTTinterval"] = settingMQTTinterval;
   doc["MQTTtopTopic"] = settingMQTTtopTopic;
   
@@ -184,8 +184,8 @@ void readSettings(bool show)
   //sprintf(settingMQTTbroker, "%s:%d", MQTTbroker, MQTTbrokerPort);
   strcpy(settingMQTTbroker, doc["MQTTbroker"]);
   settingMQTTbrokerPort = doc["MQTTbrokerPort"];
-  strcpy(settingMQTTuser, doc["MQTTUser"]);
-  strcpy(settingMQTTpasswd, doc["MQTTpasswd"]);
+//  strcpy(settingMQTTuser, doc["MQTTUser"]);
+//  strcpy(settingMQTTpasswd, doc["MQTTpasswd"]);
   settingMQTTinterval = doc["MQTTinterval"];
   strcpy(settingMQTTtopTopic, doc["MQTTtopTopic"]);
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");

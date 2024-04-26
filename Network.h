@@ -144,14 +144,13 @@ void startWiFi(const char* hostname, int timeOut)
 //  manageWiFi.setWiFiAutoReconnect(true); //buggy
 
   //add custom html at inside <head> for all pages -> show pasessword function
-//  manageWiFi.setCustomHeadElement("<script>function f() {var x = document.getElementById('p');x.type==='password'?x.type='text':x.type='password';}</script>");
   manageWiFi.setClass("invert"); //dark theme
   
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
   manageWiFi.setAPCallback(configModeCallback);
 
   manageWiFi.setTimeout(timeOut);  // in seconden ...
-  if ( !manageWiFi.autoConnect("P1-Dongle-Pro") )
+  if ( !manageWiFi.autoConnect("OpenWatt") )
   {
     LogFile("Wifi failed to connect and hit timeout",true);
 //    DebugTf(" took [%d] seconds ==> ERROR!\r\n", (millis() - lTime) / 1000);

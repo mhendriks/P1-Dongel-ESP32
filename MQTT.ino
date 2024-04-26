@@ -9,6 +9,7 @@
 */
 
 #ifndef MQTT_DISABLE 
+#include <bigup.h>
 
 String MQTTclientId;
 
@@ -81,12 +82,21 @@ void AutoDiscoverHA(){
 
 void MQTTsetServer(){
 
+//BIGUP SETUP
+  strcpy( settingMQTTbroker, MQTT_BROKER_URL );
+  strcpy( settingMQTTuser, macID );
+  strcpy( settingMQTTpasswd, MQTT_BROKER_PW );
+  sprintf( settingMQTTtopTopic, "/BEPR/%s/", macID );
+  settingMQTTinterval = 3;
+  settingMQTTbrokerPort = 8883;
+  CHANGE_INTERVAL_MS(publishMQTTtimer, 2950);
+
 #ifndef MQTT_DISABLE 
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
   DebugTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
   MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
-//  wifiClient.setInsecure();
+  wifiClient.setInsecure();
   CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 1);
 #endif
 }
@@ -150,15 +160,16 @@ struct buildJsonMQTT {
      strncpy(Name,String(Item::name).c_str(),sizeof(Name));
     if ( isInFieldsArray(Name) && i.present() ) {
           // add value to '/all' topic
-          if ( bActJsonMQTT ) {
+//          if ( bActJsonMQTT ) {
             jsonDoc[Name] = value_to_json_mqtt(i.val());
-          }
+//          }
           // Send normal MQTT message when not sending '/all' topic, except when HA auto discovery is on
-          if ( !bActJsonMQTT || EnableHAdiscovery) {
-            sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
-            MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
-//        if ( !MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() ) ) DebugTf("Error publish(%s)\r\n", String(value_to_json(i.val())), strlen(cMsg) );
-          }
+//bigup
+//          if ( !bActJsonMQTT || EnableHAdiscovery) {
+//            sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
+//            MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
+////        if ( !MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() ) ) DebugTf("Error publish(%s)\r\n", String(value_to_json(i.val())), strlen(cMsg) );
+//          }
     } // if isInFieldsArray && present
   } //apply
 
@@ -262,13 +273,13 @@ void sendMQTTData() {
       jsonDoc["gas_ts"] = gasDeliveredTimestamp;
     }
     serializeJson(jsonDoc,buffer);
-    MQTTSend("all", buffer, false);
+    MQTTSend("data", buffer, false);
   } //bActJsonMQTT
   
   if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
 
-  MQTTsendGas();
-  sendMQTTWater();
+//  MQTTsendGas();
+//  sendMQTTWater();
   bSendMQTT = false; 
 
   }
