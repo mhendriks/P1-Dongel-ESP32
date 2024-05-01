@@ -86,7 +86,9 @@ void MQTTsetServer(){
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
   DebugTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
   MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
-//  wifiClient.setInsecure();
+#ifdef SMQTT
+  wifiClient.setInsecure();
+#endif  
   CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 1);
 #endif
 }

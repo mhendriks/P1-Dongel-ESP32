@@ -196,8 +196,11 @@ void delayms(unsigned long);
 void SetConfig();
 
 //===========================GLOBAL VAR'S======================================
-WiFiClient wifiClient;
-
+#ifdef SMQTT
+  WiFiClientSecure wifiClient;
+#else
+  WiFiClient wifiClient;
+#endif
 #ifndef MQTT_DISABLE 
   #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
   static PubSubClient MQTTclient(wifiClient);
