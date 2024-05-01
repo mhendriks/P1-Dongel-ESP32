@@ -230,8 +230,10 @@ void MQTTSentStaticInfo(){
   MQTTSend( "p1_version",DSMRdata.p1_version, true );
   MQTTSend( "equipment_id",DSMRdata.equipment_id, true );
   MQTTSend( "firmware",_VERSION_ONLY, true );
-  MQTTSend( "ip_address",WiFi.localIP().toString(), true);
+  MQTTSend( "ip_address",IP_Address(), true);
+#ifndef ETHERNET  
   MQTTSend( "wifi_rssi",String( WiFi.RSSI() ), true );
+#endif  
 
   if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc, true); }  
 }
@@ -272,11 +274,11 @@ void sendMQTTData() {
       jsonDoc["gas"] = gasDelivered;
       jsonDoc["gas_ts"] = gasDeliveredTimestamp;
     }
+    if ( DSMRdata.highest_peak_pwr_present ) jsonDoc["highest_peak_pwr_ts"] = DSMRdata.highest_peak_pwr.timestamp;
+    
     serializeJson(jsonDoc,buffer);
     MQTTSend("data", buffer, false);
   } //bActJsonMQTT
-  
-  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
 
 //  MQTTsendGas();
 //  sendMQTTWater();

@@ -261,7 +261,7 @@ char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 
 //update
-char      BaseOTAurl[35] = OTAURL;
+char      BaseOTAurl[45] = OTAURL;
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;

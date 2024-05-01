@@ -29,9 +29,9 @@
     #define TXP1                -1 //no txp1
     #define IO_WATER_SENSOR     -1 // n/a  
     #undef OTAURL
-    #define OTAURL              "http://ota.smart-stuff.nl/eth/"
+    #define OTAURL              "http://ota.smart-stuff.nl/v5-bu/eth/"
     #undef _DEFAULT_HOSTNAME
-    #define _DEFAULT_HOSTNAME   "Eth-Dongle-Pro" 
+    #define _DEFAULT_HOSTNAME   "OpenWatt"
 #else
     #warning Using ESP32C3
     #define LED                 7
