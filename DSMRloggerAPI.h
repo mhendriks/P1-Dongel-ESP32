@@ -271,7 +271,7 @@ bool      bAutoUpdate = false;
 
 //MQTT
 
-char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[40] = _DEFAULT_MQTT_TOPIC;
+char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[160], settingMQTTtopTopic[40] = _DEFAULT_MQTT_TOPIC;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;

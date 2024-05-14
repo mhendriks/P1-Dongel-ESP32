@@ -65,7 +65,7 @@ void writeToJsonFile(const TSource &doc, File &_file)
 //=======================================================================
 void writeSettings() 
 {
-  StaticJsonDocument<2100> doc; 
+  StaticJsonDocument<3000> doc; 
   if (!FSmounted) return;
 
   DebugT(F("Writing to [")); Debug(SETTINGS_FILE); Debugln(F("] ..."));
@@ -129,7 +129,7 @@ void writeSettings()
 void readSettings(bool show) 
 {
   
-  StaticJsonDocument<2100> doc; 
+  StaticJsonDocument<3000> doc; 
   File SettingsFile;
   if (!FSmounted) return;
 
@@ -339,7 +339,7 @@ void updateSetting(const char *field, const char *newValue)
     mqtt_reconnect = true;
   }
   if (!stricmp(field, "mqtt_passwd")) {
-    strCopy(settingMQTTpasswd  ,25, newValue);  
+    strCopy(settingMQTTpasswd  ,sizeof(settingMQTTpasswd), newValue);  
     mqtt_reconnect = true;
   }
   
