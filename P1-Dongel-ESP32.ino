@@ -42,8 +42,6 @@ TODO
 - issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering ) x§x
 - support https mqtt connection
 
-4.8.17
-- eid toevoeging 1 minuut resolutie
 
 4.8.18
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
@@ -56,7 +54,6 @@ TODO
 - RNGDays 31 days
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - support https / http mqtt link extern
-- issue: wegvallen wifi geen reconnect / reconnect mqtt
 
 
 ************************************************************************************
@@ -82,6 +79,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 //#define EID
+//#define DEVTYPE_H2OV2
 #define DEV_PAIRING
 //#define DEBUG
 //#define SMQTT
@@ -91,11 +89,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 void setup() 
 {
   USBSerial.begin(115200); //cdc stream
-
   Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
-
   
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);

@@ -79,6 +79,9 @@ static void onWifiEvent (WiFiEvent_t event) {
         Debug(" )\n\n");
         tWifiReconnect = 0;
         break;
+    case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+//        WiFi.disconnect();
+        break;           
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: //5
         SwitchLED( LED_OFF, LED_BLUE );
         if ( !WifiDisconnect ) LogFile("Wifi connection lost",true); //log only once 
@@ -103,7 +106,7 @@ void configModeCallback (WiFiManager *myWiFiManager)
 //===========================================================================================
 void handleReconnectWifi(){
   //reboots when dongle doesn't get an IP address
-  if ( !tWifiReconnect || ( millis() - tWifiReconnect ) < 10000 ) return;
+  if ( !tWifiReconnect || ( millis() - tWifiReconnect ) < 20000 ) return;
   P1Reboot();
 }
 

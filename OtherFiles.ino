@@ -198,7 +198,7 @@ void readSettings(bool show)
 #else  
   if (doc.containsKey("enableHistory")) EnableHistory = doc["enableHistory"];
 #endif
-  if (doc.containsKey("watermeter")) WtrMtr = doc["watermeter"];
+  if (doc.containsKey("watermeter") && (P1Status.dev_type != PRO_H20_2) ) WtrMtr = doc["watermeter"];
   if (doc.containsKey("waterfactor")) WtrFactor = doc["waterfactor"];
 
   if (doc.containsKey("HAdiscovery")) EnableHAdiscovery = doc["HAdiscovery"];
