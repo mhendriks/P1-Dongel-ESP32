@@ -631,7 +631,7 @@ function UpdateDash()
 		if (!isNaN(json.voltage_l3.value)) v3 = json.voltage_l3.value;
 
 
-		if (v1 && (!Injection || ShowVoltage) ) {
+		if ( ShowVoltage && v1 ) {
 			document.getElementById("l2").style.display = "block"
 			document.getElementById("fases").innerHTML = Phases;
 			
