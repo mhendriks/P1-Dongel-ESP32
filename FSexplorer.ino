@@ -141,6 +141,8 @@ void APIlistFiles()             // Senden aller Daten an den Client
 //=====================================================================================
 bool handleFile(String&& path) 
 {
+//  Debugln("handleFile");
+  if ( !LittleFS.exists(settingIndexPage) ) GetFile(settingIndexPage); 
   if (httpServer.hasArg("delete")) 
   {
     DebugTf("Delete -> [%s]\n\r",  httpServer.arg("delete").c_str());
