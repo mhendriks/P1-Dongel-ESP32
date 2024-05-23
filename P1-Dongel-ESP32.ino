@@ -1,67 +1,6 @@
 //BIGUP VERSION
 
-/*
-***************************************************************************  
-**  Program  : P1-Dongel-ESP32
-**  Copyright (c) 2024 Martijn Hendriks / based on DSMR Api Willem Aandewiel
-**
-**  TERMS OF USE: MIT License. See bottom of file.                                                            
-***************************************************************************      
-*
-TODO
-- detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
-- feature: nieuwe meter = beginstand op 0
-- front-end: splitsen dashboard / eenmalige instellingen bv fases 
-- verbruik - teruglevering lijn door maandgrafiek (Erik)
-- auto switch 3 - 1 fase max fuse
-- issue met basic auth afscherming rng bestanden
-- temparatuur ook opnemen in grafieken (A van Dijken)
-- websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
-- 90 dagen opslaan van uur gegevens ( R de Grijs )
-- Roberto: P1 H2O watersensor gegevens apart versturen (MQTT) van P1 
-- Sluipverbruik bijhouden
-- Modbus TCP (a3) Vrij slave adres. Sommige systemen kennen alleen uniek slave adres/id. Maken geen onderscheid in IP adres omdat soms meer RS485/RTU devices achter 1 TCP naar RTU converter (bijvoorbeeld Moxa M-gate) zitten.
-- Modbus Registers van de "Actueel" pagina lijkt me in eerste instantie voldoende. Wel mis ik zo iets als m3 (of liters) gas per uur. Belangrijk bij hybride warmteopwekking (ketel en warmtepomp), waarbij elke liter gas er één te veel is :-). Is natuurlijk ook softwarematig te maken.
-- optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
-- toevoegen van mdns aanmelding na 1 minuut
-- update Warmtelink url en mechanisme isoleren (Henry de J)
-- ondersteuning ISTA devices (868MHz) - Jan Winder
-- Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
-- #18 water en gas ook in de enkele json string (mqtt)
-- spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
-- loadbalancing bijhouden over de fases
-
-- grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
-- Consistentie tijd-assen, links oud, rechts nieuw
-  - in Actueel staat de laatste meting rechts en de oudste meting links
-  - in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
-
-- Harold B: Dark-mode frontend
-- Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
-- een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
-- MQTT over ssl ( J Steenhuis) 
-- Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
-- issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering )
-- support https mqtt connection
-
-4.8.17
-- eid toevoeging 1 minuut resolutie
-
-4.8.18
-- Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
-- NeoPixelwrite implementeren ipv eigen oplossing
-
-4.9.0
-- RNGhours files vergroten (nu 48h -> 336h) (Broes)
-- teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
-- localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
-- RNGDays 31 days
-- eigen NTP kunnen opgeven of juist niet (stopt pollen)
-- support https / http mqtt link extern
-- issue: wegvallen wifi geen reconnect / reconnect mqtt
-
-
-************************************************************************************
+/************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Board: "ESP32C3 Dev Module"
   - Flash mode: "QIO"
@@ -98,7 +37,6 @@ void setup()
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
 
-  
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
   SetConfig();

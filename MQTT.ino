@@ -87,9 +87,9 @@ void MQTTsetServer(){
   strcpy( settingMQTTuser, macID );
   strcpy( settingMQTTpasswd, MQTT_BROKER_PW );
   sprintf( settingMQTTtopTopic, "/BEPR/%s/", macID );
-  settingMQTTinterval = 3;
+  settingMQTTinterval = 5;
   settingMQTTbrokerPort = 8883;
-  CHANGE_INTERVAL_MS(publishMQTTtimer, 2950);
+  CHANGE_INTERVAL_MS(publishMQTTtimer, 4950);
 
 #ifndef MQTT_DISABLE 
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
@@ -104,14 +104,18 @@ void MQTTsetServer(){
 //===========================================================================================
 
 static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
-  if (length > 24) return;
-  sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
-  if (strcmp(topic, cMsg) == 0) bUpdateSketch = false; 
-  else bUpdateSketch = true;
-  
-  for (int i=0;i<length;i++) UpdateVersion[i] = (char)payload[i];
-//  DebugT("Message arrived [");Debug(topic);Debug("] ");Debugln(UpdateVersion);
-  UpdateRequested = true;
+  String StrTopic = topic;
+  if ( StrTopic.indexOf("update") >= 0 ){
+    if (length > 24) return;
+    bUpdateSketch = true;  
+    for (int i=0;i<length;i++) UpdateVersion[i] = (char)payload[i];
+  //  DebugT("Message arrived [");Debug(topic);Debug("] ");Debugln(UpdateVersion);
+    UpdateRequested = true;
+    //update
+  } else if ( StrTopic.indexOf("mqtt_set_refresh_rate") >= 0 ){
+    //set refresh
+    //todo
+  }
 }
 
 //===========================================================================================
@@ -134,6 +138,8 @@ void MQTTConnect() {
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
   	  sprintf(cMsg,"%supdate",settingMQTTtopTopic);
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
+      sprintf(cMsg,"/cmd/%s/mqtt_set_refresh_rate",macID);
+      MQTTclient.subscribe(cMsg); //subscribe mqtt update
       if ( EnableHAdiscovery ) AutoDiscoverHA();
     } else {
       LogFile("MQTT: Attempting connection... connection FAILED", true);
