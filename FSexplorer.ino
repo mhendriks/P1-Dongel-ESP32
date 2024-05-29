@@ -23,27 +23,46 @@
 const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCache-Control: no-cache\r\n";
 
 void checkauth(){
-  if( strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW) ) {
-    httpServer.sendHeader("Location", String("/login"), true);
-    httpServer.send ( 302, "text/plain", "");
-  }
+//  if( strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW) ) {
+//    httpServer.sendHeader("Location", String("/login"), true);
+//    httpServer.send ( 302, "text/plain", "");
+//  }
+  auth();
 }
 
-void auth(){
-//    httpServer.send(200, "text/html", UpdateHTML)
-    if( strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW) ) {
-      return httpServer.requestAuthentication();
-      httpServer.sendHeader("Location", String("/"), true);
-      httpServer.send ( 302, "text/plain", "");
+// Function to check authentication
+bool auth() {
+  if (strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW)) {
+    httpServer.requestAuthentication();
+    return false;
+  }
+  return true;
+}
+
+// Function to handle static file serving with authentication
+void serveStaticWithAuth(const char* uri, const char* fileName) {
+  httpServer.on(uri, HTTP_GET, [fileName]() {
+    if (auth()) {
+      File file = LittleFS.open(fileName, "r");
+      if (file) {
+        httpServer.streamFile(file, "application/json");
+        file.close();
+      } else {
+        httpServer.send(404, "text/plain", "File Not Found");
+      }
     }
+  });
 }
 
 //=====================================================================================
 void setupFSexplorer()
 { 
-  httpServer.serveStatic("/api/v2/hist/hours" , LittleFS, RingFiles[RINGHOURS].filename );
-  httpServer.serveStatic("/api/v2/hist/days"  , LittleFS, RingFiles[RINGDAYS].filename );
-  httpServer.serveStatic("/api/v2/hist/months", LittleFS, RingFiles[RINGMONTHS].filename );
+
+ // Serve static files with authentication
+  serveStaticWithAuth("/api/v2/hist/hours", RingFiles[RINGHOURS].filename);
+  serveStaticWithAuth("/api/v2/hist/days", RingFiles[RINGDAYS].filename);
+  serveStaticWithAuth("/api/v2/hist/months", RingFiles[RINGMONTHS].filename);
+
   httpServer.on("/api/v2/hist/months", HTTP_POST, [](){ writeRingFile(RINGMONTHS, httpServer.arg(0).c_str(), false); });
 
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
@@ -208,14 +227,14 @@ const String &contentType(String& filename)
   else if (filename.endsWith(".css")) filename = "text/css";
   else if (filename.endsWith(".js")) filename = F("application/javascript");
   else if (filename.endsWith(".json")) filename = F("application/json");
-  else if (filename.endsWith(".png")) filename = F("image/png");
-  else if (filename.endsWith(".gif")) filename = F("image/gif");
-  else if (filename.endsWith(".jpg")) filename = F("image/jpeg");
-  else if (filename.endsWith(".ico")) filename = F("image/x-icon");
+//  else if (filename.endsWith(".png")) filename = F("image/png");
+//  else if (filename.endsWith(".gif")) filename = F("image/gif");
+//  else if (filename.endsWith(".jpg")) filename = F("image/jpeg");
+//  else if (filename.endsWith(".ico")) filename = F("image/x-icon");
   else if (filename.endsWith(".xml")) filename = F("text/xml");
-  else if (filename.endsWith(".pdf")) filename = F("application/x-pdf");
-  else if (filename.endsWith(".zip")) filename = F("application/x-zip");
-  else if (filename.endsWith(".gz")) filename = F("application/x-gzip");
+//  else if (filename.endsWith(".pdf")) filename = F("application/x-pdf");
+//  else if (filename.endsWith(".zip")) filename = F("application/x-zip");
+//  else if (filename.endsWith(".gz")) filename = F("application/x-gzip");
   else filename = "text/plain";
   return filename;
   
