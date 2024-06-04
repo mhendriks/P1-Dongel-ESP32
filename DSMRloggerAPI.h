@@ -170,22 +170,53 @@ using MyData = ParsedData<
   /* TimestampedFixedValue */ ,mbus4_delivered_dbl
 >;
 
-//TODO
-//in mem houden van de ringfile gegevens voor een snelle oplevering naar de client. Vooral de Day gegevens die worden door het dashboard gebruikt.
-//struct P1DataRec {
-//  uint32_t  epoch;
-//  uint32_t  T1;
-//  uint32_t  T2;
-//  uint32_t  T1r;
-//  uint32_t  T2r;
-//  uint32_t  G;
-//  uint16_t  Water;
-//};
-//
-//P1DataRec P1_Day[15]; //390 bytes 
-//P1DataRec P1_Hour[25]; //650 bytes 
-//P1DataRec P1_Month[49]; //1.274 bytes 
+/*TODO espnow communicatie
 
+typedef struct struct_pairing {
+    uint8_t msgType;     //Pair
+    char    ssid[32];    //max 32
+    char    pw[63];      //max 63
+    char    host[30];    //max 30
+    uint8_t ipAddr[4];  //max 4
+} struct_pairing;
+
+//6*4 + 8 = 32
+typedef struct HistRect {
+  time_t    epoch;
+  uint32_t  T1;
+  uint32_t  T2;
+  uint32_t  T1r;
+  uint32_t  T2r;
+  uint32_t  G;
+  uint32_t  W;
+};
+
+//1 + 7 * 32  = 225
+typedef struct HistData {
+  uint8_t   msgType; //HistData
+  HistRect  recs[7];
+};
+
+// 8 + 8*4 = 40 bytes
+struct Actuals {
+  uint8_t   msgType; //Actuals
+  time_t    epoch; //8
+  uint32_t  actEin; //4
+  uint32_t  actEout;//4
+  uint32_t  actG;//4
+  uint32_t  actW;//4
+  uint32_t  dailyEin;//4
+  uint32_t  dailyEout;//4
+  uint32_t  dailyG;//4
+  uint32_t  dailyW;//4
+};
+
+
+
+P1DataRec P1_Day[15]; //390 bytes 
+P1DataRec P1_Hour[25]; //650 bytes 
+P1DataRec P1_Month[49]; //1.274 bytes 
+*/
 //P1DataRec P1_Profile[288]; //7.488
 
 const PROGMEM char *flashMode[]    { "QIO", "QOUT", "DIO", "DOUT", "Unknown" };

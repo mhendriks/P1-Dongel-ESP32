@@ -25,7 +25,7 @@ String AddPayload(const char* key, const char* value ){
 void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char* dev_title, const char* dev_unit, const char* dev_payload, const char* state_class, const char* extrapl ){
   char msg_topic[80];
   String msg_payload = "{";
-  sprintf(msg_topic,"homeassistant/sensor/p1-dongle-pro/%s/config",dev_name);
+  sprintf(msg_topic,"homeassistant/sensor/%s/%s/config",_DEFAULT_HOSTNAME,dev_name);
 //    Debugln(msg_topic);
   msg_payload += AddPayload( "uniq_id"        , dev_name);
   msg_payload += AddPayload( "dev_cla"        , dev_class);
@@ -38,7 +38,7 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
   msg_payload += "\"dev\":{";
   msg_payload += AddPayload("ids"             , String(_getChipId()).c_str() );
   msg_payload += AddPayload("name"            , settingHostname);
-  msg_payload += "\"mdl\":\"P1 Dongle Pro\",\"mf\":\"Smartstuff\"}}";
+  msg_payload += "\"mdl\":\"" _DEFAULT_HOSTNAME "\",\"mf\":\"Smartstuff\"}}";
 //  Debugln(msg_payload);
   if (!MQTTclient.publish(msg_topic, msg_payload.c_str(), true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", msg_topic, msg_payload, ( strlen(msg_topic) + msg_payload.length() ));
 }
@@ -46,7 +46,7 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
 void AutoDiscoverHA(){
   if (!EnableHAdiscovery) return;
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/p1-dongle-pro/power_delivered/config" -m '{"uniq_id":"power_delivered","dev_cla":"power","name":"Power Delivered","stat_t":"Eth-Dongle-Pro/power_delivered","unit_of_meas":"W","val_tpl":"{{ value | round(3) * 1000 }}","stat_cla":"measurement","dev":{"ids":"36956260","name":"Eth-Dongle-Pro","mdl":"P1 Dongle Pro","mf":"Smartstuff"}}'
-
+#ifndef HEATLINK
   SendAutoDiscoverHA("timestamp", "timestamp", "DSMR Last Update", "", "{{ strptime(value[:-1] + '-+0200' if value[12] == 'S' else value[:-1] + '-+0100', '%y%m%d%H%M%S-%z') }}","", "\"icon\": \"mdi:clock\",");
   
   SendAutoDiscoverHA("power_delivered", "power", "Power Delivered", "W", "{{ value | round(3) * 1000 }}","measurement","");
@@ -76,6 +76,11 @@ void AutoDiscoverHA(){
   SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(3) }}","total_increasing","");
   
   SendAutoDiscoverHA("water", "water", "Waterverbruik", "m³", "{{ value | round(3) }}","total_increasing","\"icon\": \"mdi:water\",");
+#else 
+  //= HEATLINK
+    SendAutoDiscoverHA("heat_ts", "timestamp", "Last Update", "", "{{ strptime(value[:-1] + '-+0200' if value[12] == 'S' else value[:-1] + '-+0100', '%y%m%d%H%M%S-%z') }}","", "\"icon\": \"mdi:clock\",");
+    SendAutoDiscoverHA("heat_delivered", "energy", "Heat Delivered", "GJ", "{{ value | round(3) }}","total_increasing","");
+#endif  
 
 }
 

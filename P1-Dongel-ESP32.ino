@@ -72,7 +72,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define SE_VERSION
 #define ETHERNET
 //#define STUB            //test only
-//#define HEATLINK        //first draft
+#define HEATLINK        //first draft
 //#define AP_ONLY
 #define MBUS
 //#define MQTT_DISABLE
