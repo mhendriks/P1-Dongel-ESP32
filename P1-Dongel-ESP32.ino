@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
-**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2024 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -36,15 +36,19 @@ TODO
 
 - Harold B: Dark-mode frontend
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
-
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
+- MQTT over ssl ( J Steenhuis) 
+- Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
+- issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering ) x§x
+- support https mqtt connection
 
-4.8.15
+
+4.8.18
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 - NeoPixelwrite implementeren ipv eigen oplossing
 
 4.9.0
-- RNG files vergroten (nu 48h -> 336h) (Broes)
+- RNGhours files vergroten (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
@@ -77,19 +81,19 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 //#define EID
+//#define DEVTYPE_H2OV2
 #define DEV_PAIRING
+//#define DEBUG
+//#define SMQTT
 
 #include "DSMRloggerAPI.h"
 
 void setup() 
 {
-  SerialOut.begin(115200); //debug stream  
-//  USBSerial.begin(115200); //cdc stream
-
+  USBSerial.begin(115200); //cdc stream
   Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
-  GetMacAddress();
   
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
@@ -127,6 +131,7 @@ void setup()
 #else
   startETH();
 #endif
+  GetMacAddress();
   delay(100);
   startTelnet();
 #ifndef AP_ONLY
@@ -184,9 +189,11 @@ void setup()
 //P1 reader task
 void fP1Reader( void * pvParameters ){
     DebugTln(F("Enable slimme meter..."));
+    SetupP1Out();
     slimmeMeter.enable(false);
     while(true) {
       handleSlimmemeter();
+      P1OutBridge();
       vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }
@@ -202,7 +209,9 @@ void loop () {
           MQTTSentStaticInfo();
           CHANGE_INTERVAL_MIN(StatusTimer, 30);
        }
-       
+#ifndef ETHERNET       
+       handleReconnectWifi();
+#endif
        handleKeyInput();
        handleRemoteUpdate();
        AuxButton.handler();

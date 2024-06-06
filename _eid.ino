@@ -124,12 +124,12 @@ States
 //      Debug(F("eid_claim_code: "));Debugln(eid_claim_code);     
 //      Debug(F("eid_claim_url: "));Debugln(eid_claim_url);     
 //      Debug(F("eid_claim_exp: "));Debugln(eid_claim_exp);
-      USBSerial.println(F("ClaimCode obtained"));
+      Debugln(F("ClaimCode obtained"));
       P1Status.eid_state = EID_CLAIMING;
           
     } else {
       //webhook info
-      USBSerial.println(F("Webhook obtained"));
+      Debugln(F("Webhook obtained"));
       eid_webhook = (const char*)doc["webhookUrl"];
       eid_header_auth = (const char*)doc["headers"]["authorization"];
       eid_header_twinid = (const char*)doc["headers"]["x-twin-id"];
@@ -165,12 +165,12 @@ void EIDGetClaim(){
 }
 
 void EIDDetermineInterval(String interval){
-  //P1M, P1D, PT1H, PT15M, PT5M
-  if ( interval == "PT5M" )       eid_interval_sec =  5*60;
+  if ( interval == "PT1M" )       eid_interval_sec =  1*60;
+  else if ( interval == "PT5M" )  eid_interval_sec =  5*60; 
   else if ( interval == "PT15M" ) eid_interval_sec = 15*60; 
   else if ( interval == "PT1H" )  eid_interval_sec = 60*60;
-  else if ( interval == "PT1D" )  eid_interval_sec = 60*60*24;
-  else if ( interval == "PT1M" )  eid_interval_sec = 60*60*24*30;
+  else if ( interval == "P1D" )   eid_interval_sec = 60*60*24;
+  else if ( interval == "P1M" )   eid_interval_sec = 60*60*24*30;
   DebugT(F("eid_interval_sec: "));Debugln(eid_interval_sec);
 }
 

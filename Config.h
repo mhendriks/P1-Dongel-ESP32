@@ -5,8 +5,10 @@
 #define PRO_BRIDGE  1
 #define PRO_ETH     2
 #define PRO_H20_B   3
+#define PRO_H20_2   4
 
 #define BASE_OPTIONS "[CORE]"
+#define APIURL "http://api.smart-stuff.nl/v1/register.php"
  
 #ifdef ESP32
   #define MBUS_TYPE 3
@@ -17,8 +19,6 @@
   #define AUX_BUTTON          9 //download knop bij startup - multifunctional tijdens runtime
   #define LED_ON              LOW
   #define LED_OFF             HIGH
-  #define SerialOut           Serial //normal use USB_CDC_ON_BOOT = Disabled
-//  #define SerialOut           USBSerial //use USB_CDC_ON_BOOT = Enabled --> log to CDC
   volatile unsigned long      Tpressed = 0;
   volatile byte               pressed = 0;
 #ifdef ETHERNET
@@ -36,7 +36,7 @@
 #else
     #warning Using ESP32C3
     #define LED                 7
-    #define DTR_IO              4 // nr = IO pulse = N/A
+    #define DTR_IO              6 // nr = IO pulse = N/A
     #define RXP1                10
     #define TXP1               -1 //disable
     #define IO_WATER_SENSOR     5
@@ -51,7 +51,7 @@
 
   #undef MBUS_TYPE
   #define MBUS_TYPE 4
-  
+
   #undef _DEFAULT_HOSTNAME
   #define _DEFAULT_HOSTNAME   "Q-Dongle-Pro" 
   
@@ -65,8 +65,15 @@
   #define ALL_OPTIONS BASE_OPTIONS "[EnergyID]"
   #undef MQTT_DISABLE
   #define MQTT_DISABLE
+#ifndef ULTRA
   #undef OTAURL
   #define OTAURL "http://ota.smart-stuff.nl/v5-eid/"
+#endif
+#ifdef ETHERNET
+  #undef OTAURL
+  #define OTAURL "http://ota.smart-stuff.nl/eth-eid/"
+#endif
+
   enum E_eid_states : uint8_t { EID_IDLE, EID_CLAIMING, EID_ENROLLED };
 
 #endif
