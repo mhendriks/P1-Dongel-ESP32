@@ -1,6 +1,9 @@
 #ifndef _BUTTON_H
 #define _BUTTON_H
 
+volatile unsigned long      Tpressed = 0;
+volatile byte               pressed = 0;
+
 void writeRingFiles();
 void P1Reboot();
 void resetWifi();

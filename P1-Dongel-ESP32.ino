@@ -69,12 +69,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
+//HARDWARE DEFINES
+//#define ETHERNET
+//#define ULTRA
+
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
-//#define ETHERNET
 //#define STUB            //test only
-//#define HEATLINK        //first draft
-//#define INSIGHT         
+//#define HEATLINK        //first draft         
 //#define AP_ONLY
 //#define MBUS
 //#define MQTT_DISABLE
@@ -97,6 +99,7 @@ void setup()
   
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
+  
   SetConfig();
   
   if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP); //Setconfig first

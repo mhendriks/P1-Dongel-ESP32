@@ -1,4 +1,4 @@
-    /*
+/*
 ***************************************************************************  
 **  Program  : DSMRloggerAPI.h - definitions for DSMRloggerAPI
 **
@@ -7,6 +7,10 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */  
+#ifndef ESP32
+  #error This code is intended to run on ESP32 platform! Please check your Tools->Board setting.
+#endif //ESP32
+
 #include "Config.h"
 
 // water sensor
@@ -16,6 +20,13 @@
   volatile time_t      WtrPrevReading = 0;
   bool                 WtrMtr         = false;
   #define              DEBOUNCETIMER 1700
+
+//LED STUFF
+#define LED_BLUE  0x07
+#define LED_RED   0x070000
+#define LED_GREEN 0x0700
+#define LED_BLACK 0x0  
+uint32_t R_value = 0, B_value = 0, G_value = 0;  
 
 #include <WiFiClientSecure.h>        
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
