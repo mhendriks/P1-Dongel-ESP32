@@ -94,7 +94,9 @@ void MQTTsetServer(){
 #ifdef SMQTT
   wifiClient.setInsecure();
 #endif  
-  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 1);
+//  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 1);
+  MQTTConnect(); //try to connect
+
 #endif
 }
 
@@ -113,19 +115,18 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 
 //===========================================================================================
 void MQTTConnect() {
- 
-  char MqttID[30+13];
-  
-  if ( DUE( reconnectMQTTtimer) ){ 
-    LogFile("MQTT Starting",true);
-    String MacStr = MAC_Address();
-    MacStr.replace(":","");
+  if ( !DUE( reconnectMQTTtimer) ) return;
+    
+    char MqttID[30+13];
+//    LogFile("MQTT: Attempting connection to broker",true);  
+//    String MacStr = MAC_Address();
+//    MacStr.replace(":","");
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
     DebugTf("connect %s %s %s %s\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
     
     if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
-      LogFile("MQTT: Attempting connection... connected", true);
+      LogFile("MQTT: Connection to broker: CONNECTED", true);
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
@@ -133,11 +134,10 @@ void MQTTConnect() {
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
       if ( EnableHAdiscovery ) AutoDiscoverHA();
     } else {
-      LogFile("MQTT: Attempting connection... connection FAILED", true);
+      LogFile("MQTT: ... connection FAILED! Will try again in 10 sec", true);
       DebugT("error code: ");Debugln(MQTTclient.state());
     }
-  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, MQTT_RECONNECT_DEFAULT_TIME);
-  } // due reconnect
+    
 } //mqttconnect
 
 //=======================================================================
