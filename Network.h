@@ -18,9 +18,11 @@
 WebServer httpServer(80);
 NetServer ws_raw(82);
 
-bool FSmounted           = false; 
-//bool WifiConnected       = false;
-time_t tWifiReconnect    = 0;
+bool FSmounted          = false; 
+//bool WifiConnected    = false;
+//time_t tWifiReconnect = 0;
+time_t tWifiLost        = 0;
+byte  WifiReconnect     = 0;
 
 void LogFile(const char*, bool);
 void P1Reboot();
@@ -33,7 +35,7 @@ void GetMacAddress(){
   strcpy( macStr, _mac.c_str() );
   _mac.replace( ":","" );
   strcpy( macID, _mac.c_str() );
-  USBSerial.print( "MacStr: " );USBSerial.println( macStr );
+  USBSerial.print( "MacStr: " );USBSerial.println( macStr ); //only at setup
 //  USBSerial.print( "MacID: " );USBSerial.println( macID );
 }
 
@@ -60,7 +62,8 @@ void PostMacIP() {
 
 #ifndef ETHERNET
 
-int WifiDisconnect = 0;
+//int WifiDisconnect = 0;
+bool bNoNetworkConn = false;
 
 static void onWifiEvent (WiFiEvent_t event) {
     sprintf(cMsg,"WiFi-event : %d | rssi: %d | channel : %i",event, WiFi.RSSI(), WiFi.channel());
@@ -69,24 +72,21 @@ static void onWifiEvent (WiFiEvent_t event) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
         LogFile(cMsg, true);
-        tWifiReconnect = millis();
-        WifiDisconnect = 0;
+//        tWifiLost = 0;
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: //7
         LogFile("Wifi Connected",true);
         SwitchLED( LED_ON, LED_BLUE );
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
         Debug(" )\n\n");
-        tWifiReconnect = 0;
+        WifiReconnect = 0;
+        bNoNetworkConn = false;
         break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-//        WiFi.disconnect();
+        tWifiLost = millis();
         break;           
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: //5
         SwitchLED( LED_OFF, LED_BLUE );
-        if ( !WifiDisconnect ) LogFile("Wifi connection lost",true); //log only once 
-        WifiDisconnect++;
-        if ( WifiDisconnect  > 120 ) P1Reboot(); //2.5sec * 120 = 300 sec = 5 min
         break;
     default:
         break;
@@ -104,10 +104,31 @@ void configModeCallback (WiFiManager *myWiFiManager)
 } // configModeCallback()
 
 //===========================================================================================
-void handleReconnectWifi(){
-  //reboots when dongle doesn't get an IP address
-  if ( !tWifiReconnect || ( millis() - tWifiReconnect ) < 20000 ) return;
-  P1Reboot();
+void WifiWatchDog(){
+  //try to reconnect or reboot when wifi is down
+   if ( WiFi.status() != WL_CONNECTED ){
+    if ( !bNoNetworkConn ) {
+      LogFile("Wifi connection lost",true); //log only once 
+      tWifiLost = millis();
+      bNoNetworkConn = true;
+    }
+    
+    if ( (millis() - tWifiLost) >= 20000 ) {
+      DebugTln("WifiLost > 20.000, disconnect");
+      WiFi.disconnect();
+      delay(100); //give it some time
+      WiFi.reconnect();
+//      Wifi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // better to disconnect and begin?
+      tWifiLost = millis();
+      WifiReconnect++;
+      DebugT("WifiReconnect: ");Debug(WifiReconnect);
+      return;
+   }
+    if (WifiReconnect >= 3) {
+      LogFile("Wifi -> Reboot because of timeout",true); //log only once 
+      P1Reboot(); //after 3 x 20.000 millis
+    }
+  }
 }
 
 //===========================================================================================
@@ -117,7 +138,7 @@ void startWiFi(const char* hostname, int timeOut)
 //  WiFi.setMinSecurity(WIFI_AUTH_WEP);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   WiFiManager manageWiFi;
-  uint32_t lTime = millis();
+//  uint32_t lTime = millis();
 
 //  DebugTln("start ...");
   LogFile("Wifi Starting",true);
@@ -152,8 +173,6 @@ void startWiFi(const char* hostname, int timeOut)
 
   PostMacIP(); //post mac en ip 
   USBSerial.print("ip-adres: ");USBSerial.println(WiFi.localIP().toString());
-//  WiFi.setAutoReconnect(true);
-//  WiFi.persistent(true);
 
 } // startWiFi()
 

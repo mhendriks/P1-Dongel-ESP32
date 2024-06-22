@@ -39,15 +39,10 @@ TODO
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
 - MQTT over ssl ( J Steenhuis) 
 - Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
-- issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering ) x§x
+- issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering )
 - support https mqtt connection
-
-
-4.8.18
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 - NeoPixelwrite implementeren ipv eigen oplossing
-
-4.9.0
 - RNGhours files vergroten (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
@@ -80,7 +75,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define VOLTAGE_MON
 //#define EID
 //#define DEVTYPE_H2OV2
-#define DEV_PAIRING
+//#define NO_HA_AUTODISCOVERY
+//#define DEV_PAIRING
 //#define DEBUG
 //#define SMQTT
 
@@ -208,14 +204,13 @@ void loop () {
           CHANGE_INTERVAL_MIN(StatusTimer, 30);
        }
 #ifndef ETHERNET       
-       handleReconnectWifi();
+       WifiWatchDog();
 #endif
        handleKeyInput();
        handleRemoteUpdate();
        AuxButton.handler();
        handleWater();
-       handleEnergyID();
-  
+       handleEnergyID();  
 } // loop()
 
 

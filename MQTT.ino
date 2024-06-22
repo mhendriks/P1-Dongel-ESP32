@@ -13,8 +13,8 @@
 String MQTTclientId;
 
 void handleMQTT(){
-        MQTTclient.loop();
-        if ( bSendMQTT ) sendMQTTData();
+  MQTTclient.loop();
+  if ( bSendMQTT ) sendMQTTData();
 }
 
 String AddPayload(const char* key, const char* value ){
@@ -87,6 +87,7 @@ void AutoDiscoverHA(){
 void MQTTsetServer(){
 
 #ifndef MQTT_DISABLE 
+  if ((settingMQTTbrokerPort == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
   DebugTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
@@ -115,12 +116,12 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 
 //===========================================================================================
 void MQTTConnect() {
-  if ( !DUE( reconnectMQTTtimer) ) return;
-    
+#ifndef ETHERNET
+  if ( DUE( reconnectMQTTtimer) && (WiFi.status() == WL_CONNECTED)) {
+#else
+  if ( DUE( reconnectMQTTtimer) ) {    
+#endif    
     char MqttID[30+13];
-//    LogFile("MQTT: Attempting connection to broker",true);  
-//    String MacStr = MAC_Address();
-//    MacStr.replace(":","");
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
     DebugTf("connect %s %s %s %s\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
@@ -132,12 +133,14 @@ void MQTTConnect() {
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
   	  sprintf(cMsg,"%supdate",settingMQTTtopTopic);
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
+#ifndef NO_HA_AUTODISCOVERY
       if ( EnableHAdiscovery ) AutoDiscoverHA();
+#endif      
     } else {
       LogFile("MQTT: ... connection FAILED! Will try again in 10 sec", true);
       DebugT("error code: ");Debugln(MQTTclient.state());
     }
-    
+  } //due
 } //mqttconnect
 
 //=======================================================================
@@ -157,14 +160,11 @@ struct buildJsonMQTT {
      strncpy(Name,String(Item::name).c_str(),sizeof(Name));
     if ( isInFieldsArray(Name) && i.present() ) {
           // add value to '/all' topic
-          if ( bActJsonMQTT ) {
-            jsonDoc[Name] = value_to_json_mqtt(i.val());
-          }
+          if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
           // Send normal MQTT message when not sending '/all' topic, except when HA auto discovery is on
           if ( !bActJsonMQTT || EnableHAdiscovery) {
             sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
             MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
-//        if ( !MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() ) ) DebugTf("Error publish(%s)\r\n", String(value_to_json(i.val())), strlen(cMsg) );
           }
     } // if isInFieldsArray && present
   } //apply
@@ -248,6 +248,7 @@ void MQTTsendGas(){
 void sendMQTTData() {
 
 //TODO: log to file on error or reconnect
+  if ( WiFi.status() != WL_CONNECTED ) return;
   if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   if (!MQTTclient.connected()) MQTTConnect();
   if ( MQTTclient.connected() ) {   
@@ -275,7 +276,7 @@ void sendMQTTData() {
   if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
 
   MQTTsendGas();
-  sendMQTTWater();
+  MQTTsendWater();
   bSendMQTT = false; 
 
   }

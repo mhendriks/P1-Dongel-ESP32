@@ -93,8 +93,6 @@ const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {
   * and printing code smaller.
   * Each template argument below results in a field of the same name.
   * 
-  * gekozen om niet alle elementen te parsen.
-  * aanname is dat voor 99% van de gebruikers de gasmeter op Mbus1 zit. Alleen deze wordt verwerkt.
   */
  
 using MyData = ParsedData<
@@ -115,11 +113,11 @@ using MyData = ParsedData<
   /* String */                ,electricity_tariff
   /* FixedValue */            ,power_delivered
   /* FixedValue */            ,power_returned
-  /* FixedValue */            ,electricity_threshold
+//  /* FixedValue */            ,electricity_threshold
 //  /* uint8_t */               ,electricity_switch_position
 //  /* uint32_t */              ,electricity_failures
 //  /* uint32_t */              ,electricity_long_failures
-  /* String */                ,electricity_failure_log
+//  /* String */                ,electricity_failure_log
 //  /* uint32_t */              ,electricity_sags_l1
 //  /* uint32_t */              ,electricity_sags_l2
 //  /* uint32_t */              ,electricity_sags_l3
@@ -234,7 +232,7 @@ void SetConfig();
 #endif
 #ifndef MQTT_DISABLE 
   #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
-  static PubSubClient MQTTclient(wifiClient);
+  PubSubClient MQTTclient(wifiClient);
 #endif
 
 //config
