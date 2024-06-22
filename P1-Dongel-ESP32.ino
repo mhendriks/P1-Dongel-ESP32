@@ -84,7 +84,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define VOLTAGE_MON
 //#define EID
 //#define DEVTYPE_H2OV2
-#define DEV_PAIRING
+//#define NO_HA_AUTODISCOVERY
+//#define DEV_PAIRING
 //#define DEBUG
 //#define SMQTT
 
@@ -213,14 +214,13 @@ void loop () {
           CHANGE_INTERVAL_MIN(StatusTimer, 30);
        }
 #ifndef ETHERNET       
-       handleReconnectWifi();
+       WifiWatchDog();
 #endif
        handleKeyInput();
        handleRemoteUpdate();
        AuxButton.handler();
        handleWater();
-       handleEnergyID();
-  
+       handleEnergyID();  
 } // loop()
 
 
