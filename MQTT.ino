@@ -78,7 +78,7 @@ void AutoDiscoverHA(){
   SendAutoDiscoverHA("water", "water", "Waterverbruik", "m³", "{{ value | round(3) }}","total_increasing","\"icon\": \"mdi:water\",");
 #else 
   //= HEATLINK
-    SendAutoDiscoverHA("heat_ts", "timestamp", "Last Update", "", "{{ strptime(value[:-1] + '-+0200' if value[12] == 'S' else value[:-1] + '-+0100', '%y%m%d%H%M%S-%z') }}","", "\"icon\": \"mdi:clock\",");
+    SendAutoDiscoverHA("timestamp", "timestamp", "Last Update", "", "{{ strptime(value[:-1] + '-+0200' if value[12] == 'S' else value[:-1] + '-+0100', '%y%m%d%H%M%S-%z') }}","", "\"icon\": \"mdi:clock\",");
     SendAutoDiscoverHA("heat_delivered", "energy", "Heat Delivered", "GJ", "{{ value | round(3) }}","total_increasing","");
 #endif  
 
