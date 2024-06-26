@@ -138,7 +138,7 @@ function ensureChartsReady()
     copyDataToChart(data, type);
 
     var labelString = "kWh";
-    if( type == "Hours") labelString = "Watt";
+    if( type == "Hours") labelString = "Watt/uur";
     myElectrChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
     myElectrChart.data = electrData;
     myElectrChart.update();
@@ -433,7 +433,7 @@ function ensureChartsReady()
     
     //update Elektra
     myElectrChart.data = dcEX;
-    myElectrChart.options.scales.yAxes[0].scaleLabel.labelString = "Watt";
+    myElectrChart.options.scales.yAxes[0].scaleLabel.labelString = "Watt/uur";
     myElectrChart.update(0);
     
     //update Gas
