@@ -15,7 +15,7 @@
   #define _DEFAULT_HOSTNAME   "P1-Dongle-Pro"
   
 #if defined(ARDUINO_ESP32C3_DEV) || defined(ARDUINO_ESP32S3_DEV)
-  #define OTAURL              "http://ota.smart-stuff.nl/v5/"
+  #define OTAURL              "http://ota.smart-stuff.nl/p1p/"
   #define AUX_BUTTON          9 //download knop bij startup - multifunctional tijdens runtime
   #define LED_ON              LOW
   #define LED_OFF             HIGH

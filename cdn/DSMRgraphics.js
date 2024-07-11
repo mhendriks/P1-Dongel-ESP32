@@ -88,10 +88,10 @@ var optionsELEKTRA = structuredClone(optionsGLOBAL);
 optionsELEKTRA.scales.yAxes[0].scaleLabel.labelString = "kWh";
 
 var actElectrOptions = structuredClone(optionsGLOBAL);
-actElectrOptions.scales.yAxes[0].scaleLabel.labelString = "kilo Watt";
+actElectrOptions.scales.yAxes[0].scaleLabel.labelString = "kW";
 
 var hourOptions = structuredClone(optionsGLOBAL);
-hourOptions.scales.yAxes[0].scaleLabel.labelString = "Watt/Uur";
+hourOptions.scales.yAxes[0].scaleLabel.labelString = "Wh";
 
 var dayOptions = structuredClone(optionsGLOBAL);
 dayOptions.scales.yAxes[0].scaleLabel.labelString = "kWh";
@@ -138,7 +138,7 @@ function ensureChartsReady()
     copyDataToChart(data, type);
 
     var labelString = "kWh";
-    if( type == "Hours") labelString = "Watt/uur";
+    if( type == "Hours") labelString = "Wh";
     myElectrChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
     myElectrChart.data = electrData;
     myElectrChart.update();
@@ -433,7 +433,7 @@ function ensureChartsReady()
     
     //update Elektra
     myElectrChart.data = dcEX;
-    myElectrChart.options.scales.yAxes[0].scaleLabel.labelString = "Watt/uur";
+    myElectrChart.options.scales.yAxes[0].scaleLabel.labelString = "Watt";
     myElectrChart.update(0);
     
     //update Gas
@@ -505,10 +505,10 @@ function ensureChartsReady()
         case "power_delivered":    telegram.set('pd',   Number(item.value) *1000 ); break;
         
         //pr is in kWatt, so multply by 1000 to get Watt
-        case "power_returned_l1": telegram.set('prl1', Number(item.value) *1000 ); break;
-        case "power_returned_l2": telegram.set('prl2', Number(item.value) *1000 ); break;
-        case "power_returned_l3": telegram.set('prl3', Number(item.value) *1000 ); break;
-        case "power_returned":    telegram.set('pr',   Number(item.value) *1000 ); break;
+        case "power_returned_l1": telegram.set('prl1', Number(item.value) *-1000 ); break;
+        case "power_returned_l2": telegram.set('prl2', Number(item.value) *-1000 ); break;
+        case "power_returned_l3": telegram.set('prl3', Number(item.value) *-1000 ); break;
+        case "power_returned":    telegram.set('pr',   Number(item.value) *-1000 ); break;
 
         case "gas_delivered_timestamp": 
           telegram.set('gas_timestamp', formatHHMMSS(item.value) );

@@ -37,7 +37,8 @@
 			<li><a id='bNRGM'   	  data-i18n-key="mnu-nrgm" class='tabButton nav-item' href="#NRGM" style="display:none">Koppelen...</a></li>
 			<li><a id='bEditSettings' data-i18n-key="mnu-settings" class='tabButton nav-item' href="#Settings" >Settings</a></li>
 			<li><a id='bEditMonths'   data-i18n-key="mnu-editmonths" class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
-			<li><a id='bReset'   	  data-i18n-key="mnu-reset" class='tabButton nav-item' href="#Reset" >Reset</a></li>
+			<li><a id='bReset'   	  data-i18n-key="mnu-reset" class='tabButton nav-item' href="#Reset" >Reset/boot</a></li>
+			<li><a id='bSolar'   	  data-i18n-key="mnu-solar" class='tabButton nav-item' href="#Solar" >Solar Setup</a></li>
 <!-- 			<li><a id='bAbout'   	  class='tabButton nav-item' href="#About" >About</a></li> -->
 		</ul></li>
 	  <li><a href="javascript:void(0);" class="icon" onclick="menu()"><i id="menuid" class="iconify" data-icon="mdi-menu"></i></a></li>
@@ -481,7 +482,39 @@
 	<hr>Indien de pagina niet automatisch getoond wordt klik dan op <a href='/'>Home pagina</a></div>
     </section>  
 
-
+	<section id="Solar" class="tabName">
+		<div id=eid-setup>
+		<i id=pulse_ico class="iconify" data-icon="mdi-pulse"></i>
+		<h1 class=align-c>Solar Setup</h1><br>
+		<div>Instellen van de koppeling met de PV omvormer om de opbrengst zichtbaar te maken in NRG Monitor. Deze configuratie is in te zien en te wijzigen via het bestandsbeheer van de dongle.<br>
+		<br>
+		</div>
+		<hr>
+		<form id="dataForm">
+		<p>Welk systeem dient gekoppeld te worden?</p>
+ 		  <input type="radio" id="pv_enphase" name="solar_system" value="Enphase" onClick="ShowHidePV();" checked="checked">
+ 		  <label for="enphase">Enphase</label><br>
+		  <input type="radio" id="pv_solaredge" name="solar_system" value="SolarEdge" onClick="ShowHidePV();">
+		  <label for="solaredge">SolarEdge</label><br>
+		<br> 
+			<label for="wp">Systeemvermogen (Wp):</label><br>
+			<input type="number" id="wp" name="wp" value=3500><br><br>
+			<label for="Interval">Update interval (minuten):</label><br>
+			<input type="number" id="interval" name="interval" value=10><br><br>
+			<label for="gw_url">Gateway url of ip-adres:</label><br>
+			<input type="text" id="gw_url" name="gw_url" value="https://envoy/api/v1/production" style="width: 100%"><br><br>
+			<label for="token">Token:</label><br>
+			<input type="text" id="token" name="token" placeholder="bv eyJraWQiOiI3ZDEwMDA1ZC03ODk5LTRk" style="width: 100%"><br><br>
+			<div id="conf_token" style="display: none">
+				<label for="siteid">SiteID:</label><br>
+				<input type="number" id="siteid" name="siteid" placeholder="bv 125231"><br><br>
+			</div>	
+		<hr>						
+			<div class=align-c><button type="button" onclick="SolarSendData()">Opslaan</button></div>
+		</form>    
+		</div>
+    </section>  
+	
 	<section id="NRGM" class="tabName">
 		<div id=eid-setup>
 		<i id=pulse_ico class="iconify" data-icon="mdi-pulse"></i>
@@ -496,7 +529,7 @@
 		<div class=align-c><button type="button" onclick="nrgm_start_stop('start')">START</button></div>
 		</div>
     </section>  
-
+	
 	<section id="EID" class="tabName">
 		<div id=eid-setup>
 		<h1 class=align-c><img src="https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@master/cdn/assets/eid.png" alt="EnergyID"></h1><br>

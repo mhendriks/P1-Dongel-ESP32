@@ -22,14 +22,6 @@
 #include <uri/UriBraces.h>
 const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCache-Control: no-cache\r\n";
 
-void checkauth(){
-//  if( strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW) ) {
-//    httpServer.sendHeader("Location", String("/login"), true);
-//    httpServer.send ( 302, "text/plain", "");
-//  }
-  auth();
-}
-
 // Function to check authentication
 bool auth() {
   if (strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW)) {
@@ -70,6 +62,7 @@ void setupFSexplorer()
   httpServer.on(UriBraces("/api/v2/dev/{}"),[]() { auth(); handleDevApi(); });
   httpServer.on(UriBraces("/api/v2/sm/{}"),[](){ auth(); handleSmApi(); });
   httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){ auth(); handleSmApiField(); });
+  httpServer.on(UriBraces("/config/{}"), HTTP_POST, [](){auth(); ConfigApi(); });
 
 #ifdef EID
   httpServer.on("/eid/getclaim",[](){ auth(); EIDGetClaim(); });
@@ -78,15 +71,15 @@ void setupFSexplorer()
   httpServer.on("/pair",[](){ HandlePairing(); });
 #endif
 
-  httpServer.on("/api/listfiles", HTTP_GET, [](){ checkauth(); APIlistFiles(); });
-  httpServer.on("/FSformat", [](){ checkauth();formatFS; });
-  httpServer.on("/upload", HTTP_POST, []() { checkauth(); }, handleFileUpload );
-  httpServer.on("/ReBoot", [](){ checkauth();reBootESP(); });
-  httpServer.on("/ResetWifi", [](){ checkauth(); resetWifi() ;});
-  httpServer.on("/remote-update", [](){ checkauth(); RemoteUpdate(); });
+  httpServer.on("/api/listfiles", HTTP_GET, [](){ auth(); APIlistFiles(); });
+  httpServer.on("/FSformat", [](){ auth();formatFS; });
+  httpServer.on("/upload", HTTP_POST, []() { auth(); }, handleFileUpload );
+  httpServer.on("/ReBoot", [](){ auth();reBootESP(); });
+  httpServer.on("/ResetWifi", [](){ auth(); resetWifi() ;});
+  httpServer.on("/remote-update", [](){ auth(); RemoteUpdate(); });
   httpServer.onNotFound([]() 
   {
-    checkauth();
+    auth();
     
     if (Verbose2) DebugTf("in 'onNotFound()'!! [%s] => \r\n", String(httpServer.uri()).c_str());
     DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
@@ -99,6 +92,27 @@ void setupFSexplorer()
   DebugTln( F("HTTP server started\r") );
   
 } // setupFSexplorer()
+
+
+void ConfigApi() {
+  String FileName;
+  
+  if ( !httpServer.args() ) { httpServer.send(400); return;} //missing data
+  String payload = httpServer.arg("plain");
+  DebugTln(payload);
+  DebugTln(httpServer.pathArg(0));
+  if (httpServer.pathArg(0) == "enphase" ) FileName = "/enphase.json";
+  if (httpServer.pathArg(0) == "solaredge" ) FileName = "/solaredge.json";
+ 
+  if ( FileName.length() ) {
+    File file = LittleFS.open(FileName.c_str(), "w");
+    if (!file) DebugTln(F("open file FAILED!!!\r\n"));
+    else file.print(payload); 
+    file.close();
+  }
+
+  httpServer.send(200);
+}  
 
 //=====================================================================================
 void APIlistFiles()             // Senden aller Daten an den Client
