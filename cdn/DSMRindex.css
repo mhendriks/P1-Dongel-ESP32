@@ -332,7 +332,7 @@ ul:after { clear: both; }
 	color: white!important;
 	}
 nav {
-	position: fixed;
+	position: absolute;
     left: 0;
     top: 0;
     width: 100%;
@@ -596,7 +596,7 @@ button { background-color: rgb(112,172,77);padding: 8px 16px;border-radius: 15px
 a.eid_link:hover, button:hover {filter: brightness(75%);}  
 
 /*** NRGM styles ***/
-#NRGM h1 { margin-top:0 }
+#Solar h1, #NRGM h1 { margin-top:0 }
 #NRGM button { min-width: 100px }
 #pulse_ico { font-size: 80px;display: block;margin: 0 auto;}
 /*

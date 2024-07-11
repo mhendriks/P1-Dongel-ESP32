@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
-**  Copyright (c) 2024 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2024 Smartstuff / based on DSMR Api Willem Aandewiel
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -15,12 +15,15 @@ TODO
 - issue met basic auth afscherming rng bestanden
 - temparatuur ook opnemen in grafieken (A van Dijken)
 - websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
+- 90 dagen opslaan van uur gegevens ( R de Grijs )
 - Roberto: P1 H2O watersensor gegevens apart versturen (MQTT) van P1 
 - Sluipverbruik bijhouden
 - Modbus TCP (a3) Vrij slave adres. Sommige systemen kennen alleen uniek slave adres/id. Maken geen onderscheid in IP adres omdat soms meer RS485/RTU devices achter 1 TCP naar RTU converter (bijvoorbeeld Moxa M-gate) zitten.
 - Modbus Registers van de "Actueel" pagina lijkt me in eerste instantie voldoende. Wel mis ik zo iets als m3 (of liters) gas per uur. Belangrijk bij hybride warmteopwekking (ketel en warmtepomp), waarbij elke liter gas er één te veel is :-). Is natuurlijk ook softwarematig te maken.
 - optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
 - toevoegen van mdns aanmelding na 1 minuut
+- update Warmtelink url en mechanisme isoleren (Henry de J)
+- ondersteuning ISTA devices (868MHz) - Jan Winder
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
 - #18 water en gas ook in de enkele json string (mqtt)
 - spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
@@ -30,6 +33,7 @@ TODO
 - Consistentie tijd-assen, links oud, rechts nieuw
   - in Actueel staat de laatste meting rechts en de oudste meting links
   - in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
+
 - Harold B: Dark-mode frontend
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
 - een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
@@ -37,21 +41,18 @@ TODO
 - Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
 - issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering )
 - support https mqtt connection
-
-4.9.2
-- HEATLink mbus selection clean
-- S0 counter
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 - NeoPixelwrite implementeren ipv eigen oplossing
+- RNGhours files vergroten (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
+- RNGDays 31 days
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - support https / http mqtt link extern
 
-5.0.0
-- RNGDays 31 days
-- 90 dagen opslaan van uur gegevens ( R de Grijs )
-- RNG files vergroten (nu 48h -> 336h) (Broes)
+todo ;
+
+- in actueel teruglevering ook als negatief meenemen per fase.
 
 
 ************************************************************************************
@@ -67,27 +68,31 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
-#define ETHERNET
+//#define SE_VERSION
+//#define ETHERNET
 //#define STUB            //test only
-//#define HEATLINK
-//#define INSIGHT         
+//#define HEATLINK        //first draft
 //#define AP_ONLY
 //#define MBUS
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 //#define EID
+//#define DEVTYPE_H2OV2
+//#define NO_HA_AUTODISCOVERY
 #define DEV_PAIRING
-#define ULTRA
+#define DEBUG
+//#define ULTRA
+//#define SMQTT
 
 #include "DSMRloggerAPI.h"
 
 void setup() 
 {
-  USBSerial.begin(115200); //cdc stream = debug only
-
+  USBSerial.begin(115200); //cdc stream
   Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
   PushButton.begin(IO_BUTTON);
+
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   
   pinMode(DTR_IO, OUTPUT);
@@ -138,7 +143,9 @@ void setup()
   startNTP();
 
 #ifndef EID  
+#ifndef MQTT_DISABLE
   MQTTsetServer();
+ #endif
 #endif  
 
 #endif
@@ -212,14 +219,13 @@ void loop () {
           CHANGE_INTERVAL_MIN(StatusTimer, 30);
        }
 #ifndef ETHERNET       
-       handleReconnectWifi();
+       WifiWatchDog();
 #endif
        handleKeyInput();
        handleRemoteUpdate();
        PushButton.handler();
        handleWater();
-       handleEnergyID();
-  
+       handleEnergyID();  
 } // loop()
 
 

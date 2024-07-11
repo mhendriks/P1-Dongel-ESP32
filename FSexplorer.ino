@@ -22,28 +22,39 @@
 #include <uri/UriBraces.h>
 const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCache-Control: no-cache\r\n";
 
-void checkauth(){
-  if( strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW) ) {
-    httpServer.sendHeader("Location", String("/login"), true);
-    httpServer.send ( 302, "text/plain", "");
+// Function to check authentication
+bool auth() {
+  if (strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW)) {
+    httpServer.requestAuthentication();
+    return false;
   }
+  return true;
 }
 
-void auth(){
-//    httpServer.send(200, "text/html", UpdateHTML)
-    if( strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW) ) {
-      return httpServer.requestAuthentication();
-      httpServer.sendHeader("Location", String("/"), true);
-      httpServer.send ( 302, "text/plain", "");
+// Function to handle static file serving with authentication
+void serveStaticWithAuth(const char* uri, const char* fileName) {
+  httpServer.on(uri, HTTP_GET, [fileName]() {
+    if (auth()) {
+      File file = LittleFS.open(fileName, "r");
+      if (file) {
+        httpServer.streamFile(file, "application/json");
+        file.close();
+      } else {
+        httpServer.send(404, "text/plain", "File Not Found");
+      }
     }
+  });
 }
 
 //=====================================================================================
 void setupFSexplorer()
 { 
-  httpServer.serveStatic("/api/v2/hist/hours" , LittleFS, RingFiles[RINGHOURS].filename );
-  httpServer.serveStatic("/api/v2/hist/days"  , LittleFS, RingFiles[RINGDAYS].filename );
-  httpServer.serveStatic("/api/v2/hist/months", LittleFS, RingFiles[RINGMONTHS].filename );
+
+ // Serve static files with authentication
+  serveStaticWithAuth("/api/v2/hist/hours", RingFiles[RINGHOURS].filename);
+  serveStaticWithAuth("/api/v2/hist/days", RingFiles[RINGDAYS].filename);
+  serveStaticWithAuth("/api/v2/hist/months", RingFiles[RINGMONTHS].filename);
+
   httpServer.on("/api/v2/hist/months", HTTP_POST, [](){ writeRingFile(RINGMONTHS, httpServer.arg(0).c_str(), false); });
 
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
@@ -51,6 +62,7 @@ void setupFSexplorer()
   httpServer.on(UriBraces("/api/v2/dev/{}"),[]() { auth(); handleDevApi(); });
   httpServer.on(UriBraces("/api/v2/sm/{}"),[](){ auth(); handleSmApi(); });
   httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){ auth(); handleSmApiField(); });
+  httpServer.on(UriBraces("/config/{}"), HTTP_POST, [](){auth(); ConfigApi(); });
 
 #ifdef EID
   httpServer.on("/eid/getclaim",[](){ auth(); EIDGetClaim(); });
@@ -59,15 +71,15 @@ void setupFSexplorer()
   httpServer.on("/pair",[](){ HandlePairing(); });
 #endif
 
-  httpServer.on("/api/listfiles", HTTP_GET, [](){ checkauth(); APIlistFiles(); });
-  httpServer.on("/FSformat", [](){ checkauth();formatFS; });
-  httpServer.on("/upload", HTTP_POST, []() { checkauth(); }, handleFileUpload );
-  httpServer.on("/ReBoot", [](){ checkauth();reBootESP(); });
-  httpServer.on("/ResetWifi", [](){ checkauth(); resetWifi() ;});
-  httpServer.on("/remote-update", [](){ checkauth(); RemoteUpdate(); });
+  httpServer.on("/api/listfiles", HTTP_GET, [](){ auth(); APIlistFiles(); });
+  httpServer.on("/FSformat", [](){ auth();formatFS; });
+  httpServer.on("/upload", HTTP_POST, []() { auth(); }, handleFileUpload );
+  httpServer.on("/ReBoot", [](){ auth();reBootESP(); });
+  httpServer.on("/ResetWifi", [](){ auth(); resetWifi() ;});
+  httpServer.on("/remote-update", [](){ auth(); RemoteUpdate(); });
   httpServer.onNotFound([]() 
   {
-    checkauth();
+    auth();
     
     if (Verbose2) DebugTf("in 'onNotFound()'!! [%s] => \r\n", String(httpServer.uri()).c_str());
     DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
@@ -80,6 +92,27 @@ void setupFSexplorer()
   DebugTln( F("HTTP server started\r") );
   
 } // setupFSexplorer()
+
+
+void ConfigApi() {
+  String FileName;
+  
+  if ( !httpServer.args() ) { httpServer.send(400); return;} //missing data
+  String payload = httpServer.arg("plain");
+  DebugTln(payload);
+  DebugTln(httpServer.pathArg(0));
+  if (httpServer.pathArg(0) == "enphase" ) FileName = "/enphase.json";
+  if (httpServer.pathArg(0) == "solaredge" ) FileName = "/solaredge.json";
+ 
+  if ( FileName.length() ) {
+    File file = LittleFS.open(FileName.c_str(), "w");
+    if (!file) DebugTln(F("open file FAILED!!!\r\n"));
+    else file.print(payload); 
+    file.close();
+  }
+
+  httpServer.send(200);
+}  
 
 //=====================================================================================
 void APIlistFiles()             // Senden aller Daten an den Client
@@ -141,6 +174,8 @@ void APIlistFiles()             // Senden aller Daten an den Client
 //=====================================================================================
 bool handleFile(String&& path) 
 {
+//  Debugln("handleFile");
+  if ( !LittleFS.exists(settingIndexPage) ) GetFile(settingIndexPage); 
   if (httpServer.hasArg("delete")) 
   {
     DebugTf("Delete -> [%s]\n\r",  httpServer.arg("delete").c_str());
@@ -206,14 +241,14 @@ const String &contentType(String& filename)
   else if (filename.endsWith(".css")) filename = "text/css";
   else if (filename.endsWith(".js")) filename = F("application/javascript");
   else if (filename.endsWith(".json")) filename = F("application/json");
-  else if (filename.endsWith(".png")) filename = F("image/png");
-  else if (filename.endsWith(".gif")) filename = F("image/gif");
-  else if (filename.endsWith(".jpg")) filename = F("image/jpeg");
-  else if (filename.endsWith(".ico")) filename = F("image/x-icon");
+//  else if (filename.endsWith(".png")) filename = F("image/png");
+//  else if (filename.endsWith(".gif")) filename = F("image/gif");
+//  else if (filename.endsWith(".jpg")) filename = F("image/jpeg");
+//  else if (filename.endsWith(".ico")) filename = F("image/x-icon");
   else if (filename.endsWith(".xml")) filename = F("text/xml");
-  else if (filename.endsWith(".pdf")) filename = F("application/x-pdf");
-  else if (filename.endsWith(".zip")) filename = F("application/x-zip");
-  else if (filename.endsWith(".gz")) filename = F("application/x-gzip");
+//  else if (filename.endsWith(".pdf")) filename = F("application/x-pdf");
+//  else if (filename.endsWith(".zip")) filename = F("application/x-zip");
+//  else if (filename.endsWith(".gz")) filename = F("application/x-gzip");
   else filename = "text/plain";
   return filename;
   

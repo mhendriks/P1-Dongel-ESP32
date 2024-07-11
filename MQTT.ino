@@ -13,8 +13,8 @@
 String MQTTclientId;
 
 void handleMQTT(){
-        MQTTclient.loop();
-        if ( bSendMQTT ) sendMQTTData();
+  MQTTclient.loop();
+  if ( bSendMQTT ) sendMQTTData();
 }
 
 String AddPayload(const char* key, const char* value ){
@@ -25,7 +25,7 @@ String AddPayload(const char* key, const char* value ){
 void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char* dev_title, const char* dev_unit, const char* dev_payload, const char* state_class, const char* extrapl ){
   char msg_topic[80];
   String msg_payload = "{";
-  sprintf(msg_topic,"homeassistant/sensor/p1-dongle-pro/%s/config",dev_name);
+  sprintf(msg_topic,"homeassistant/sensor/%s/%s/config",_DEFAULT_HOSTNAME,dev_name);
 //    Debugln(msg_topic);
   msg_payload += AddPayload( "uniq_id"        , dev_name);
   msg_payload += AddPayload( "dev_cla"        , dev_class);
@@ -38,7 +38,7 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
   msg_payload += "\"dev\":{";
   msg_payload += AddPayload("ids"             , String(_getChipId()).c_str() );
   msg_payload += AddPayload("name"            , settingHostname);
-  msg_payload += "\"mdl\":\"P1 Dongle Pro\",\"mf\":\"Smartstuff\"}}";
+  msg_payload += "\"mdl\":\"" _DEFAULT_HOSTNAME "\",\"mf\":\"Smartstuff\"}}";
 //  Debugln(msg_payload);
   if (!MQTTclient.publish(msg_topic, msg_payload.c_str(), true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", msg_topic, msg_payload, ( strlen(msg_topic) + msg_payload.length() ));
 }
@@ -46,7 +46,7 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
 void AutoDiscoverHA(){
   if (!EnableHAdiscovery) return;
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/p1-dongle-pro/power_delivered/config" -m '{"uniq_id":"power_delivered","dev_cla":"power","name":"Power Delivered","stat_t":"Eth-Dongle-Pro/power_delivered","unit_of_meas":"W","val_tpl":"{{ value | round(3) * 1000 }}","stat_cla":"measurement","dev":{"ids":"36956260","name":"Eth-Dongle-Pro","mdl":"P1 Dongle Pro","mf":"Smartstuff"}}'
-
+#ifndef HEATLINK
   SendAutoDiscoverHA("timestamp", "timestamp", "DSMR Last Update", "", "{{ strptime(value[:-1] + '-+0200' if value[12] == 'S' else value[:-1] + '-+0100', '%y%m%d%H%M%S-%z') }}","", "\"icon\": \"mdi:clock\",");
   
   SendAutoDiscoverHA("power_delivered", "power", "Power Delivered", "W", "{{ value | round(3) * 1000 }}","measurement","");
@@ -76,20 +76,28 @@ void AutoDiscoverHA(){
   SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(3) }}","total_increasing","");
   
   SendAutoDiscoverHA("water", "water", "Waterverbruik", "m³", "{{ value | round(3) }}","total_increasing","\"icon\": \"mdi:water\",");
+#else 
+  //= HEATLINK
+    SendAutoDiscoverHA("timestamp", "timestamp", "Last Update", "", "{{ strptime(value[:-1] + '-+0200' if value[12] == 'S' else value[:-1] + '-+0100', '%y%m%d%H%M%S-%z') }}","", "\"icon\": \"mdi:clock\",");
+    SendAutoDiscoverHA("heat_delivered", "energy", "Heat Delivered", "GJ", "{{ value | round(3) }}","total_increasing","");
+#endif  
 
 }
 
 void MQTTsetServer(){
 
-#ifdef MQTT_DISABLE 
-  return;
-#else
+#ifndef MQTT_DISABLE 
+  if ((settingMQTTbrokerPort == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
   DebugTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
   MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
-  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 1);
-  
+#ifdef SMQTT
+  wifiClient.setInsecure();
+#endif  
+//  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 1);
+  MQTTConnect(); //try to connect
+
 #endif
 }
 
@@ -108,31 +116,31 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 
 //===========================================================================================
 void MQTTConnect() {
- 
-  char MqttID[30+13];
-  
-  if ( DUE( reconnectMQTTtimer) ){ 
-    LogFile("MQTT Starting",true);
-    String MacStr = MAC_Address();
-    MacStr.replace(":","");
+#ifndef ETHERNET
+  if ( DUE( reconnectMQTTtimer) && (WiFi.status() == WL_CONNECTED)) {
+#else
+  if ( DUE( reconnectMQTTtimer) ) {    
+#endif    
+    char MqttID[30+13];
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
     DebugTf("connect %s %s %s %s\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
     
     if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
-      LogFile("MQTT: Attempting connection... connected", true);
+      LogFile("MQTT: Connection to broker: CONNECTED", true);
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
   	  sprintf(cMsg,"%supdate",settingMQTTtopTopic);
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
+#ifndef NO_HA_AUTODISCOVERY
       if ( EnableHAdiscovery ) AutoDiscoverHA();
+#endif      
     } else {
-      LogFile("MQTT: Attempting connection... connection FAILED", true);
+      LogFile("MQTT: ... connection FAILED! Will try again in 10 sec", true);
       DebugT("error code: ");Debugln(MQTTclient.state());
     }
-  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, MQTT_RECONNECT_DEFAULT_TIME);
-  } // due reconnect
+  } //due
 } //mqttconnect
 
 //=======================================================================
@@ -152,14 +160,11 @@ struct buildJsonMQTT {
      strncpy(Name,String(Item::name).c_str(),sizeof(Name));
     if ( isInFieldsArray(Name) && i.present() ) {
           // add value to '/all' topic
-          if ( bActJsonMQTT ) {
-            jsonDoc[Name] = value_to_json_mqtt(i.val());
-          }
+          if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
           // Send normal MQTT message when not sending '/all' topic, except when HA auto discovery is on
           if ( !bActJsonMQTT || EnableHAdiscovery) {
             sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
             MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
-//        if ( !MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() ) ) DebugTf("Error publish(%s)\r\n", String(value_to_json(i.val())), strlen(cMsg) );
           }
     } // if isInFieldsArray && present
   } //apply
@@ -243,6 +248,7 @@ void MQTTsendGas(){
 void sendMQTTData() {
 
 //TODO: log to file on error or reconnect
+  if ( WiFi.status() != WL_CONNECTED ) return;
   if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   if (!MQTTclient.connected()) MQTTConnect();
   if ( MQTTclient.connected() ) {   
@@ -266,10 +272,11 @@ void sendMQTTData() {
     serializeJson(jsonDoc,buffer);
     MQTTSend("all", buffer, false);
   } else {
-    if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
-    MQTTsendGas();
-    sendMQTTWater();  
-  }
+	  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
+
+	  MQTTsendGas();
+	  MQTTsendWater();
+  }  
   
   bSendMQTT = false; 
 

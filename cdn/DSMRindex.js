@@ -284,6 +284,47 @@ let cfgGaugeWATER = structuredClone(cfgDefaultTREND);
 cfgGaugeWATER.options.title.text = "Liter";
 cfgGaugeWATER.options.plugins.labels.render = renderLabelWater;
 
+function ShowHidePV(){
+	if ( document.getElementById('pv_enphase').checked ) {
+		document.getElementById('conf_token').style.display = "none";
+		document.getElementById('gw_url').value = "https://envoy/api/v1/production";
+	}
+	if ( document.getElementById('pv_solaredge').checked ) {
+		document.getElementById('conf_token').style.display = "block";
+		document.getElementById('gw_url').value = "";
+	}
+}
+
+
+function SolarSendData() {
+	const wp = Number(document.getElementById('wp').value);
+	const interval = Number(document.getElementById('interval').value);
+	const token = document.getElementById('token').value;
+	const siteid = Number(document.getElementById('siteid').value);
+	const gw_url = document.getElementById('gw_url').value;
+	
+	const jsonData = {
+		"gateway-url": gw_url,
+		"wp": wp,
+		"refresh-interval": interval,
+		"token": token,
+		"expire": 0,
+		"siteid": siteid
+	};
+
+	const xhr = new XMLHttpRequest();
+	if ( document.getElementById('pv_enphase').checked ) xhr.open("POST", "/config/enphase", true);
+	else xhr.open("POST", "/config/solaredge", true);
+	xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+
+	xhr.onreadystatechange = function () {
+		if (xhr.readyState === 4 && xhr.status === 200) {
+			alert("Data sent successfully");
+		}
+	};
+
+	xhr.send(JSON.stringify(jsonData));
+}
 
 function loadIcons(){
 Iconify.addCollection({
@@ -392,7 +433,7 @@ function SetOnSettings(json){
 	if (!Injection) Injection = isNaN(json.energy_returned_tariff2.value)?false:json.energy_returned_tariff2.value;
 	Injection = Injection && !IgnoreInjection;
 	
-	if (!Phases && (Dongle_Config != "p1-q") ) {
+	if (Dongle_Config != "p1-q" ) {
 		//bereken het aantal fases aan de hand van de slimme meter data
 		if ( isNaN(json.voltage_l1.value) ) alert_message("Spanningsvelden slimme meter niet gevuld : Pas 'Phases' aan in Frontend.json bij 3 fases");
 		Phases = 1;
@@ -631,7 +672,7 @@ function UpdateDash()
 		if (!isNaN(json.voltage_l3.value)) v3 = json.voltage_l3.value;
 
 
-		if (v1 && (!Injection || ShowVoltage) ) {
+		if ( ShowVoltage && v1 ) {
 			document.getElementById("l2").style.display = "block"
 			document.getElementById("fases").innerHTML = Phases;
 			

@@ -16,7 +16,8 @@
   volatile time_t      WtrPrevReading = 0;
   bool                 WtrMtr         = false;
   #define              DEBOUNCETIMER 1700
- 
+
+#include <WiFiClientSecure.h>        
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
@@ -92,8 +93,6 @@ const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {
   * and printing code smaller.
   * Each template argument below results in a field of the same name.
   * 
-  * gekozen om niet alle elementen te parsen.
-  * aanname is dat voor 99% van de gebruikers de gasmeter op Mbus1 zit. Alleen deze wordt verwerkt.
   */
  
 using MyData = ParsedData<
@@ -114,11 +113,11 @@ using MyData = ParsedData<
   /* String */                ,electricity_tariff
   /* FixedValue */            ,power_delivered
   /* FixedValue */            ,power_returned
-  /* FixedValue */            ,electricity_threshold
+//  /* FixedValue */            ,electricity_threshold
 //  /* uint8_t */               ,electricity_switch_position
 //  /* uint32_t */              ,electricity_failures
 //  /* uint32_t */              ,electricity_long_failures
-  /* String */                ,electricity_failure_log
+//  /* String */                ,electricity_failure_log
 //  /* uint32_t */              ,electricity_sags_l1
 //  /* uint32_t */              ,electricity_sags_l2
 //  /* uint32_t */              ,electricity_sags_l3
@@ -169,22 +168,53 @@ using MyData = ParsedData<
   /* TimestampedFixedValue */ ,mbus4_delivered_dbl
 >;
 
-//TODO
-//in mem houden van de ringfile gegevens voor een snelle oplevering naar de client. Vooral de Day gegevens die worden door het dashboard gebruikt.
-//struct P1DataRec {
-//  uint32_t  epoch;
-//  uint32_t  T1;
-//  uint32_t  T2;
-//  uint32_t  T1r;
-//  uint32_t  T2r;
-//  uint32_t  G;
-//  uint16_t  Water;
-//};
-//
-//P1DataRec P1_Day[15]; //390 bytes 
-//P1DataRec P1_Hour[25]; //650 bytes 
-//P1DataRec P1_Month[49]; //1.274 bytes 
+/*TODO espnow communicatie
 
+typedef struct struct_pairing {
+    uint8_t msgType;     //Pair
+    char    ssid[32];    //max 32
+    char    pw[63];      //max 63
+    char    host[30];    //max 30
+    uint8_t ipAddr[4];  //max 4
+} struct_pairing;
+
+//6*4 + 8 = 32
+typedef struct HistRect {
+  time_t    epoch;
+  uint32_t  T1;
+  uint32_t  T2;
+  uint32_t  T1r;
+  uint32_t  T2r;
+  uint32_t  G;
+  uint32_t  W;
+};
+
+//1 + 7 * 32  = 225
+typedef struct HistData {
+  uint8_t   msgType; //HistData
+  HistRect  recs[7];
+};
+
+// 8 + 8*4 = 40 bytes
+struct Actuals {
+  uint8_t   msgType; //Actuals
+  time_t    epoch; //8
+  uint32_t  actEin; //4
+  uint32_t  actEout;//4
+  uint32_t  actG;//4
+  uint32_t  actW;//4
+  uint32_t  dailyEin;//4
+  uint32_t  dailyEout;//4
+  uint32_t  dailyG;//4
+  uint32_t  dailyW;//4
+};
+
+
+
+P1DataRec P1_Day[15]; //390 bytes 
+P1DataRec P1_Hour[25]; //650 bytes 
+P1DataRec P1_Month[49]; //1.274 bytes 
+*/
 //P1DataRec P1_Profile[288]; //7.488
 
 const PROGMEM char *flashMode[]    { "QIO", "QOUT", "DIO", "DOUT", "Unknown" };
@@ -195,11 +225,14 @@ void delayms(unsigned long);
 void SetConfig();
 
 //===========================GLOBAL VAR'S======================================
-WiFiClient  wifiClient;
-
+#ifdef SMQTT
+  WiFiClientSecure wifiClient;
+#else
+  WiFiClient wifiClient;
+#endif
 #ifndef MQTT_DISABLE 
   #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
-  static PubSubClient MQTTclient(wifiClient);
+  PubSubClient MQTTclient(wifiClient);
 #endif
 
 //config + button
@@ -268,7 +301,8 @@ bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;
 
 //MQTT
-char      settingMQTTbroker[101], settingMQTTuser[40], settingMQTTpasswd[30], settingMQTTtopTopic[40] = _DEFAULT_MQTT_TOPIC;
+
+char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[40] = _DEFAULT_MQTT_TOPIC;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;
@@ -287,7 +321,7 @@ bool      bSendMQTT = false;
 
 //===========================================================================================
 // setup timers 
-//DECLARE_TIMER_SEC(synchrNTP,          30);
+DECLARE_TIMER_SEC(synchrNTP,          30);
 DECLARE_TIMER_SEC(reconnectMQTTtimer,  MQTT_RECONNECT_DEFAULT_TIME); // try reconnecting cyclus timer
 DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time between MQTT messages  
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);

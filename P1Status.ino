@@ -8,6 +8,12 @@ void P1StatusBegin(){
     P1StatusRead();
     P1Status.reboots++;
     preferences.putUInt("reboots", P1Status.reboots);
+
+#ifdef DEVTYPE_H2OV2
+    P1Status.dev_type = PRO_H20_2;    
+    P1SetDevType();  
+#endif                      
+
     P1StatusPrint(); //print nieuwe data
 }
 

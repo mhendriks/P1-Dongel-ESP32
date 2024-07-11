@@ -5,7 +5,7 @@ void handleWater(){
   }
 }
 
-void sendMQTTWater(){
+void MQTTsendWater(){
   if (!WtrMtr && !mbusWater) return;
   if ( mbusWater ){
     MQTTSend( "water", waterDelivered );

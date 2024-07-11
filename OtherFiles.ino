@@ -67,7 +67,7 @@ void writeToJsonFile(const TSource &doc, File &_file)
 //=======================================================================
 void writeSettings() 
 {
-  StaticJsonDocument<2100> doc; 
+  StaticJsonDocument<3000> doc; 
   if (!FSmounted) return;
 
   DebugT(F("Writing to [")); Debug(SETTINGS_FILE); Debugln(F("] ..."));
@@ -127,12 +127,11 @@ void writeSettings()
   
 } // writeSettings()
 
-
 //=======================================================================
 void readSettings(bool show) 
 {
   
-  StaticJsonDocument<2100> doc; 
+  StaticJsonDocument<3000> doc; 
   File SettingsFile;
   if (!FSmounted) return;
 
@@ -201,7 +200,7 @@ void readSettings(bool show)
 #else  
   if (doc.containsKey("enableHistory")) EnableHistory = doc["enableHistory"];
 #endif
-  if (doc.containsKey("watermeter")) WtrMtr = doc["watermeter"];
+  if (doc.containsKey("watermeter") && (P1Status.dev_type != PRO_H20_2) ) WtrMtr = doc["watermeter"];
   if (doc.containsKey("waterfactor")) WtrFactor = doc["waterfactor"];
 
   if (doc.containsKey("HAdiscovery")) EnableHAdiscovery = doc["HAdiscovery"];
@@ -342,7 +341,7 @@ void updateSetting(const char *field, const char *newValue)
     mqtt_reconnect = true;
   }
   if (!stricmp(field, "mqtt_passwd")) {
-    strCopy(settingMQTTpasswd  ,25, newValue);  
+    strCopy(settingMQTTpasswd  ,sizeof(settingMQTTpasswd), newValue);  
     mqtt_reconnect = true;
   }
   

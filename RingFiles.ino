@@ -101,6 +101,7 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev)
   return;
 #else  
   if ( !EnableHistory || !FSmounted ) return; //do nothing
+  time_t start = millis();
   char key[9] = "";
   byte slot = 0;
   uint8_t actSlot = CalcSlot(ringfiletype, bPrev);
@@ -150,7 +151,11 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev)
 //    DebugTln("actslot: "+actSlot);
 //    DebugT(F("update date: "));Debugln(key);
     //create record
+#ifdef SE_VERSION
+    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_total, 0, (float)DSMRdata.energy_returned_total, 0, (float)gasDelivered, (float)P1Status.wtr_m3+(float)P1Status.wtr_l/1000.0);
+#else    
     snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_tariff1, (float)DSMRdata.energy_delivered_tariff2, (float)DSMRdata.energy_returned_tariff1, (float)DSMRdata.energy_returned_tariff2, (float)gasDelivered, mbusWater?(float)waterDelivered : (float)P1Status.wtr_m3+(float)P1Status.wtr_l/1000.0);
+#endif    
   }
   //DebugT("update timeslot: ");Debugln(slot);
   //goto writing starting point  
@@ -167,6 +172,8 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev)
 //    String log_temp = "Ringfile " + String(RingFiles[ringfiletype].filename) + " writen. actT:[" + String(actT) + "] newT:[" + String(newT) +"] ActSlot:[" + String(slot) + "]";
 //    LogFile(log_temp.c_str(),true);
 #endif //NO_STORAGE
+  Debugf( "Time consumed writing RNGFile %s : %d\n", RingFiles[ringfiletype].filename, millis()-start);
+
 } // writeRingFile()
 
 /*
