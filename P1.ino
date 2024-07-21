@@ -116,7 +116,8 @@ void handleSlimmemeter()
     slimmeMeter.loop();
     if (slimmeMeter.available()) {
       ToggleLED(LED_ON);
-      CapTelegram = "/" + slimmeMeter.raw() + "!" + slimmeMeter.GetCRC_str() + "\r\n"; //capture last telegram
+//      CapTelegram = "/" + slimmeMeter.raw() + "!" + slimmeMeter.GetCRC_str(); //capture last telegram
+      CapTelegram = slimmeMeter.CompleteRaw();
       Out1Avail = true;
       if (showRaw) {
         //-- process telegrams in raw mode

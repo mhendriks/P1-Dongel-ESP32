@@ -1,10 +1,10 @@
 #ifdef ETHERNET
 
-#define INT_GPIO            1
-#define MISO_GPIO           5
-#define MOSI_GPIO           6
-#define SCK_GPIO            4
-#define CS_GPIO             10
+//#define INT_GPIO            1
+//#define MISO_GPIO           5
+//#define MOSI_GPIO           6
+//#define SCK_GPIO            4
+//#define CS_GPIO             10
 
 #include <WebServer_ESP32_SC_W5500.h>
 
@@ -37,8 +37,7 @@ void startETH(){
 
   PostMacIP(); //post mac en ip 
 
-  USBSerial.print(F("ETH IP : ")); //CDC output
-  USBSerial.println(IP_Address());
+  USBPrint(F("ETH IP : ")); USBPrintln(IP_Address());
 //  USBSerial.print(F("ETH MAC: ")); //CDC output
 //  USBSerial.println(macStr);
   

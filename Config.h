@@ -1,4 +1,4 @@
-// Boardsconfig
+// Board config
 
 // Device Types
 #define PRO         0
@@ -25,12 +25,13 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
 //PROFILES
 #ifdef ULTRA 
   #include "hw_profile_ultra.h"
-#elif ETHERNET
-  #include "hw_profile_p1_eth.h"
 #else
-  #include "hw_profile_p1_pro.h"
+  #ifdef ETHERNET
+    #include "hw_profile_p1_eth.h"
+  #else
+    #include "hw_profile_p1_pro.h"
+  #endif
 #endif
-
 //FETAURES
 
 #ifdef HEATLINK

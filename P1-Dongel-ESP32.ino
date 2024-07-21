@@ -12,7 +12,6 @@ TODO
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
 - auto switch 3 - 1 fase max fuse
-- issue met basic auth afscherming rng bestanden
 - temparatuur ook opnemen in grafieken (A van Dijken)
 - websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
@@ -23,7 +22,6 @@ TODO
 - optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
 - toevoegen van mdns aanmelding na 1 minuut
 - update Warmtelink url en mechanisme isoleren (Henry de J)
-- ondersteuning ISTA devices (868MHz) - Jan Winder
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
 - #18 water en gas ook in de enkele json string (mqtt)
 - spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
@@ -36,8 +34,6 @@ TODO
 
 - Harold B: Dark-mode frontend
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
-- een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
-- MQTT over ssl ( J Steenhuis) 
 - Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
 - issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering )
 - support https mqtt connection
@@ -50,9 +46,27 @@ TODO
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - support https / http mqtt link extern
 
-todo ;
+TODO
+- check: manifest file location (front end aanpassing)
+- config file support
+- check p1 verwerking 
+- check complete telegram functie
 
+
+docs
+- long / short press aanpassing
+- partitioning -> oude versie moet flashen
+- core versie = altijd device pairing aan + mqtt + mqtt auto discovery HA
+- andere versies EID / Modbus TCP
+
+4.9.1
 - in actueel teruglevering ook als negatief meenemen per fase.
+- config bestanden solar koppeling via webpagina
+- een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
+- working with hardware config files
+- change the button funcion (< 5sec = reboot, > 5sec is factory reset (not the data files))
+- other partitioning result in more program space and less data storage
+- fix raw telegram return for dongles with P1 Out
 
 
 ************************************************************************************
@@ -81,7 +95,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define DEVTYPE_H2OV2
 //#define NO_HA_AUTODISCOVERY
 #define DEV_PAIRING
-#define DEBUG
+//#define DEBUG
 //#define ULTRA
 //#define SMQTT
 
@@ -89,8 +103,12 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 void setup() 
 {
-  USBSerial.begin(115200); //cdc stream
-  Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
+  DebugBegin(115200);
+  delay(100);
+  USBPrint("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
+
+//  USBSerial.begin(115200); //cdc stream
+//  Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
   PushButton.begin(IO_BUTTON);
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1

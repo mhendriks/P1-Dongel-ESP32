@@ -35,7 +35,7 @@ void GetMacAddress(){
   strcpy( macStr, _mac.c_str() );
   _mac.replace( ":","" );
   strcpy( macID, _mac.c_str() );
-  USBSerial.print( "MacStr: " );USBSerial.println( macStr ); //only at setup
+  USBPrint( "MacStr: " );USBPrintln( macStr ); //only at setup
 //  USBSerial.print( "MacID: " );USBSerial.println( macID );
 }
 
@@ -172,7 +172,7 @@ void startWiFi(const char* hostname, int timeOut)
 //  DebugTf("Took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
 
   PostMacIP(); //post mac en ip 
-  USBSerial.print("ip-adres: ");USBSerial.println(WiFi.localIP().toString());
+  USBPrint("ip-adres: ");USBPrintln(WiFi.localIP().toString());
 
 } // startWiFi()
 

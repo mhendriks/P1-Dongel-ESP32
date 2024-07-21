@@ -93,7 +93,6 @@ void setupFSexplorer()
   
 } // setupFSexplorer()
 
-
 void ConfigApi() {
   String FileName;
   
@@ -106,12 +105,16 @@ void ConfigApi() {
  
   if ( FileName.length() ) {
     File file = LittleFS.open(FileName.c_str(), "w");
-    if (!file) DebugTln(F("open file FAILED!!!\r\n"));
-    else file.print(payload); 
+    if (!file) {
+      DebugTln(F("open file FAILED!!!\r\n"));
+      httpServer.send(400);
+    }  
+    else {
+      file.print(payload); 
+      httpServer.send(200);
+    }  
     file.close();
   }
-
-  httpServer.send(200);
 }  
 
 //=====================================================================================

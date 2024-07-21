@@ -28,16 +28,22 @@
                              TelnetStream.flush(); \
                           })
 
+  #define USBPrint(...)   ({ DebugT(__VA_ARGS__);})
+  #define USBPrintln(...) ({ DebugTln(__VA_ARGS__);})
+                          
+
 #else
   //NORMAL MODE
   #define Debug(...)      ({ TelnetStream.print(__VA_ARGS__); })
   #define Debugln(...)    ({ TelnetStream.println(__VA_ARGS__); })
   #define Debugf(...)     ({ TelnetStream.printf(__VA_ARGS__); })
   #define DebugFlush()    ({ TelnetStream.flush(); })
+  #define USBPrint(...)   ({ if (USBSerial.isConnected() && USBSerial.isPlugged() ) USBSerial.print(__VA_ARGS__);})
+  #define USBPrintln(...) ({ if (USBSerial.isConnected() && USBSerial.isPlugged() ) USBSerial.println(__VA_ARGS__);})
 
 #endif
 
-
+#define DebugBegin(...)({ USBSerial.begin(__VA_ARGS__); })
 #define DebugT(...)     ({ _debugBOL(__FUNCTION__, __LINE__);  \
                            Debug(__VA_ARGS__);                 \
                         })

@@ -1,9 +1,14 @@
 #warning Using ESP32C3 - P1 Dongle Pro - ETHERNET
 
-#define ALL_OPTIONS BASE_OPTIONS "[ETHERNET]"
+#define PROFILE "[ETH]"
 #define _HOSTNAME           "Eth-Dongle-Pro"
 #define _DEFAULT_HOSTNAME _HOSTNAME
-#define OTAURL              "http://ota.smart-stuff.nl/eth/"
+
+#ifdef EID
+	#define OTAURL "http://ota.smart-stuff.nl/eth-eid/"
+#else
+	#define OTAURL "http://ota.smart-stuff.nl/eth/"
+#endif
 
 //pinout P1 Dongle Pro v6.x
 #define LED                   3
@@ -37,7 +42,7 @@
 
 
 //MODBUS
-#define RTSPIN      		11
+// #define RTSPIN      		11
 // #define RXPIN       		1
 // #define TXPIN       		3
 // #define BAUDRATE  		 9600

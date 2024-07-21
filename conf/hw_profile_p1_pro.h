@@ -1,12 +1,16 @@
 #warning Using ESP32C3 - P1 Dongle Pro
 
+#define PROFILE "[WIFI]"
 #define _HOSTNAME           "P1-Dongle-Pro"
 #define _DEFAULT_HOSTNAME _HOSTNAME
-#define OTAURL              "http://ota.smart-stuff.nl/v5/"
-
+#ifdef EID
+	#define OTAURL "http://ota.smart-stuff.nl/p1p/eid/"
+#else
+	#define OTAURL "http://ota.smart-stuff.nl/p1p/"
+#endif
 //pinout P1 Dongle Pro v6.x
 #define LED                   7
-#define DTR_IO                4 // nr = IO pulse = N/A
+#define DTR_IO                6 // nr = IO pulse = N/A
 #define RXP1                 10
 #define TXP1                 -1 //disable
 #define IO_WATER_SENSOR       5
