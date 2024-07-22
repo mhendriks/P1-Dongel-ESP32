@@ -9,6 +9,10 @@
 ***************************************************************************      
 */                           
 
+volatile bool dtr1         = false;
+bool Out1Avail    = false;
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
 void SetupSMRport(){
   Serial1.end();
   delay(100); //give it some time
@@ -38,20 +42,6 @@ struct showValues {
     }
   }
 };
-
-
-#ifdef ULTRA
-	#define P1_LED     16
-	#define O1_DTR_IO  15
-	#define TXO1       21
-#else // PRO_H20_2 pinout
-	#define P1_LED     0
-	#define O1_DTR_IO  1
-	#define TXO1      10
-#endif
-volatile bool dtr1         = false;
-bool Out1Avail    = false;
-portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void SetDTR(bool val){
    portENTER_CRITICAL_ISR(&mux);

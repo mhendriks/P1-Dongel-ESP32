@@ -46,28 +46,11 @@ TODO
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - support https / http mqtt link extern
 
-TODO
-- check: manifest file location (front end aanpassing)
-- config file support
-- check p1 verwerking 
-- check complete telegram functie
-
-
 docs
 - long / short press aanpassing
 - partitioning -> oude versie moet flashen
 - core versie = altijd device pairing aan + mqtt + mqtt auto discovery HA
 - andere versies EID / Modbus TCP
-
-4.9.1
-- in actueel teruglevering ook als negatief meenemen per fase.
-- config bestanden solar koppeling via webpagina
-- een fase in dashboard ipv 3 (na refresh is dit goed) (D Schepens)
-- working with hardware config files
-- change the button funcion (< 5sec = reboot, > 5sec is factory reset (not the data files))
-- other partitioning result in more program space and less data storage
-- fix raw telegram return for dongles with P1 Out
-
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
