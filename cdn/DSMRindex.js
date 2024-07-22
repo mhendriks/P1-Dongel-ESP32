@@ -435,7 +435,7 @@ function SetOnSettings(json){
 	
 	if (Dongle_Config != "p1-q" ) {
 		//bereken het aantal fases aan de hand van de slimme meter data
-		if ( isNaN(json.voltage_l1.value) ) alert_message("Spanningsvelden slimme meter niet gevuld : Pas 'Phases' aan in Frontend.json bij 3 fases");
+// 		if ( isNaN(json.voltage_l1.value) ) alert_message("Spanningsvelden slimme meter niet gevuld : Pas 'Phases' aan in Frontend.json bij 3 fases");
 		Phases = 1;
 		if (!isNaN(json.voltage_l2.value)) Phases++;
 		if (!isNaN(json.voltage_l3.value)) Phases++;
