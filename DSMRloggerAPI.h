@@ -269,6 +269,7 @@ bool        bHideP1Log = false;
 char        bAuthUser[25]="", bAuthPW[25]="";
 bool        EnableHistory = true;
 bool        bPre40 = false;
+bool        bWarmteLink = false;
 bool        bActJsonMQTT = false;
 bool        bRawPort = false;
 bool        bLED_PRT = true;

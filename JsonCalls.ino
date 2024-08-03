@@ -126,9 +126,11 @@ void sendDeviceInfo()
 //  snprintf(cMsg, sizeof(cMsg), "%s %s", __DATE__, __TIME__);
   doc["compiled"] = __DATE__ " " __TIME__;
 
-#ifndef HEATLINK
-  doc["smr_version"] = DSMR_NL?"NL":"BE";
-#endif
+//#ifndef HEATLINK
+  if ( ! bWarmteLink ) { // IF NOT HEATLINK
+    doc["smr_version"] = DSMR_NL?"NL":"BE";
+  }
+//#endif
   
   doc["hostname"] = settingHostname;
   doc["ipaddress"] = IP_Address();
@@ -172,9 +174,11 @@ void sendDeviceInfo()
   doc["wifirssi"] = WiFi.RSSI();
 #endif
   doc["uptime"] = upTime();
-#ifndef HEATLINK
-  doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
-#endif
+
+  if ( !bWarmteLink ) { // IF NO HEATLINK
+      doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
+  }
+
 
 //  doc["telegraminterval"] = (int)settingTelegramInterval;
   if ( DSMRdata.p1_version == "50" || !DSMR_NL ) doc["telegraminterval"] = 1; 
@@ -211,22 +215,28 @@ void sendDeviceSettings() {
   doc[name]["max"] = max
 
   ADD_SETTING("hostname", "s", 0, sizeof(settingHostname) - 1, settingHostname);
-#ifndef HEATLINK
+  if ( !bWarmteLink ) { // IF NO HEATLINK
+//#ifndef HEATLINK
   ADD_SETTING("ed_tariff1", "f", 0, 10, settingEDT1);
   ADD_SETTING("ed_tariff2", "f", 0, 10, settingEDT2);
   ADD_SETTING("er_tariff1", "f", 0, 10, settingERT1);
   ADD_SETTING("er_tariff2", "f", 0, 10, settingERT2);
   ADD_SETTING("w_tariff", "f", 0, 10, settingWDT);
-#endif
+//#endif
+  }
   ADD_SETTING("gd_tariff", "f", 0, 10, settingGDT);
-#ifndef HEATLINK
-  ADD_SETTING("electr_netw_costs", "f", 0, 100, settingENBK);
-  ADD_SETTING("water_netw_costs", "f", 0, 100, settingWNBK);
-#endif
+//#ifndef HEATLINK
+  if ( ! bWarmteLink ) { // IF NO HEATLINK
+    ADD_SETTING("electr_netw_costs", "f", 0, 100, settingENBK);
+    ADD_SETTING("water_netw_costs", "f", 0, 100, settingWNBK);
+//#endif
+  }
   ADD_SETTING("gas_netw_costs", "f", 0, 100, settingGNBK);
-#ifndef HEATLINK
-  ADD_SETTING("sm_has_fase_info", "i", 0, 1, settingSmHasFaseInfo);
-#endif
+//#ifndef HEATLINK
+  if ( ! bWarmteLink ) { // IF NO HEATLINK
+    ADD_SETTING("sm_has_fase_info", "i", 0, 1, settingSmHasFaseInfo);
+  }
+//#endif
   ADD_SETTING("IndexPage", "s", 0, sizeof(settingIndexPage) - 1, settingIndexPage);
 
 #ifndef MQTT_DISABLE
@@ -271,12 +281,12 @@ void sendDeviceSettings() {
   doc["ha_disc_enabl"] = EnableHAdiscovery;
 if ( P1Status.dev_type == PRO_BRIDGE ) doc["led-prt"] = bLED_PRT;
 
-#ifdef HEATLINK
-  doc["conf"] = "p1-q";
-#else
-  doc["pre40"] = bPre40;
-  doc["conf"] = "p1-p";
-#endif
+  if ( bWarmteLink ) { // IF HEATLINK
+    doc["conf"] = "p1-q";
+  } else {
+    doc["pre40"] = bPre40;
+    doc["conf"] = "p1-p";
+  }
 
   // doc["auto_update"] = bAutoUpdate;  TO DO ...
 
@@ -308,12 +318,12 @@ void handleSmApi()
   case 'i': //info
     onlyIfPresent = false;
     fieldsElements = INFOELEMENTS;
-  break;
+    break;
   
   case 'a': //actual
     fieldsElements = ACTUALELEMENTS;
     onlyIfPresent = true;
-  break;
+    break;
   
   case 'f': //fields
     fieldsElements = 0;

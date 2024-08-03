@@ -34,13 +34,13 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
 #endif
 //FETAURES
 
-#ifdef HEATLINK
-  #define ALL_OPTIONS BASE_OPTIONS "[Q]"
-  #undef _DEFAULT_HOSTNAME
-  #define _DEFAULT_HOSTNAME   "Q-Dongle-Pro" 
-  #undef OTAURL
-  #define OTAURL              "http://ota.smart-stuff.nl/v5-q/"
-#endif  
+//#ifdef HEATLINK
+//  #define ALL_OPTIONS BASE_OPTIONS "[Q]"
+//  #undef _DEFAULT_HOSTNAME
+//  #define _DEFAULT_HOSTNAME   "Q-Dongle-Pro" 
+//  #undef OTAURL
+//  #define OTAURL              "http://ota.smart-stuff.nl/v5-q/"
+//#endif  
 
 #ifdef EID
   bool    bEID_enabled = false;

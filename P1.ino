@@ -138,7 +138,7 @@ void SMCheckOnce(){
     DSMRdata.p1_version_present     = true;
     DSMR_NL = false;
   } //p1_version_be_present
-  
+  if ( ! DSMRdata.energy_delivered_tariff1_present) bWarmteLink = true;
   mbusWater = MbusTypeAvailable(7);  
   if (mbusWater) WtrMtr = true;
   mbusGas = MbusTypeAvailable(3);  
@@ -174,39 +174,37 @@ void processSlimmemeter() {
       }
         
       modifySmFaseInfo();
-#ifdef HEATLINK
-//        DSMRdata.timestamp         = cMsg;
-        DSMRdata.timestamp = DSMRdata.mbus1_delivered.timestamp;
-        DSMRdata.timestamp_present = true;
-#else
-  if (!DSMRdata.timestamp_present) { 
-        if (Verbose2) DebugTln(F("NTP Time set"));
-      if ( getLocalTime(&tm) ) {
-          DSTactive = tm.tm_isdst;
-          sprintf(cMsg, "%02d%02d%02d%02d%02d%02d%s\0\0", (tm.tm_year -100 ), tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,DSTactive?"S":"W");
-      } else {
-        strCopy(cMsg, sizeof(cMsg), actTimestamp);
-        LogFile("timestamp = old time",true);
-      }
-        DSMRdata.timestamp         = cMsg;
-        DSMRdata.timestamp_present = true;
-  } //!timestamp present
-#endif //HEATLINK
-
-      //-- handle mbus delivered values
-      if (mbusWater) {
-        waterDelivered = MbusDelivered(mbusWater);
-        waterDeliveredTimestamp = mbusDeliveredTimestamp;
-      }
-#ifdef HEATLINK
+  if ( bWarmteLink ) { // IF HEATLINK
+      
+      DSMRdata.timestamp = DSMRdata.mbus1_delivered.timestamp;
+      DSMRdata.timestamp_present = true;
       gasDelivered = MbusDelivered(1); //always 1ste
       gasDeliveredTimestamp = mbusDeliveredTimestamp;
-#else
-      if (mbusGas) {
-        gasDelivered = MbusDelivered(mbusGas);
-        gasDeliveredTimestamp = mbusDeliveredTimestamp;
-      }
-#endif
+
+  } else  {
+    if (!DSMRdata.timestamp_present) { 
+          if (Verbose2) DebugTln(F("NTP Time set"));
+        if ( getLocalTime(&tm) ) {
+            DSTactive = tm.tm_isdst;
+            sprintf(cMsg, "%02d%02d%02d%02d%02d%02d%s\0\0", (tm.tm_year -100 ), tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,DSTactive?"S":"W");
+        } else {
+          strCopy(cMsg, sizeof(cMsg), actTimestamp);
+          LogFile("timestamp = old time",true);
+        }
+          DSMRdata.timestamp         = cMsg;
+          DSMRdata.timestamp_present = true;
+    } //!timestamp present
+
+    //-- handle mbus delivered values
+    if (mbusWater) {
+      waterDelivered = MbusDelivered(mbusWater);
+      waterDeliveredTimestamp = mbusDeliveredTimestamp;
+    }
+    if (mbusGas) {
+      gasDelivered = MbusDelivered(mbusGas);
+      gasDeliveredTimestamp = mbusDeliveredTimestamp;
+    }
+  } //end
         
       processTelegram();
       if (Verbose2) DSMRdata.applyEach(showValues());
