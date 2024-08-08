@@ -33,7 +33,6 @@ void P1StatusDefType(){
   
 void P1StatusRead(){
     P1Status.reboots = preferences.getUInt("reboots", 0);
-//    P1Status.sloterrors = preferences.getUInt("sloterrors", 0);
     preferences.getString("timestamp",P1Status.timestamp,14);
     P1Status.wtr_m3 = preferences.getShort("wtr_m3", 0);
     P1Status.wtr_l = preferences.getUInt("wtr_l", 0);

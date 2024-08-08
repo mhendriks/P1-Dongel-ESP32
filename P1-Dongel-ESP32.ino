@@ -6,7 +6,7 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 
-TODO
+WENSEN
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
 - feature: nieuwe meter = beginstand op 0
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
@@ -46,6 +46,9 @@ TODO
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - support https / http mqtt link extern
 
+TODO
+- flag NoRebootOnNoWiFi
+
 docs
 - long / short press aanpassing
 - partitioning -> oude versie moet flashen
@@ -77,7 +80,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define EID
 //#define DEVTYPE_H2OV2
 //#define NO_HA_AUTODISCOVERY
-//#define DEV_PAIRING
+#define DEV_PAIRING
 //#define DEBUG
 //#define ULTRA
 //#define SMQTT
