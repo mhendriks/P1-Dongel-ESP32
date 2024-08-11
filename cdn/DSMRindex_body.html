@@ -607,6 +607,15 @@
             <h3>min: <span id="power_delivered_1min">0.0</span> <span name="power">kW</span></h3>
         </div>
 		</a>
+        <div class=card id=dash_solar style="display:none">
+            <h1 id=dash_solar_h style="background:#f7b638"><span class="iconify" data-icon="mdi-solar-power-variant"></span><span data-i18n-key="dsh-returned">Productie<span></h1>
+            <canvas class="chart-container" id="container-solar"></canvas>
+			<div id=legenda style="padding-top:25px">
+			</div>
+    		<hr/>
+            <div style="text-align:center" data-i18n-key="lbl-today-kwh">Vandaag [kWh]</div>
+            <h2 id=dash_solar_p>0.0</h2>
+        </div>		
 		<a href="#HoursTab" style="display:flex">
         <div class=card id=l3 style="display:block">
             <h1 id=Ph><span class="iconify" data-icon="mdi-lightning-bolt"></span><span data-i18n-key="dsh-energy">Elektra</span></h1>

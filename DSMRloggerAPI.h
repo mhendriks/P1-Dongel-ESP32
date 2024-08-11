@@ -10,12 +10,12 @@
 #include "Config.h"
 
 // water sensor
-  volatile byte        WtrFactor      = 1;
-  volatile time_t      WtrTimeBetween = 0;
-  volatile byte        debounces      = 0;
-  volatile time_t      WtrPrevReading = 0;
-  bool                 WtrMtr         = false;
-  #define              DEBOUNCETIMER 1700
+volatile byte        WtrFactor      = 1;
+volatile time_t      WtrTimeBetween = 0;
+volatile byte        debounces      = 0;
+volatile time_t      WtrPrevReading = 0;
+bool                 WtrMtr         = false;
+#define              DEBOUNCETIMER 1700
 
 #include <WiFiClientSecure.h>        
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
@@ -44,6 +44,7 @@ TaskHandle_t tP1Reader; //  own proces for P1 reading
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS, RINGVOLTAGE};
+enum  SolarSource { ENPHASE, SOLAR_EDGE };
 
 typedef struct {
     char filename[17];
@@ -209,8 +210,6 @@ struct Actuals {
   uint32_t  dailyW;//4
 };
 
-
-
 P1DataRec P1_Day[15]; //390 bytes 
 P1DataRec P1_Hour[25]; //650 bytes 
 P1DataRec P1_Month[49]; //1.274 bytes 
@@ -302,7 +301,6 @@ bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;
 
 //MQTT
-
 char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[40] = _DEFAULT_MQTT_TOPIC;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
@@ -316,6 +314,14 @@ String    mbusDeliveredTimestamp;
 String    smID;
 bool      StaticInfoSend = false;
 bool      bSendMQTT = false;
+
+//Post_Telegram
+#ifdef POST_TELEGRAM
+  time_t TelegramLastPost = 0;
+  uint16_t pt_port = 80;
+  uint16_t pt_interval = 60;
+  char pt_end_point[60];
+#endif
 
 #include "_Button.h"
 #include "Network.h"

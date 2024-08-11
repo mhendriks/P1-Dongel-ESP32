@@ -20,11 +20,10 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 "Reset when the vdd voltage is not stable","RTC Watch dog reset digital core and rtc module"};
 
 void SetConfig(){
-  //defaults
 #ifdef ULTRA
- UseRGB = true; 
- IOWater = IO_WATER;
- WtrMtr = false;
+  UseRGB = true; 
+  IOWater = IO_WATER;
+  WtrMtr = false;
 #else    
   switch ( P1Status.dev_type ) {
     case PRO       : UseRGB = false; 
@@ -32,6 +31,8 @@ void SetConfig(){
                      break;
     case PRO_BRIDGE: UseRGB = true; 
                      IOWater = -1;
+                     pinMode(PRT_LED, OUTPUT);
+                     digitalWrite(PRT_LED, true); //default on
                      break;
     case PRO_ETH:    UseRGB = true; 
                      IOWater = -1;
@@ -47,13 +48,20 @@ void SetConfig(){
                      WtrMtr = true;
                      break;                     
   }
-#endif  
+#endif 
+  //pin modes
+  pinMode(DTR_IO, OUTPUT);
+  pinMode(LED, OUTPUT);
+  if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP);   
+  
   Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);
   if ( UseRGB ) rgb.begin();
+  
   // sign of life = ON during setup or change config
   SwitchLED( LED_ON, LED_BLUE );
   delay(2000);
   SwitchLED( LED_OFF, LED_BLUE );
+  
 }
 
 void FacReset() {
@@ -256,9 +264,11 @@ int8_t splitString(String inStrng, char delimiter, String wOut[], uint8_t maxWor
 } // splitString()
 
 
-//===========================================================================================
-String upTime() 
-{
+uint64_t uptime()  {
+  return esp_log_timestamp()/1000;;
+}
+
+String upTime()  {
   char    calcUptime[20];
   uint64_t  upTimeSeconds = esp_log_timestamp()/1000;
 

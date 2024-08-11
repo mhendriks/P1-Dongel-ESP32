@@ -72,6 +72,7 @@ void setupFSexplorer()
 #endif
 
   httpServer.on("/api/listfiles", HTTP_GET, [](){ auth(); APIlistFiles(); });
+  httpServer.on("/api/v2/gen", HTTP_GET, [](){ auth(); SendSolarJson(); });
   httpServer.on("/FSformat", [](){ auth();formatFS; });
   httpServer.on("/upload", HTTP_POST, []() { auth(); }, handleFileUpload );
   httpServer.on("/ReBoot", [](){ auth();reBootESP(); });
@@ -112,6 +113,7 @@ void ConfigApi() {
     else {
       file.print(payload); 
       httpServer.send(200);
+      ReadSolarConfigs();
     }  
     file.close();
   }
@@ -217,6 +219,7 @@ void handleFileUpload()
     Debugln("FileUpload Size: " + (String)upload.totalSize);
     httpServer.sendContent(Header);
     if (upload.filename == "DSMRsettings.json") readSettings(false);
+    if (upload.filename == "enphase.json" || upload.filename == "solaredge.json") ReadSolarConfigs();
   }
 } // handleFileUpload() 
 

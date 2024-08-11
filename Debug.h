@@ -29,8 +29,7 @@
                           })
 
   #define USBPrint(...)   ({ DebugT(__VA_ARGS__);})
-  #define USBPrintln(...) ({ DebugTln(__VA_ARGS__);})
-                          
+  #define USBPrintln(...) ({ DebugTln(__VA_ARGS__);})                       
 
 #else
   //NORMAL MODE

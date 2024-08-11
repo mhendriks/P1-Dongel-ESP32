@@ -67,22 +67,26 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
+//PROFILES
+//#define ULTRA         //ultra dongle
+//#define ETHERNET      //ethernet dongle
+//#define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
+//#define P1_WIFI       // DOES NOTHING; UNSELECTED IS OKAY TOO
+
+//FEATURES
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
-#define ETHERNET
 //#define STUB            //test only
-//#define HEATLINK        //first draft
 //#define AP_ONLY
-//#define MBUS
+#define MBUS
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 //#define EID
-//#define DEVTYPE_H2OV2
 //#define NO_HA_AUTODISCOVERY
 #define DEV_PAIRING
 //#define DEBUG
-//#define ULTRA
+//#define POST_TELEGRAM
 //#define SMQTT
 
 #include "DSMRloggerAPI.h"
@@ -90,39 +94,18 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 void setup() 
 {
   DebugBegin(115200);
-  delay(100);
   USBPrint("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
 
-//  USBSerial.begin(115200); //cdc stream
-//  Debug("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
   PushButton.begin(IO_BUTTON);
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
-  
-  pinMode(DTR_IO, OUTPUT);
-  pinMode(LED, OUTPUT);
   SetConfig();
-  
-  if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP); //Setconfig first
-  
-  if ( P1Status.dev_type == PRO_BRIDGE ) {
-    pinMode(PRT_LED, OUTPUT);
-    digitalWrite(PRT_LED, true); //default on
-  }
-
-  #ifdef ULTRA
-    pinMode(DTR_IO, OUTPUT);
-  #endif 
-
   lastReset = getResetReason();
   DebugT(F("Last reset reason: ")); Debugln(lastReset);
   
 //================ File System =====================================
-  if (LittleFS.begin(true)) 
-  {
-    DebugTln(F("FS Mount OK\r"));
-    FSmounted = true;     
-  } else DebugTln(F("!!!! FS Mount ERROR\r"));   // Serious problem with File System 
+  if (LittleFS.begin(true)) { DebugTln(F("FS Mount OK\r")); FSmounted = true;  } 
+  else DebugTln(F("!!!! FS Mount ERROR\r"));   // Serious problem with File System 
   
 //================ Status update ===================================
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
@@ -130,14 +113,14 @@ void setup()
   LogFile("",false); // write reboot status to file
   readSettings(true);
 //=============start Networkstuff ==================================
-#ifndef ETHERNET
+#ifdef ETHERNET
+  startETH();
+#else
   #ifndef AP_ONLY
     startWiFi(settingHostname, 240);  // timeout 4 minuten
   #else 
     startAP();
   #endif
-#else
-  startETH();
 #endif
   GetMacAddress();
   delay(100);
@@ -176,7 +159,6 @@ void setup()
   esp_register_shutdown_handler(ShutDownHandler);
 
   setupWater();
-//  setupAuxButton(); //esp32c3 only
 
   if (EnableHistory) CheckRingExists();
 
@@ -192,6 +174,7 @@ void setup()
 #ifdef MBUS
   mbusSetup();
 #endif  
+  ReadSolarConfigs();
 
 } // setup()
 
@@ -230,6 +213,8 @@ void loop () {
        PushButton.handler();
        handleWater();
        handleEnergyID();  
+       PostTelegram();
+       GetSolarDataN();
 } // loop()
 
 

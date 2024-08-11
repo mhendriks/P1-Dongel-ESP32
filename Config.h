@@ -7,7 +7,6 @@
 #define PRO_H20_B   3
 #define PRO_H20_2   4
 
-#define BASE_OPTIONS        "[CORE]"
 #define APIURL              "http://api.smart-stuff.nl/v1/register.php"
 #define LED_ON              LOW
 #define LED_OFF             HIGH
@@ -32,32 +31,58 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
     #include "hw_profile_p1_pro.h"
   #endif
 #endif
+
 //FETAURES
-
-//#ifdef HEATLINK
-//  #define ALL_OPTIONS BASE_OPTIONS "[Q]"
-//  #undef _DEFAULT_HOSTNAME
-//  #define _DEFAULT_HOSTNAME   "Q-Dongle-Pro" 
-//  #undef OTAURL
-//  #define OTAURL              "http://ota.smart-stuff.nl/v5-q/"
-//#endif  
-
 #ifdef EID
   bool    bEID_enabled = false;
   enum E_eid_states : uint8_t { EID_IDLE, EID_CLAIMING, EID_ENROLLED };
-  #define ALL_OPTIONS BASE_OPTIONS "[EnergyID]"
   #undef MQTT_DISABLE
   #define MQTT_DISABLE
 #endif //EID
 
+#ifdef DEBUG
+  #define OPT1  "[DEBUG]"
+#else
+  #define OPT1
+#endif
+
+#ifdef MBUS
+  #define OPT2  "[MODBUS]"
+#else
+  #define OPT2  
+#endif
+ 
+#ifdef DEV_PAIRING
+  #define OPT3  "[PAIR]"  
+#else
+  #define OPT3  
+#endif
+
+#ifdef EID
+  #define OPT4  "[EID]" 
+#else
+  #define OPT4
+#endif
+
+#ifdef POST_TELEGRAM
+  #define OPT5  "[POST]" 
+#else
+  #define OPT5
+#endif
+
+#ifdef SMQTT
+  #define OPT6  "[SMQTT]" 
+#else
+  #define OPT6
+#endif
+
 #ifdef SE_VERSION
-  #define ALL_OPTIONS BASE_OPTIONS "[SE]"
+  #define OPT7 "[SE]"
+#else 
+  #define OPT7
 #endif
 
-#ifndef ALL_OPTIONS
- #define ALL_OPTIONS BASE_OPTIONS
-#endif
-
+#define ALL_OPTIONS PROFILE OPT1 OPT2 OPT3 OPT4 OPT5 OPT6 OPT7
 #define _DEFAULT_MQTT_TOPIC _DEFAULT_HOSTNAME "/"
 
 #ifdef AP_ONLY  

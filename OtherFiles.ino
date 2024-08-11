@@ -123,6 +123,13 @@ void writeSettings()
 #ifdef EID    
   doc["eid-enabled"] = bEID_enabled;
 #endif  
+
+#ifdef POST_TELEGRAM
+  doc["pt_port"] = pt_port;
+  doc["pt_interval"] = pt_interval;
+  doc["pt_end_point"] = pt_end_point;
+#endif
+
   writeToJsonFile(doc, SettingsFile);
   
 } // writeSettings()
@@ -214,6 +221,14 @@ void readSettings(bool show)
 #ifdef VOLTAGE_MON
   if (doc.containsKey("max-volt")) MaxVoltage = doc["max-volt"];
 #endif  
+
+#ifdef POST_TELEGRAM
+  if (doc.containsKey("pt_port")) pt_port = doc["pt_port"];
+  if (doc.containsKey("pt_interval")) pt_interval = doc["pt_interval"];
+  if (doc.containsKey("pt_end_point")) strcpy(pt_end_point, doc["pt_end_point"]);
+#endif
+  
+  
   if (doc.containsKey("act-json-mqtt")) bActJsonMQTT = doc["act-json-mqtt"];
 
   const char* temp = doc["basic-auth"]["user"];

@@ -59,7 +59,8 @@ const MONTHS_IN_YEAR_NL    = ["Januari","Februari","Maart","April","Mei","Juni",
   let monthType        		= "ED";
   let settingFontColor 		= 'white';
   var objDAL = null;
-
+  var SolarActive 			= false;
+    
   //The Data Access Layer for the DSMR
   // - acts as an cache between frontend and server
   // - schedules refresh to keep data fresh
@@ -261,6 +262,50 @@ let cfgGaugeELEKTRA = structuredClone(cfgDefaultTREND);
 cfgGaugeELEKTRA.options.title.text = "kWh";
 cfgGaugeELEKTRA.options.plugins.labels.render = renderLabelElektra;
 
+// let cfgGaugeSolar = structuredClone(cfgDefaultTREND);
+// cfgGaugeSolar.options.title.text = "kWh";
+// cfgGaugeSolar.options.plugins.labels.render = renderLabelElektra;
+// cfgGaugeSolar.data.datasets[0].label = "Productie";
+
+let cfgGaugeSolar = {
+  type: 'doughnut',
+  data: {
+    datasets: [
+      {
+        label: "Productie",
+        backgroundColor: ["#f7b638", "rgba(0,0,0,0.1)"],
+      }
+    ]
+  },
+  options: {
+    events: [],
+    title: {
+      display: true,
+      text: 'Watt',
+      position: "bottom",
+      padding: -18,
+      fontSize: 17,
+      fontColor: "#000",
+      fontFamily: "Dosis",
+    },
+    responsive: true,
+    circumference: Math.PI,
+    rotation: -Math.PI,
+    plugins: {
+      labels: {
+        render: {},   //structuredClone will fail if there is a function
+        arc: true,
+        fontColor: ["#000", "rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+    legend: { display: false },
+  }, //options
+};
+cfgGaugeSolar.options.plugins.labels.render = renderLabelSolar;
+function renderLabelSolar(args){return args.value + "W";}
+
+
+
 let cfgGaugeELEKTRA2 = structuredClone(cfgDefaultTREND);
 cfgGaugeELEKTRA2.options.title.text = "kWh";
 cfgGaugeELEKTRA2.options.plugins.labels.render = renderLabelElektra;
@@ -371,6 +416,9 @@ Iconify.addCollection({
        "mdi-pulse": {
            body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
        },        
+	   "mdi-solar-power-variant": {
+           body: '<path d="M3.33 16H11V13H4L3.33 16M13 16H20.67L20 13H13V16M21.11 18H13V22H22L21.11 18M2 22H11V18H2.89L2 22M11 8H13V11H11V8M15.76 7.21L17.18 5.79L19.3 7.91L17.89 9.33L15.76 7.21M4.71 7.91L6.83 5.79L8.24 7.21L6.12 9.33L4.71 7.91M3 2H6V4H3V2M18 2H21V4H18V2M12 7C14.76 7 17 4.76 17 2H7C7 4.76 9.24 7 12 7Z" fill="currentColor"/>',
+       }, 
     },
    width: 24,
    height: 24,
@@ -388,7 +436,7 @@ function visibilityListener() {
 //       console.log("visibilityState: hidden");
     clearInterval(tabTimer);  
     clearInterval(actualTimer);
-	clearInterval(timeTimer);  
+	clearInterval(timeTimer);
       PauseAPI=true;
       break;
     case "visible":
@@ -490,6 +538,28 @@ function SetOnSettings(json){
 // 		document.getElementById("gasChart").style.height = "250px";
 	}
 }
+
+//============================================================================  
+function UpdateSolar(){
+	console.log("Update Solar");
+	fetch(APIHOST+"/api/v2/gen", {"setTimeout": 5000})
+      .then(response => response.json())
+      .then(json => {
+			"active" in json ? SolarActive=json.active : SolarActive = false;
+			console.log("SolarActive: "+ SolarActive);
+			if ( SolarActive ) {		
+				console.log("parsed response: "+ JSON.stringify(json));
+				console.log("json.total.daily: "+ json.total.daily);
+				console.log("json.total.actual: "+ json.total.actual);
+				console.log("json.Wp: "+ json.Wp);
+				trend_solar.data.datasets[0].data=[json.total.actual,json.Wp-json.total.actual];	
+				trend_solar.update();
+				document.getElementById('dash_solar_p').innerHTML = formatValue(json.total.daily/1000.0);
+				document.getElementById('dash_solar').style.display = 'block';
+			}
+      })
+ }
+
 //============================================================================  
 
 function nrgm_start_stop(cmd){	
@@ -611,6 +681,7 @@ function UpdateDash()
 */
 	var Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
 	console.log("Update dash");
+	if ( SolarActive ) UpdateSolar();
 	
 	setPresentationType('TAB'); //zet grafische mode uit
 	
@@ -686,8 +757,8 @@ function UpdateDash()
 			//min - max waarde
 			if (minV == 0.0 || Vmin_now < minV) { minV = Vmin_now; }
 			if (Vmax_now > maxV) { maxV = Vmax_now; }
-			document.getElementById(`power_delivered_2max`).innerHTML = Number(maxV.toFixed(1)).toLocaleString();
-			document.getElementById(`power_delivered_2min`).innerHTML = Number(minV.toFixed(1)).toLocaleString();   
+			document.getElementById(`power_delivered_2max`).innerHTML = Number(maxV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
+			document.getElementById(`power_delivered_2min`).innerHTML = Number(minV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
 
 			//update gauge
 			gaugeV.data.datasets[0].data=[v1-207,253-json.voltage_l1.value];
@@ -747,7 +818,7 @@ function UpdateDash()
 		if (Act_Watt) {
 			document.getElementById("power_delivered").innerHTML = Number(TotalKW  * 1000).toFixed(0);
 		} else {
-			document.getElementById("power_delivered").innerHTML = Number(TotalKW).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} ) ;
+			document.getElementById("power_delivered").innerHTML = Number(TotalKW).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} ) ;
 		}
 
 		//vermogen min - max bepalen
@@ -760,8 +831,8 @@ function UpdateDash()
 			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW * 1000).toFixed(0);           
 			document.getElementsByName('power').forEach(function(ele, idx) { ele.innerHTML = 'Watt'; }) //for all elements
 		} else {
-			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );                    
-			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );                        
+			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} );                    
+			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} );                        
 		}
 		
     // stop here if there is no history enabled
@@ -799,7 +870,7 @@ function UpdateDash()
 		{
       Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1);
       updateGaugeTrend(trend_g, Garr);
-			document.getElementById("G").innerHTML = Number(Garr[0]).toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3} );
+			document.getElementById("G").innerHTML = formatValue(Garr[0]);
 		}
 		
 		//-------WATER METER	
@@ -815,11 +886,12 @@ function UpdateDash()
 		{
       Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1000);
       updateGaugeTrend(trend_q, Garr);
-			document.getElementById("Q").innerHTML = Number(Garr[0]).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0} );
+			document.getElementById("Q").innerHTML = Number(Garr[0]).toLocaleString("nl", {minimumFractionDigits: 0, maximumFractionDigits: 0} );
 		}
-								
+										
 		Spinner(false);
 	}); //end fetch fields
+
 }
 
 //bereken verschillen gas, afname, teruglevering en totaal
@@ -837,7 +909,6 @@ function calculateDifferences(curval, hist_arr, factor)
   }
   return out;
 }
-
 //update dataset and update gauge 
 function updateGaugeTrend(objGauge, arr)
 {
@@ -907,6 +978,7 @@ function createDashboardGauges()
 	trend_w 	= new Chart(document.getElementById("container-7"), cfgGaugeWATER);
 	gauge3f 	= new Chart(document.getElementById("gauge3f"),     cfgGauge3F);
 	gaugeV 		= new Chart(document.getElementById("gauge-v"),     cfgGaugeVOLTAGE);
+	trend_solar	= new Chart(document.getElementById("container-solar"), cfgGaugeSolar);	
 }
 
 //callback function for the DAL
@@ -1046,7 +1118,7 @@ function show_hide_column2(table, col_no, do_show) {
     clearInterval(tabTimer);  
     clearInterval(actualTimer);
     clearInterval(NRGStatusTimer);
-
+	
     hideAllCharts();
 
 	if (!EnableHist) {
@@ -1100,6 +1172,7 @@ function show_hide_column2(table, col_no, do_show) {
       	case "bDashTab":
       		readGitHubVersion();
 			UpdateDash();
+			UpdateSolar();
 			clearInterval(tabTimer);
 			clearInterval(actualTimer);  
 			tabTimer = setInterval(UpdateDash, 10 * 1000); // repeat every 10s
@@ -1831,7 +1904,7 @@ function formatFailureLog(svalue) {
   {
     var t="";
     if (!isNaN(value) ) 
-      t = Number(value).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 3} );
+      t = Number(value).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} );
     else 
       t = value;
     return t;
