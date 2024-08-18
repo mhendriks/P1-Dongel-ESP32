@@ -54,9 +54,14 @@ void PostMacIP() {
 #else
   String httpRequestData = "mac=" + String(macStr) + "&ip=" + IPAddress()+ "&version=" + _VERSION_ONLY;           
 #endif  
-//  DebugT(F("HTTP RequestData: "));Debugln(httpRequestData);
+  
   int httpResponseCode = http.POST(httpRequestData);
+
+#ifdef DEBUG  
+  DebugT(F("HTTP RequestData: "));Debugln(httpRequestData);
   DebugT(F("HTTP Response code: "));Debugln(httpResponseCode);
+#endif  
+
   http.end();  
 }
 
@@ -170,9 +175,6 @@ void startWiFi(const char* hostname, int timeOut)
   } 
   //  phy_bbpll_en_usb(true); 
 //  DebugTf("Took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
-
-  PostMacIP(); //post mac en ip 
-  USBPrint("ip-adres: ");USBPrintln(WiFi.localIP().toString());
 
 } // startWiFi()
 

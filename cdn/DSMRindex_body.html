@@ -499,7 +499,7 @@
 		<br> 
 			<label for="wp">Systeemvermogen (Wp):</label><br>
 			<input type="number" id="wp" name="wp" value=3500><br><br>
-			<label for="Interval">Update interval (minuten):</label><br>
+			<label for="Interval">Update interval (seconden):</label><br>
 			<input type="number" id="interval" name="interval" value=10><br><br>
 			<label for="gw_url">Gateway url of ip-adres:</label><br>
 			<input type="text" id="gw_url" name="gw_url" value="https://envoy/api/v1/production" style="width: 100%"><br><br>
@@ -615,6 +615,10 @@
     		<hr/>
             <div style="text-align:center" data-i18n-key="lbl-today-kwh">Vandaag [kWh]</div>
             <h2 id=dash_solar_p>0.0</h2>
+            <div style="text-align:center">Zelfvoorzienend: <b><span id="seue">-</span> <span>%</span></b></div>
+            <div style="text-align:center">Zelfverbruik: <b><span id="scr">-</span> <span>%</span></b></div>
+<!--             <div style="text-align:center">Wh/Wp: <b><span id="wpwh">-</span> <span>%</span></b></div> -->
+
         </div>		
 		<a href="#HoursTab" style="display:flex">
         <div class=card id=l3 style="display:block">

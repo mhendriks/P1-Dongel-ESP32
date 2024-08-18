@@ -1,5 +1,3 @@
-// Board config
-
 // Device Types
 #define PRO         0
 #define PRO_BRIDGE  1

@@ -60,6 +60,8 @@ const MONTHS_IN_YEAR_NL    = ["Januari","Februari","Maart","April","Mei","Juni",
   let settingFontColor 		= 'white';
   var objDAL = null;
   var SolarActive 			= false;
+  var Pi_today				= 0;
+  var Pd_today				= 0;
     
   //The Data Access Layer for the DSMR
   // - acts as an cache between frontend and server
@@ -485,8 +487,8 @@ function SetOnSettings(json){
 		//bereken het aantal fases aan de hand van de slimme meter data
 // 		if ( isNaN(json.voltage_l1.value) ) alert_message("Spanningsvelden slimme meter niet gevuld : Pas 'Phases' aan in Frontend.json bij 3 fases");
 		Phases = 1;
-		if (!isNaN(json.voltage_l2.value)) Phases++;
-		if (!isNaN(json.voltage_l3.value)) Phases++;
+		if (!isNaN(json.current_l2.value)) Phases++;
+		if (!isNaN(json.current_l3.value)) Phases++;
 	}
 	if(!EnableHist){
 		//hide menu elements + dashboard item
@@ -556,6 +558,15 @@ function UpdateSolar(){
 				trend_solar.update();
 				document.getElementById('dash_solar_p').innerHTML = formatValue(json.total.daily/1000.0);
 				document.getElementById('dash_solar').style.display = 'block';
+
+				//SCR
+// console.log("Pi_today: " + Pi_today*1000);
+// console.log("json.total.daily: " + json.total.daily);
+				if ( json.total.daily ) document.getElementById('scr').innerHTML = Number(((json.total.daily-(1000*Pi_today))/json.total.daily)*100).toFixed(0);
+// 				Number(maxV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
+				//SEUE				( Productie - Teruglevering ) / ( Afname + Productie - Teruglevering )
+				if ( json.total.daily ) document.getElementById('seue').innerHTML = Number( (json.total.daily-(1000*Pi_today)) / (json.total.daily-(1000*Pi_today)+(Pd_today*1000))*100 ).toFixed(0);				
+// 				if ( json.Wp ) document.getElementById('wpwh').innerHTML = Number( json.total.daily / json.Wp * 100 ).toFixed(0);				
 			}
       })
  }
@@ -853,6 +864,9 @@ function UpdateDash()
       updateGaugeTrend(trend_p, Parr);
       document.getElementById("P").innerHTML = formatValue( Parr[0] );
       
+	  Pi_today = Parri[0];
+	  Pd_today = Parra[0];
+	        
       if (Injection) 
       {
         //-------INJECTIE METER

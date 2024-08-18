@@ -8,7 +8,6 @@
 
 WENSEN
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
-- feature: nieuwe meter = beginstand op 0
 - front-end: splitsen dashboard / eenmalige instellingen bv fases 
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
 - auto switch 3 - 1 fase max fuse
@@ -17,11 +16,7 @@ WENSEN
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
 - Roberto: P1 H2O watersensor gegevens apart versturen (MQTT) van P1 
 - Sluipverbruik bijhouden
-- Modbus TCP (a3) Vrij slave adres. Sommige systemen kennen alleen uniek slave adres/id. Maken geen onderscheid in IP adres omdat soms meer RS485/RTU devices achter 1 TCP naar RTU converter (bijvoorbeeld Moxa M-gate) zitten.
-- Modbus Registers van de "Actueel" pagina lijkt me in eerste instantie voldoende. Wel mis ik zo iets als m3 (of liters) gas per uur. Belangrijk bij hybride warmteopwekking (ketel en warmtepomp), waarbij elke liter gas er één te veel is :-). Is natuurlijk ook softwarematig te maken.
 - optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
-- toevoegen van mdns aanmelding na 1 minuut
-- update Warmtelink url en mechanisme isoleren (Henry de J)
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
 - #18 water en gas ook in de enkele json string (mqtt)
 - spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
@@ -46,8 +41,14 @@ WENSEN
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - support https / http mqtt link extern
 
+4.9.3 
+- bugfix doorgeven macadres naar checkip
+- phase check op basis van stroom
+- Solis Omvormer (local USB ) toegevoegd.
+
 TODO
 - flag NoRebootOnNoWiFi
+- nieuwe meter
 
 docs
 - long / short press aanpassing
@@ -122,7 +123,11 @@ void setup()
     startAP();
   #endif
 #endif
+  
   GetMacAddress();
+  PostMacIP(); //post mac en ip 
+  USBPrint("ip-adres: ");USBPrintln(WiFi.localIP().toString());
+  
   delay(100);
   startTelnet();
 #ifndef AP_ONLY

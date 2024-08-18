@@ -95,8 +95,7 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, char* Timestamp)
 
 //===========================================================================================
 
-void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) 
-{
+void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) {
 #ifdef NO_STORAGE
   return;
 #else  
@@ -105,7 +104,7 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev)
   char key[9] = "";
   byte slot = 0;
   uint8_t actSlot = CalcSlot(ringfiletype, bPrev);
-//  if ( actSlot == 99 ) return;  // stop if error occured
+
   StaticJsonDocument<145> rec;
 
   char buffer[DATA_RECLEN];
