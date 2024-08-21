@@ -41,11 +41,6 @@ WENSEN
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - support https / http mqtt link extern
 
-4.9.3 
-- bugfix doorgeven macadres naar checkip
-- phase check op basis van stroom
-- Solis Omvormer (local USB ) toegevoegd.
-
 TODO
 - flag NoRebootOnNoWiFi
 - nieuwe meter

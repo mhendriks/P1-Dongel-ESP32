@@ -563,9 +563,11 @@ function UpdateSolar(){
 // console.log("Pi_today: " + Pi_today*1000);
 // console.log("json.total.daily: " + json.total.daily);
 				if ( json.total.daily ) document.getElementById('scr').innerHTML = Number(((json.total.daily-(1000*Pi_today))/json.total.daily)*100).toFixed(0);
+				else document.getElementById('seue').innerHTML = "-";
 // 				Number(maxV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
 				//SEUE				( Productie - Teruglevering ) / ( Afname + Productie - Teruglevering )
-				if ( json.total.daily ) document.getElementById('seue').innerHTML = Number( (json.total.daily-(1000*Pi_today)) / (json.total.daily-(1000*Pi_today)+(Pd_today*1000))*100 ).toFixed(0);				
+				if ( json.total.daily ) document.getElementById('seue').innerHTML = Number( (json.total.daily-(1000*Pi_today)) / (json.total.daily-(1000*Pi_today)+(Pd_today*1000))*100 ).toFixed(0);
+				else document.getElementById('seue').innerHTML = "-";
 // 				if ( json.Wp ) document.getElementById('wpwh').innerHTML = Number( json.total.daily / json.Wp * 100 ).toFixed(0);				
 			}
       })
