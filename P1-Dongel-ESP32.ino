@@ -63,6 +63,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
+//#define DEBUG
+
 //PROFILES
 //#define ULTRA         //ultra dongle
 //#define ETHERNET      //ethernet dongle
@@ -78,10 +80,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-//#define EID
+#define EID
 //#define NO_HA_AUTODISCOVERY
 #define DEV_PAIRING
-//#define DEBUG
 //#define POST_TELEGRAM
 //#define SMQTT
 
