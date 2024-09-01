@@ -40,6 +40,10 @@ SingleNeoPixel rgb(RGBLED_PIN);
 
 P1Reader    slimmeMeter(&Serial1, DTR_IO);
 
+#ifdef VIRTUAL_P1
+  char virtual_p1_ip[20] ="";
+#endif
+
 TaskHandle_t tP1Reader; //  own proces for P1 reading
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };

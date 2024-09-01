@@ -63,10 +63,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-//#define DEBUG
+#define DEBUG
 
 //PROFILES
-//#define ULTRA         //ultra dongle
+#define ULTRA         //ultra dongle
 //#define ETHERNET      //ethernet dongle
 //#define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; UNSELECTED IS OKAY TOO
@@ -80,7 +80,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-#define EID
+//#define EID
 //#define NO_HA_AUTODISCOVERY
 #define DEV_PAIRING
 //#define POST_TELEGRAM
@@ -99,7 +99,7 @@ void setup()
   SetConfig();
   lastReset = getResetReason();
   DebugT(F("Last reset reason: ")); Debugln(lastReset);
-  
+  DebugFlush();
 //================ File System =====================================
   if (LittleFS.begin(true)) { DebugTln(F("FS Mount OK\r")); FSmounted = true;  } 
   else DebugTln(F("!!!! FS Mount ERROR\r"));   // Serious problem with File System 
@@ -177,6 +177,10 @@ void setup()
 #endif  
   ReadSolarConfigs();
 
+//#ifdef VIRTUAL_P1
+//  SetupVitrualP1();
+//#endif  
+
 } // setup()
 
 
@@ -216,6 +220,7 @@ void loop () {
        handleEnergyID();  
        PostTelegram();
        GetSolarDataN();
+       handleVirtualP1();
 } // loop()
 
 

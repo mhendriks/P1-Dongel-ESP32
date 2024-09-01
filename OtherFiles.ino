@@ -227,8 +227,11 @@ void readSettings(bool show)
   if (doc.containsKey("pt_interval")) pt_interval = doc["pt_interval"];
   if (doc.containsKey("pt_end_point")) strcpy(pt_end_point, doc["pt_end_point"]);
 #endif
-  
-  
+
+#ifdef VIRTUAL_P1
+  if (doc.containsKey("virtual_p1_ip")) strcpy(virtual_p1_ip, doc["virtual_p1_ip"]);  
+#endif  
+
   if (doc.containsKey("act-json-mqtt")) bActJsonMQTT = doc["act-json-mqtt"];
 
   const char* temp = doc["basic-auth"]["user"];

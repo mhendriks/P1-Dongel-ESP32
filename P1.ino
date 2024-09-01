@@ -87,13 +87,55 @@ void P1OutBridge(){
   if ( dtr1 && Out1Avail ) {
 
     digitalWrite(P1_LED, HIGH);
-    Serial.println(CapTelegram);
+    Serial.print(CapTelegram);
     Serial.flush();
     Out1Avail = false; 
     if ( digitalRead(O1_DTR_IO) == LOW ) SetDTR(false);
     digitalWrite(P1_LED, LOW);
   }
 } 
+
+//==================================================================================
+
+#ifdef VIRTUAL_P1
+bool bVirt_connected = false;
+WiFiClient vp1_client;
+time_t vp1_last_connect = 0;
+time_t vp1_last_data = 0;
+
+void virtSetLastData(){
+   vp1_last_data = millis();
+}
+
+void handleVirtualP1(){
+  if (strlen(virtual_p1_ip) == 0) {
+    if (vp1_client.connected()) {
+      bVirt_connected = false;
+      vp1_client.stop();
+      slimmeMeter.ChangeStream(&Serial1);
+    } else return;
+  }
+
+ if ( millis() - vp1_last_data > 20000) vp1_client.stop();
+  
+  if( ! vp1_client.connected() ){
+    if ( (millis() - vp1_last_connect) < 5000 && (millis() > 5000) ) return;
+    vp1_last_connect = millis();
+    DebugTln(F("Virtual P1 DISCONNECTED"));
+    bVirt_connected = false;
+    if (!vp1_client.connect(virtual_p1_ip, 82)) {
+      DebugTln(F("Virtual P1 to host failed"));
+    } else {
+      DebugTln(F("Virtual P1 connected"));
+      vp1_last_data = millis();
+      bVirt_connected = true;
+      slimmeMeter.ChangeStream(&vp1_client);
+    }
+  }
+}
+#else
+void handleVirtualP1(){}
+#endif  
 
 //==================================================================================
 void handleSlimmemeter()
@@ -108,6 +150,9 @@ void handleSlimmemeter()
       ToggleLED(LED_ON);
 //      CapTelegram = "/" + slimmeMeter.raw() + "!" + slimmeMeter.GetCRC_str(); //capture last telegram
       CapTelegram = slimmeMeter.CompleteRaw();
+#ifdef VIRTUAL_P1
+  virtSetLastData();
+#endif
       Out1Avail = true;
       if (showRaw) {
         //-- process telegrams in raw mode
