@@ -37,7 +37,7 @@ void startETH(){
 
   PostMacIP(); //post mac en ip 
 
-  USBPrint(F("ETH IP : ")); USBPrintln(IP_Address());
+//  USBPrint(F("ETH IP : ")); USBPrintln(IP_Address());
 //  USBSerial.print(F("ETH MAC: ")); //CDC output
 //  USBSerial.println(macStr);
   

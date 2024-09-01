@@ -63,7 +63,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-#define DEBUG
+//#define DEBUG
 
 //PROFILES
 #define ULTRA         //ultra dongle
@@ -76,13 +76,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define SE_VERSION
 //#define STUB            //test only
 //#define AP_ONLY
-#define MBUS
+//#define MBUS
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 //#define EID
 //#define NO_HA_AUTODISCOVERY
-#define DEV_PAIRING
+//#define DEV_PAIRING
 //#define POST_TELEGRAM
 //#define SMQTT
 
@@ -122,7 +122,7 @@ void setup()
   
   GetMacAddress();
   PostMacIP(); //post mac en ip 
-  USBPrint("ip-adres: ");USBPrintln(WiFi.localIP().toString());
+  USBPrint("ip-adres: ");USBPrintln(IP_Address());
   
   delay(100);
   startTelnet();

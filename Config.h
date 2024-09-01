@@ -23,8 +23,10 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
 #ifdef ULTRA 
   #ifndef ETHERNET 
       #define ETHERNET
-      #define VIRTUAL_P1
   #endif    
+  #define VIRTUAL_P1
+  #define MBUS
+  #define DEV_PAIRING
   #include "hw_profile_ultra.h"
 #else
   #ifdef ETHERNET
@@ -84,7 +86,13 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
   #define OPT7
 #endif
 
-#define ALL_OPTIONS PROFILE OPT1 OPT2 OPT3 OPT4 OPT5 OPT6 OPT7
+#ifdef VIRTUAL_P1
+  #define OPT8  "[VIRT_P1]" 
+#else
+  #define OPT8
+#endif
+
+#define ALL_OPTIONS PROFILE OPT1 OPT2 OPT3 OPT4 OPT5 OPT6 OPT7 OPT8
 #define _DEFAULT_MQTT_TOPIC _DEFAULT_HOSTNAME "/"
 
 #ifdef AP_ONLY  
