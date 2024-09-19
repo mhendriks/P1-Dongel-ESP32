@@ -65,13 +65,12 @@ void writeToJsonFile(const TSource &doc, File &_file)
 }
 
 //=======================================================================
-void writeSettings() 
-{
-  if (!FSmounted) return;
+void writeSettings() {
+  if ( !FSmounted ) return;
 
   DebugTln(F("Writing to [" SETTINGS_FILE "] ..."));
-  
-  File SettingsFile = LittleFS.open(SETTINGS_FILE, "w"); // open for writing
+
+  File SettingsFile = LittleFS.open(SETTINGS_FILE, FILE_WRITE); // open for writing
   
   if (!SettingsFile) 
   {
@@ -84,56 +83,56 @@ void writeSettings()
     
   DebugTln(F("Start writing setting data to json settings file"));
   
-  StaticJsonDocument<3000> doc; 
-  doc["Hostname"] = settingHostname;
-  doc["EnergyDeliveredT1"] = settingEDT1;
-  doc["EnergyDeliveredT2"] = settingEDT2;
-  doc["EnergyReturnedT1"] = settingERT1;
-  doc["EnergyReturnedT2"] = settingERT2;
-  doc["GASDeliveredT"] = settingGDT;
-  doc["WaterDelivered"] = settingWDT;
-  doc["EnergyVasteKosten"] = settingENBK;
-  doc["GasVasteKosten"] = settingGNBK;
-  doc["WaterVasteKosten"] = settingWNBK;
-  doc["SmHasFaseInfo"] = settingSmHasFaseInfo;
-  doc["IndexPage"] = settingIndexPage;
+  DynamicJsonDocument docw(3000); 
+  docw["Hostname"] = settingHostname;
+  docw["EnergyDeliveredT1"] = settingEDT1;
+  docw["EnergyDeliveredT2"] = settingEDT2;
+  docw["EnergyReturnedT1"] = settingERT1;
+  docw["EnergyReturnedT2"] = settingERT2;
+  docw["GASDeliveredT"] = settingGDT;
+  docw["WaterDelivered"] = settingWDT;
+  docw["EnergyVasteKosten"] = settingENBK;
+  docw["GasVasteKosten"] = settingGNBK;
+  docw["WaterVasteKosten"] = settingWNBK;
+  docw["SmHasFaseInfo"] = settingSmHasFaseInfo;
+  docw["IndexPage"] = settingIndexPage;
   yield();
-  doc["MQTTbroker"] = settingMQTTbroker;
-  doc["MQTTbrokerPort"] = settingMQTTbrokerPort;
-  doc["MQTTUser"] = settingMQTTuser;
-  doc["MQTTpasswd"] = settingMQTTpasswd;
-  doc["MQTTinterval"] = settingMQTTinterval;
-  doc["MQTTtopTopic"] = settingMQTTtopTopic;
+  docw["MQTTbroker"] = settingMQTTbroker;
+  docw["MQTTbrokerPort"] = settingMQTTbrokerPort;
+  docw["MQTTUser"] = settingMQTTuser;
+  docw["MQTTpasswd"] = settingMQTTpasswd;
+  docw["MQTTinterval"] = settingMQTTinterval;
+  docw["MQTTtopTopic"] = settingMQTTtopTopic;
   
-  doc["LED"] = LEDenabled;
-  doc["ota"] = BaseOTAurl;
-  doc["enableHistory"] = EnableHistory;
-  doc["watermeter"] = WtrMtr;
-  doc["waterfactor"] = WtrFactor;
-  doc["HAdiscovery"] = EnableHAdiscovery;
-  doc["basic-auth"]["user"] = bAuthUser;
-  doc["basic-auth"]["pass"] = bAuthPW;
-  doc["auto-update"] = bAutoUpdate;
-  doc["pre40"] = bPre40;
-  doc["act-json-mqtt"] = bActJsonMQTT;
-  doc["raw-port"] = bRawPort;
-  doc["led-prt"] = bLED_PRT;
+  docw["LED"] = LEDenabled;
+  docw["ota"] = BaseOTAurl;
+  docw["enableHistory"] = EnableHistory;
+  docw["watermeter"] = WtrMtr;
+  docw["waterfactor"] = WtrFactor;
+  docw["HAdiscovery"] = EnableHAdiscovery;
+  docw["basic-auth"]["user"] = bAuthUser;
+  docw["basic-auth"]["pass"] = bAuthPW;
+  docw["auto-update"] = bAutoUpdate;
+  docw["pre40"] = bPre40;
+  docw["act-json-mqtt"] = bActJsonMQTT;
+  docw["raw-port"] = bRawPort;
+  docw["led-prt"] = bLED_PRT;
 
 #ifdef VOLTAGE_MON
-  doc["max-volt"] = MaxVoltage;
+  docw["max-volt"] = MaxVoltage;
 #endif
 
 #ifdef EID    
-  doc["eid-enabled"] = bEID_enabled;
+  docw["eid-enabled"] = bEID_enabled;
 #endif  
 
 #ifdef POST_TELEGRAM
-  doc["pt_port"] = pt_port;
-  doc["pt_interval"] = pt_interval;
-  doc["pt_end_point"] = pt_end_point;
+  docw["pt_port"] = pt_port;
+  docw["pt_interval"] = pt_interval;
+  docw["pt_end_point"] = pt_end_point;
 #endif
 
-  writeToJsonFile(doc, SettingsFile);
+  writeToJsonFile(docw, SettingsFile);
   
 } // writeSettings()
 
@@ -151,7 +150,7 @@ void readSettings(bool show)
     writeSettings();
     return;
   }
-
+  
   for (int T = 0; T < 2; T++) 
   {
     SettingsFile = LittleFS.open(SETTINGS_FILE, "r");
@@ -165,7 +164,7 @@ void readSettings(bool show)
   
   DebugT(F("Reading settings:.."));
   
-  StaticJsonDocument<3000> doc; 
+  DynamicJsonDocument doc(3000); 
   DeserializationError error = deserializeJson(doc, SettingsFile);
   if (error) {
     Debugln();
@@ -421,6 +420,7 @@ void LogFile(const char* payload, bool toDebug = false) {
   File LogFile = LittleFS.open("/P1.log", "a"); // open for appending  
   if (!LogFile) {
     DebugTln(F("open P1.log FAILED!!!--> Bailout\r\n"));
+    LogFile.close(); 
     return;
   }
   //log rotate

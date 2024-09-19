@@ -9,3 +9,6 @@ debug_custom.json
 /*.bin
 launch.json
 ap
+*.bin
+*.elf
+*.map

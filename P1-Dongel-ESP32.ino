@@ -63,7 +63,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-#define DEBUG
+// #define DEBUG
 
 //PROFILES
 #define ULTRA         //ultra dongle
@@ -103,9 +103,8 @@ void setup()
   DebugT(F("Last reset reason: ")); Debugln(lastReset);
   DebugFlush();
 //================ File System =====================================
-  if (LittleFS.begin(true)) { DebugTln(F("FS Mount OK\r")); FSmounted = true;  } 
+  if ( LittleFS.begin(true) ) { DebugTln(F("FS Mount OK\r")); FSmounted = true;  } 
   else DebugTln(F("!!!! FS Mount ERROR\r"));   // Serious problem with File System 
-  
 //================ Status update ===================================
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
   P1StatusWrite();
