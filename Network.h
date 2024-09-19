@@ -28,6 +28,7 @@ void LogFile(const char*, bool);
 void P1Reboot();
 void SwitchLED( byte mode, uint32_t color);
 String MAC_Address();
+String  IP_Address();
 
 void GetMacAddress(){
 
@@ -48,11 +49,11 @@ void PostMacIP() {
   HTTPClient http;
   http.begin(wifiClient, APIURL);
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-
+  
 #ifndef AP_ONLY
-  String httpRequestData = "mac=" + String(macStr) + "&ip=" + WiFi.localIP().toString() + "&version=" + _VERSION_ONLY;           
+  String httpRequestData = "mac=" + String(macStr) + "&ip=" + IP_Address() + "&version=" + _VERSION_ONLY;           
 #else
-  String httpRequestData = "mac=" + String(macStr) + "&ip=" + IPAddress()+ "&version=" + _VERSION_ONLY;           
+  String httpRequestData = "mac=" + String(macStr) + "&ip=" + IP_Address() + "&version=" + _VERSION_ONLY;           
 #endif  
   
   int httpResponseCode = http.POST(httpRequestData);

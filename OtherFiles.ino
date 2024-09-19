@@ -67,23 +67,24 @@ void writeToJsonFile(const TSource &doc, File &_file)
 //=======================================================================
 void writeSettings() 
 {
-  StaticJsonDocument<3000> doc; 
   if (!FSmounted) return;
 
-  DebugT(F("Writing to [")); Debug(SETTINGS_FILE); Debugln(F("] ..."));
+  DebugTln(F("Writing to [" SETTINGS_FILE "] ..."));
   
-  File SettingsFile = LittleFS.open(SETTINGS_FILE, "w"); // open for reading and writing
+  File SettingsFile = LittleFS.open(SETTINGS_FILE, "w"); // open for writing
   
   if (!SettingsFile) 
   {
-    DebugTf("open(%s, 'w') FAILED!!! --> Bailout\r\n", SETTINGS_FILE);
+    DebugTln("open(" SETTINGS_FILE ", 'w') FAILED!!! --> Bailout\r\n");
     return;
   }
-
+  
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), _DEFAULT_HOMEPAGE);
   if (settingMQTTbrokerPort < 1)    settingMQTTbrokerPort = 1883;
     
   DebugTln(F("Start writing setting data to json settings file"));
+  
+  StaticJsonDocument<3000> doc; 
   doc["Hostname"] = settingHostname;
   doc["EnergyDeliveredT1"] = settingEDT1;
   doc["EnergyDeliveredT2"] = settingEDT2;
@@ -117,9 +118,11 @@ void writeSettings()
   doc["act-json-mqtt"] = bActJsonMQTT;
   doc["raw-port"] = bRawPort;
   doc["led-prt"] = bLED_PRT;
+
 #ifdef VOLTAGE_MON
   doc["max-volt"] = MaxVoltage;
 #endif
+
 #ifdef EID    
   doc["eid-enabled"] = bEID_enabled;
 #endif  
@@ -137,8 +140,6 @@ void writeSettings()
 //=======================================================================
 void readSettings(bool show) 
 {
-  
-  StaticJsonDocument<3000> doc; 
   File SettingsFile;
   if (!FSmounted) return;
 
@@ -163,7 +164,8 @@ void readSettings(bool show)
   } // try T times ..
   
   DebugT(F("Reading settings:.."));
-
+  
+  StaticJsonDocument<3000> doc; 
   DeserializationError error = deserializeJson(doc, SettingsFile);
   if (error) {
     Debugln();

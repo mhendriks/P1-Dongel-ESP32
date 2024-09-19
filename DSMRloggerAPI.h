@@ -113,7 +113,6 @@ using MyData = ParsedData<
   /* FixedValue */            ,energy_delivered_tariff2
   /* FixedValue */            ,energy_returned_tariff1
   /* FixedValue */            ,energy_returned_tariff2
-  /* FixedValue */            ,energy_delivered_total
   /* FixedValue */            ,energy_returned_total
   /* String */                ,electricity_tariff
   /* FixedValue */            ,power_delivered
@@ -305,7 +304,7 @@ bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;
 
 //MQTT
-char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[40] = _DEFAULT_MQTT_TOPIC;
+char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
 int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;

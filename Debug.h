@@ -28,8 +28,8 @@
                              TelnetStream.flush(); \
                           })
 
-  #define USBPrint(...)   ({ DebugT(__VA_ARGS__);})
-  #define USBPrintln(...) ({ DebugTln(__VA_ARGS__);})                       
+  #define USBPrint(...)   ({ Debug(__VA_ARGS__);})
+  #define USBPrintln(...) ({ Debugln(__VA_ARGS__);})                       
 
 #else
   //NORMAL MODE

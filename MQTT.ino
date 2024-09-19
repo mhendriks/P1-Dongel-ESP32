@@ -87,8 +87,20 @@ void AutoDiscoverHA(){
 
 }
 
-void MQTTsetServer(){
+#include "_mqtt_kb.h"
 
+void MQTTSetBaseInfo(){
+#ifdef MQTTKB
+  settingMQTTbrokerPort =   MQTT_PORT;
+  settingMQTTinterval =     MQTT_INERTVAL;
+  strcpy(settingMQTTbroker, MQTT_BROKER);
+  strcpy(settingMQTTuser,   MQTT_USER);
+  strcpy(settingMQTTpasswd, MQTT_PASSWD);
+  sprintf( settingMQTTtopTopic,"%s/%s/", _DEFAULT_HOSTNAME, macID );
+#endif  
+}
+
+void MQTTsetServer(){
 #ifndef MQTT_DISABLE 
   if ((settingMQTTbrokerPort == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
@@ -106,15 +118,25 @@ void MQTTsetServer(){
 
 //===========================================================================================
 
-static void MQTTcallback(char* topic, byte* payload, unsigned int length) {
-  if (length > 24) return;
-  sprintf(cMsg,"%supdatefs",settingMQTTtopTopic);
-  if (strcmp(topic, cMsg) == 0) bUpdateSketch = false; 
-  else bUpdateSketch = true;
+static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
+  String StrTopic = topic;
+  char StrPayload[len];
+
+  DebugTf("Message length: %d\n",len );
+  for (int i=0;i<len;i++) StrPayload[i] = (char)payload[i];
+  payload[len] = '\0';
   
-  for (int i=0;i<length;i++) UpdateVersion[i] = (char)payload[i];
-//  DebugT("Message arrived [");Debug(topic);Debug("] ");Debugln(UpdateVersion);
-  UpdateRequested = true;
+  if ( StrTopic.indexOf("update") >= 0) {
+    bUpdateSketch = true;
+    strcpy( UpdateVersion, StrPayload );
+    DebugT("Message arrived [" + StrTopic + "] ");Debugln(UpdateVersion);
+    UpdateRequested = true;
+  }
+  if ( StrTopic.indexOf("interval") >= 0) {
+    settingMQTTinterval =  String(StrPayload).toInt();
+    DebugT("Message arrived [" + StrTopic + "] ");Debugln(StrPayload);
+    CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
+  }
 }
 
 //===========================================================================================
@@ -134,8 +156,10 @@ void MQTTConnect() {
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
-  	  sprintf(cMsg,"%supdate",settingMQTTtopTopic);
+      sprintf( cMsg,"%supdate", settingMQTTtopTopic );
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
+      sprintf(cMsg,"%sinterval",settingMQTTtopTopic);
+      MQTTclient.subscribe(cMsg); //subscribe mqtt update
 #ifndef NO_HA_AUTODISCOVERY
       if ( EnableHAdiscovery ) AutoDiscoverHA();
 #endif      
@@ -229,7 +253,7 @@ void MQTTSentStaticInfo(){
   MQTTSend( "p1_version",DSMRdata.p1_version, true );
   MQTTSend( "equipment_id",DSMRdata.equipment_id, true );
   MQTTSend( "firmware",_VERSION_ONLY, true );
-  MQTTSend( "ip_address",WiFi.localIP().toString(), true);
+  MQTTSend( "ip_address",IP_Address(), true);
   MQTTSend( "wifi_rssi",String( WiFi.RSSI() ), true );
 
   if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc, true); }  

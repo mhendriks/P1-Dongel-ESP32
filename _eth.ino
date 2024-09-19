@@ -8,13 +8,15 @@
 
 #include <WebServer_ESP32_SC_W5500.h>
 
-// Select the IP address according to your local network
-//IPAddress myIP(192, 168, 2, 232);
-//IPAddress myGW(192, 168, 2, 1);
-//IPAddress mySN(255, 255, 255, 0);
+#ifdef FIXED_IP
+  // Select the IP address according to your local network
+  IPAddress myIP(192, 168, 2, 232);
+  IPAddress myGW(192, 168, 2, 1);
+  IPAddress mySN(255, 255, 255, 0);
+  // Google DNS Server IP
+  IPAddress myDNS(8, 8, 8, 8);
+#endif
 
-// Google DNS Server IP
-IPAddress myDNS(8, 8, 8, 8);
 
 void startETH(){
 // To be called before ETH.begin()
@@ -31,11 +33,12 @@ void startETH(){
 
   // Static IP, leave without this line to get IP via DHCP
   //bool config(IPAddress local_ip, IPAddress gateway, IPAddress subnet, IPAddress dns1 = 0, IPAddress dns2 = 0);
-  //ETH.config(myIP, myGW, mySN, myDNS);
-
+#ifdef FIXED_IP
+  ETH.config(myIP, myGW, mySN, myDNS);
+#endif
   ESP32_W5500_waitForConnect();
 
-  PostMacIP(); //post mac en ip 
+//  PostMacIP(); //post mac en ip 
 
 //  USBPrint(F("ETH IP : ")); USBPrintln(IP_Address());
 //  USBSerial.print(F("ETH MAC: ")); //CDC output

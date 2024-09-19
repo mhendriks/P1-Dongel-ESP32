@@ -63,28 +63,30 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-//#define DEBUG
+#define DEBUG
 
 //PROFILES
 #define ULTRA         //ultra dongle
 //#define ETHERNET      //ethernet dongle
 //#define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
-//#define P1_WIFI       // DOES NOTHING; UNSELECTED IS OKAY TOO
+//#define P1_WIFI       // DOES NOTHING; 
 
 //FEATURES
+#define DEV_PAIRING
+#define MBUS
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
 //#define STUB            //test only
 //#define AP_ONLY
-//#define MBUS
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 //#define EID
 //#define NO_HA_AUTODISCOVERY
-//#define DEV_PAIRING
 //#define POST_TELEGRAM
 //#define SMQTT
+//#define MQTTKB
+//#define FIXED_IP
 
 #include "DSMRloggerAPI.h"
 
@@ -132,6 +134,7 @@ void setup()
 
 #ifndef EID  
 #ifndef MQTT_DISABLE
+  MQTTSetBaseInfo();
   MQTTsetServer();
  #endif
 #endif  

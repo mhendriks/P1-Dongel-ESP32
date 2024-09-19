@@ -20,7 +20,7 @@
 uint32_t R_value = 0, B_value = 0, G_value = 0;
 
 //PROFILES
-#ifdef ULTRA 
+#ifdef ULTRA
   #ifndef ETHERNET 
       #define ETHERNET
   #endif    
