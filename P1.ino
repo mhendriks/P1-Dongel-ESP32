@@ -266,6 +266,24 @@ void processSlimmemeter() {
   
 } // handleSlimmeMeter()
 
+//called every hour
+void UpdateYesterday( ){
+#ifdef DEBUG
+  Debug("newT/(uint32_t)(3600*24): ");Debugln(newT/(uint32_t)(3600*24));
+  Debug("dataYesterday.lastUpdDay: ");Debugln( dataYesterday.lastUpdDay);
+#endif  
+  if ( dataYesterday.lastUpdDay == (newT/(uint32_t)(3600*24)) ) return; //do nothing
+  //data yesterday should be changed
+  DebugTln("UpdateUsage data");
+  dataYesterday.t1    = (uint32_t) (DSMRdata.energy_delivered_tariff1 * 1000);
+  dataYesterday.t2    = (uint32_t) (DSMRdata.energy_delivered_tariff2 * 1000);
+  dataYesterday.t1r   = (uint32_t) (DSMRdata.energy_returned_tariff1 * 1000);
+  dataYesterday.t2r   = (uint32_t) (DSMRdata.energy_returned_tariff2 * 1000);
+  dataYesterday.gas   = (uint32_t) (gasDelivered * 1000);
+  dataYesterday.water = (uint32_t) (waterDelivered * 1000);
+  dataYesterday.lastUpdDay = newT/(3600*24);
+}
+
 //==================================================================================
 void processTelegram(){
 //  DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());                                                
@@ -276,17 +294,21 @@ void processTelegram(){
   DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
 
   // has the hour changed write ringfiles
-  if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) writeRingFiles(); //bWriteFiles = true; //handled in main flow
+  if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) {
+    writeRingFiles(); //bWriteFiles = true; //handled in main flow
+    UpdateYesterday();
+  }
   
+  if ( telegramCount % 3 == 1 ) SendData2Display();
+
   //handle mqtt
 #ifndef MQTT_DISABLE
-  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1) bSendMQTT = true; //handled in main flow
+  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1 ) bSendMQTT = true; //handled in main flow
 #endif  
   // handle rawport
   if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
   
   ProcessMaxVoltage();
-
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
   actT = newT;

@@ -11,6 +11,9 @@
 #define INFOELEMENTS     3
 #define FIELDELEMENTS    1
 
+String SolarProdActual();
+String SolarProdToday();
+
 byte fieldsElements = 0;
 char Onefield[25];
 bool onlyIfPresent = false;
@@ -118,6 +121,29 @@ void sendDeviceTime()
   sendJsonBuffer(buffer);
   
 } // sendDeviceTime()
+
+void handleUsage(){
+  if ( !DSMRdata.energy_delivered_tariff1_present ) {
+    httpServer.send(204, "application/json", "{\"error\":{\"No Data available\"}}");  
+    return;
+  }
+  String json = "{\"today\":{";
+  json += "\"e_t1\":"   + String((DSMRdata.energy_delivered_tariff1 * 1000) - dataYesterday.t1 ,0);
+  json += ",\"e_t2\":"  + String((DSMRdata.energy_delivered_tariff2 * 1000) - dataYesterday.t2 ,0);
+  json += ",\"e_t1r\":" + String((DSMRdata.energy_returned_tariff1  * 1000) - dataYesterday.t1r,0);
+  json += ",\"e_t2r\":" + String((DSMRdata.energy_returned_tariff2  * 1000) - dataYesterday.t2r,0);
+  if ( mbusGas )    json += ",\"gas\":"   + String(gasDelivered    * 1000 - dataYesterday.gas  ,0);
+  if ( mbusWater )  json += ",\"water\":" + String(waterDelivered  * 1000 - dataYesterday.water,0);
+  json += ",\"solar\":" + SolarProdToday();
+  json += "},\"actuals\":{";
+  json += "\"epoch\":"  + String(actT);
+  json += ",\"p\":"     + String((DSMRdata.power_delivered * 1000) ,0);
+  json += ",\"pr\":"    + String((DSMRdata.power_returned * 1000)  ,0);
+  json += ",\"solar\":" + SolarProdActual();
+  json += "}}";
+  
+  sendJsonBuffer(json.c_str());
+}
 
 void sendDeviceInfo() 
 {

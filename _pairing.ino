@@ -21,12 +21,27 @@
 #include "./../../_secrets/pairing.h"
 
 esp_now_peer_info_t slave;
-enum MessageType { PAIRING, DATA, CONFIRMED, } messageType;
+enum MessageType { PAIRING, DATA, CONFIRMED, NRGACTUALS} messageType;
 enum _pairStatus { _INACTIVE, _WAITING, _PAIRING, _CONFIRMED, } PairingStatus = _INACTIVE;
 
 char PeerHostname[30];
 
 int chan;
+
+typedef struct {
+  uint8_t   type = NRGACTUALS;       // PEER_ACTUALS
+  time_t    epoch;      // sec from 1/1/1970
+  uint32_t  P;          // W
+  uint32_t  Pr;         // W
+  uint32_t  e_t1;       // Wh
+  uint32_t  e_t2;       // Wh
+  uint32_t  e_t1r;      // Wh
+  uint32_t  e_t2r;      // Wh
+  uint32_t  Gas;        // dm3/Liter
+  uint32_t  Water;      // dm3/Liter
+  uint32_t  Psolar;     // W  
+  uint32_t  Esolar;     // Wh  
+} sActualData;
 
 typedef struct struct_pairing {
     uint8_t msgType;
@@ -36,7 +51,21 @@ typedef struct struct_pairing {
     uint8_t ipAddr[4];  //max 4
 } struct_pairing;
 
+typedef struct {
+  uint8_t   type;        // PEER_TARIFS
+  float     FixedEnergy;    // euro
+  float     LowEnergy;      // euro
+  float     NormalEnergy;   // euro
+  float     FixedGas;       // euro
+  float     Gas;            // euro
+  float     FixedWater;     // euro
+  float     Water;          // euro
+  float     FixedHeat;      // euro
+  float     Heat;           // euro
+} sTarifs;
+
 struct_pairing pairingData, recvdata;
+sActualData ActualData;
 
 // ---------------------------- esp_ now -------------------------
 void printMAC(const uint8_t * mac_addr){
@@ -79,7 +108,6 @@ void StopPairing(){
     esp_now_deinit(); //stop service
     WiFi.mode(WIFI_STA); //set wifi to STA  
 }
-
 
 void OnDataRecv(const uint8_t * mac_addr, const uint8_t *incomingData, int len) { 
   Debugf("%i bytes of data received from : ",len);printMAC(mac_addr);Debugln();
@@ -131,9 +159,7 @@ void HandlePairing() {
   }
 }
 
-
 //=======================================================================
-
 
 #ifdef ETHERNET
 bool readWifiCredentials(){
@@ -164,6 +190,35 @@ bool readWifiCredentials(){
 }
 #endif
 
+// uint8_t mac_peer1[] = {0x30, 0x30, 0xF9, 0xFD, 0x91, 0x19}; //test p1p
+// uint8_t mac_peer2[] = {0x30, 0x30, 0xF9, 0xFD, 0x91, 0x18};
+// uint8_t mac_peer1[] = {0x4A, 0x27, 0xE2, 0x1F, 0x24, 0x6C}; //nrgm 35 AP
+// uint8_t mac_peer1[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; //broadcast
+uint8_t mac_peer1[] = {0x48, 0x27, 0xE2, 0x1F, 0x24, 0x6C}; //nrgm 35
+
+esp_now_peer_info_t peerInfo = {};
+
+void StartESPNOW(){
+  // WiFi.mode(WIFI_STA);
+
+  if (esp_now_init() != ESP_OK) {
+      Debugln("Error initializing ESP-NOW");
+      return;
+    }
+  
+  Debug("WifiChannel: ");Debugln(WiFi.channel());
+  memcpy(peerInfo.peer_addr, mac_peer1, 6);
+  peerInfo.channel = WiFi.channel(); // Use default channel
+  peerInfo.encrypt = false;
+  Debug("add peer: ");Debugln(esp_now_add_peer(&peerInfo)==ESP_OK?"SUCCES":"FAILED");
+    
+    // addPeer(mac_peer1);
+  esp_now_register_send_cb(OnDataSent);
+  esp_now_register_recv_cb(OnDataRecv);
+    
+  Debugln("Pairing started");
+}
+
 void StartPairing() {
   
   WiFiManager manageWiFi;
@@ -171,7 +226,7 @@ void StartPairing() {
   Debug("Server SOFT AP MAC Address:  "); Debugln(WiFi.softAPmacAddress());
   chan = WiFi.channel();
   Debug("Station IP Address: "); Debugln(WiFi.localIP());
-  Debug("Wi-Fi Channel: ");  Debugln(WiFi.channel());
+  Debug("Wi-Fi Channel: ");  Debugln(chan);
   
   //prepair the hostdata
 #ifdef ETHERNET  
@@ -204,6 +259,33 @@ void StartPairing() {
     Debugln("Pairing started");
     PeerHostname[0] = '\0'; //clear
     PairingStatus = _WAITING;
+}
+
+String SolarProdActual();
+String SolarProdToday();
+
+void SendData2Display(){
+  
+  ActualData.epoch  = actT;
+  ActualData.P      = DSMRdata.power_delivered.int_val();
+  ActualData.Pr     = DSMRdata.power_returned.int_val() ;
+  ActualData.e_t1   = DSMRdata.energy_delivered_tariff1.int_val() - dataYesterday.t1;
+  ActualData.e_t2   = DSMRdata.energy_delivered_tariff2.int_val() - dataYesterday.t2;
+  ActualData.e_t1r  = DSMRdata.energy_returned_tariff1.int_val() - dataYesterday.t1r;
+  ActualData.e_t2r  = DSMRdata.energy_returned_tariff2.int_val() - dataYesterday.t2r;
+  if ( mbusGas ) ActualData.Gas = gasDelivered * 1000 - dataYesterday.gas;
+  else ActualData.Gas = 0xFFFFFFFF;
+  if ( mbusWater ) ActualData.Water  = waterDelivered * 1000 - dataYesterday.water;
+  else ActualData.Water = 0xFFFFFFFF;
+  ActualData.Esolar = SolarProdToday().toInt();
+  if ( !Enphase.Available && !SolarEdge.Available ) ActualData.Psolar = 0xFFFFFFFF;
+  else ActualData.Psolar = SolarProdActual().toInt();
+
+  // esp_err_t result = esp_now_send(NULL, (uint8_t *) &ActualData, sizeof(ActualData));
+  esp_now_send(NULL, (uint8_t *) &ActualData, sizeof(ActualData));
+
+  // Debug("Senddata Ptot: ");Debugln(ActualData.P+ActualData.Pr);
+
 }
 
 #endif //_PAIRING

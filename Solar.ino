@@ -130,6 +130,15 @@ void GetSolarData( SolarSource src, bool forceUpdate ){
 #endif  
 }
 
+
+String SolarProdActual(){
+  return String(Enphase.Actual + SolarEdge.Actual);
+}
+
+
+String SolarProdToday(){
+  return String(Enphase.Daily + SolarEdge.Daily);
+}
 void SendSolarJson(){
  
   
@@ -145,9 +154,9 @@ Prestatie = kWh/kWp
  */
 
   String Json = "{\"active\":true,\"total\":{\"daily\":";
-  Json += String(Enphase.Daily + SolarEdge.Daily);
+  Json += SolarProdToday();
   Json += ",\"actual\":";
-  Json += String(Enphase.Actual + SolarEdge.Actual);
+  Json += SolarProdActual();
   Json += "}, \"Wp\":";
   Json += String( Enphase.Wp + SolarEdge.Wp  );
   Json += ", \"perc\":{\"seue\":";

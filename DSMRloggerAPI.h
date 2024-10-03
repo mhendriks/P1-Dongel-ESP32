@@ -50,6 +50,37 @@ enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS, RINGVOLTAGE};
 enum  SolarSource { ENPHASE, SOLAR_EDGE };
 
+// connect NRG Monitor via ESPNOW 
+enum  { PEER_PARING, PEER_ACTUALS, PEER_TARIFS, PEER_DEVICE, PEER_WIFI };
+
+typedef struct { 
+  uint32_t lastUpdDay;
+  uint32_t t1;
+  uint32_t t2;
+  uint32_t t1r;
+  uint32_t t2r;
+  uint32_t gas; //and heat
+  uint32_t water;
+} sUsage;
+
+typedef struct {
+  uint8_t   type;       // PEER_DEVICE
+  uint8_t   ver_major;
+  uint8_t   ver_minor;
+  uint8_t   ver_build;
+} sDevice;
+
+typedef struct {
+  uint8_t   type;      // PEER_ACTUALS
+  time_t    epoch;      // sec from 1/1/1970
+  uint32_t  e_in;      // Wh
+  uint32_t  e_out;     // Wh
+  uint32_t  Power;     // W
+  uint32_t  Gas;       // dm3/Liter
+  uint32_t  Water;     // dm3/Liter
+  uint32_t  Production; // W  
+} sActual;
+
 typedef struct {
     char filename[17];
     uint16_t slots;
@@ -57,6 +88,7 @@ typedef struct {
     int f_len;
   } S_ringfile;
 
+sUsage dataYesterday;
 
 #ifdef VOLTAGE_MON
 //Store over Voltage situations
@@ -304,8 +336,19 @@ bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;
 
 //MQTT
-char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
-int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
+#ifndef MQTTKB
+  uint32_t   settingMQTTinterval = 0;
+  char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
+#else
+  #include "_mqtt_kb.h"
+  uint32_t   settingMQTTinterval     = MQTT_INTERVAL;
+  char      settingMQTTbroker[101]  = MQTT_BROKER;
+  char      settingMQTTuser[75]     = MQTT_USER;
+  char      settingMQTTpasswd[160]  = MQTT_PASSWD;
+  char      settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
+#endif 
+
+uint32_t   settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;
 bool      UpdateRequested = false;

@@ -87,15 +87,8 @@ void AutoDiscoverHA(){
 
 }
 
-#include "_mqtt_kb.h"
-
 void MQTTSetBaseInfo(){
 #ifdef MQTTKB
-  settingMQTTbrokerPort =   MQTT_PORT;
-  settingMQTTinterval =     MQTT_INERTVAL;
-  strcpy(settingMQTTbroker, MQTT_BROKER);
-  strcpy(settingMQTTuser,   MQTT_USER);
-  strcpy(settingMQTTpasswd, MQTT_PASSWD);
   sprintf( settingMQTTtopTopic,"%s/%s/", _DEFAULT_HOSTNAME, macID );
 #endif  
 }
@@ -136,6 +129,7 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
     settingMQTTinterval =  String(StrPayload).toInt();
     DebugT("Message arrived [" + StrTopic + "] ");Debugln(StrPayload);
     CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
+    writeSettings();
   }
 }
 

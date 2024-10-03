@@ -93,6 +93,70 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, char* Timestamp)
 //  writeRingFile(ringfiletype, JsonRec, false);
 //}
 
+void readRingYesterday( E_ringfiletype ringfiletype ) {
+  /*
+    - lees bestand alleen bij opstarten
+    - bij een dagwissel worden de gegevens ook opgeslagen.
+    - indien er geen bestand is dan zal de logica dat contateren en de waardes van vandaag er in zetten
+    - haal gegevens van gisteren er uit
+  */
+
+  if ( !EnableHistory || !FSmounted ) return; //do nothing
+  
+  //set NTP date as current date in case no proper date is read jet
+  actT = time(nullptr);
+  Debug("actT set based on NTP: ");Debugln(actT);
+
+  byte slot = 0;
+  uint8_t actSlot = CalcSlot(ringfiletype, true);
+
+  //json openen
+  DebugT(F("read(): Ring file ")); Debugln(RingFiles[ringfiletype].filename);
+  
+  File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "r+"); // open for reading  
+  if (!RingFile || (RingFile.size() != RingFiles[ringfiletype].f_len)) {
+    DebugT(F("open ring file FAILED!!! --> Bailout\r\n"));
+    Debugln(RingFiles[ringfiletype].filename);
+    RingFile.close();
+    return;
+  }
+
+  //start of yesterday
+  uint16_t offset = (actSlot * DATA_RECLEN) + JSON_HEADER_LEN;
+  RingFile.seek(offset, SeekSet); 
+  String record = RingFile.readStringUntil('\n');
+  record.remove(record.length() - 1);
+  Debug("Yesterday rec: ");Debugln(record);
+  RingFile.close();
+  
+  //parse json
+  StaticJsonDocument<192> json;
+  DeserializationError error = deserializeJson(json, record);
+  if (error) {
+    DebugT(F("convert:Failed to deserialize json yesterday: "));Debugln(error.c_str());
+    return;
+  } 
+  
+  //process data fields
+  dataYesterday.t1    = (uint32_t)(json["values"][0].as<float>() * 1000);
+  dataYesterday.t2    = (uint32_t)(json["values"][1].as<float>() * 1000);
+  dataYesterday.t1r   = (uint32_t)(json["values"][2].as<float>() * 1000);
+  dataYesterday.t2r   = (uint32_t)(json["values"][3].as<float>() * 1000);
+  dataYesterday.gas   = (uint32_t)(json["values"][4].as<float>() * 1000);
+  dataYesterday.water = (uint32_t)(json["values"][5].as<float>() * 1000);
+  dataYesterday.lastUpdDay = actT/86400; //only whole days are captured
+
+#ifdef DEBUG
+  Debug("dataYesterday.t1 : ");Debugln( dataYesterday.t1 );
+  Debug("dataYesterday.t1r: ");Debugln( dataYesterday.t1r );
+  Debug("dataYesterday.t2 : ");Debugln( dataYesterday.t2 );
+  Debug("dataYesterday.t2r: ");Debugln( dataYesterday.t2r );
+  Debug("dataYesterday.gas: ");Debugln( dataYesterday.gas );
+  Debug("dataYesterday.wtr: ");Debugln( dataYesterday.water );
+  Debug("dataYesterday.lastUpdate: ");Debugln( dataYesterday.lastUpdDay);
+#endif
+}
+
 //===========================================================================================
 
 void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) {

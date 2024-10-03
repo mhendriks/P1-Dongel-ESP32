@@ -14,6 +14,10 @@
 /*---- start macro's ------------------------------------------------------------------*/
 #ifdef DEBUG
   //DEBUG MODE
+  
+  // #define USBSerial Serial //uncomment when using dev board 
+  
+
   #define Debug(...)      ({ USBSerial.print(__VA_ARGS__);\
                              TelnetStream.print(__VA_ARGS__);\
                           })
