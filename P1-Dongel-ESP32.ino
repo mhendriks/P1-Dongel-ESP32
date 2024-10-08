@@ -41,6 +41,14 @@ WENSEN
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - support https / http mqtt link extern
 
+4.9.6
+- add Iskra IE.5 support (BE)
+- Linking to peer devices (NRG Monitor, Daluren Coach in furure) with direct connection
+- keep day usage in memory
+- add usage json api 
+- add MQTT subscriptions reboot and iterval
+- refactoring
+
 TODO
 - flag NoRebootOnNoWiFi
 - nieuwe meter
@@ -63,12 +71,12 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-// #define DEBUG
+#define DEBUG
 
 //PROFILES
 //#define ULTRA         //ultra dongle
 // #define ETHERNET      //ethernet dongle
-//#define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
+// #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 
 //FEATURES
@@ -81,12 +89,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-//#define EID
+// #define EID
 //#define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 //#define SMQTT
 // #define MQTTKB
 //#define FIXED_IP
+#define ESPNOW
 
 #include "DSMRloggerAPI.h"
 
@@ -184,8 +193,9 @@ void setup()
 //#ifdef VIRTUAL_P1
 //  SetupVitrualP1();
 //#endif  
+#ifdef ESPNOW
   StartESPNOW();
-
+#endif
 } // setup()
 
 //P1 reader task

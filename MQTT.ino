@@ -131,6 +131,10 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
     CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
     writeSettings();
   }
+  if ( StrTopic.indexOf("reboot") >= 0) {
+    DebugTln("Message arrived [" + StrTopic + "] ");
+    P1Reboot();
+  }
 }
 
 //===========================================================================================
@@ -153,6 +157,8 @@ void MQTTConnect() {
       sprintf( cMsg,"%supdate", settingMQTTtopTopic );
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
       sprintf(cMsg,"%sinterval",settingMQTTtopTopic);
+      MQTTclient.subscribe(cMsg); //subscribe mqtt update
+      sprintf(cMsg,"%sreboot",settingMQTTtopTopic);
       MQTTclient.subscribe(cMsg); //subscribe mqtt update
 #ifndef NO_HA_AUTODISCOVERY
       if ( EnableHAdiscovery ) AutoDiscoverHA();
@@ -277,14 +283,19 @@ void sendMQTTData() {
 #endif  
   if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   if (!MQTTclient.connected()) MQTTConnect();
-  if ( MQTTclient.connected() ) {   
+  if ( MQTTclient.connected() ) {
     
   DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
   
   if ( !StaticInfoSend )  MQTTSentStaticInfo();
     
   fieldsElements = ACTUALELEMENTS;
-  
+
+#ifdef MQTTKB  
+  bActJsonMQTT = true;
+  EnableHAdiscovery = false;
+#endif
+
   if ( bActJsonMQTT ) jsonDoc.clear();
 
   DSMRdata.applyEach(buildJsonMQTT());

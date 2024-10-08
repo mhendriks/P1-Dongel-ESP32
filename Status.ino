@@ -47,6 +47,8 @@ void P1StatusRead(){
 #ifdef EID
     P1Status.eid_state = (E_eid_states) preferences.getUShort("eid_state", EID_IDLE);
 #endif
+    Pref.peers = preferences.getUInt("peers", 0);
+    preferences.getBytes("mac", Pref.mac, 6);
     P1StatusPrint();
 }
 
@@ -70,6 +72,8 @@ void P1StatusWrite(){
 #ifdef EID    
     preferences.putUShort("eid_state", (uint16_t)P1Status.eid_state);
 #endif
+    preferences.putUInt("peers", Pref.peers);
+    preferences.putBytes("mac", Pref.mac, 6);
     DebugTln(F("P1Status successfully writen"));
 }
 
@@ -87,6 +91,8 @@ void P1StatusClear(){
   telegramCount       = 0;
   telegramErrors      = 0;
   mqttCount           = 0;
+  Pref.peers          = 0;
+  memset(Pref.mac, 0, sizeof(Pref.mac));
 #ifdef EID
   P1Status.eid_state  = EID_IDLE;
 #endif  

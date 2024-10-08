@@ -169,11 +169,7 @@ void SMCheckOnce(){
   if (DSMRdata.identification_present) {
     //--- this is a hack! The identification can have a backslash in it
     //--- that will ruin javascript processing :-(
-    for(int i=0; i<DSMRdata.identification.length(); i++)
-    {
-      if (DSMRdata.identification[i] == '\\') DSMRdata.identification[i] = '=';
-      yield();
-    }
+    DSMRdata.identification.replace("\\","=");
     smID = DSMRdata.identification;
   } // check id 
 
@@ -298,8 +294,10 @@ void processTelegram(){
     writeRingFiles(); //bWriteFiles = true; //handled in main flow
     UpdateYesterday();
   }
-  
-  if ( telegramCount % 3 == 1 ) SendData2Display();
+
+#ifdef ESPNOW  
+  if ( telegramCount % 3 == 1 ) SendActualData();
+#endif
 
   //handle mqtt
 #ifndef MQTT_DISABLE

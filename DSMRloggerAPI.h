@@ -53,6 +53,12 @@ enum  SolarSource { ENPHASE, SOLAR_EDGE };
 // connect NRG Monitor via ESPNOW 
 enum  { PEER_PARING, PEER_ACTUALS, PEER_TARIFS, PEER_DEVICE, PEER_WIFI };
 
+struct {
+  // uint32_t  reboots;
+  uint8_t   mac[6];
+  uint8_t   peers;      
+} Pref;
+
 typedef struct { 
   uint32_t lastUpdDay;
   uint32_t t1;
@@ -329,24 +335,26 @@ uint8_t   settingSmHasFaseInfo = 1;
 char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 
-//update
-char      BaseOTAurl[45] = OTAURL;
-char      UpdateVersion[25] = "";
-bool      bUpdateSketch = true;
-bool      bAutoUpdate = false;
-
 //MQTT
 #ifndef MQTTKB
   uint32_t   settingMQTTinterval = 0;
   char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
 #else
+  #define NO_HA_AUTODISCOVERY
   #include "_mqtt_kb.h"
+  #define OTAURL "http://ota.smart-stuff.nl/p1e/kb/"
   uint32_t   settingMQTTinterval     = MQTT_INTERVAL;
   char      settingMQTTbroker[101]  = MQTT_BROKER;
   char      settingMQTTuser[75]     = MQTT_USER;
   char      settingMQTTpasswd[160]  = MQTT_PASSWD;
   char      settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
 #endif 
+
+//update
+char      BaseOTAurl[45] = OTAURL;
+char      UpdateVersion[25] = "";
+bool      bUpdateSketch = true;
+bool      bAutoUpdate = false;
 
 uint32_t   settingMQTTbrokerPort = 1883;
 float     gasDelivered;
