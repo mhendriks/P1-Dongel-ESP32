@@ -57,6 +57,7 @@ S9VWqHB73Q+OyIVvIbKYcSc2w/aSuFKGSA==
     DebugTf("[%s] => setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbroker, settingMQTTbrokerPort);
     MQTTclient.setServer(EVERGI_HOST, EVERGI_PORT);
     snprintf(MqttID,sizeof(MqttID),"P1-Dongle-Pro-%s",StrMac);
+    // Debug("EVERGI_TOKEN: ");Debugln(EVERGI_TOKEN);
   }
     
 void MQTTSentStaticInfoEvergi(){
