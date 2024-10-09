@@ -15,8 +15,11 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - CorenDebug Level: "None"
   - Flash Frequency: "80MHz"
   - CPU Frequency: "240MHz"
-  - Upload Speed: "961600"                                                                                                                                                                                                                                                 
+  - Upload Speed: "961600"                                                                                                                                                                                                                                         
   - Port: <select correct port>
+
+// 2.0.13 SDK
+
 */
 /******************** compiler options  ********************************************/
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
