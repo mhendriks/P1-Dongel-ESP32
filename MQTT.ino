@@ -91,11 +91,6 @@ void AutoDiscoverHA(){
 
 void MQTTSetBaseInfo(){
 #ifdef MQTTKB
-  settingMQTTbrokerPort =   MQTT_PORT;
-  settingMQTTinterval =     MQTT_INERTVAL;
-  strcpy(settingMQTTbroker, MQTT_BROKER);
-  strcpy(settingMQTTuser,   MQTT_USER);
-  strcpy(settingMQTTpasswd, MQTT_PASSWD);
   sprintf( settingMQTTtopTopic,"%s/%s/", _DEFAULT_HOSTNAME, macID );
 #endif  
 }
@@ -136,6 +131,11 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
     settingMQTTinterval =  String(StrPayload).toInt();
     DebugT("Message arrived [" + StrTopic + "] ");Debugln(StrPayload);
     CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
+    writeSettings();
+  }
+  if ( StrTopic.indexOf("reboot") >= 0) {
+    DebugTln("Message arrived [" + StrTopic + "] ");
+    P1Reboot();
   }
 }
 
@@ -159,6 +159,8 @@ void MQTTConnect() {
       sprintf( cMsg,"%supdate", settingMQTTtopTopic );
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
       sprintf(cMsg,"%sinterval",settingMQTTtopTopic);
+      MQTTclient.subscribe(cMsg); //subscribe mqtt update
+      sprintf(cMsg,"%sreboot",settingMQTTtopTopic);
       MQTTclient.subscribe(cMsg); //subscribe mqtt update
 #ifndef NO_HA_AUTODISCOVERY
       if ( EnableHAdiscovery ) AutoDiscoverHA();
@@ -290,6 +292,11 @@ void sendMQTTData() {
   if ( !StaticInfoSend )  MQTTSentStaticInfo();
     
   fieldsElements = ACTUALELEMENTS;
+  
+#ifdef MQTTKB  
+  bActJsonMQTT = true;
+  EnableHAdiscovery = false;
+#endif
   
   if ( bActJsonMQTT ) jsonDoc.clear();
 

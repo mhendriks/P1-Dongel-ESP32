@@ -297,15 +297,23 @@ uint8_t   settingSmHasFaseInfo = 1;
 char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 
-//update
-char      BaseOTAurl[45] = OTAURL;
-char      UpdateVersion[25] = "";
-bool      bUpdateSketch = true;
-bool      bAutoUpdate = false;
-
 //MQTT
-char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
-int32_t   settingMQTTinterval = 0, settingMQTTbrokerPort = 1883;
+#ifndef MQTTKB
+  uint32_t   settingMQTTinterval = 0;
+  char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
+#else
+  #include "_mqtt_kb.h"
+  #define NO_HA_AUTODISCOVERY
+  #undef OTAURL
+  #define OTAURL "http://ota.smart-stuff.nl/p1e/kb/"
+  uint32_t   settingMQTTinterval     = MQTT_INTERVAL;
+  char      settingMQTTbroker[101]  = MQTT_BROKER;
+  char      settingMQTTuser[75]     = MQTT_USER;
+  char      settingMQTTpasswd[160]  = MQTT_PASSWD;
+  char      settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
+#endif 
+
+uint32_t   settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;
 bool      UpdateRequested = false;
@@ -317,6 +325,12 @@ String    mbusDeliveredTimestamp;
 String    smID;
 bool      StaticInfoSend = false;
 bool      bSendMQTT = false;
+
+//update
+char      BaseOTAurl[45] = OTAURL;
+char      UpdateVersion[25] = "";
+bool      bUpdateSketch = true;
+bool      bAutoUpdate = false;
 
 //Post_Telegram
 #ifdef POST_TELEGRAM

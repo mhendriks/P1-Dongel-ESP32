@@ -76,7 +76,14 @@ void RemoteUpdate(const char* versie, bool sketch){
 
   otaFile = strcmp(versie,"4-sketch-latest") == 0 ? "" : "DSMR-API-V";
   otaFile += _versie + "_" + flashSize + "Mb.bin"; 
+  
+  
+#ifdef MQTTKB
+  path = String(OTAURL) + otaFile;
+#else  
   path = String(BaseOTAurl) + otaFile;
+#endif
+
   Debugf("OTA versie: %s | flashsize: %i Mb\n", _versie.c_str(), flashSize);
   Debugln("OTA path: " + path);
 

@@ -280,7 +280,7 @@ void processTelegram(){
   
   //handle mqtt
 #ifndef MQTT_DISABLE
-  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1) bSendMQTT = true; //handled in main flow
+  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1) bSendMQTT = true; //handled in main flow
 #endif  
   // handle rawport
   if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port

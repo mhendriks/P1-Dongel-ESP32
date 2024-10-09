@@ -66,14 +66,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define DEBUG
 
 //PROFILES
-#define ULTRA         //ultra dongle
-//#define ETHERNET      //ethernet dongle
+// #define ULTRA         //ultra dongle
+#define ETHERNET      //ethernet dongle
 //#define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 
 //FEATURES
-#define DEV_PAIRING
-#define MBUS
+// #define DEV_PAIRING
+// #define MBUS
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
 //#define STUB            //test only
@@ -82,10 +82,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 //#define EID
-//#define NO_HA_AUTODISCOVERY
+// #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 //#define SMQTT
-//#define MQTTKB
+#define MQTTKB
 //#define FIXED_IP
 
 #include "DSMRloggerAPI.h"
@@ -109,7 +109,9 @@ void setup()
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
   P1StatusWrite();
   LogFile("",false); // write reboot status to file
-  readSettings(true);
+  if (!LittleFS.exists(SETTINGS_FILE)) writeSettings(); //otherwise the dongle crashes some times on the first boot
+  else readSettings(true);
+
 //=============start Networkstuff ==================================
 #ifdef ETHERNET
   startETH();

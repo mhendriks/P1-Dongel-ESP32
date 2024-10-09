@@ -1,11 +1,5 @@
 #ifdef ETHERNET
 
-//#define INT_GPIO            1
-//#define MISO_GPIO           5
-//#define MOSI_GPIO           6
-//#define SCK_GPIO            4
-//#define CS_GPIO             10
-
 #include <WebServer_ESP32_SC_W5500.h>
 
 #ifdef FIXED_IP
