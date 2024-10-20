@@ -40,8 +40,10 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
 #ifdef EID
   bool    bEID_enabled = true;
   enum E_eid_states : uint8_t { EID_IDLE, EID_CLAIMING, EID_ENROLLED };
+#ifndef VICTRON_GRID  
   #undef MQTT_DISABLE
   #define MQTT_DISABLE
+#endif  
 #endif //EID
 
 #ifdef DEBUG

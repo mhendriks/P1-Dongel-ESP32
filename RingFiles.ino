@@ -170,8 +170,9 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) 
   RingFile.close();
 //    String log_temp = "Ringfile " + String(RingFiles[ringfiletype].filename) + " writen. actT:[" + String(actT) + "] newT:[" + String(newT) +"] ActSlot:[" + String(slot) + "]";
 //    LogFile(log_temp.c_str(),true);
-#endif //NO_STORAGE
   Debugf( "Time consumed writing RNGFile %s : %d\n", RingFiles[ringfiletype].filename, millis()-start);
+  
+#endif //NO_STORAGE
 
 } // writeRingFile()
 

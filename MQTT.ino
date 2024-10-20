@@ -151,7 +151,8 @@ void MQTTConnect() {
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
     DebugTf("connect %s %s %s %s\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
     
-    if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
+    // if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
+    if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd ) ) {
       LogFile("MQTT: Connection to broker: CONNECTED", true);
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
@@ -276,6 +277,37 @@ void MQTTsendGas(){
   }
 }
 
+void MQTTSendVictronData(){
+  String jsondata = "{\"grid\":{\"power\":";
+  jsondata += String( (DSMRdata.power_delivered.int_val() + DSMRdata.power_returned.int_val()) * (DSMRdata.power_returned?-1.0:1.0),0);
+  jsondata += ",\"L1\":{\"power\":";
+  jsondata += String((DSMRdata.power_delivered_l1.int_val() + DSMRdata.power_returned_l1.int_val()) * (DSMRdata.power_returned_l1?-1.0:1.0),0);
+  jsondata += ",\"voltage\":";
+  jsondata += String (DSMRdata.voltage_l1,1);
+  jsondata += ",\"current\":";
+  jsondata += String (DSMRdata.current_l1,0);
+  
+  jsondata += "},\"L2\":{\"power\":";
+  jsondata += String((DSMRdata.power_delivered_l2.int_val() + DSMRdata.power_returned_l2.int_val()) * (DSMRdata.power_returned_l2?-1.0:1.0),0);
+  jsondata += ",\"voltage\":";
+  jsondata += String (DSMRdata.voltage_l2,1);
+  jsondata += ",\"current\":";
+  jsondata += String (DSMRdata.current_l2,0);
+
+  jsondata += "},\"L3\":{\"power\":";
+  jsondata += String((DSMRdata.power_delivered_l3.int_val() + DSMRdata.power_returned_l3.int_val()) * (DSMRdata.power_returned_l3?-1.0:1.0),0);
+  jsondata += ",\"voltage\":";
+  jsondata += String (DSMRdata.voltage_l3,1);
+  jsondata += ",\"current\":";
+  jsondata += String (DSMRdata.current_l3,0);
+
+  jsondata += "}}}";
+  
+  Debug("Victron jsondata: ");Debugln(jsondata);
+
+  MQTTSend( "victron/grid", jsondata, false);  
+}
+
 //===========================================================================================
 void sendMQTTData() {
 
@@ -316,7 +348,11 @@ void sendMQTTData() {
 	  MQTTsendGas();
 	  MQTTsendWater();
   }  
-  
+
+#ifdef VICTRON_GRID
+  MQTTSendVictronData();
+#endif
+
   bSendMQTT = false; 
 
   }

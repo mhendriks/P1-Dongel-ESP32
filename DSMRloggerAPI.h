@@ -305,6 +305,7 @@ char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
   #include "_mqtt_kb.h"
   #define NO_HA_AUTODISCOVERY
   #undef OTAURL
+  #define NO_STORAGE
   #define OTAURL "http://ota.smart-stuff.nl/p1e/kb/"
   uint32_t   settingMQTTinterval     = MQTT_INTERVAL;
   char      settingMQTTbroker[101]  = MQTT_BROKER;

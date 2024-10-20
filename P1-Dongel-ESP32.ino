@@ -81,12 +81,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-//#define EID
+#define EID
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 //#define SMQTT
-#define MQTTKB
+// #define MQTTKB
 //#define FIXED_IP
+#define VICTRON_GRID
 
 #include "DSMRloggerAPI.h"
 
@@ -133,11 +134,9 @@ void setup()
   startMDNS(settingHostname);
   startNTP();
 
-#ifndef EID  
 #ifndef MQTT_DISABLE
   MQTTSetBaseInfo();
   MQTTsetServer();
- #endif
 #endif  
 
 #endif
