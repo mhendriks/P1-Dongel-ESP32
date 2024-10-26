@@ -137,6 +137,8 @@ void startWiFi(const char* hostname, int timeOut)
   WiFi.setHostname(hostname);
 //  WiFi.setMinSecurity(WIFI_AUTH_WEP);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
+  WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL); //mesh fix https://github.com/arjenhiemstra/ithowifi/issues/108
+  WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN); //mesh fix https://github.com/tzapu/WiFiManager/issues/1426
   WiFiManager manageWiFi;
 //  uint32_t lTime = millis();
 
