@@ -135,10 +135,14 @@ String SolarProdActual(){
   return String(Enphase.Actual + SolarEdge.Actual);
 }
 
-
 String SolarProdToday(){
   return String(Enphase.Daily + SolarEdge.Daily);
 }
+
+uint32_t SolarWpTotal(){
+  return Enphase.Wp + SolarEdge.Wp;
+}
+
 void SendSolarJson(){
  
   

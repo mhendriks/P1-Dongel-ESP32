@@ -414,7 +414,7 @@ void updateSetting(const char *field, const char *newValue)
 } // updateSetting()
 
 //=======================================================================
-void LogFile(const char* payload, bool toDebug = false) {
+void LogFile(const char* payload, bool toDebug ) {
   if (toDebug) DebugTln(payload);
   if (!FSmounted) return;
   File LogFile = LittleFS.open("/P1.log", "a"); // open for appending  

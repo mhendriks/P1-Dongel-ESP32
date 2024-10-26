@@ -80,8 +80,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define P1_WIFI       // DOES NOTHING; 
 
 //FEATURES
-#define DEV_PAIRING
-#define MBUS
+// #define DEV_PAIRING
+// #define MBUS
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
 //#define STUB            //test only
@@ -89,7 +89,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-// #define EID
+#define EID
 //#define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 //#define SMQTT
@@ -101,9 +101,11 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 void setup() 
 {
+  make_version();
   DebugBegin(115200);
   // Serial.begin(115200); //uncomment when using dev board
-  USBPrint("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
+  // USBPrint("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
+  USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, _VERSION );
 
   PushButton.begin(IO_BUTTON);
 
@@ -190,12 +192,11 @@ void setup()
   mbusSetup();
 #endif  
   ReadSolarConfigs();
+  StartESPNOW();
 //#ifdef VIRTUAL_P1
 //  SetupVitrualP1();
 //#endif  
-#ifdef ESPNOW
-  StartESPNOW();
-#endif
+
 } // setup()
 
 //P1 reader task

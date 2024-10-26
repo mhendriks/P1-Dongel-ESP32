@@ -55,12 +55,12 @@ void SetConfig(){
   if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP);   
   
   Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);
-  if ( UseRGB ) rgb.begin();
+  if ( UseRGB ) SetupRGB();
   
   // sign of life = ON during setup or change config
-  SwitchLED( LED_ON, LED_BLUE );
-  delay(2000);
-  SwitchLED( LED_OFF, LED_BLUE );
+  // SwitchLED( LED_ON, LED_BLUE );
+  // delay(2000);
+  // SwitchLED( LED_OFF, LED_BLUE );
   
 }
 
@@ -75,7 +75,7 @@ void FacReset() {
 void ToggleLED(byte mode) {
   if ( UseRGB ) { 
     if ( LEDenabled ) SwitchLED( mode, LED_GREEN ); 
-    else { rgb.setPixel(LED_BLACK); }; 
+    else { rgb.Switch(BLACK,LED_OFF); }; 
   } // PRO_BRIDGE
   else if ( LEDenabled ) digitalWrite(LED, !digitalRead(LED)); else digitalWrite(LED, LED_OFF);
 }
@@ -83,16 +83,17 @@ void ToggleLED(byte mode) {
 void SwitchLED( byte mode, uint32_t color) {
 if ( UseRGB ) {
     if ( LEDenabled ) {
-      uint32_t value = 0; //off mode
-      if ( mode == LED_ON ) value = color;
+      rgb.Switch((rgbcolor) color,  (switchmode) mode);
+      // uint32_t value = 0; //off mode
+      // if ( mode == LED_ON ) value = color;
       
-      switch ( color ) {
-      case LED_RED:   R_value = value; break;
-      case LED_GREEN: G_value = value; break;
-      case LED_BLUE:  B_value = value; break;  
-      } 
+      // switch ( color ) {
+      // case LED_RED:   R_value = value; break;
+      // case LED_GREEN: G_value = value; break;
+      // case LED_BLUE:  B_value = value; break;  
+      // } 
     }
-    rgb.setPixel(R_value+G_value+B_value);
+    // rgb.setPixel(R_value+G_value+B_value);
 //    neopixelWrite(RGBLED_PIN,20,20,20); ///white
    } else digitalWrite(LED, mode);
 }

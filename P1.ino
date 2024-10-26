@@ -296,7 +296,8 @@ void processTelegram(){
   }
 
 #ifdef ESPNOW  
-  if ( telegramCount % 3 == 1 ) SendActualData();
+  // if ( telegramCount % 3 == 1 ) SendActualData();
+  P2PSendActualData();
 #endif
 
   //handle mqtt

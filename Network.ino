@@ -9,26 +9,7 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-#include <ESPmDNS.h>        
-#include <Update.h>
-#include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager
-#include <HTTPClient.h>
-#include "NetTypes.h"
-
-WebServer httpServer(80);
-NetServer ws_raw(82);
-
-bool FSmounted          = false; 
-//bool WifiConnected    = false;
-//time_t tWifiReconnect = 0;
-time_t tWifiLost        = 0;
-byte  WifiReconnect     = 0;
-
-void LogFile(const char*, bool);
-void P1Reboot();
-void SwitchLED( byte mode, uint32_t color);
-String MAC_Address();
-String  IP_Address();
+#include "DSMRloggerAPI.h"
 
 void GetMacAddress(){
 

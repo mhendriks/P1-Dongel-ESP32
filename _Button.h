@@ -34,8 +34,10 @@ public:
       FacReset();
     }
     else {
-      DebugTln(F("Button SHORT Press = Reboot"));
-      P1Reboot();
+      DebugTln(F("Button SHORT Press = Pairingmode"));
+      // P1Reboot();
+      Pref.peers   = 0;
+      bPairingmode = true;
     }
   }
   

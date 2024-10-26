@@ -1,3 +1,5 @@
+#pragma once
+
 // Device Types
 #define PRO         0
 #define PRO_BRIDGE  1
@@ -6,8 +8,8 @@
 #define PRO_H20_2   4
 
 #define APIURL              "http://api.smart-stuff.nl/v1/register.php"
-#define LED_ON              LOW
-#define LED_OFF             HIGH
+// #define LED_ON              0
+// #define LED_OFF             1
 #define SETTINGS_FILE       "/DSMRsettings.json"
 #define HOST_DATA_FILES     "cdn.jsdelivr.net"
 #define PATH_DATA_FILES     "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/data"
@@ -26,7 +28,7 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
   #endif    
   #define VIRTUAL_P1
   #define MBUS
-  #define DEV_PAIRING
+  #define ESPNOW
   #include "hw_profile_ultra.h"
 #else
   #ifdef ETHERNET
@@ -56,8 +58,8 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
   #define OPT2  
 #endif
  
-#ifdef DEV_PAIRING
-  #define OPT3  "[PAIR]"  
+#ifdef ESPNOW
+  #define OPT3  "[ESPNOW]"  
 #else
   #define OPT3  
 #endif
