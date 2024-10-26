@@ -143,6 +143,9 @@ void startWiFi(const char* hostname, int timeOut)
   WiFi.setHostname(hostname);
 //  WiFi.setMinSecurity(WIFI_AUTH_WEP);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
+  
+  WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);  //to solve mesh issues 
+  WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);      //to solve mesh issues 
   WiFiManager manageWiFi;
 //  uint32_t lTime = millis();
 
