@@ -111,6 +111,10 @@ void MQTTsetServer(){
 #endif
 }
 
+void MqttReconfig(){
+  //todo
+}
+
 //===========================================================================================
 
 static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
@@ -137,6 +141,11 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
     DebugTln("Message arrived [" + StrTopic + "] ");
     P1Reboot();
   }
+  
+  if ( StrTopic.indexOf("reconfig") >= 0) {
+    DebugTln("Message arrived [" + StrTopic + "] ");
+    MqttReconfig();
+  }
 }
 
 //===========================================================================================
@@ -160,9 +169,11 @@ void MQTTConnect() {
       sprintf( cMsg,"%supdate", settingMQTTtopTopic );
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
       sprintf(cMsg,"%sinterval",settingMQTTtopTopic);
-      MQTTclient.subscribe(cMsg); //subscribe mqtt update
+      MQTTclient.subscribe(cMsg); //subscribe mqtt interval
       sprintf(cMsg,"%sreboot",settingMQTTtopTopic);
-      MQTTclient.subscribe(cMsg); //subscribe mqtt update
+      MQTTclient.subscribe(cMsg); //subscribe mqtt reboot
+      sprintf(cMsg,"%%reconfig",settingMQTTtopTopic);
+      MQTTclient.subscribe(cMsg); //subscribe mqtt reconfig
 #ifndef NO_HA_AUTODISCOVERY
       if ( EnableHAdiscovery ) AutoDiscoverHA();
 #endif      
