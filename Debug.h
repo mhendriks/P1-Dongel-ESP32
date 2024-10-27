@@ -1,15 +1,12 @@
-#ifndef _DEBUG_H
-#define _DEBUG_H
 /* 
 ***************************************************************************  
-**  Program  : Debug.h, part of DSMRloggerAPI
-**
 **  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
-**  Met dank aan Erik
-**
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
+
+#ifndef _DEBUG_H
+#define _DEBUG_H
 
 /*---- start macro's ------------------------------------------------------------------*/
 #ifdef DEBUG
@@ -44,6 +41,7 @@
   #define Debugf(...)     ({ TelnetStream.printf(__VA_ARGS__); })
   #define DebugFlush()    ({ TelnetStream.flush(); })
   #define USBPrint(...)   ({ if (USBSerial.isConnected() && USBSerial.isPlugged() ) USBSerial.print(__VA_ARGS__);})
+  #define USBPrintf(...)  ({ if (USBSerial.isConnected() && USBSerial.isPlugged() ) USBSerial.printf(__VA_ARGS__);})
   #define USBPrintln(...) ({ if (USBSerial.isConnected() && USBSerial.isPlugged() ) USBSerial.println(__VA_ARGS__);})
 
 #endif

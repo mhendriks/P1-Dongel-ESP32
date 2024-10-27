@@ -1,3 +1,9 @@
+/* 
+***************************************************************************  
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  TERMS OF USE: MIT License. See bottom of file.                                                            
+***************************************************************************      
+*/
 #ifndef _P1STATUS_H
 #define _P1STATUS_H
 #include <Preferences.h>

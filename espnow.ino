@@ -1,3 +1,10 @@
+/* 
+***************************************************************************  
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  TERMS OF USE: MIT License. See bottom of file.                                                            
+***************************************************************************      
+*/
+
 #ifdef ESPNOW
 
 /*
@@ -33,11 +40,6 @@ uint32_t SolarWpTotal();
 enum MessageType { COMMAND, CONFIRMED, NRGACTUALS, NRGTARIFS, NRGSTATIC, } messageType;
 enum sAction { CONN_REQUEST, CONN_RESPONSE, CONN_CLEAR, PAIRING, ASK_TARIF, ASK_STATIC }; 
 
-// uint8_t mac_peer1[] = {0x30, 0x30, 0xF9, 0xFD, 0x91, 0x19}; //test p1p
-// uint8_t mac_peer2[] = {0x30, 0x30, 0xF9, 0xFD, 0x91, 0x18};
-// uint8_t mac_peer1[] = {0x4A, 0x27, 0xE2, 0x1F, 0x24, 0x6C}; //nrgm 35 AP
-// uint8_t mac_peer1[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}; //broadcast
-// uint8_t mac_peer1[] = {0x48, 0x27, 0xE2, 0x1F, 0x24, 0x6C}; //nrgm 35
 uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 esp_now_peer_info_t peerInfo = {};
@@ -159,7 +161,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
 
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Debug("Last Packet Send Status: ");
-  Debug(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success to " : "Delivery Fail to ");
+  Debugln(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
   // printMAC(mac_addr);
   // Debugln();
 }

@@ -1,9 +1,6 @@
 /* 
 ***************************************************************************  
-**  Program  : MQTTstuff, part of DSMRloggerAPI
-**
-**  Copyright (c) 2023 Martijn Hendriks 
-**
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */

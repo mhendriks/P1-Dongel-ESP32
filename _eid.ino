@@ -1,7 +1,8 @@
 /* 
- todo
-  - apart proces van maken
-  - UI: check expire claimcode + url (frontend)
+***************************************************************************  
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  TERMS OF USE: MIT License. See bottom of file.                                                            
+***************************************************************************      
 */
 
 #ifndef EID

@@ -1,10 +1,6 @@
 /* 
 ***************************************************************************  
-**  Program  : menuStuff, part of DSMRloggerAPI
-**  Version  : v4.2.1
-**
-**  Copyright (c) 2021 Willem Aandewiel / Martijn Hendriks
-**
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
@@ -149,7 +145,7 @@ void handleKeyInput()
       case 'b':
       case 'B':     displayBoardInfo();
                     break;
-      case 'c':     PrintVarr(); break;              
+      // case 'c':     PrintVarr(); break;              
       case 'T':     {        
                       char c;
                       while (TelnetStream.available() > 0) { 

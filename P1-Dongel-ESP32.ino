@@ -1,8 +1,6 @@
 /*
 ***************************************************************************  
-**  Program  : P1-Dongel-ESP32
 **  Copyright (c) 2024 Smartstuff / based on DSMR Api Willem Aandewiel
-**
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 
@@ -41,6 +39,12 @@ WENSEN
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - support https / http mqtt link extern
 
+ISSUES
+- port 82 broken
+
+TODO
+- 
+
 4.9.6
 - add Iskra IE.5 support (BE)
 - Linking to peer devices (NRG Monitor, Daluren Coach in furure) with direct connection
@@ -73,11 +77,11 @@ Settings for P1 Dongle Pro hardware:
   - Upload Speed: "961600"
 */
 /******************** compiler options  ********************************************/
-#define DEBUG
+// #define DEBUG
 
 //PROFILES
 //#define ULTRA         //ultra dongle
-#define ETHERNET      //ethernet dongle
+// #define ETHERNET      //ethernet dongle
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 
@@ -90,7 +94,6 @@ Settings for P1 Dongle Pro hardware:
 //#define AP_ONLY
 //#define MQTT_DISABLE
 //#define NO_STORAGE
-//#define VOLTAGE_MON
 #define EID
 //#define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
@@ -99,7 +102,7 @@ Settings for P1 Dongle Pro hardware:
 //#define FIXED_IP
 #define ESPNOW
 
-#include "DSMRloggerAPI.h"
+#include "main.h"
 
 void setup() 
 {
@@ -126,16 +129,7 @@ void setup()
   if (!LittleFS.exists(SETTINGS_FILE)) writeSettings(); //otherwise the dongle crashes some times on the first boot
   else readSettings(true);
 //=============start Networkstuff ==================================
-#ifdef ETHERNET
-  startETH();
-#else
-  #ifndef AP_ONLY
-    startWiFi(settingHostname, 240);  // timeout 4 minuten
-  #else 
-    startAP();
-  #endif
-#endif
-  
+  StartNetwork();
   GetMacAddress();
   PostMacIP(); //post mac en ip 
   USBPrint("ip-adres: ");USBPrintln(IP_Address());
@@ -145,14 +139,12 @@ void setup()
 #ifndef AP_ONLY
   startMDNS(settingHostname);
   startNTP();
-
-#ifndef EID  
-#ifndef MQTT_DISABLE
-  MQTTSetBaseInfo();
-  MQTTsetServer();
- #endif
-#endif  
-
+  #ifndef EID  
+    #ifndef MQTT_DISABLE
+      MQTTSetBaseInfo();
+      MQTTsetServer();
+    #endif
+  #endif  
 #endif
 //================ Check necessary files ============================
   if (!DSMRfileExist(settingIndexPage, false) ) {

@@ -1,9 +1,6 @@
-    /*
+/*
 ***************************************************************************  
-**  Program  : DSMRloggerAPI.h - definitions for DSMRloggerAPI
-**
 **  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
-**
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************     
 */
@@ -42,7 +39,7 @@ bool                 WtrMtr         = false;
 #include "rgb.h"
 
 #ifdef MBUS
-#include "ModbusServerWiFi.h"
+  #include "ModbusServerWiFi.h"
 #endif
 
 #define JSON_BUFF_MAX     255
@@ -64,6 +61,7 @@ String  IP_Address();
 WebServer httpServer(80);
 NetServer ws_raw(82);
 
+
 time_t tWifiLost        = 0;
 byte  WifiReconnect     = 0;
 
@@ -75,8 +73,6 @@ enum  SolarSource { ENPHASE, SOLAR_EDGE };
 
 // connect NRG Monitor via ESPNOW
 bool bPairingmode = false;
-
-enum  { PEER_PARING, PEER_ACTUALS, PEER_TARIFS, PEER_DEVICE, PEER_WIFI };
 
 struct {
   // uint32_t  reboots;
@@ -94,23 +90,12 @@ typedef struct {
   uint32_t water;
 } sUsage;
 
-typedef struct {
-  uint8_t   type;       // PEER_DEVICE
-  uint8_t   ver_major;
-  uint8_t   ver_minor;
-  uint8_t   ver_build;
-} sDevice;
-
-typedef struct {
-  uint8_t   type;      // PEER_ACTUALS
-  time_t    epoch;      // sec from 1/1/1970
-  uint32_t  e_in;      // Wh
-  uint32_t  e_out;     // Wh
-  uint32_t  Power;     // W
-  uint32_t  Gas;       // dm3/Liter
-  uint32_t  Water;     // dm3/Liter
-  uint32_t  Production; // W  
-} sActual;
+// typedef struct {
+//   uint8_t   type;       // PEER_DEVICE
+//   uint8_t   ver_major;
+//   uint8_t   ver_minor;
+//   uint8_t   ver_build;
+// } sDevice;
 
 typedef struct {
     char filename[17];
@@ -120,30 +105,6 @@ typedef struct {
   } S_ringfile;
 
 sUsage dataYesterday;
-
-#ifdef VOLTAGE_MON
-//Store over Voltage situations
-#define     VmaxSlots 100
-//                       ts       ,L1 ,L2 ,L3 ,MaxV, Overß
-#define DATA_FORMAT_V    "%-12.12s,%4d,%4d,%4d,%3d,%c"
-#define DATA_RECLEN_V    34  //total length incl comma and new line
-
-//sMaxV consist of 12 + 3x2 + 2 = 20 bytes
-struct sMaxV {
-  char      ts[12];
-  uint16_t     L1;
-  uint16_t     L2;
-  uint16_t     L3;
-  uint16_t     MaxV;
-  char         Over;
-  } MaxVarr[VmaxSlots]; //50 x 20 = 1.000 bytes 
-
-//Voltage
-uint16_t    MaxVoltage = 253;
-bool        bMaxV = false;
-uint8_t     Vcount = 0;
-
-#endif
 
 #define JSON_HEADER_LEN   23  //total length incl new line
 #define DATA_CLOSE        2   //length last row of datafile
@@ -361,7 +322,7 @@ bool      bSendMQTT = false;
 #include <Update.h>
 #include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager
 #include <HTTPClient.h>
-#include "NetTypes.h"
+#include "NetTypes.h"        //included in #include "ESPTelnet.h"
 #include "_Button.h"
 // #include "Network.h"
 

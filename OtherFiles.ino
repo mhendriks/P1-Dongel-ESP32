@@ -1,9 +1,6 @@
-/*
+/* 
 ***************************************************************************  
-**  Program  : settings_status_files, part of DSMRloggerAPI
-**
-**  Copyright (c) 2023 Martijn Hendriks
-**
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
@@ -118,10 +115,6 @@ void writeSettings() {
   docw["raw-port"] = bRawPort;
   docw["led-prt"] = bLED_PRT;
 
-#ifdef VOLTAGE_MON
-  docw["max-volt"] = MaxVoltage;
-#endif
-
 #ifdef EID    
   docw["eid-enabled"] = bEID_enabled;
 #endif  
@@ -219,9 +212,6 @@ void readSettings(bool show)
 #ifdef EID    
   if (doc.containsKey("eid-enabled")) bEID_enabled = doc["eid-enabled"];
  #endif
-#ifdef VOLTAGE_MON
-  if (doc.containsKey("max-volt")) MaxVoltage = doc["max-volt"];
-#endif  
 
 #ifdef POST_TELEGRAM
   if (doc.containsKey("pt_port")) pt_port = doc["pt_port"];

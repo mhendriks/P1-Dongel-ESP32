@@ -1,8 +1,16 @@
+/* 
+***************************************************************************  
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
+**  TERMS OF USE: MIT License. See bottom of file.                                                            
+***************************************************************************      
+*/
+
 #pragma once
 
 #define _VERSION_MAJOR 5
 #define _VERSION_MINOR 0
 #define _VERSION_PATCH 0
+#define _VERSION_ONLY STR(_VERSION_MAJOR) "." STR(_VERSION_MINOR) "." STR(_VERSION_PATCH)
 
 #define __MON__     ((__DATE__[0]+__DATE__[1]+__DATE__[2]) == 281 ? "01" \
                     :(__DATE__[0]+__DATE__[1]+__DATE__[2]) == 269 ? "02" \
@@ -23,10 +31,8 @@
 #define DAY_STR   __DATE__[4], __DATE__[5]
 #define MONTH_STR __MON__[0], __MON__[1]
 #define YEAR_STR  __DATE__[7], __DATE__[8], __DATE__[9], __DATE__[10]
-#define _VERSION_ONLY STR(_VERSION_MAJOR) "." STR(_VERSION_MINOR) "." STR(_VERSION_PATCH)
 
 const char compile_date[] = {DAY_STR, '/', MONTH_STR, '/', YEAR_STR, '\0'};
-
 char _VERSION[19];
 
 void make_version(){

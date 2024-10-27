@@ -1,9 +1,6 @@
 /* 
 ***************************************************************************  
-**  Filename  : safeTimers.h
-**
-**  Copyright (c) 2021 Willem Aandewiel
-**
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */

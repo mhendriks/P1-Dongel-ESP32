@@ -1,13 +1,9 @@
-/*
+/* 
 ***************************************************************************  
-**  Program  : handleSlimmeMeter - part of DSMRloggerAPI
-**  Version  : v4.2.1
-**
-**  Copyright (c) 2023 Martijn Hendriks
-**
+**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
-*/                           
+*/                          
 
 volatile bool dtr1         = false;
 bool Out1Avail    = false;
@@ -286,10 +282,10 @@ void processTelegram(){
 //!!! DO NOT REFER TO CPU CONSUMING FUNCTIONS ... THIS PROCES SHOULD NOT BLOCK OR TAKES LOTS OF CPU TIME
 
   newT = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), true); // update system time
-  DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
-
+  
   // has the hour changed write ringfiles
   if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) {
+    DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
     writeRingFiles(); //bWriteFiles = true; //handled in main flow
     UpdateYesterday();
   }
@@ -304,9 +300,8 @@ void processTelegram(){
   if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1 ) bSendMQTT = true; //handled in main flow
 #endif  
   // handle rawport
-  if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
+  if ( bRawPort ) ws_raw.print( CapTelegram ); //print telegram to dongle port
   
-  ProcessMaxVoltage();
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
   actT = newT;

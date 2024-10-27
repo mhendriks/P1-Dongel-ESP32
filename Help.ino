@@ -1,9 +1,6 @@
 /* 
 ***************************************************************************  
-**  Program  : helperStuff, part of DSMRloggerAPI
-**
 **  Copyright (c) 2021 Willem Aandewiel / Martijn Hendriks
-**
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
