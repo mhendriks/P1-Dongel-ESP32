@@ -21,7 +21,6 @@ bool onlyIfPresent = false;
 const static PROGMEM char infoArray[][25]   = { "identification","p1_version","equipment_id" }; //waardes dient redelijk statisch zijn niet elke keer versturen
 #ifndef SE_VERSION
   const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3","peak_pwr_last_q", "highest_peak_pwr"};
-
 #else
   const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_total","energy_delivered_tariff2","energy_returned_total","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
 #endif
@@ -30,13 +29,12 @@ DynamicJsonDocument jsonDoc(4100);  // generic doc to return, clear() before use
 
 void JsonGas(){
   if (!gasDelivered) return;
-  jsonDoc["gas_delivered"]["value"] =  (int)(gasDelivered*1000)/1000.0;
-  jsonDoc["gas_delivered"]["unit"]  = "m3";
+  jsonDoc["gas_delivered"]["value"]           = (int)(gasDelivered*1000)/1000.0;
+  jsonDoc["gas_delivered"]["unit"]            = "m3";
   jsonDoc["gas_delivered_timestamp"]["value"] = gasDeliveredTimestamp;
 }
 
 void JsonWater(){
-
   if ( !WtrMtr && !mbusWater ) return;  
   if ( mbusWater) {
     jsonDoc["water"]["value"] =  (int)(waterDelivered*1000)/1000.0;
@@ -149,48 +147,37 @@ void sendDeviceInfo()
 {
   DynamicJsonDocument doc(1500);
   doc["fwversion"] = _VERSION;
-//  snprintf(cMsg, sizeof(cMsg), "%s %s", __DATE__, __TIME__);
   doc["compiled"] = __DATE__ " " __TIME__;
 
-//#ifndef HEATLINK
   if ( ! bWarmteLink ) { // IF NOT HEATLINK
     doc["smr_version"] = DSMR_NL?"NL":"BE";
   }
-//#endif
   
-  doc["hostname"] = settingHostname;
-  doc["ipaddress"] = IP_Address();
-  doc["indexfile"] = settingIndexPage;
-  doc["macaddress"] = macStr;
-  doc["freeheap"] ["value"] = ESP.getFreeHeap();
-  doc["freeheap"]["unit"] = "bytes";
-//  doc["maxfreeblock"] ["value"] = ESP.getMaxAllocHeap(); 
-//  doc["maxfreeblock"]["unit"] = "bytes";
+  doc["hostname"]           = settingHostname;
+  doc["ipaddress"]          = IP_Address();
+  doc["indexfile"]          = settingIndexPage;
+  doc["macaddress"]         = macStr;
+  doc["freeheap"]["value"]  = ESP.getFreeHeap();
+  doc["freeheap"]["unit"]   = "bytes";
   
   esp_chip_info_t chip_info;
   esp_chip_info(&chip_info);
 
-  doc["chipid"] = _getChipId();
+  doc["chipid"]                 = _getChipId();
   snprintf(cMsg, sizeof(cMsg), "model %x rev: %x cores: %x", chip_info.model, chip_info.revision, chip_info.cores);
-  doc["coreversion"] = cMsg;
-  doc["sdkversion"] = String( ESP.getSdkVersion() );
-  doc["cpufreq"] ["value"] = ESP.getCpuFreqMHz();
-  doc["cpufreq"]["unit"] = "MHz";
-  doc["sketchsize"] ["value"] = formatFloat( (ESP.getSketchSize() / 1024.0), 3);
-  doc["sketchsize"]["unit"] = "kB";
+  doc["coreversion"]            = cMsg;
+  doc["sdkversion"]             = String( ESP.getSdkVersion() );
+  doc["cpufreq"] ["value"]      = ESP.getCpuFreqMHz();
+  doc["cpufreq"]["unit"]        = "MHz";
+  doc["sketchsize"] ["value"]   = formatFloat( (ESP.getSketchSize() / 1024.0), 3);
+  doc["sketchsize"]["unit"]     = "kB";
   doc["freesketchspace"] ["value"] = formatFloat( (ESP.getFreeSketchSpace() / 1024.0), 3);
-  doc["freesketchspace"]["unit"] = "kB";
-  doc["flashchipsize"] ["value"] = formatFloat((ESP.getFlashChipSize() / 1024.0 / 1024.0), 3);
-  doc["flashchipsize"]["unit"] = "MB";
-  doc["FSsize"] ["value"] = formatFloat( (LittleFS.totalBytes() / (1024.0 * 1024.0)), 0);
-  doc["FSsize"]["unit"] = "MB";
-//  doc["flashchipspeed"] ["value"] = formatFloat((ESP.getFlashChipSpeed() / 1000.0 / 1000.0), 0);
-//  doc["flashchipspeed"]["unit"] = "MHz";
- 
-//  FlashMode_t ideMode = ESP.getFlashChipMode();
-//  doc["flashchipmode"] = flashMode[ideMode];
-//  doc["boardtype"] = ARDUINO_BOARD;
-  doc["compileoptions"] = ALL_OPTIONS;
+  doc["freesketchspace"]["unit"]= "kB";
+  doc["flashchipsize"] ["value"]= formatFloat((ESP.getFlashChipSize() / 1024.0 / 1024.0), 3);
+  doc["flashchipsize"]["unit"]  = "MB";
+  doc["FSsize"] ["value"]       = formatFloat( (LittleFS.totalBytes() / (1024.0 * 1024.0)), 0);
+  doc["FSsize"]["unit"]         = "MB";
+  doc["compileoptions"]         = ALL_OPTIONS;
 
 #ifndef ETHERNET
   doc["ssid"] = WiFi.SSID();
@@ -205,8 +192,7 @@ void sendDeviceInfo()
       doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
   }
 
-
-//  doc["telegraminterval"] = (int)settingTelegramInterval;
+  //  doc["telegraminterval"] = (int)settingTelegramInterval;
   if ( DSMRdata.p1_version == "50" || !DSMR_NL ) doc["telegraminterval"] = 1; 
   else doc["telegraminterval"] = 10; 
 
@@ -302,12 +288,9 @@ void sendDeviceSettings() {
 #ifdef EID
   doc["eid-enabled"] = bEID_enabled;
 #endif
-// #ifdef ESPNOW
-//   doc["dev-pairing"] = true;
-// #endif
 
   doc["ha_disc_enabl"] = EnableHAdiscovery;
-if ( P1Status.dev_type == PRO_BRIDGE ) doc["led-prt"] = bLED_PRT;
+  if ( P1Status.dev_type == PRO_BRIDGE ) doc["led-prt"] = bLED_PRT;
 
   if ( bWarmteLink ) { // IF HEATLINK
     doc["conf"] = "p1-q";

@@ -148,7 +148,6 @@ void handleSlimmemeter()
     slimmeMeter.loop();
     if (slimmeMeter.available()) {
       ToggleLED(LED_ON);
-//      CapTelegram = "/" + slimmeMeter.raw() + "!" + slimmeMeter.GetCRC_str(); //capture last telegram
       CapTelegram = slimmeMeter.CompleteRaw();
 #ifdef VIRTUAL_P1
   virtSetLastData();
@@ -192,8 +191,8 @@ void processSlimmemeter() {
     
     // Voorbeeld: [21:00:11][   9880/  8960] loop        ( 997): read telegram [28] => [140307210001S]
     if (!bHideP1Log) {
-      Debugln(F("\r\nP [Time----][FreeHeap/mBlck][Function----(line):"));
-      DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
+      if ( telegramCount%10 == 0) Debugln(F("\nP [Time----][FreeHeap/mBlck][Function----(line):"));
+      DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
     }
         
 #ifndef STUB

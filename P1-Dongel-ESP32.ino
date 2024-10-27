@@ -60,22 +60,24 @@ docs
 - andere versies EID / Modbus TCP
 
 ************************************************************************************
-Arduino-IDE settings for P1 Dongle hardware ESP32:
+!!! Arduino-IDE V3.x.x !!!
+
+Settings for P1 Dongle Pro hardware:
   - Board: "ESP32C3 Dev Module"
   - Flash mode: "QIO"
   - Flash size: "4MB (32Mb)"
+  - Partition: Minimal SPIFFS (1.9M/190kB)
   - CorenDebug Level: "None"
   - Flash Frequency: "80MHz"
   - CPU Frequency: "160MHz"
-  - Upload Speed: "961600"                                                                                                                                                                                                                                                 
-  - Port: <select correct port>
+  - Upload Speed: "961600"
 */
 /******************** compiler options  ********************************************/
 #define DEBUG
 
 //PROFILES
 //#define ULTRA         //ultra dongle
-// #define ETHERNET      //ethernet dongle
+#define ETHERNET      //ethernet dongle
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 

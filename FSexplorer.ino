@@ -68,9 +68,6 @@ void setupFSexplorer()
 #ifdef EID
   httpServer.on("/eid/getclaim",[](){ auth(); EIDGetClaim(); });
 #endif
-// #ifdef ESPNOW
-//   httpServer.on("/pair",[](){ HandlePairing(); });
-// #endif
 
   httpServer.on("/api/listfiles", HTTP_GET, [](){ auth(); APIlistFiles(); });
   httpServer.on("/api/v2/gen", HTTP_GET, [](){ auth(); SendSolarJson(); });

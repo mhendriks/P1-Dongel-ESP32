@@ -114,7 +114,7 @@ void writeSettings() {
   docw["basic-auth"]["pass"] = bAuthPW;
   docw["auto-update"] = bAutoUpdate;
   docw["pre40"] = bPre40;
-  docw["act-json-mqtt"] = bActJsonMQTT;
+  // docw["act-json-mqtt"] = bActJsonMQTT;
   docw["raw-port"] = bRawPort;
   docw["led-prt"] = bLED_PRT;
 
@@ -233,7 +233,7 @@ void readSettings(bool show)
   if (doc.containsKey("virtual_p1_ip")) strcpy(virtual_p1_ip, doc["virtual_p1_ip"]);  
 #endif  
 
-  if (doc.containsKey("act-json-mqtt")) bActJsonMQTT = doc["act-json-mqtt"];
+  // if (doc.containsKey("act-json-mqtt")) bActJsonMQTT = doc["act-json-mqtt"];
 
   const char* temp = doc["basic-auth"]["user"];
   if (temp) strcpy(bAuthUser, temp);
@@ -403,7 +403,7 @@ void updateSetting(const char *field, const char *newValue)
     SetupSMRport();
   }
   if (!stricmp(field, "raw-port")) bRawPort = (stricmp(newValue, "true") == 0?true:false);  
-  if (!stricmp(field, "act-json-mqtt")) bActJsonMQTT = (stricmp(newValue, "true") == 0?true:false);  
+  // if (!stricmp(field, "act-json-mqtt")) bActJsonMQTT = (stricmp(newValue, "true") == 0?true:false);  
 
 #ifdef EID 
   if (!stricmp(field, "eid-enabled")) bEID_enabled = (stricmp(newValue, "true") == 0?true:false);  

@@ -187,27 +187,27 @@ struct buildJsonMQTT {
      strncpy(Name,String(Item::name).c_str(),sizeof(Name));
     if ( isInFieldsArray(Name) && i.present() ) {
           // add value to '/all' topic
-          if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
+          jsonDoc[Name] = value_to_json_mqtt(i.val());
           // Send normal MQTT message when not sending '/all' topic, except when HA auto discovery is on
-          if ( !bActJsonMQTT || EnableHAdiscovery) {
-            sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
-            MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
-          }
+          // if ( !bActJsonMQTT || EnableHAdiscovery) {
+          //   sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
+          //   MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
+          // }
     } // if isInFieldsArray && present
   } //apply
 
-  template<typename Item>
-  Item& value_to_json(Item& i) {
-    return i;
-  }
+  // template<typename Item>
+  // Item& value_to_json(Item& i) {
+  //   return i;
+  // }
 
-  String value_to_json(TimestampedFixedValue i) {
-    return String(i,3);
-  }
+  // String value_to_json(TimestampedFixedValue i) {
+  //   return String(i,3);
+  // }
   
-  String value_to_json(FixedValue i) {
-    return String(i,3);
-  }
+  // String value_to_json(FixedValue i) {
+  //   return String(i,3);
+  // }
 
   template<typename Item>
   Item& value_to_json_mqtt(Item& i) {
@@ -296,24 +296,21 @@ void sendMQTTData() {
   EnableHAdiscovery = false;
 #endif
 
-  if ( bActJsonMQTT ) jsonDoc.clear();
-
+  jsonDoc.clear();
   DSMRdata.applyEach(buildJsonMQTT());
   
-  if ( bActJsonMQTT ) {
+  
     String buffer;
     if ( gasDelivered ) {
       jsonDoc["gas"] = gasDelivered;
       jsonDoc["gas_ts"] = gasDeliveredTimestamp;
     }
+
+    MQTTsendWater();
+
     serializeJson(jsonDoc,buffer);
     MQTTSend("all", buffer, false);
-  } else {
-	  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
-
-	  MQTTsendGas();
-	  MQTTsendWater();
-  }  
+  
   
   bSendMQTT = false; 
 

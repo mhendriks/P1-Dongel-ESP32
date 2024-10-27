@@ -164,7 +164,7 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) 
   return;
 #else  
   if ( !EnableHistory || !FSmounted ) return; //do nothing
-  time_t start = millis();
+  // time_t start = millis();
   char key[9] = "";
   byte slot = 0;
   uint8_t actSlot = CalcSlot(ringfiletype, bPrev);
@@ -235,7 +235,7 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) 
 //    String log_temp = "Ringfile " + String(RingFiles[ringfiletype].filename) + " writen. actT:[" + String(actT) + "] newT:[" + String(newT) +"] ActSlot:[" + String(slot) + "]";
 //    LogFile(log_temp.c_str(),true);
 #endif //NO_STORAGE
-  Debugf( "Time consumed writing RNGFile %s : %d\n", RingFiles[ringfiletype].filename, millis()-start);
+  // Debugf( "Time consumed writing RNGFile %s : %d\n", RingFiles[ringfiletype].filename, millis()-start);
 
 } // writeRingFile()
 

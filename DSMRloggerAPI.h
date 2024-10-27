@@ -309,8 +309,8 @@ bool        FSmounted           = false;
 uint32_t    unixTimestamp;
 
 IPAddress ipDNS, ipGateWay, ipSubnet;
-float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5, settingWDT = 1.04;
-float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
+float     settingEDT1 = 0.24, settingEDT2 = 0.24, settingERT1 = 0.24, settingERT2 = 0.24, settingGDT = 1.25, settingWDT = 1.04;
+float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 5.0;
 uint8_t   settingSmHasFaseInfo = 1;
 char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;

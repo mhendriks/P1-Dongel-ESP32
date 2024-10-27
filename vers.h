@@ -27,8 +27,6 @@
 
 const char compile_date[] = {DAY_STR, '/', MONTH_STR, '/', YEAR_STR, '\0'};
 
-// const char compile_date[] = { __DATE__[4], __DATE__[5],'/' ,__MON__[0],__MON__[1], '/',__DATE__[7], __DATE__[8],__DATE__[9], __DATE__[10], '\0' };
-
 char _VERSION[19];
 
 void make_version(){

@@ -96,18 +96,11 @@ struct {
     char      pw[63];     //wifi password
 } Static;
 
-// struct_pairing pairingData, recvdata;
 sActualData ActualData;
 sTariff TariffData;
 
-void StopPairing(){
-    Debugln("Stop Pairing");
-    esp_now_deinit(); //stop service
-    // WiFi.mode(WIFI_STA); //set wifi to STA  
-}
-
 void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
-Debug("msgTyp: ");Debugln( incomingData[0] );
+  Debug("msgTyp: ");Debugln( incomingData[0] );
   switch ( incomingData[0] ){
     case COMMAND:
       memcpy(&Command, incomingData, sizeof(Command));
@@ -171,8 +164,6 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   // Debugln();
 }
 
-void HandlePairing() {
-}
 
 void AddPeer( uint8_t * peer_mac ){
     memcpy(peerInfo.peer_addr, peer_mac, 6);
@@ -181,11 +172,17 @@ void AddPeer( uint8_t * peer_mac ){
     esp_now_add_peer(&peerInfo);
 }
 
+bool bESPNowInit = false;
+
 void StartESPNOW(){
-    if (esp_now_init() != ESP_OK) {
-    Debugln("Error initializing ESP-NOW");
-    return;
-  }
+#ifdef ETHERNET
+  if ( readWifiCredentials() ) WiFi.begin(Static.ssid, Static.pw);
+  else WiFi.mode(WIFI_STA);
+#endif  
+  if (esp_now_init() != ESP_OK) {
+  Debugln("Error initializing ESP-NOW");
+  return;
+  } 
 
   // Register send callback function
   esp_now_register_send_cb(OnDataSent);
@@ -194,13 +191,52 @@ void StartESPNOW(){
   AddPeer(broadcastAddress); //always add broadcast address 
   if ( Pref.peers ) AddPeer(Pref.mac);
 
+  bESPNowInit = true;
 }
 
+#ifdef ETHERNET
+bool readWifiCredentials(){
+  // Static.ssid = '\0';
+  // Static.pw = '\0';
+  if ( !FSmounted || !LittleFS.exists("/wifi.json") ) return false;
+  // Debugln("wifi.json exists");
+  
+  StaticJsonDocument<200> doc;
+  File SettingsFile = LittleFS.open("/wifi.json", "r");
+  if (!SettingsFile) return false;
+  // Debugln("wifi.json read");
+  
+  DeserializationError error = deserializeJson(doc, SettingsFile);
+  if (error) {
+    SettingsFile.close();
+    return false;
+  }
+  SettingsFile.close();
+  Debugln("wifi.json read and deserialised");
+  if ( !doc.containsKey("ssid") || !doc.containsKey("pw") ) return false;
+
+  strcpy( Static.ssid, doc["ssid"] );
+  strcpy( Static.pw, doc["pw"] );
+
+#ifdef DEBUG  
+  Debug("ssid: ");Debugln(Static.ssid);
+  Debug("pw  : ");Debugln(Static.pw);
+#endif
+  return true;
+}
+#endif
+
 void sendStatic() {
+#ifdef ETHERNET 
+  if ( strlen(Static.pw) == 0 || strlen(Static.ssid) == 0 ) {
+    if ( readWifiCredentials() ) WiFi.begin(Static.ssid, Static.pw);
+  }
+#else
   WiFiManager manageWiFi;
-  Static.msgType = NRGSTATIC;
   strcpy(Static.pw, manageWiFi.getWiFiPass().c_str());
   strcpy(Static.ssid, WiFi.SSID().c_str());
+#endif
+  Static.msgType = NRGSTATIC;
   Static.WpSolar = SolarWpTotal();
   esp_err_t result = esp_now_send(NULL, (uint8_t *) &Static, sizeof(Static));
 }
@@ -234,7 +270,7 @@ void SendTariffData(){
 }
 
 void P2PSendActualData(){
-  if ( !Pref.peers ) return;
+  if ( ! Pref.peers || ! bESPNowInit ) return;
   ActualData.epoch  = actT;
   ActualData.P      = DSMRdata.power_delivered.int_val();
   ActualData.Pr     = DSMRdata.power_returned.int_val() ;
@@ -259,5 +295,5 @@ void P2PSendActualData(){
 
 #endif //_ESPNOW
 #else
-  StartESPNOW(){}
+  void StartESPNOW(){}
 #endif //ESPNOW

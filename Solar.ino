@@ -48,7 +48,6 @@ void ReadSolarConfig( SolarSource src ){
   Debug("wp       > "); Debugln(solarSystem->Wp);
   Debug("interval > "); Debugln(solarSystem->Interval);
   Debug("siteid   > "); Debugln(solarSystem->SiteID);
-  
 #endif
  
   SolarFile.close();
