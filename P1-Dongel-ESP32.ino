@@ -81,20 +81,21 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-#define EID
+// #define EID
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 //#define SMQTT
-// #define MQTTKB
+#define MQTTKB
 //#define FIXED_IP
-#define VICTRON_GRID
+// #define VICTRON_GRID
 
 #include "DSMRloggerAPI.h"
 
 void setup() 
 {
+  make_version();
   DebugBegin(115200);
-  USBPrint("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
+  USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, _VERSION );
 
   PushButton.begin(IO_BUTTON);
 
