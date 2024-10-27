@@ -111,9 +111,50 @@ void MQTTsetServer(){
 #endif
 }
 
-void MqttReconfig(){
-  //todo
+void MqttReconfig(String payload){
+
+/*
+{
+    "broker": "url",
+    "port": 1892,
+    "user": "name",
+    "pass": "word"
 }
+*/
+  // 1) deserialise -> json
+  // 2) test new connection
+  // 3) when okay copy new config and restart mqtt process
+  
+  DynamicJsonDocument doc(3000); 
+  DeserializationError error = deserializeJson(doc, payload);
+  if (error) return;
+  if ( doc.containsKey("broker") && doc.containsKey("port") && doc.containsKey("user") && doc.containsKey("pass") ){
+    //test connection
+    MQTTSend( "msg", "MQTT: reconfig check connection", true );
+    char MqttID[30+13];
+    snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
+    if ( MQTTclient.connected() ) MQTTclient.disconnect();
+    MQTTclient.setServer(doc["broker"].as<const char*>(), doc["port"].as<uint16_t>());
+    if ( MQTTclient.connect( MqttID, doc["user"].as<const char*>(), doc["pass"].as<const char*>() ) ) {
+      //adapt the new settings
+      DebugTln("MQTT config check succesfull");
+      settingMQTTbrokerPort = doc["port"].as<uint16_t>();
+      strcpy(settingMQTTbroker, doc["broker"].as<const char*>());
+      strcpy(settingMQTTuser, doc["user"].as<const char*>());
+      strcpy(settingMQTTpasswd, doc["pass"].as<const char*>());
+      writeSettings(); //save the settings
+      MQTTsetServer();
+    } else {
+      //fallback to old config
+      DebugTln("MQTT config check FAILED");
+      MQTTsetServer();
+      MQTTSend( "msg", "MQTT: connection check FAILED", true );
+    } 
+  } else {
+    DebugTln("MQTT config failure: missing elements");
+    MQTTSend( "msg", "MQTT: config failure due to missing json keys", true );
+  }
+} // end MqttConfig
 
 //===========================================================================================
 
@@ -124,7 +165,8 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
   DebugTf("Message length: %d\n",len );
   for (int i=0;i<len;i++) StrPayload[i] = (char)payload[i];
   payload[len] = '\0';
-  
+  DebugT("Message arrived [" + StrTopic + "] ");Debugln(StrPayload);
+
   if ( StrTopic.indexOf("update") >= 0) {
     bUpdateSketch = true;
     strcpy( UpdateVersion, StrPayload );
@@ -133,18 +175,14 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
   }
   if ( StrTopic.indexOf("interval") >= 0) {
     settingMQTTinterval =  String(StrPayload).toInt();
-    DebugT("Message arrived [" + StrTopic + "] ");Debugln(StrPayload);
     CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
     writeSettings();
   }
   if ( StrTopic.indexOf("reboot") >= 0) {
-    DebugTln("Message arrived [" + StrTopic + "] ");
     P1Reboot();
   }
-  
   if ( StrTopic.indexOf("reconfig") >= 0) {
-    DebugTln("Message arrived [" + StrTopic + "] ");
-    MqttReconfig();
+    MqttReconfig(StrPayload);
   }
 }
 
@@ -172,7 +210,7 @@ void MQTTConnect() {
       MQTTclient.subscribe(cMsg); //subscribe mqtt interval
       sprintf(cMsg,"%sreboot",settingMQTTtopTopic);
       MQTTclient.subscribe(cMsg); //subscribe mqtt reboot
-      sprintf(cMsg,"%%reconfig",settingMQTTtopTopic);
+      sprintf(cMsg,"%sreconfig",settingMQTTtopTopic);
       MQTTclient.subscribe(cMsg); //subscribe mqtt reconfig
 #ifndef NO_HA_AUTODISCOVERY
       if ( EnableHAdiscovery ) AutoDiscoverHA();
