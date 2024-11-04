@@ -41,6 +41,10 @@ WENSEN
 
 ISSUES
 - port 82 broken
+- arduinojson 7.x
+- crash eerste keer opstartem
+- auto detect slimme meter
+- 
 
 TODO
 - 
