@@ -110,7 +110,7 @@ void RemoteUpdate(const char* versie, bool sketch){
 void ReadManifest() {
   HTTPClient http;
   String ota_manifest = BaseOTAurl;
-  ota_manifest += "version-manifest.json";
+  ota_manifest += "version-manifest-v5.json";
   http.begin(wifiClient, ota_manifest.c_str() );
     
   int httpResponseCode = http.GET();

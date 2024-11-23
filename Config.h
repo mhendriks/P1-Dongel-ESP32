@@ -8,8 +8,6 @@
 #define PRO_H20_2   4
 
 #define APIURL              "http://api.smart-stuff.nl/v1/register.php"
-// #define LED_ON              0
-// #define LED_OFF             1
 #define SETTINGS_FILE       "/DSMRsettings.json"
 #define HOST_DATA_FILES     "cdn.jsdelivr.net"
 #define PATH_DATA_FILES     "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/data"

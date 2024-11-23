@@ -1,10 +1,3 @@
-/* 
-***************************************************************************  
-**  Copyright (c) 2023 Martijn Hendriks / based on DSMR Api Willem Aandewiel
-**  TERMS OF USE: MIT License. See bottom of file.                                                            
-***************************************************************************      
-*/
-
 #pragma once
 
 #define _VERSION_MAJOR 5

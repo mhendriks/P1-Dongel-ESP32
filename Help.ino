@@ -52,13 +52,7 @@ void SetConfig(){
   if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP);   
   
   Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);
-  if ( UseRGB ) SetupRGB();
-  
-  // sign of life = ON during setup or change config
-  // SwitchLED( LED_ON, LED_BLUE );
-  // delay(2000);
-  // SwitchLED( LED_OFF, LED_BLUE );
-  
+  if ( UseRGB ) rgb.begin(RGBLED_PIN, BRIGHTNESS );
 }
 
 void FacReset() {

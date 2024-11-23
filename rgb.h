@@ -16,8 +16,11 @@ class RGBLed {
     void begin(int pin, byte brightn = 50 ) {
       _pin = pin;
       brightness = brightn;
+      // sign of life = ON during setup or change config
+      Switch( BLUE, LED_ON );
+      delay(1500);
+      Switch( BLUE, LED_OFF );
     };
-    void begin(){};
     void SetBrightness(int val){ brightness = val; }
     void clearRGB_state(){ for ( byte i = 0; i < 3;i++) RGB_state[i]=0; }
     void Switch( rgbcolor color, switchmode mode ){
@@ -60,9 +63,5 @@ class RGBLed {
 
 
 void SetupRGB(){
-      rgb.begin(RGBLED_PIN, BRIGHTNESS );
-      // sign of life = ON during setup or change config
-      rgb.Switch( BLUE, LED_ON );
-      delay(1500);
-      rgb.Switch( BLUE, LED_OFF );
+     
 }

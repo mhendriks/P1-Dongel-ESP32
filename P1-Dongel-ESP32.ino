@@ -40,22 +40,11 @@ WENSEN
 - support https / http mqtt link extern
 
 ISSUES
-- port 82 broken
+- port 82 werkt niet meer
 - arduinojson 7.x
 - crash eerste keer opstartem
 - auto detect slimme meter
 - 
-
-TODO
-- 
-
-4.9.6
-- add Iskra IE.5 support (BE)
-- Linking to peer devices (NRG Monitor, Daluren Coach in furure) with direct connection
-- keep day usage in memory
-- add usage json api 
-- add MQTT subscriptions reboot and iterval
-- refactoring
 
 TODO
 - flag NoRebootOnNoWiFi
@@ -85,7 +74,7 @@ Settings for P1 Dongle Pro hardware:
 
 //PROFILES
 //#define ULTRA         //ultra dongle
-// #define ETHERNET      //ethernet dongle
+#define ETHERNET      //ethernet dongle
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 
