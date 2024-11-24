@@ -26,8 +26,18 @@
 #define YEAR_STR  __DATE__[7], __DATE__[8], __DATE__[9], __DATE__[10]
 
 const char compile_date[] = {DAY_STR, '/', MONTH_STR, '/', YEAR_STR, '\0'};
-char _VERSION[19];
+char Firmware.Version[19];
 
-void make_version(){
-  sprintf(_VERSION,"%s (%s)",_VERSION_ONLY, compile_date);
-}
+// void make_version(){
+//   sprintf(_VERSION,"%s (%s)",_VERSION_ONLY, compile_date);
+// }
+
+class FW {
+public:
+  FW() {
+    sprintf(Version, "%s (%s)", _VERSION_ONLY, compile_date);
+  }
+  char Version[20];
+
+private:
+} Firmware;

@@ -99,11 +99,8 @@ Settings for P1 Dongle Pro hardware:
 
 void setup() 
 {
-  make_version();
   DebugBegin(115200);
-  // Serial.begin(115200); //uncomment when using dev board
-  // USBPrint("\n\n ----> BOOTING P1 Dongle Pro [" _VERSION "] <-----\n\n");
-  USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, _VERSION );
+  USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, Firmware.Version );
 
   PushButton.begin(IO_BUTTON);
 

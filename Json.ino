@@ -143,7 +143,7 @@ void handleUsage(){
 void sendDeviceInfo() 
 {
   DynamicJsonDocument doc(1500);
-  doc["fwversion"] = _VERSION;
+  doc["fwversion"] = Firmware.Version;
   doc["compiled"] = __DATE__ " " __TIME__;
 
   if ( ! bWarmteLink ) { // IF NOT HEATLINK

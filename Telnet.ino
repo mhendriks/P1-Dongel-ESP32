@@ -226,7 +226,7 @@ void handleKeyInput()
       case 'Z':     P1StatusClear();
                     break;
                     
-      default:      Debugf("Dongle version %s | mac address %s\n\r",_VERSION, macStr );
+      default:      Debugf("Dongle version %s | mac address %s\n\r",Firmware.Version, macStr );
                     Debugln(F("\r\nCommands are:"));
                     Debugln(F("   A  - P1 Status info a=available|r=read|w=write|p=print|z=erase\r"));
                     Debugln(F("  *E  - erase file from FS\r"));
