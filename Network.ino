@@ -231,15 +231,18 @@ void NetworkEvent(arduino_event_id_t event, arduino_event_info_t info) {
     case ARDUINO_EVENT_ETH_GOT_IP:
       DebugTf("ETH Got IP: '%s'\n", esp_netif_get_desc(info.got_ip.esp_netif));
       ETH.printTo(Serial);
-      SwitchLED( LED_ON, LED_BLUE ); //Ethernet available = RGB LED Blue
+      // SwitchLED( LED_ON, LED_BLUE ); //Ethernet available = RGB LED Blue
+      rgb.Switch( BLUE, LED_ON );
       netw_connected = true;
       break;
     case ARDUINO_EVENT_ETH_LOST_IP:
       DebugTln("!!! ETH Lost IP");
       netw_connected = false;
+      rgb.Switch( BLUE, LED_OFF );
       break;
     case ARDUINO_EVENT_ETH_DISCONNECTED:
       netw_connected = false;
+      rgb.Switch( BLUE, LED_OFF );
       break;
     case ARDUINO_EVENT_ETH_STOP:
       DebugTln("!!! ETH Stopped");

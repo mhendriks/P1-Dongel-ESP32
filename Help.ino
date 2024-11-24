@@ -65,7 +65,7 @@ void FacReset() {
 
 void ToggleLED(byte mode) {
   if ( UseRGB ) { 
-    if ( LEDenabled ) SwitchLED( mode, LED_GREEN ); 
+    if ( LEDenabled ) SwitchLED( mode, GREEN ); 
     else { rgb.Switch(BLACK,LED_OFF); }; 
   } // PRO_BRIDGE
   else if ( LEDenabled ) digitalWrite(LED, !digitalRead(LED)); else digitalWrite(LED, LED_OFF);

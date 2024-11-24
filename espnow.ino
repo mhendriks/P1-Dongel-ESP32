@@ -160,10 +160,12 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
 }
 
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+#ifdef DEBUG  
   Debug("Last Packet Send Status: ");
   Debugln(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
   // printMAC(mac_addr);
   // Debugln();
+#endif  
 }
 
 
