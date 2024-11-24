@@ -67,13 +67,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //PROFILES
 // #define ULTRA         //ultra dongle
-#define ETHERNET      //ethernet dongle
+// #define ETHERNET      //ethernet dongle
 //#define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 
 //FEATURES
-// #define DEV_PAIRING
-// #define MBUS
+#define DEV_PAIRING
+#define MBUS
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
 //#define STUB            //test only
@@ -85,17 +85,17 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 //#define SMQTT
-#define MQTTKB
+// #define MQTTKB
 //#define FIXED_IP
-// #define VICTRON_GRID
+// #define 
 
 #include "DSMRloggerAPI.h"
 
 void setup() 
 {
-  make_version();
+  // make_version();
   DebugBegin(115200);
-  USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, _VERSION );
+  USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, Firmware.Version ); 
 
   PushButton.begin(IO_BUTTON);
 

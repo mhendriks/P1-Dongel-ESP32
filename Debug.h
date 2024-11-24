@@ -14,6 +14,7 @@
 /*---- start macro's ------------------------------------------------------------------*/
 #ifdef DEBUG
   //DEBUG MODE
+  #define DebugBegin(...)({ USBSerial.begin(__VA_ARGS__);while (!USBSerial); })
   #define Debug(...)      ({ USBSerial.print(__VA_ARGS__);\
                              TelnetStream.print(__VA_ARGS__);\
                           })
@@ -34,6 +35,7 @@
 
 #else
   //NORMAL MODE
+  #define DebugBegin(...)({ USBSerial.begin(__VA_ARGS__); })
   #define Debug(...)      ({ TelnetStream.print(__VA_ARGS__); })
   #define Debugln(...)    ({ TelnetStream.println(__VA_ARGS__); })
   #define Debugf(...)     ({ TelnetStream.printf(__VA_ARGS__); })
@@ -44,7 +46,6 @@
 
 #endif
 
-#define DebugBegin(...)({ USBSerial.begin(__VA_ARGS__);while (!USBSerial); })
 #define DebugT(...)     ({ _debugBOL(__FUNCTION__, __LINE__);  \
                            Debug(__VA_ARGS__);                 \
                         })

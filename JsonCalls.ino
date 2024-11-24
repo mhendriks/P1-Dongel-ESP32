@@ -122,7 +122,7 @@ void sendDeviceTime()
 void sendDeviceInfo() 
 {
   DynamicJsonDocument doc(1500);
-  doc["fwversion"] = _VERSION;
+  doc["fwversion"] = Firmware.Version;
 //  snprintf(cMsg, sizeof(cMsg), "%s %s", __DATE__, __TIME__);
   doc["compiled"] = __DATE__ " " __TIME__;
 

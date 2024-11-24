@@ -25,7 +25,7 @@ String AddPayload(const char* key, const char* value ){
 void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char* dev_title, const char* dev_unit, const char* dev_payload, const char* state_class, const char* extrapl ){
   char msg_topic[80];
   String msg_payload = "{";
-  sprintf(msg_topic,"homeassistant/sensor/%s/%s/config",_DEFAULT_HOSTNAME,dev_name);
+  sprintf(msg_topic,"homeassistant/sensor/%s/%s/config",settingHostname,dev_name);
 //    Debugln(msg_topic);
   msg_payload += AddPayload( "uniq_id"        , dev_name);
   msg_payload += AddPayload( "dev_cla"        , dev_class);
@@ -38,7 +38,9 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
   msg_payload += "\"dev\":{";
   msg_payload += AddPayload("ids"             , String(_getChipId()).c_str() );
   msg_payload += AddPayload("name"            , settingHostname);
-  msg_payload += "\"mdl\":\"" _DEFAULT_HOSTNAME "\",\"mf\":\"Smartstuff\"}}";
+  msg_payload += "\"mdl\":\"";
+  msg_payload += settingHostname;
+  msg_payload += "\",\"mf\":\"Smartstuff\"}}";
 //  Debugln(msg_payload);
   if (!MQTTclient.publish(msg_topic, msg_payload.c_str(), true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", msg_topic, msg_payload, ( strlen(msg_topic) + msg_payload.length() ));
 }
