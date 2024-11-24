@@ -56,7 +56,7 @@ void displayBoardInfo()
   snprintf(cMsg, sizeof(cMsg), "model %x rev: %x cores: %x", chip_info.model, chip_info.revision, chip_info.cores);
 
   Debugln(F("\r\n==================================================================\r"));
-  Debug(F("]\r\n      Firmware Version ["));  Debug( _VERSION );
+  Debug(F("]\r\n      Firmware Version ["));  Debug( Firmware.Version );
   Debug(F("]\r\n              Compiled ["));  Debug( __DATE__ "  "  __TIME__ );
   Debug(F("]\r\n              #defines "));   Debug(F(ALL_OPTIONS));
   Debug(F(" \r\n   Telegrams Processed ["));  Debug( telegramCount );
