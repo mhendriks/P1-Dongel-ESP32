@@ -59,7 +59,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - CorenDebug Level: "None"
   - Flash Frequency: "80MHz"
   - CPU Frequency: "160MHz"
-  - Upload Speed: "961600"                                                                                                                                                                                                                                                 
+  - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
@@ -68,14 +68,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //PROFILES
 // #define ULTRA         //ultra dongle
 // #define ETHERNET      //ethernet dongle
-//#define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
+// #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 
 //FEATURES
 #define DEV_PAIRING
 #define MBUS
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
-//#define SE_VERSION
+// #define SE_VERSION
 //#define STUB            //test only
 //#define AP_ONLY
 //#define MQTT_DISABLE
@@ -120,7 +120,7 @@ void setup()
 #else
   #ifndef AP_ONLY
     startWiFi(settingHostname, 240);  // timeout 4 minuten
-  #else 
+  #else
     startAP();
   #endif
 #endif

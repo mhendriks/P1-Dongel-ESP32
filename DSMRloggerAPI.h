@@ -113,6 +113,7 @@ using MyData = ParsedData<
   /* FixedValue */            ,energy_delivered_tariff2
   /* FixedValue */            ,energy_returned_tariff1
   /* FixedValue */            ,energy_returned_tariff2
+  /* FixedValue */            ,energy_delivered_total
   /* FixedValue */            ,energy_returned_total
   /* String */                ,electricity_tariff
   /* FixedValue */            ,power_delivered

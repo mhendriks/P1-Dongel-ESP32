@@ -26,7 +26,7 @@ void P1StatusPrint(){
   }
 
 void P1StatusDefType(){
-  Debugln(F("Devices types:\n0 = Pro\n1 = Pro Bridge\n2 = Pro Ethernet\n3 = Pro H2O+"));
+  Debugln(F("Devices types:\n0 = Pro\n1 = Pro Bridge\n2 = Pro Ethernet\n3 = Pro H2O+\n4 = Pro H2O+ v2"));
   Debug(F("Device Type     : "));Debugln(P1Status.dev_type);
   Debug(F("Device First Use: "));Debugln(P1Status.FirstUse);
 }

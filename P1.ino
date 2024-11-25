@@ -58,7 +58,7 @@ void IRAM_ATTR dtr_out_int() {
 //==================================================================================
 void SetupP1Out(){
 #ifndef ULTRA
-  if ( P1Status.dev_type == PRO_H20_2 ) {
+  if ( P1Status.dev_type != PRO_H20_2 ) return;
 #endif
   //setup ports
   pinMode(O1_DTR_IO, INPUT);
@@ -78,9 +78,7 @@ void SetupP1Out(){
   Serial.begin(115200, SERIAL_8N1, -1, TXO1, false);
 
   Debugln("SetupP1Out executed");
-#ifndef ULTRA  
-  }
-#endif  
+ 
 }
 //==================================================================================
 void P1OutBridge(){
