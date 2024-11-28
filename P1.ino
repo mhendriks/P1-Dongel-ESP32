@@ -85,7 +85,7 @@ void P1OutBridge(){
   if ( dtr1 && Out1Avail ) {
 
     digitalWrite(P1_LED, HIGH);
-    Serial.print(CapTelegram);
+    Serial.println(CapTelegram);
     Serial.flush();
     Out1Avail = false; 
     if ( digitalRead(O1_DTR_IO) == LOW ) SetDTR(false);
