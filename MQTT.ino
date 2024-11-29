@@ -180,34 +180,13 @@ struct buildJsonMQTT {
  *  msg = "\"{\""+Name+"\":[{\"value\":"+value_to_json(i.val())+"}]}\""
  *  
  */   
-    template<typename Item>
-    void apply(Item &i) {
-     char Name[25];
-     strncpy(Name,String(Item::name).c_str(),sizeof(Name));
-    if ( isInFieldsArray(Name) && i.present() ) {
-          // add value to '/all' topic
-          jsonDoc[Name] = value_to_json_mqtt(i.val());
-          // Send normal MQTT message when not sending '/all' topic, except when HA auto discovery is on
-          // if ( !bActJsonMQTT || EnableHAdiscovery) {
-          //   sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
-          //   MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
-          // }
-    } // if isInFieldsArray && present
+  template<typename Item>
+  void apply(Item &i) {
+    // char Name[25];
+    // strncpy(Name,String(Item::name).c_str(),sizeof(Name));
+  if ( isInFieldsArray(Item::name) && i.present() ) 
+    jsonDoc[Item::name] = value_to_json_mqtt(i.val());
   } //apply
-
-  // template<typename Item>
-  // Item& value_to_json(Item& i) {
-  //   return i;
-  // }
-
-  // String value_to_json(TimestampedFixedValue i) {
-  //   return String(i,3);
-  // }
-  
-  // String value_to_json(FixedValue i) {
-  //   return String(i,3);
-  // }
-
   template<typename Item>
   Item& value_to_json_mqtt(Item& i) {
     return i;
