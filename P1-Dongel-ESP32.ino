@@ -68,7 +68,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //PROFILES
 // #define ULTRA         //ultra dongle
 // #define ETHERNET      //ethernet dongle
-#define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
+// #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 
 //FEATURES
@@ -81,7 +81,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-// #define EID
+#define EID
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 //#define SMQTT

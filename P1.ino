@@ -148,10 +148,10 @@ void handleSlimmemeter()
       ToggleLED(LED_ON);
 //      CapTelegram = "/" + slimmeMeter.raw() + "!" + slimmeMeter.GetCRC_str(); //capture last telegram
       CapTelegram = slimmeMeter.CompleteRaw();
+      Out1Avail = true;
 #ifdef VIRTUAL_P1
   virtSetLastData();
 #endif
-      Out1Avail = true;
       if (showRaw) {
         //-- process telegrams in raw mode
         Debugf("Telegram Raw (%d)\n%s\n", slimmeMeter.raw().length(), CapTelegram.c_str() ); 
