@@ -149,6 +149,8 @@ void handleSlimmemeter()
 //      CapTelegram = "/" + slimmeMeter.raw() + "!" + slimmeMeter.GetCRC_str(); //capture last telegram
       CapTelegram = slimmeMeter.CompleteRaw();
       Out1Avail = true;
+      if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
+  
 #ifdef VIRTUAL_P1
   virtSetLastData();
 #endif
@@ -192,7 +194,7 @@ void SMCheckOnce(){
 void processSlimmemeter() {
     telegramCount++;
     
-    // Voorbeeld: [21:00:11][   9880/  8960] loop        ( 997): read telegram [28] => [140307210001S]
+    // example: [21:00:11][   9880/  8960] loop        ( 997): read telegram [28] => [140307210001S]
     if (!bHideP1Log) {
       Debugln(F("\r\nP [Time----][FreeHeap/mBlck][Function----(line):"));
       DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
@@ -221,7 +223,7 @@ void processSlimmemeter() {
       
       DSMRdata.timestamp = DSMRdata.mbus1_delivered.timestamp;
       DSMRdata.timestamp_present = true;
-      gasDelivered = MbusDelivered(1); //always 1ste
+      gasDelivered = MbusDelivered(1); //always #1
       gasDeliveredTimestamp = mbusDeliveredTimestamp;
 
   } else  {
@@ -280,8 +282,6 @@ void processTelegram(){
 #ifndef MQTT_DISABLE
   if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1) bSendMQTT = true; //handled in main flow
 #endif  
-  // handle rawport
-  if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
   
   ProcessMaxVoltage();
 
