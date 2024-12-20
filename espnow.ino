@@ -77,18 +77,19 @@ typedef struct {
 //     uint8_t ipAddr[4];  //max 4
 // } struct_pairing;
 
+//all values x 100.000
 typedef struct { 
     uint8_t   msgType = NRGTARIFS;
-    uint16_t  Efixed;   //per maand in centen
-    uint16_t  Et1;      //per kwh in centen
-    uint16_t  Et2;      //per kwh in centen
-    uint16_t  Et1r;     //terugleververgoeding per kwh in centen
-    uint16_t  Et2r;     //terugleververgoeding per kwh in centen
-    uint16_t  Gfixed;   //per maand in centen
-    uint16_t  G;        //per m3 in centen
-    uint16_t  Wfixed;   //per maand in centen
-    uint16_t  W;        //per m3 in centen
-    uint16_t  Efine;    //terugleverboete per Kwh in centen
+    uint32_t  Efixed;   //per maand in centen
+    uint32_t  Et1;      //per kwh in centen
+    uint32_t  Et2;      //per kwh in centen
+    uint32_t  Et1r;     //terugleververgoeding per kwh in centen
+    uint32_t  Et2r;     //terugleververgoeding per kwh in centen
+    uint32_t  Gfixed;   //per maand in centen
+    uint32_t  G;        //per m3 in centen
+    uint32_t  Wfixed;   //per maand in centen
+    uint32_t  W;        //per m3 in centen
+    uint32_t  Efine;    //terugleverboete per Kwh in centen
 } sTariff;
 
 struct { 
@@ -248,16 +249,16 @@ void sendStatic() {
 void SendTariffData(){
   
   TariffData.msgType= NRGTARIFS;
-  TariffData.Efixed = (uint16_t)(settingENBK*1000.0);
-  TariffData.Gfixed = (uint16_t)(settingGNBK*1000.0);
-  TariffData.Wfixed = (uint16_t)(settingWNBK*1000.0);
+  TariffData.Efixed = (uint32_t)(settingENBK*100000.0);
+  TariffData.Gfixed = (uint32_t)(settingGNBK*100000.0);
+  TariffData.Wfixed = (uint32_t)(settingWNBK*100000.0);
 
-  TariffData.Et1    = (uint16_t)(settingEDT1*1000.0);
-  TariffData.Et2    = (uint16_t)(settingEDT2*1000.0);
-  TariffData.Et1r   = (uint16_t)(settingERT1*1000.0);
-  TariffData.Et2r   = (uint16_t)(settingERT2*1000.0);
-  TariffData.G      = (uint16_t)(settingGDT*1000.0);
-  TariffData.W      = (uint16_t)(settingWDT*1000.0);
+  TariffData.Et1    = (uint32_t)(settingEDT1*100000.0);
+  TariffData.Et2    = (uint32_t)(settingEDT2*100000.0);
+  TariffData.Et1r   = (uint32_t)(settingERT1*100000.0);
+  TariffData.Et2r   = (uint32_t)(settingERT2*100000.0);
+  TariffData.G      = (uint32_t)(settingGDT*100000.0);
+  TariffData.W      = (uint32_t)(settingWDT*100000.0);
 
   // Debugf( "TariffData.Efixed : %i\n", TariffData.Efixed );
   // Debugf( "TariffData.Gfixed : %i\n", TariffData.Gfixed );

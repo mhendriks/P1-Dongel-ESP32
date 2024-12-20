@@ -182,10 +182,10 @@ struct buildJsonMQTT {
  */   
   template<typename Item>
   void apply(Item &i) {
-    // char Name[25];
-    // strncpy(Name,String(Item::name).c_str(),sizeof(Name));
-  if ( isInFieldsArray(Item::name) && i.present() ) 
-    jsonDoc[Item::name] = value_to_json_mqtt(i.val());
+    char Name[25];
+    strncpy(Name,String(Item::name).c_str(),sizeof(Name));
+  if ( isInFieldsArray(Name) && i.present() ) 
+    jsonDoc[Name] = value_to_json_mqtt(i.val());
   } //apply
   template<typename Item>
   Item& value_to_json_mqtt(Item& i) {
