@@ -170,7 +170,7 @@ void startWiFi(const char* hostname, int timeOut)
   manageWiFi.setAPCallback(configModeCallback);
 
   manageWiFi.setTimeout(timeOut);  // in seconden ...
-  if ( !manageWiFi.autoConnect("P1-Dongle-Pro") )
+  if ( !manageWiFi.autoConnect(_HOTSPOT) )
   {
     LogFile("Wifi failed to connect and hit timeout",true);
 //    DebugTf(" took [%d] seconds ==> ERROR!\r\n", (millis() - lTime) / 1000);

@@ -70,6 +70,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ETHERNET      //ethernet dongle
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
+// #define __Az__
 
 //FEATURES
 #define DEV_PAIRING
@@ -87,7 +88,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define SMQTT
 // #define MQTTKB
 //#define FIXED_IP
-// #define 
 
 #include "DSMRloggerAPI.h"
 

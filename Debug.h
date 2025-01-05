@@ -14,21 +14,11 @@
 /*---- start macro's ------------------------------------------------------------------*/
 #ifdef DEBUG
   //DEBUG MODE
-  #define DebugBegin(...)({ USBSerial.begin(__VA_ARGS__);while (!USBSerial); })
-  #define Debug(...)      ({ USBSerial.print(__VA_ARGS__);\
-                             TelnetStream.print(__VA_ARGS__);\
-                          })
-  #define Debugln(...)    ({ USBSerial.println(__VA_ARGS__); \
-                             TelnetStream.println(__VA_ARGS__); \
-                          })
-  #define Debugf(...)     ({ USBSerial.printf(__VA_ARGS__); \
-                             TelnetStream.printf(__VA_ARGS__); \
-                          })
-  
-  #define DebugFlush()    ({ USBSerial.flush(); \
-                             TelnetStream.flush(); \
-                          })
-
+  #define DebugBegin(...)({ USBSerial.begin(__VA_ARGS__); while (!USBSerial); })
+  #define Debug(...)      ({ USBSerial.print(__VA_ARGS__); TelnetStream.print(__VA_ARGS__); })
+  #define Debugln(...)    ({ USBSerial.println(__VA_ARGS__); TelnetStream.println(__VA_ARGS__); })
+  #define Debugf(...)     ({ USBSerial.printf(__VA_ARGS__); TelnetStream.printf(__VA_ARGS__); })
+  #define DebugFlush()    ({ USBSerial.flush(); TelnetStream.flush(); })
   #define USBPrint(...)   ({ Debug(__VA_ARGS__);})
   #define USBPrintf(...)  ({ Debugf(__VA_ARGS__);})
   #define USBPrintln(...) ({ Debugln(__VA_ARGS__);})                       
