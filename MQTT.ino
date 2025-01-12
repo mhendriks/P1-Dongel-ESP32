@@ -89,7 +89,7 @@ void AutoDiscoverHA(){
 
 }
 
-#include "_mqtt_kb.h"
+// #include "_mqtt_kb.h" //duplicate
 
 void MQTTSetBaseInfo(){
 #ifdef MQTTKB
