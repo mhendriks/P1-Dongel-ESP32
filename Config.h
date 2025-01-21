@@ -56,7 +56,7 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
 #endif
  
 #ifdef ESPNOW
-  #define OPT3  "[ESPNOW]"  
+  #define OPT3  "[P2P]"  
 #else
   #define OPT3  
 #endif

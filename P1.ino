@@ -192,12 +192,13 @@ void processSlimmemeter() {
     }
         
 #ifndef STUB
-    DSMRdata = {};
+    MyData DSMRdataNew = {};
     String    DSMRerror;
         
-    if (slimmeMeter.parse(&DSMRdata, &DSMRerror))   // Parse succesful
+    if (slimmeMeter.parse(&DSMRdataNew, &DSMRerror))   // Parse succesful
     {
 #endif      
+      DSMRdata = DSMRdataNew;
       if ( (telegramCount - telegramErrors) == 1) SMCheckOnce(); //only the first succesfull telegram
       else {
         //use the keys from the initial check; saves processing power
@@ -289,6 +290,8 @@ void processTelegram(){
     writeRingFiles(); //bWriteFiles = true; //handled in main flow
     UpdateYesterday();
   }
+    // handle rawport
+  if ( bRawPort ) ws_raw.print( CapTelegram ); //print telegram to dongle port
 
 #ifdef ESPNOW  
   // if ( telegramCount % 3 == 1 ) SendActualData();
@@ -299,8 +302,6 @@ void processTelegram(){
 #ifndef MQTT_DISABLE
   if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1 ) bSendMQTT = true; //handled in main flow
 #endif  
-  // handle rawport
-  if ( bRawPort ) ws_raw.print( CapTelegram ); //print telegram to dongle port
   
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 

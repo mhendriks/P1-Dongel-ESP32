@@ -6,11 +6,11 @@ void FacReset();
 
 void  IRAM_ATTR isrButton() {
     if ( digitalRead(IO_BUTTON) == LOW ) {
-  //    Serial.println("Button PRESSED");
+     Debugln("Button PRESSED");
       Tpressed = millis();
       bButtonPressed =  false;
     } else {
-  //    Serial.println("Button RELEASED");
+     Debugln("Button RELEASED");
       Tpressed = (millis() - Tpressed);
       bButtonPressed =  true;  
     }
