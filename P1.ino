@@ -58,17 +58,18 @@ void IRAM_ATTR dtr_out_int() {
 //==================================================================================
 void SetupP1Out(){
 #ifndef ULTRA
-  if ( P1Status.dev_type != PRO_H20_2 ) return;
+  if ( (P1Status.dev_type != PRO_H20_2) && (P1Status.dev_type != P1EP) ) return;
 #endif
   //setup ports
   pinMode(O1_DTR_IO, INPUT);
-  pinMode(P1_LED, OUTPUT);
+  if ( P1_LED != -1 ) {
+    pinMode(P1_LED, OUTPUT);
   
-  //hello world lights
-  digitalWrite(P1_LED, HIGH); //inverse
-  delay(500);
-  digitalWrite(P1_LED, LOW); //inverse
-
+    //hello world lights
+    digitalWrite(P1_LED, HIGH); //inverse
+    delay(500);
+    digitalWrite(P1_LED, LOW); //inverse
+  }
     //detect DTR changes
   attachInterrupt( O1_DTR_IO , dtr_out_int, RISING);
       
@@ -84,12 +85,12 @@ void SetupP1Out(){
 void P1OutBridge(){
   if ( dtr1 && Out1Avail ) {
 
-    digitalWrite(P1_LED, HIGH);
+    if ( P1_LED >= 0 ) digitalWrite(P1_LED, HIGH);
     Serial.println(CapTelegram);
     Serial.flush();
     Out1Avail = false; 
     if ( digitalRead(O1_DTR_IO) == LOW ) SetDTR(false);
-    digitalWrite(P1_LED, LOW);
+    if ( P1_LED >= 0 ) digitalWrite(P1_LED, LOW);
   }
 } 
 
@@ -201,12 +202,13 @@ void processSlimmemeter() {
     }
         
 #ifndef STUB
-    DSMRdata = {};
-    String    DSMRerror;
+    MyData DSMRdataNew = {};
+    String DSMRerror;
         
-    if (slimmeMeter.parse(&DSMRdata, &DSMRerror))   // Parse succesful
+    if (slimmeMeter.parse(&DSMRdataNew, &DSMRerror))   // Parse succesful
     {
 #endif      
+      DSMRdata = DSMRdataNew;
       if ( (telegramCount - telegramErrors) == 1) SMCheckOnce(); //only the first succesfull telegram
       else {
         //use the keys from the initial check; saves processing power

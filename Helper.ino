@@ -46,7 +46,12 @@ void SetConfig(){
                      RxP1 = 4;
                      P1Out = true;
                      WtrMtr = true;
-                     break;                     
+                     break;    
+    case P1EP:       UseRGB = false; 
+                     IOWater = -1;
+                     P1Out = true;
+                     WtrMtr = false;
+                     break;                           
   }
 #endif 
   //pin modes

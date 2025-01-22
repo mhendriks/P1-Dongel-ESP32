@@ -4,6 +4,7 @@
 #define PRO_ETH     2
 #define PRO_H20_B   3
 #define PRO_H20_2   4
+#define P1EP        5
 
 #define APIURL              "http://api.smart-stuff.nl/v1/register.php"
 #define LED_ON              LOW
@@ -33,7 +34,11 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
     #ifdef __Az__
       #include "hw_profile_p1_eth_az.h"
     #else 
-      #include "hw_profile_p1_eth.h"
+      #ifdef P1EP
+        #include "hw_profile_p1ep.h"
+      #else 
+        #include "hw_profile_p1_eth.h"
+      #endif  
     #endif
   #else
     #ifdef __Az__

@@ -45,6 +45,11 @@ TODO
 - flag NoRebootOnNoWiFi
 - nieuwe meter
 
+4.9.11
+- p1 zero values fix
+- S210 fix
+- P1E+ support added
+
 docs
 - long / short press aanpassing
 - partitioning -> oude versie moet flashen
@@ -68,6 +73,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //PROFILES
 // #define ULTRA         //ultra dongle
 #define ETHERNET      //ethernet dongle
+#define P1EP          //ethernet pro+ dongle
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 // #define __Az__
@@ -82,7 +88,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-// #define EID
+#define EID
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 //#define SMQTT

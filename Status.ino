@@ -37,7 +37,11 @@ void P1StatusRead(){
     P1Status.wtr_m3 = preferences.getShort("wtr_m3", 0);
     P1Status.wtr_l = preferences.getUInt("wtr_l", 0);
 #ifdef ETHERNET
-    P1Status.dev_type = PRO_ETH;
+  #ifdef P1EP
+      P1Status.dev_type = P1EP;
+  #else
+      P1Status.dev_type = PRO_ETH;
+  #endif    
 #else
     P1Status.dev_type = preferences.getUShort("dev_type", PRO);
 #endif    
