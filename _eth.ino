@@ -13,8 +13,9 @@
 
 
 void startETH(){
+ 
 // To be called before ETH.begin()
-  ESP32_W5500_onEvent();
+  // ESP32_W5500_onEvent();
 
   // start the ethernet connection and the server:
   // Use DHCP dynamic IP and random mac
@@ -30,7 +31,7 @@ void startETH(){
 #ifdef FIXED_IP
   ETH.config(myIP, myGW, mySN, myDNS);
 #endif
-  ESP32_W5500_waitForConnect();
+  // ESP32_W5500_waitForConnect();
 
 //  PostMacIP(); //post mac en ip 
 
@@ -38,14 +39,17 @@ void startETH(){
 //  USBSerial.print(F("ETH MAC: ")); //CDC output
 //  USBSerial.println(macStr);
   
-  SwitchLED( LED_ON, LED_BLUE ); //Ethernet available = RGB LED Blue
+  // SwitchLED( LED_ON, LED_BLUE ); //Ethernet available = RGB LED Blue
 }
-
+#else
+  void startETH(){}
 #endif
 
 String IP_Address(){
 #ifdef ETHERNET
-  return ETH.localIP().toString();
+  if ( netw_state == NW_ETH ) return ETH.localIP().toString();
+  else return WiFi.localIP().toString();
+  
 #else
   return WiFi.localIP().toString();
 #endif
@@ -53,7 +57,8 @@ String IP_Address(){
 
 String MAC_Address(){
 #ifdef ETHERNET
-  return ETH.macAddress();
+  if ( netw_state == NW_ETH ) return ETH.macAddress();
+  else return WiFi.macAddress();
 #else
   return WiFi.macAddress();
 #endif

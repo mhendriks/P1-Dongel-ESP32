@@ -18,15 +18,15 @@
 WebServer httpServer(80);
 NetServer ws_raw(82);
 
-bool FSmounted          = false; 
-//bool WifiConnected    = false;
-//time_t tWifiReconnect = 0;
 time_t tWifiLost        = 0;
 byte  WifiReconnect     = 0;
 
 void LogFile(const char*, bool);
 void P1Reboot();
 void SwitchLED( byte mode, uint32_t color);
+void startETH();
+void startWiFi(const char* hostname, int timeOut);
+
 String MAC_Address();
 String  IP_Address();
 
@@ -40,6 +40,7 @@ void GetMacAddress(){
 //  USBSerial.print( "MacID: " );USBSerial.println( macID );
 }
 
+
 /***===========================================================================================
     POST MAC + IP
     https://www.allphptricks.com/create-and-consume-simple-rest-api-in-php/
@@ -50,11 +51,7 @@ void PostMacIP() {
   http.begin(wifiClient, APIURL);
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
   
-#ifndef AP_ONLY
   String httpRequestData = "mac=" + String(macStr) + "&ip=" + IP_Address() + "&version=" + _VERSION_ONLY;           
-#else
-  String httpRequestData = "mac=" + String(macStr) + "&ip=" + IP_Address() + "&version=" + _VERSION_ONLY;           
-#endif  
   
   int httpResponseCode = http.POST(httpRequestData);
 
@@ -66,15 +63,43 @@ void PostMacIP() {
   http.end();  
 }
 
-#ifndef ETHERNET
-
 //int WifiDisconnect = 0;
 bool bNoNetworkConn = false;
 
-static void onWifiEvent (WiFiEvent_t event) {
-    sprintf(cMsg,"WiFi-event : %d | rssi: %d | channel : %i",event, WiFi.RSSI(), WiFi.channel());
-    LogFile(cMsg, true);
-    switch (event) {
+// Network event -> Ethernet is dominant
+static void onNetworkEvent (WiFiEvent_t event) {
+  switch (event) {
+  //ETH    
+    case ARDUINO_EVENT_ETH_START: //1
+      DebugTln("ETH Started");
+      // ETH.setHostname(_HOSTNAME); SDK 3.0 feature
+      break;
+    case ARDUINO_EVENT_ETH_CONNECTED: //3
+      DebugTln("\nETH Connected");
+      break;
+    case ARDUINO_EVENT_ETH_GOT_IP: //5
+      {
+        WiFiManager manageWiFi;
+        if ( WiFi.isConnected() ) WiFi.disconnect();
+        LogFile("ETH GOT IP", true);
+        netw_state = NW_ETH;
+        SwitchLED( LED_ON , LED_BLUE ); //Ethernet available = RGB LED Blue
+        // tLastConnect = 0;
+        break;
+      }
+    // case ARDUINO_EVENT_ETH_LOST_IP: //6 not available in SDK 2.x
+    //   DebugTln("!!! ETH Lost IP");
+    //   netw_connected = false;
+    //   break;
+    case ARDUINO_EVENT_ETH_STOP: //2
+      DebugTln("!!! ETH Stopped");
+    case ARDUINO_EVENT_ETH_DISCONNECTED: //4
+      // if ( Update.isRunning() ) Update.abort();
+      if ( netw_state != NW_WIFI ) netw_state = NW_NONE;
+      SwitchLED( LED_ON , LED_RED );
+      LogFile("ETH Disconnected", true);
+      break;
+//WIFI
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
         LogFile(cMsg, true);
@@ -86,15 +111,24 @@ static void onWifiEvent (WiFiEvent_t event) {
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
         Debug(" )\n\n");
         WifiReconnect = 0;
+        if ( netw_state == NW_ETH ) WiFi.disconnect();
+        else netw_state = NW_WIFI;
         bNoNetworkConn = false;
         break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
         tWifiLost = millis();
+        if ( netw_state != NW_ETH ) netw_state = NW_NONE;
         break;           
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: //5
+#ifdef ULTRA
+        if ( netw_state != NW_ETH ) SwitchLED( LED_ON, LED_RED );
+#else
         SwitchLED( LED_OFF, LED_BLUE );
+#endif        
         break;
     default:
+        sprintf(cMsg,"WiFi-event : %d | rssi: %d | channel : %i",event, WiFi.RSSI(), WiFi.channel());
+        LogFile(cMsg, true);
         break;
     }
 }
@@ -111,8 +145,9 @@ void configModeCallback (WiFiManager *myWiFiManager)
 
 //===========================================================================================
 void WifiWatchDog(){
+#if not defined ETHERNET  || defined ULTRA
   //try to reconnect or reboot when wifi is down
-   if ( WiFi.status() != WL_CONNECTED ){
+   if ( WiFi.status() != WL_CONNECTED && WiFi.status() != WL_DISCONNECTED ){
     if ( !bNoNetworkConn ) {
       LogFile("Wifi connection lost",true); //log only once 
       tWifiLost = millis();
@@ -135,11 +170,21 @@ void WifiWatchDog(){
       P1Reboot(); //after 3 x 20.000 millis
     }
   }
+#endif  
 }
 
 //===========================================================================================
 void startWiFi(const char* hostname, int timeOut) 
-{
+{  
+#if not defined ETHERNET || defined ULTRA
+#ifdef ULTRA
+  //lets wait on ethernet first for 3.5sec and consume some time to charge the capacitors
+  uint8_t timeout = 0;
+  while ( (netw_state == NW_NONE) && (timeout++ < 35) ) {
+    delay(100); 
+  } 
+#endif 
+  if ( netw_state != NW_NONE ) return;
   WiFi.setHostname(hostname);
 //  WiFi.setMinSecurity(WIFI_AUTH_WEP);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
@@ -148,13 +193,12 @@ void startWiFi(const char* hostname, int timeOut)
   WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);      //to solve mesh issues 
   WiFiManager manageWiFi;
 //  uint32_t lTime = millis();
-
 //  DebugTln("start ...");
   LogFile("Wifi Starting",true);
 //  digitalWrite(LED, LED_OFF);
   SwitchLED( LED_OFF, LED_BLUE );
   
-  WiFi.onEvent(onWifiEvent);
+  manageWiFi.setConfigPortalBlocking(false);
   manageWiFi.setDebugOutput(false);
   manageWiFi.setShowStaticFields(true); // force show static ip fields
   manageWiFi.setShowDnsFields(true);    // force show dns field always  
@@ -170,6 +214,8 @@ void startWiFi(const char* hostname, int timeOut)
   manageWiFi.setAPCallback(configModeCallback);
 
   manageWiFi.setTimeout(timeOut);  // in seconden ...
+  manageWiFi.autoConnect(_HOTSPOT);
+ /* 
   if ( !manageWiFi.autoConnect(_HOTSPOT) )
   {
     LogFile("Wifi failed to connect and hit timeout",true);
@@ -177,12 +223,47 @@ void startWiFi(const char* hostname, int timeOut)
     P1Reboot();
     return;
   } 
-  //  phy_bbpll_en_usb(true); 
-//  DebugTf("Took [%d] seconds => OK!\n", (millis() - lTime) / 1000);
-
+*/
+  //handle wifi webinterface timeout and connection
+  //timeOut in sec
+  uint16_t i = 0;
+  while ( (i++ < timeOut*10) && (netw_state == NW_NONE) ){
+    Debug("*");
+    delay(100);
+    manageWiFi.process();
+    SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE); //fast blinking
+  }
+  Debugln();
+  if ( netw_state == NW_NONE ) {
+    P1Reboot(); //timeout hit
+    LogFile("Wifi failed to connect and hit timeout",true);
+  }
+  manageWiFi.stopWebPortal();
+  SwitchLED( LED_ON, LED_BLUE );
+#else 
+  Debugln(F("NO WIFI SUPPORT"));
+#endif //ifndef ETHERNET
 } // startWiFi()
 
-#endif //ifndef ETHERNET
+//===========================================================================================
+void WaitOnNetwork()
+{
+  while ( netw_state == NW_NONE ) { //endless wait for network connection
+    Debug(".");
+    delay(200);
+  }
+  Debugln("\nNetwork connected");
+}
+//===========================================================================================
+void startNetwork()
+{
+  WiFi.onEvent(onNetworkEvent);
+  startETH();
+  startWiFi(settingHostname, 240);  // timeout 4 minuten
+  WaitOnNetwork();
+  GetMacAddress();
+  USBPrint("ip-adres: ");USBPrintln(IP_Address());
+}
 
 //===========================================================================================
 void startTelnet() 

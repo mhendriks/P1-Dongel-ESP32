@@ -127,10 +127,8 @@ void handleKeyInput()
     inChar = (char)TelnetStream.read();
     
     switch(inChar) {
-#ifdef EID
       case 'n': PostEnergyID();break;
       case 'N': DebugT("P1Status.eid_state: "); Debugln(P1Status.eid_state);break;
-#endif
       case 'a':     
       case 'A':     { char c;
                       while (TelnetStream.available() > 0) { 

@@ -64,9 +64,7 @@ void setupFSexplorer()
   httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){ auth(); handleSmApiField(); });
   httpServer.on(UriBraces("/config/{}"), HTTP_POST, [](){auth(); ConfigApi(); });
 
-#ifdef EID
   httpServer.on("/eid/getclaim",[](){ auth(); EIDGetClaim(); });
-#endif
 #ifdef DEV_PAIRING
   httpServer.on("/pair",[](){ HandlePairing(); });
 #endif

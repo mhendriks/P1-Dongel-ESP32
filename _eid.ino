@@ -4,10 +4,6 @@
   - UI: check expire claimcode + url (frontend)
 */
 
-#ifndef EID
-void handleEnergyID(){ }
-#else
-
 #include "./../../_secrets/energyid.h"
 
 String  eid_webhook;
@@ -174,49 +170,6 @@ void EIDDetermineInterval(String interval){
   DebugT(F("eid_interval_sec: "));Debugln(eid_interval_sec);
 }
 
-//bool EIDWriteConfig(String payload){
-//  if (!FSmounted) return false;
-//  File EIDFile = LittleFS.open(EID_CONF_FILE, "w"); // open for appending  
-//  if (!EIDFile) {
-//    DebugTln(F("open eid-config.json FAILED!!!--> Bailout\r\n"));
-//    return false;
-//  }
-//  EIDFile.print(payload);
-//  EIDFile.close();
-//  DebugTln(F("EID Config file writen")); 
-//  return true;
-//}
-
-//void EIDReadConfig(){
-//  if (!FSmounted) return;
-//  File EIDFile = LittleFS.open(EID_CONF_FILE, "r"); // open for appending  
-//  if (!EIDFile) {
-//    DebugTln(F("open config file FAILED!!!--> Bailout\r\n"));
-//    return;
-//  }
-//  eid_token = EIDFile.readStringUntil('\r');
-//  EIDFile.close();
-//}
-  
-//void GETEnergyID(){
-//
-//  HTTPClient http;
-//  snprintf( cMsg, sizeof( cMsg ), "%s%s",EID_BASE_URL, eid_token );
-//  http.begin( cMsg );
-//  
-//  int httpResponseCode = http.GET();
-//  if ( httpResponseCode<=0 ) { 
-//    Debug(F("Error code: "));Debugln(httpResponseCode);
-//    return;
-//  }
-//  
-//  Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
-//  String payload = http.getString();
-//  Debugln(payload);
-//  http.end();
-//
-//}
-
 String IsoTS () {
   // convert to this format -> 2023-06-16T08:01+0200
   
@@ -380,5 +333,3 @@ void PostEnergyID(){
   
   http.end();
 }
-
-#endif

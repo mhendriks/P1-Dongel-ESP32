@@ -34,7 +34,7 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
     #ifdef __Az__
       #include "hw_profile_p1_eth_az.h"
     #else 
-      #ifdef P1EP
+      #ifdef ETH_P1EP
         #include "hw_profile_p1ep.h"
       #else 
         #include "hw_profile_p1_eth.h"
@@ -50,14 +50,8 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
 #endif
 
 //FETAURES
-#ifdef EID
-  bool    bEID_enabled = true;
+  bool    bEID_enabled = false;
   enum E_eid_states : uint8_t { EID_IDLE, EID_CLAIMING, EID_ENROLLED };
-#ifndef VICTRON_GRID  
-  #undef MQTT_DISABLE
-  #define MQTT_DISABLE
-#endif  
-#endif //EID
 
 #ifdef DEBUG
   #define OPT1  "[DEBUG]"
@@ -77,11 +71,7 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
   #define OPT3  
 #endif
 
-#ifdef EID
-  #define OPT4  "[EID]" 
-#else
-  #define OPT4
-#endif
+#define OPT4  "[EID]" 
 
 #ifdef POST_TELEGRAM
   #define OPT5  "[POST]" 
@@ -109,9 +99,4 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
 
 #define ALL_OPTIONS PROFILE OPT1 OPT2 OPT3 OPT4 OPT5 OPT6 OPT7 OPT8
 #define _DEFAULT_MQTT_TOPIC _DEFAULT_HOSTNAME "/"
-
-#ifdef AP_ONLY  
-  #define _DEFAULT_HOMEPAGE  "/DSMRindexLOCAL.html"
-#else
-  #define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
-#endif
+#define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"

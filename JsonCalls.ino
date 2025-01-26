@@ -18,7 +18,6 @@ bool onlyIfPresent = false;
 const static PROGMEM char infoArray[][25]   = { "identification","p1_version","equipment_id" }; //waardes dient redelijk statisch zijn niet elke keer versturen
 #ifndef SE_VERSION
   const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3","peak_pwr_last_q", "highest_peak_pwr"};
-
 #else
   const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_total","energy_delivered_tariff2","energy_returned_total","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
 #endif
@@ -272,10 +271,7 @@ void sendDeviceSettings() {
   doc["water_enabl"] = WtrMtr;
   doc["led"] = LEDenabled;
   doc["raw-port"] = bRawPort;
-
-#ifdef EID
   doc["eid-enabled"] = bEID_enabled;
-#endif
 #ifdef DEV_PAIRING
   doc["dev-pairing"] = true;
 #endif

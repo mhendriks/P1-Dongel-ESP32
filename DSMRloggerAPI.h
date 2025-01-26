@@ -252,9 +252,7 @@ struct Status {
    volatile uint16_t  wtr_l;
    uint16_t           dev_type;   
    bool               FirstUse;
-#ifdef EID   
    E_eid_states       eid_state;
-#endif   
 } P1Status;
   
 MyData      DSMRdata;
@@ -297,7 +295,9 @@ float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
 uint8_t   settingSmHasFaseInfo = 1;
 char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
-
+enum tNetwState { NW_NONE, NW_WIFI, NW_ETH};
+uint8_t netw_state = NW_NONE;
+bool      FSmounted = false;
 //MQTT
 #ifndef MQTTKB
   uint32_t   settingMQTTinterval = 0;

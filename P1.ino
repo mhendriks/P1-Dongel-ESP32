@@ -197,7 +197,7 @@ void processSlimmemeter() {
     
     // example: [21:00:11][   9880/  8960] loop        ( 997): read telegram [28] => [140307210001S]
     if (!bHideP1Log) {
-      Debugln(F("\r\nP [Time----][FreeHeap/mBlck][Function----(line):"));
+      // Debugln(F("\r\nP [Time----][FreeHeap/mBlck][Function----(line):"));
       DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
     }
         

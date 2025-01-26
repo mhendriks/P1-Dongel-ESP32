@@ -122,9 +122,7 @@ void writeSettings() {
   docw["max-volt"] = MaxVoltage;
 #endif
 
-#ifdef EID    
   docw["eid-enabled"] = bEID_enabled;
-#endif  
 
 #ifdef POST_TELEGRAM
   docw["pt_port"] = pt_port;
@@ -216,9 +214,8 @@ void readSettings(bool show)
   if (doc.containsKey("pre40")) bPre40 = doc["pre40"];
   if (doc.containsKey("raw-port")) bRawPort = doc["raw-port"];
   if (doc.containsKey("led-prt")) bLED_PRT = doc["led-prt"];
-#ifdef EID    
+
   if (doc.containsKey("eid-enabled")) bEID_enabled = doc["eid-enabled"];
- #endif
 #ifdef VOLTAGE_MON
   if (doc.containsKey("max-volt")) MaxVoltage = doc["max-volt"];
 #endif  
@@ -404,10 +401,7 @@ void updateSetting(const char *field, const char *newValue)
   }
   if (!stricmp(field, "raw-port")) bRawPort = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "act-json-mqtt")) bActJsonMQTT = (stricmp(newValue, "true") == 0?true:false);  
-
-#ifdef EID 
   if (!stricmp(field, "eid-enabled")) bEID_enabled = (stricmp(newValue, "true") == 0?true:false);  
-#endif  
 
   writeSettings();
   

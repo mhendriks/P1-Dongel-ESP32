@@ -85,12 +85,18 @@ void ToggleLED(byte mode) {
   else if ( LEDenabled ) digitalWrite(LED, !digitalRead(LED)); else digitalWrite(LED, LED_OFF);
 }
 
+void ClearRGB(){
+  R_value = 0;
+  G_value = 0;
+  B_value = 0;
+}
+
 void SwitchLED( byte mode, uint32_t color) {
 if ( UseRGB ) {
     if ( LEDenabled ) {
       uint32_t value = 0; //off mode
-      if ( mode == LED_ON ) value = color;
-      
+      if ( mode == LED_ON ) value = color; 
+      if ( color != LED_GREEN ) ClearRGB();
       switch ( color ) {
       case LED_RED:   R_value = value; break;
       case LED_GREEN: G_value = value; break;
@@ -99,7 +105,9 @@ if ( UseRGB ) {
     }
     rgb.setPixel(R_value+G_value+B_value);
 //    neopixelWrite(RGBLED_PIN,20,20,20); ///white
-   } else digitalWrite(LED, mode);
+   } else {
+      digitalWrite(LED, color==LED_RED?LED_OFF:mode);
+   }
 }
 
 
@@ -125,7 +133,7 @@ void ShutDownHandler(){
 //===========================================================================================
 
 void P1Reboot(){
-    delay(1500);
+    delay(500);
     ESP.restart();
     delay(2000);  
 }

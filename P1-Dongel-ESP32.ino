@@ -43,12 +43,6 @@ WENSEN
 
 TODO
 - flag NoRebootOnNoWiFi
-- nieuwe meter
-
-4.9.11
-- p1 zero values fix
-- S210 fix
-- P1E+ support added
 
 docs
 - long / short press aanpassing
@@ -71,9 +65,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define DEBUG
 
 //PROFILES
-// #define ULTRA         //ultra dongle
-#define ETHERNET      //ethernet dongle
-#define P1EP          //ethernet pro+ dongle
+// #define ULTRA         //ultra (mini) dongle
+// #define ETHERNET      //ethernet dongle
+// #define ETH_P1EP          //ethernet pro+ dongle
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 // #define __Az__
@@ -84,11 +78,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 // #define SE_VERSION
 //#define STUB            //test only
-//#define AP_ONLY
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
-#define EID
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 //#define SMQTT
@@ -121,23 +113,10 @@ void setup()
   else readSettings(true);
 
 //=============start Networkstuff ==================================
-#ifdef ETHERNET
-  startETH();
-#else
-  #ifndef AP_ONLY
-    startWiFi(settingHostname, 240);  // timeout 4 minuten
-  #else
-    startAP();
-  #endif
-#endif
-  
-  GetMacAddress();
-  PostMacIP(); //post mac en ip 
-  USBPrint("ip-adres: ");USBPrintln(IP_Address());
-  
+  startNetwork();
+  PostMacIP(); //post mac en ip   
   delay(100);
   startTelnet();
-#ifndef AP_ONLY
   startMDNS(settingHostname);
   startNTP();
 
@@ -146,7 +125,6 @@ void setup()
   MQTTsetServer();
 #endif  
 
-#endif
 //================ Check necessary files ============================
   if (!DSMRfileExist(settingIndexPage, false) ) {
     DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
@@ -220,9 +198,7 @@ void loop () {
           MQTTSentStaticInfo();
           CHANGE_INTERVAL_MIN(StatusTimer, 30);
        }
-#ifndef ETHERNET       
        WifiWatchDog();
-#endif
        handleKeyInput();
        handleRemoteUpdate();
        PushButton.handler();
