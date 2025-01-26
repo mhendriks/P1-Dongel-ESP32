@@ -228,15 +228,12 @@ void delayms(unsigned long);
 void SetConfig();
 
 //===========================GLOBAL VAR'S======================================
-#ifdef SMQTT
-  WiFiClientSecure wifiClient;
-#else
-  WiFiClient wifiClient;
-#endif
 #ifndef MQTT_DISABLE 
   #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
-  PubSubClient MQTTclient(wifiClient);
 #endif
+  WiFiClientSecure wifiClientTLS;
+  WiFiClient wifiClient;
+  PubSubClient MQTTclient(wifiClient);
 
 //config + button
 int8_t IOWater = 0;
@@ -327,6 +324,7 @@ String    mbusDeliveredTimestamp;
 String    smID;
 bool      StaticInfoSend = false;
 bool      bSendMQTT = false;
+bool      bMQTToverTLS = false;
 
 //update
 char      BaseOTAurl[45] = OTAURL;

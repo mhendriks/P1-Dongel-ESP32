@@ -79,11 +79,11 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
   #define OPT5
 #endif
 
-#ifdef SMQTT
-  #define OPT6  "[SMQTT]" 
-#else
+// #ifdef SMQTT
+//   #define OPT6  "[SMQTT]" 
+// #else
   #define OPT6
-#endif
+// #endif
 
 #ifdef SE_VERSION
   #define OPT7 "[SE]"

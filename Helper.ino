@@ -74,6 +74,7 @@ void FacReset() {
 //  bFacReset = false;
   P1StatusClear();
   LittleFS.remove("/DSMRsettings.json");
+  LittleFS.remove("/fixedip.json");
   resetWifi();
 }
 

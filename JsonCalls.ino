@@ -167,9 +167,7 @@ void sendDeviceInfo()
 
 #ifndef ETHERNET
   doc["ssid"] = WiFi.SSID();
-#ifdef SHOW_PASSWRDS
-  doc["pskkey"] = WiFi.psk();
-#endif
+  // doc["pskkey"] = WiFi.psk();
   doc["wifirssi"] = WiFi.RSSI();
 #endif
   doc["uptime"] = upTime();
@@ -177,8 +175,7 @@ void sendDeviceInfo()
   if ( !bWarmteLink ) { // IF NO HEATLINK
       doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
   }
-
-
+  
 //  doc["telegraminterval"] = (int)settingTelegramInterval;
   if ( DSMRdata.p1_version == "50" || !DSMR_NL ) doc["telegraminterval"] = 1; 
   else doc["telegraminterval"] = 10; 
@@ -215,27 +212,21 @@ void sendDeviceSettings() {
 
   ADD_SETTING("hostname", "s", 0, sizeof(settingHostname) - 1, settingHostname);
   if ( !bWarmteLink ) { // IF NO HEATLINK
-//#ifndef HEATLINK
   ADD_SETTING("ed_tariff1", "f", 0, 10, settingEDT1);
   ADD_SETTING("ed_tariff2", "f", 0, 10, settingEDT2);
   ADD_SETTING("er_tariff1", "f", 0, 10, settingERT1);
   ADD_SETTING("er_tariff2", "f", 0, 10, settingERT2);
   ADD_SETTING("w_tariff", "f", 0, 10, settingWDT);
-//#endif
   }
   ADD_SETTING("gd_tariff", "f", 0, 10, settingGDT);
-//#ifndef HEATLINK
   if ( ! bWarmteLink ) { // IF NO HEATLINK
     ADD_SETTING("electr_netw_costs", "f", 0, 100, settingENBK);
     ADD_SETTING("water_netw_costs", "f", 0, 100, settingWNBK);
-//#endif
   }
   ADD_SETTING("gas_netw_costs", "f", 0, 100, settingGNBK);
-//#ifndef HEATLINK
   if ( ! bWarmteLink ) { // IF NO HEATLINK
     ADD_SETTING("sm_has_fase_info", "i", 0, 1, settingSmHasFaseInfo);
   }
-//#endif
   ADD_SETTING("IndexPage", "s", 0, sizeof(settingIndexPage) - 1, settingIndexPage);
 
 #ifndef MQTT_DISABLE
@@ -244,6 +235,7 @@ void sendDeviceSettings() {
   ADD_SETTING("mqtt_broker_port", "i", 1, 9999, settingMQTTbrokerPort);
   ADD_SETTING("mqtt_user", "s", 0, sizeof(settingMQTTuser) - 1, settingMQTTuser);
   ADD_SETTING("mqtt_passwd", "s", 0, sizeof(settingMQTTpasswd) - 1, settingMQTTpasswd);
+  doc["mqtt_tls"] = bMQTToverTLS;
 #endif
   ADD_SETTING("mqtt_toptopic", "s", 0, sizeof(settingMQTTtopTopic) - 1, settingMQTTtopTopic);
   ADD_SETTING("mqtt_interval", "i", 0, 600, settingMQTTinterval);

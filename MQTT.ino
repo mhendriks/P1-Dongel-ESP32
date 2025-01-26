@@ -101,12 +101,17 @@ void MQTTsetServer(){
 #ifndef MQTT_DISABLE 
   if ((settingMQTTbrokerPort == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
+  if (bMQTToverTLS) {
+    wifiClientTLS.setInsecure();
+    MQTTclient.setClient(wifiClientTLS);
+  }
+  else {
+    MQTTclient.setClient(wifiClient);
+  }
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
   DebugTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
   MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
-#ifdef SMQTT
-  wifiClient.setInsecure();
-#endif  
+
 //  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 1);
   MQTTConnect(); //try to connect
 

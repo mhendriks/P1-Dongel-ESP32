@@ -90,11 +90,8 @@ void displayBoardInfo()
     Debug(F("ESP32S2_DEV"));
 #endif
   Debug(F("]\r\n                  SSID ["));  Debug( WiFi.SSID() );
-#ifdef SHOW_PASSWRDS
-  Debug(F("]\r\n               PSK key ["));  Debug( WiFi.psk() );
-#else
+  // Debug(F("]\r\n               PSK key ["));  Debug( WiFi.psk() );
   Debug(F("]\r\n               PSK key [**********"));
-#endif
   Debug(F("]\r\n            IP Address ["));  Debug( IP_Address() );
   Debug(F("]\r\n              Hostname ["));  Debug( settingHostname );
   Debug(F("]\r\n     Last reset reason ["));  Debug( getResetReason() );
@@ -104,11 +101,8 @@ void displayBoardInfo()
   Debugln(F("==================================================================\r"));
   Debug(F(" \r\n           MQTT broker ["));  Debug( settingMQTTbroker );
   Debug(F("]\r\n             MQTT User ["));  Debug( settingMQTTuser );
-  #ifdef SHOW_PASSWRDS
-    Debug(F("]\r\n         MQTT PassWord ["));  Debug( settingMQTTpasswd );
-  #else
-    Debug(F("]\r\n         MQTT PassWord [**********"));
-  #endif
+    // Debug(F("]\r\n         MQTT PassWord ["));  Debug( settingMQTTpasswd );
+  Debug(F("]\r\n         MQTT PassWord [**********"));
   Debug(F("]\r\n             Top Topic ["));  Debug(settingMQTTtopTopic );
   Debug(F("]\r\n       Update Interval ["));  Debug(settingMQTTinterval);
   Debugln(F("]\r"));

@@ -12,7 +12,7 @@ WENSEN
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
 - auto switch 3 - 1 fase max fuse
 - temparatuur ook opnemen in grafieken (A van Dijken)
-- websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
+- SSE of websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
 - Roberto: P1 H2O watersensor gegevens apart versturen (MQTT) van P1 
 - Sluipverbruik bijhouden
@@ -21,12 +21,10 @@ WENSEN
 - #18 water en gas ook in de enkele json string (mqtt)
 - spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
 - loadbalancing bijhouden over de fases
-
 - grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
 - Consistentie tijd-assen, links oud, rechts nieuw
   - in Actueel staat de laatste meting rechts en de oudste meting links
   - in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
-
 - Harold B: Dark-mode frontend
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
 - Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
@@ -39,10 +37,7 @@ WENSEN
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
-- support https / http mqtt link extern
 
-TODO
-- flag NoRebootOnNoWiFi
 
 docs
 - long / short press aanpassing
@@ -65,7 +60,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define DEBUG
 
 //PROFILES
-// #define ULTRA         //ultra (mini) dongle
+#define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
@@ -75,17 +70,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //FEATURES
 #define DEV_PAIRING
 #define MBUS
-//#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 // #define SE_VERSION
-//#define STUB            //test only
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
-//#define SMQTT
 // #define MQTTKB
-//#define FIXED_IP
 
 #include "DSMRloggerAPI.h"
 

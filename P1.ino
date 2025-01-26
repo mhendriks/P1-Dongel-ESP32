@@ -140,10 +140,6 @@ void handleVirtualP1(){}
 void handleSlimmemeter()
 {
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
-#ifdef STUB
-  _handleSTUB();
-  return; //escape when stub is active
-#endif
     slimmeMeter.loop();
     if (slimmeMeter.available()) {
       ToggleLED(LED_ON);
@@ -200,14 +196,12 @@ void processSlimmemeter() {
       // Debugln(F("\r\nP [Time----][FreeHeap/mBlck][Function----(line):"));
       DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
     }
-        
-#ifndef STUB
+    
     MyData DSMRdataNew = {};
     String DSMRerror;
         
     if (slimmeMeter.parse(&DSMRdataNew, &DSMRerror))   // Parse succesful
     {
-#endif      
       DSMRdata = DSMRdataNew;
       if ( (telegramCount - telegramErrors) == 1) SMCheckOnce(); //only the first succesfull telegram
       else {
@@ -255,7 +249,6 @@ void processSlimmemeter() {
         
       processTelegram();
       if (Verbose2) DSMRdata.applyEach(showValues());
-#ifndef STUB
     } 
     else // Parser error, print error
     {
@@ -264,7 +257,6 @@ void processSlimmemeter() {
       DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
       slimmeMeter.clear(); //on errors clear buffer
     }
-#endif    
   
 } // handleSlimmeMeter()
 

@@ -20,6 +20,8 @@ NetServer ws_raw(82);
 
 time_t tWifiLost        = 0;
 byte  WifiReconnect     = 0;
+IPAddress staticIP, gateway, subnet, dns;
+bool bFixedIP = false;
 
 void LogFile(const char*, bool);
 void P1Reboot();
@@ -65,6 +67,7 @@ void PostMacIP() {
 
 //int WifiDisconnect = 0;
 bool bNoNetworkConn = false;
+bool bEthUsage = false;
 
 // Network event -> Ethernet is dominant
 static void onNetworkEvent (WiFiEvent_t event) {
@@ -83,6 +86,7 @@ static void onNetworkEvent (WiFiEvent_t event) {
         if ( WiFi.isConnected() ) WiFi.disconnect();
         LogFile("ETH GOT IP", true);
         netw_state = NW_ETH;
+        bEthUsage = true; //set only once 
         SwitchLED( LED_ON , LED_BLUE ); //Ethernet available = RGB LED Blue
         // tLastConnect = 0;
         break;
@@ -145,9 +149,10 @@ void configModeCallback (WiFiManager *myWiFiManager)
 
 //===========================================================================================
 void WifiWatchDog(){
-#if not defined ETHERNET  || defined ULTRA
+#if not defined ETHERNET || defined ULTRA
   //try to reconnect or reboot when wifi is down
-   if ( WiFi.status() != WL_CONNECTED && WiFi.status() != WL_DISCONNECTED ){
+  if ( bEthUsage ) return; //leave when ethernet is prefered network
+  if ( WiFi.status() != WL_CONNECTED && WiFi.status() != WL_DISCONNECTED  ){
     if ( !bNoNetworkConn ) {
       LogFile("Wifi connection lost",true); //log only once 
       tWifiLost = millis();
@@ -191,6 +196,7 @@ void startWiFi(const char* hostname, int timeOut)
   
   WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);  //to solve mesh issues 
   WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);      //to solve mesh issues 
+  if ( bFixedIP ) WiFi.config(staticIP, gateway, subnet, dns);
   WiFiManager manageWiFi;
 //  uint32_t lTime = millis();
 //  DebugTln("start ...");
@@ -254,10 +260,50 @@ void WaitOnNetwork()
   }
   Debugln("\nNetwork connected");
 }
+
+bool loadFixedIPConfig(const char *filename) {
+
+  File file = LittleFS.open(filename, "r");
+  if (!file) {
+    Debugln("Configuratiebestand niet gevonden.");
+    return false;
+  }
+
+  StaticJsonDocument<512> doc;
+  DeserializationError error = deserializeJson(doc, file);
+  if (error) {
+    Debugln("Fout bij het parsen van JSON-bestand.");
+    file.close();
+    return false;
+  }
+
+  staticIP.fromString(doc["static_ip"].as<const char *>());
+  gateway.fromString(doc["gateway"].as<const char *>());
+  subnet.fromString(doc["subnet"].as<const char *>());
+  dns.fromString(doc["dns"].as<const char *>());
+
+  file.close();
+  return true;
+}
+
+// validate fixed ip config
+bool validateConfig() {
+  if (!staticIP || !gateway || !subnet || !dns) {
+    Serial.println("IP-instellingen zijn ongeldig.");
+    return false;
+  }
+#ifdef DEBUG  
+  Debugf("\n\nFixed IP values: ip[%s] gw[%s] sub[%s] dns[%s]\n\n",staticIP.toString(), gateway.toString(), subnet.toString(), dns.toString());
+#endif
+
+  return true;
+}
+
 //===========================================================================================
 void startNetwork()
 {
   WiFi.onEvent(onNetworkEvent);
+  if ( loadFixedIPConfig("/fixedip.json") ) bFixedIP = validateConfig();
   startETH();
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   WaitOnNetwork();
@@ -285,6 +331,38 @@ void startMDNS(const char *Hostname)
 } // startMDNS()
 
 #endif
+
+#ifdef ETHERNET
+
+#include <WebServer_ESP32_SC_W5500.h>
+
+void startETH(){
+ 
+  ETH.begin( MISO_GPIO, MOSI_GPIO, SCK_GPIO, CS_GPIO, INT_GPIO, SPI_CLOCK_MHZ, ETH_SPI_HOST );
+  if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
+}
+#else
+  void startETH(){}
+#endif //def ETHERNET
+
+String IP_Address(){
+#ifdef ETHERNET
+  if ( netw_state == NW_ETH ) return ETH.localIP().toString();
+  else return WiFi.localIP().toString();
+  
+#else
+  return WiFi.localIP().toString();
+#endif
+}
+
+String MAC_Address(){
+#ifdef ETHERNET
+  if ( netw_state == NW_ETH ) return ETH.macAddress();
+  else return WiFi.macAddress();
+#else
+  return WiFi.macAddress();
+#endif
+}
 /***************************************************************************
 *
 * Permission is hereby granted, free of charge, to any person obtaining a

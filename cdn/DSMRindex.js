@@ -3326,6 +3326,8 @@ function formatFailureLog(svalue) {
       ,[ "highest_peak_pwr",      "Piek Elektra huidige maand"]
       ,[ "highest_peak_pwr_13mnd","Piek Elektra over 13 maanden"]
       ,[ "water_delivered_ts",	  "Tijdcode Watermeterstand"]
+	  ,[ "mqtt_tls",	  		  "MQTT over tls"]
+	  ,[ "dev-pairing",	  		  "Peer2Peer communication"]
 	  ,[ "eid-enabled",	  		  "EnergyID aan/uit"]		  		  		  
   ];
 

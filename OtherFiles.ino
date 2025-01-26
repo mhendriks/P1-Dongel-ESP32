@@ -103,6 +103,7 @@ void writeSettings() {
   docw["MQTTpasswd"] = settingMQTTpasswd;
   docw["MQTTinterval"] = settingMQTTinterval;
   docw["MQTTtopTopic"] = settingMQTTtopTopic;
+  docw["mqtt_tls"] = bMQTToverTLS;
   
   docw["LED"] = LEDenabled;
   docw["ota"] = BaseOTAurl;
@@ -197,6 +198,7 @@ void readSettings(bool show)
   settingMQTTinterval = doc["MQTTinterval"];
   strcpy(settingMQTTtopTopic, doc["MQTTtopTopic"]);
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+  if (doc.containsKey("mqtt_tls")) bMQTToverTLS = doc["mqtt_tls"];
   
   CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
   LEDenabled = doc["LED"];
@@ -253,39 +255,6 @@ if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
   if (settingMQTTbrokerPort    < 1) settingMQTTbrokerPort   = 1883;
 
   if (!show) return;
-
-//  serializeJsonPretty(doc,SerialOut);
-//  serializeJsonPretty(doc,TelnetStream);
-//  
-//  Debugln(F("\r\n==== Settings ===================================================\r"));
-//  Debugf("                    Hostname : %s\r\n",     settingHostname);
-//   Debugf("  SM Fase Info (0=No, 1=Yes) : %d\r\n",     settingSmHasFaseInfo);
-//  Debugf("                  Index Page : %s\r\n",     settingIndexPage);
-//#ifndef MQTT_DISABLE 
-//  Debugln(F("\r\n==== MQTT settings ==============================================\r"));
-//  Debugf("          MQTT broker URL/IP : %s:%d", settingMQTTbroker, settingMQTTbrokerPort);
-//  if (MQTTclient.connected()) Debugln(F(" (is Connected!)\r"));
-//  else                 Debugln(F(" (NOT Connected!)\r"));
-//  Debugf("                   MQTT user : %s\r\n", settingMQTTuser);
-//#ifdef SHOW_PASSWRDS
-//  Debugf("               MQTT password : %s\r\n", settingMQTTpasswd);
-//#else
-//  Debug( "               MQTT password : *************\r\n");
-//#endif
-//  Debugf("          MQTT send Interval : %d\r\n", settingMQTTinterval);
-//  Debugf("              MQTT top Topic : %s\r\n", settingMQTTtopTopic);
-//#endif //MQTT  
-//  Debugln(F("\r\n==== Other settings =============================================\r"));
-//  Debug(F("                 LED enabled : ")); Debugln(LEDenabled);
-//  Debug(F("                Base OTA url : ")); Debugln(BaseOTAurl);
-//  Debug(F("              History Enabled: ")); Debugln(EnableHistory);
-//  Debug(F("          Water Meter Enabled: ")); Debugln(WtrMtr);
-//  Debug(F("    HA Auto Discovery Enabled: ")); Debugln(EnableHAdiscovery);
-//  Debug(F("   Support 2.x and 3.x meters: ")); Debugln(bPre40);
-//  Debug(F("      Raw Telegram on port 82: ")); Debugln(bRawPort);
-//  Debug(F("  Enables actual json in mqtt: ")); Debugln(bActJsonMQTT);
-//    
-//  Debugln(F("-\r"));
 
 } // readSettings()
 
@@ -361,6 +330,11 @@ void updateSetting(const char *field, const char *newValue)
     mqtt_reconnect = true;
   }
   
+  if (!stricmp(field, "mqtt_tls")) {
+    bMQTToverTLS = (stricmp(newValue, "true") == 0?true:false); 
+    mqtt_reconnect = true;
+  }
+
   if ( mqtt_reconnect ) MQTTsetServer();
   
   if (!stricmp(field, "mqtt_interval")) {
