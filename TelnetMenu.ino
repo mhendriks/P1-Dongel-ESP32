@@ -65,7 +65,6 @@ void displayBoardInfo()
   Debug(F("]\r\n              #defines "));   Debug(F(ALL_OPTIONS));
   Debug(F(" \r\n   Telegrams Processed ["));  Debug( telegramCount );
   Debug(F("]\r\n           With Errors ["));  Debug( telegramErrors );
-//  Debug(F("]\r\n MQTT All topic Proces ["));  Debug( mqttCount );
   Debug(F("]\r\n              FreeHeap ["));  Debug( ESP.getFreeHeap() );
   Debug(F("]\r\n             max.Block ["));  Debug( ESP.getMaxAllocHeap() );
   Debug(F("]\r\n               Chip ID ["));  Debug( _getChipId() );

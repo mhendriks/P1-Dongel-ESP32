@@ -31,13 +31,17 @@ WENSEN
 - issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering )
 - support https mqtt connection
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
-- NeoPixelwrite implementeren ipv eigen oplossing
 - RNGhours files vergroten (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 
+4.10.2
+- NeoPixelwrite implementeren ipv eigen oplossing
+
+4.11.0 
+- Shelly Powersocket aansturen op basis van drempels aan / uit (terugleveren / afname)
 
 docs
 - long / short press aanpassing
