@@ -340,6 +340,7 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "mqtt_interval")) {
     settingMQTTinterval   = String(newValue).toInt();  
     CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
+    if ( settingMQTTinterval == 0 )  MQTTDisconnect();
   }
   if (!stricmp(field, "mqtt_toptopic")) {
     strCopy(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), newValue);  

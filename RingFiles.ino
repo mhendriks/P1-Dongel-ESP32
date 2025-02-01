@@ -223,7 +223,12 @@ void WritePrevRingRecord(E_ringfiletype ringfiletype){
 
 //===========================================================================================
 void writeRingFiles() {
-  if (!EnableHistory || (telegramCount - telegramErrors ) < 2 ) return; //do nothing or telegram < 2 skip 
+  if (!EnableHistory || ((telegramCount - telegramErrors ) < 2) ) {
+#ifdef XTRA_LOG  
+    LogFile("RNG: exit before writing",true); //log only once
+#endif    
+    return; //do nothing or telegram < 2 skip 
+  }
 
   if ( P1Status.FirstUse ) {
     // write previous slot first because of the current act_slot in the file
@@ -240,6 +245,9 @@ void writeRingFiles() {
   writeRingFile(RINGDAYS, "", false);
   yield();
   writeRingFile(RINGMONTHS, "", false);
+#ifdef XTRA_LOG  
+  LogFile("RNG: all files writen",true); //log only once
+#endif  
 //  bWriteFiles = false;
   
 } // writeRingFiles()

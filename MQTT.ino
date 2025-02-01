@@ -8,6 +8,8 @@
 ***************************************************************************      
 */
 
+//test via broker.emqx.io
+
 #ifndef MQTT_DISABLE 
 
 String MQTTclientId;
@@ -97,10 +99,16 @@ void MQTTSetBaseInfo(){
 #endif  
 }
 
+void MQTTDisconnect(){
+  sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
+  MQTTclient.publish(cMsg,"Offline", true); //LWT status update
+  if ( MQTTclient.connected() ) MQTTclient.disconnect();
+}
+
 void MQTTsetServer(){
 #ifndef MQTT_DISABLE 
   if ((settingMQTTbrokerPort == 0) || (strlen(settingMQTTbroker) < 4) ) return;
-  if ( MQTTclient.connected() ) MQTTclient.disconnect();
+  MQTTDisconnect();
   if (bMQTToverTLS) {
     wifiClientTLS.setInsecure();
     MQTTclient.setClient(wifiClientTLS);
@@ -140,7 +148,7 @@ void MqttReconfig(String payload){
     MQTTSend( "msg", "MQTT: reconfig check connection", true );
     char MqttID[30+13];
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
-    if ( MQTTclient.connected() ) MQTTclient.disconnect();
+    MQTTDisconnect();
     MQTTclient.setServer(doc["broker"].as<const char*>(), doc["port"].as<uint16_t>());
     if ( MQTTclient.connect( MqttID, doc["user"].as<const char*>(), doc["pass"].as<const char*>() ) ) {
       //adapt the new settings
@@ -422,6 +430,7 @@ void MQTTSend(const char* item, float value){}
 void MQTTConnect() {}
 void handleMQTT(){}
 void SetupMQTT(){}
+void MQTTDisconnect(){}
 
 #endif
 

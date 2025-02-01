@@ -72,6 +72,7 @@ bool bEthUsage = false;
 // Network event -> Ethernet is dominant
 static void onNetworkEvent (WiFiEvent_t event) {
   switch (event) {
+#ifdef ETHERNET  
   //ETH    
     case ARDUINO_EVENT_ETH_START: //1
       DebugTln("ETH Started");
@@ -103,6 +104,7 @@ static void onNetworkEvent (WiFiEvent_t event) {
       SwitchLED( LED_ON , LED_RED );
       LogFile("ETH Disconnected", true);
       break;
+#endif //ETHERNET
 //WIFI
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
@@ -152,7 +154,7 @@ void WifiWatchDog(){
 #if not defined ETHERNET || defined ULTRA
   //try to reconnect or reboot when wifi is down
   if ( bEthUsage ) return; //leave when ethernet is prefered network
-  if ( WiFi.status() != WL_CONNECTED && WiFi.status() != WL_DISCONNECTED  ){
+  if ( WiFi.status() != WL_CONNECTED ){
     if ( !bNoNetworkConn ) {
       LogFile("Wifi connection lost",true); //log only once 
       tWifiLost = millis();
@@ -182,15 +184,17 @@ void WifiWatchDog(){
 void startWiFi(const char* hostname, int timeOut) 
 {  
 #if not defined ETHERNET || defined ULTRA
-#ifdef ULTRA
-  //lets wait on ethernet first for 3.5sec and consume some time to charge the capacitors
-  uint8_t timeout = 0;
-  while ( (netw_state == NW_NONE) && (timeout++ < 35) ) {
-    delay(100); 
-  } 
-#endif 
+//not needed anymore
+// #ifdef ULTRA
+//   //lets wait on ethernet first for 2.5sec and consume some time to charge the capacitors
+//   uint8_t timeout = 0;
+//   while ( (netw_state == NW_NONE) && (timeout++ < 25) ) {
+//     delay(100); 
+//   } 
+// #endif 
   if ( netw_state != NW_NONE ) return;
   WiFi.setHostname(hostname);
+  WiFi.enableIpV6();
 //  WiFi.setMinSecurity(WIFI_AUTH_WEP);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   
@@ -198,10 +202,7 @@ void startWiFi(const char* hostname, int timeOut)
   WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);      //to solve mesh issues 
   if ( bFixedIP ) WiFi.config(staticIP, gateway, subnet, dns);
   WiFiManager manageWiFi;
-//  uint32_t lTime = millis();
-//  DebugTln("start ...");
   LogFile("Wifi Starting",true);
-//  digitalWrite(LED, LED_OFF);
   SwitchLED( LED_OFF, LED_BLUE );
   
   manageWiFi.setConfigPortalBlocking(false);
@@ -210,10 +211,9 @@ void startWiFi(const char* hostname, int timeOut)
   manageWiFi.setShowDnsFields(true);    // force show dns field always  
   manageWiFi.setRemoveDuplicateAPs(false);
   manageWiFi.setScanDispPerc(true); // display percentages instead of graphs for RSSI
-//  manageWiFi.setWiFiAutoReconnect(true); //buggy
+  //  manageWiFi.setWiFiAutoReconnect(true); //buggy
 
   //add custom html at inside <head> for all pages -> show pasessword function
-//  manageWiFi.setCustomHeadElement("<script>function f() {var x = document.getElementById('p');x.type==='password'?x.type='text':x.type='password';}</script>");
   manageWiFi.setClass("invert"); //dark theme
   
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
@@ -221,17 +221,8 @@ void startWiFi(const char* hostname, int timeOut)
 
   manageWiFi.setTimeout(timeOut);  // in seconden ...
   manageWiFi.autoConnect(_HOTSPOT);
- /* 
-  if ( !manageWiFi.autoConnect(_HOTSPOT) )
-  {
-    LogFile("Wifi failed to connect and hit timeout",true);
-//    DebugTf(" took [%d] seconds ==> ERROR!\r\n", (millis() - lTime) / 1000);
-    P1Reboot();
-    return;
-  } 
-*/
-  //handle wifi webinterface timeout and connection
-  //timeOut in sec
+
+  //handle wifi webinterface timeout and connection (timeOut in sec)
   uint16_t i = 0;
   while ( (i++ < timeOut*10) && (netw_state == NW_NONE) ){
     Debug("*");
@@ -241,8 +232,8 @@ void startWiFi(const char* hostname, int timeOut)
   }
   Debugln();
   if ( netw_state == NW_NONE ) {
-    P1Reboot(); //timeout hit
-    LogFile("Wifi failed to connect and hit timeout",true);
+    LogFile("WIFI: failed to connect and hit timeout",true);
+    P1Reboot(); //timeout 
   }
   manageWiFi.stopWebPortal();
   SwitchLED( LED_ON, LED_BLUE );
@@ -337,7 +328,6 @@ void startMDNS(const char *Hostname)
 #include <WebServer_ESP32_SC_W5500.h>
 
 void startETH(){
- 
   ETH.begin( MISO_GPIO, MOSI_GPIO, SCK_GPIO, CS_GPIO, INT_GPIO, SPI_CLOCK_MHZ, ETH_SPI_HOST );
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
 }

@@ -176,7 +176,6 @@ void sendDeviceInfo()
       doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
   }
   
-//  doc["telegraminterval"] = (int)settingTelegramInterval;
   if ( DSMRdata.p1_version == "50" || !DSMR_NL ) doc["telegraminterval"] = 1; 
   else doc["telegraminterval"] = 10; 
 
@@ -233,9 +232,9 @@ void sendDeviceSettings() {
 #ifndef MQTTKB
   ADD_SETTING("mqtt_broker", "s", 0, sizeof(settingMQTTbroker) - 1, settingMQTTbroker);
   ADD_SETTING("mqtt_broker_port", "i", 1, 9999, settingMQTTbrokerPort);
+  doc["mqtt_tls"] = bMQTToverTLS;
   ADD_SETTING("mqtt_user", "s", 0, sizeof(settingMQTTuser) - 1, settingMQTTuser);
   ADD_SETTING("mqtt_passwd", "s", 0, sizeof(settingMQTTpasswd) - 1, settingMQTTpasswd);
-  doc["mqtt_tls"] = bMQTToverTLS;
 #endif
   ADD_SETTING("mqtt_toptopic", "s", 0, sizeof(settingMQTTtopTopic) - 1, settingMQTTtopTopic);
   ADD_SETTING("mqtt_interval", "i", 0, 600, settingMQTTinterval);

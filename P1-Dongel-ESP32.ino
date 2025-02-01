@@ -37,7 +37,7 @@ WENSEN
 - RNGDays 31 days
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 
-4.10.2
+4.10.3
 - NeoPixelwrite implementeren ipv eigen oplossing
 
 4.11.0 
@@ -62,9 +62,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 // #define DEBUG
+// #define XTRA_LOG
 
 //PROFILES
-#define ULTRA         //ultra (mini) dongle
+// #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out

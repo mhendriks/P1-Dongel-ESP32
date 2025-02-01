@@ -273,7 +273,7 @@ void processTelegram(){
   DebugTf("actMin[%02d] -- newMin[%02d]\r\n", minute(actT), minute(newT));  
   if ( ( minute(actT) != minute(newT) ) || P1Status.FirstUse ) writeRingFiles(); //bWriteFiles = true; //handled in main flow
 #else
-  // DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
+  DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
   if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) writeRingFiles(); //bWriteFiles = true; //handled in main flow
 #endif
   
