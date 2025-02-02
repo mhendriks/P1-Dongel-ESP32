@@ -137,9 +137,7 @@ void sendDeviceInfo()
   doc["macaddress"] = macStr;
   doc["freeheap"] ["value"] = ESP.getFreeHeap();
   doc["freeheap"]["unit"] = "bytes";
-//  doc["maxfreeblock"] ["value"] = ESP.getMaxAllocHeap(); 
-//  doc["maxfreeblock"]["unit"] = "bytes";
-  
+ 
   esp_chip_info_t chip_info;
   esp_chip_info(&chip_info);
 
@@ -151,18 +149,17 @@ void sendDeviceInfo()
   doc["cpufreq"]["unit"] = "MHz";
   doc["sketchsize"] ["value"] = formatFloat( (ESP.getSketchSize() / 1024.0), 3);
   doc["sketchsize"]["unit"] = "kB";
+  
+  // SDK 3.x
+  // doc["utilization"] ["value"] = 100-ulTaskGetIdleRunTimePercent() ;
+  // doc["utilization"]["unit"] = "%";
+  
   doc["freesketchspace"] ["value"] = formatFloat( (ESP.getFreeSketchSpace() / 1024.0), 3);
   doc["freesketchspace"]["unit"] = "kB";
-  doc["flashchipsize"] ["value"] = formatFloat((ESP.getFlashChipSize() / 1024.0 / 1024.0), 3);
-  doc["flashchipsize"]["unit"] = "MB";
-  doc["FSsize"] ["value"] = formatFloat( (LittleFS.totalBytes() / (1024.0 * 1024.0)), 0);
-  doc["FSsize"]["unit"] = "MB";
-//  doc["flashchipspeed"] ["value"] = formatFloat((ESP.getFlashChipSpeed() / 1000.0 / 1000.0), 0);
-//  doc["flashchipspeed"]["unit"] = "MHz";
- 
-//  FlashMode_t ideMode = ESP.getFlashChipMode();
-//  doc["flashchipmode"] = flashMode[ideMode];
-//  doc["boardtype"] = ARDUINO_BOARD;
+  doc["flashchipsize"] ["value"] = formatFloat((ESP.getFlashChipSize() / 1024.0 ), 3);
+  doc["flashchipsize"]["unit"] = "kB";
+  doc["FSsize"] ["value"] = formatFloat( (LittleFS.totalBytes() / (1024.0)), 0);
+  doc["FSsize"]["unit"] = "kB";
   doc["compileoptions"] = ALL_OPTIONS;
 
 #ifndef ETHERNET
