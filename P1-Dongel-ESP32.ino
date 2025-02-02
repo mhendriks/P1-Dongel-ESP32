@@ -70,30 +70,30 @@ Settings for P1 Dongle Pro hardware:
   - Upload Speed: "961600"
 */
 /******************** compiler options  ********************************************/
-// #define DEBUG
+#define DEBUG
 
 //PROFILES
-#define ULTRA         //ultra dongle
+// #define ULTRA         //ultra dongle
 // #define ETHERNET      //ethernet dongle
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 
 //FEATURES
-// #define DEV_PAIRING
-// #define MBUS
+#define DEV_PAIRING
+#define MBUS
 //#define SHOW_PASSWRDS   // well .. show the PSK key and MQTT password, what else?     
 //#define SE_VERSION
 //#define STUB            //test only
 //#define AP_ONLY
 //#define MQTT_DISABLE
 //#define NO_STORAGE
-#define EID
+// #define EID
 //#define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 //#define SMQTT
 // #define MQTTKB
 //#define FIXED_IP
-#define ESPNOW
+// #define ESPNOW
 
 #include "main.h"
 

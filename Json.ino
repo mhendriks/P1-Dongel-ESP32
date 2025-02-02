@@ -170,10 +170,12 @@ void sendDeviceInfo()
   doc["sketchsize"]["unit"]     = "kB";
   doc["freesketchspace"] ["value"] = formatFloat( (ESP.getFreeSketchSpace() / 1024.0), 3);
   doc["freesketchspace"]["unit"]= "kB";
-  doc["flashchipsize"] ["value"]= formatFloat((ESP.getFlashChipSize() / 1024.0 / 1024.0), 3);
-  doc["flashchipsize"]["unit"]  = "MB";
-  doc["FSsize"] ["value"]       = formatFloat( (LittleFS.totalBytes() / (1024.0 * 1024.0)), 0);
-  doc["FSsize"]["unit"]         = "MB";
+  doc["flashchipsize"] ["value"]= formatFloat((ESP.getFlashChipSize() / 1024.0 ), 3);
+  doc["flashchipsize"]["unit"]  = "kB";
+  doc["utilization"] ["value"] = 100-ulTaskGetIdleRunTimePercent() ;
+  doc["utilization"]["unit"] = "%";
+  doc["FSsize"] ["value"]       = formatFloat( (LittleFS.totalBytes() / (1024.0 )), 0);
+  doc["FSsize"]["unit"]         = "kB";
   doc["compileoptions"]         = ALL_OPTIONS;
 
 #ifndef ETHERNET
