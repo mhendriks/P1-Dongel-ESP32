@@ -500,7 +500,7 @@ function prepareDataBURNUP_DAYSINMONTH(histdata)
 // 	console.log("nYY: "+nYY+" nMM: "+nMM);
 	//current month start is previous month end
 // 	var itemCM = objStorage.getMonth(nYY,nMM-1)[0]; //issue in january
-	var itemCM = objStorage.getMonth(nMM==1?nYY-1:nYY,nMM==1?nMM=12:nMM)[0];
+	var itemCM = objStorage.getMonth(nMM==1?nYY-1:nYY,nMM==1?nMM=12:nMM-1)[0];
 
 // 	console.log("itemCM: " + itemCM);
 	var nCED0 = itemCM.values[0] + itemCM.values[1];
