@@ -1,7 +1,5 @@
 /*
-	
-	P1-Dongle Pro
-	plugin by Mar10us
+		plugin by Mar10us
 */
 
 // const APIGW = window.location.protocol+'//'+window.location.host+'/api/';
