@@ -126,9 +126,9 @@ void sendDeviceInfo()
   doc["compiled"] = __DATE__ " " __TIME__;
 
 //#ifndef HEATLINK
-  if ( ! bWarmteLink ) { // IF NOT HEATLINK
-    doc["smr_version"] = DSMR_NL?"NL":"BE";
-  }
+  // if ( ! bWarmteLink ) { // IF NOT HEATLINK
+  //   doc["smr_version"] = DSMR_NL?"NL":"BE";
+  // }
 //#endif
   
   doc["hostname"] = settingHostname;
@@ -173,8 +173,8 @@ void sendDeviceInfo()
       doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
   }
   
-  if ( DSMRdata.p1_version == "50" || !DSMR_NL ) doc["telegraminterval"] = 1; 
-  else doc["telegraminterval"] = 10; 
+  // if ( DSMRdata.p1_version == "50" /*|| !DSMR_NL */) doc["telegraminterval"] = 1; 
+  // else doc["telegraminterval"] = 10; 
 
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;

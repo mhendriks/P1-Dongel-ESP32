@@ -8,7 +8,6 @@
 
 WENSEN
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
-- front-end: splitsen dashboard / eenmalige instellingen bv fases 
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
 - auto switch 3 - 1 fase max fuse
 - temparatuur ook opnemen in grafieken (A van Dijken)
@@ -36,12 +35,11 @@ WENSEN
 - localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
-
-4.10.3
-- NeoPixelwrite implementeren ipv eigen oplossing
+- detect and repair issues RNG files
 
 4.11.0 
-- Shelly Powersocket aansturen op basis van drempels aan / uit (terugleveren / afname)
+- Shelly Powersocket aansturen op basis van drempel en aan / uit
+- NeoPixelwrite implementeren ipv eigen oplossing
 
 docs
 - long / short press aanpassing
@@ -68,6 +66,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
+// #define NRG_DONGLE   
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 //#define P1_WIFI       // DOES NOTHING; 
 // #define __Az__
@@ -82,15 +81,18 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 // #define MQTTKB
+//define NETSWITCH
 
 #include "DSMRloggerAPI.h"
 
 void setup() 
 {
   // make_version();
+  uint16_t Freq = getCpuFrequencyMhz();
+  setCpuFrequencyMhz(80); //lower power mode
   DebugBegin(115200);
   USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, Firmware.Version ); 
-
+  Debugf("Original cpu speed: %d\n",Freq);
   PushButton.begin(IO_BUTTON);
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
@@ -109,13 +111,13 @@ void setup()
   else readSettings(true);
 
 //=============start Networkstuff ==================================
+  
   startNetwork();
   PostMacIP(); //post mac en ip   
   delay(100);
   startTelnet();
   startMDNS(settingHostname);
   startNTP();
-
 #ifndef MQTT_DISABLE
   MQTTSetBaseInfo();
   MQTTsetServer();
@@ -146,6 +148,7 @@ void setup()
   setupWater();
 
   if (EnableHistory) CheckRingExists();
+  SetupNetSwitch();
 
 //================ Start Slimme Meter ===============================
   
@@ -160,6 +163,8 @@ void setup()
   mbusSetup();
 #endif  
   ReadSolarConfigs();
+  delay(500);
+  setCpuFrequencyMhz(Freq); //restore original clockspeed
 
 //#ifdef VIRTUAL_P1
 //  SetupVitrualP1();

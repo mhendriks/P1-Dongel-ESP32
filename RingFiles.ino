@@ -114,6 +114,9 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) 
     if (error) {
       DebugT(F("convert:Failed to deserialize RECORD: "));Debugln(error.c_str());
       httpServer.send(500, "application/json", httpServer.arg(0));
+      #ifdef XTRA_LOG  
+      LogFile("RNG: 118 convert:Failed to deserialize RECORD:",true); //log only once
+      #endif 
       return;
     } 
   }
@@ -125,6 +128,9 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) 
   if (!RingFile || (RingFile.size() != RingFiles[ringfiletype].f_len)) {
     DebugT(F("open ring file FAILED!!! --> Bailout\r\n"));
     Debugln(RingFiles[ringfiletype].filename);
+    #ifdef XTRA_LOG  
+    LogFile("RNG: 129 open ring file FAILED!!! --> Bailout",true); //log only once
+    #endif  
     RingFile.close();
     return;
   }

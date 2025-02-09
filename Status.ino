@@ -43,7 +43,11 @@ void P1StatusRead(){
       P1Status.dev_type = PRO_ETH;
   #endif    
 #else
-    P1Status.dev_type = preferences.getUShort("dev_type", PRO);
+    #ifdef NRG_DONGLE
+      P1Status.dev_type = P1NRG;
+    #else 
+      P1Status.dev_type = preferences.getUShort("dev_type", PRO);
+    #endif
 #endif    
     P1Status.FirstUse = preferences.getBool("first_use", false);
     if (strlen(P1Status.timestamp)!=13) strcpy(P1Status.timestamp,"010101010101X"); 

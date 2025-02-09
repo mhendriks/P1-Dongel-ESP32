@@ -5,6 +5,7 @@
 #define PRO_H20_B   3
 #define PRO_H20_2   4
 #define P1EP        5
+#define P1NRG       6
 
 #define APIURL              "http://api.smart-stuff.nl/v1/register.php"
 #define LED_ON              LOW
@@ -44,7 +45,11 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
     #ifdef __Az__
       #include "hw_profile_p1_pro_az.h"
     #else
-      #include "hw_profile_p1_pro.h"
+      #ifdef NRG_DONGLE
+        #include "hw_profile_nrgd.h"
+      #else
+        #include "hw_profile_p1_pro.h"
+      #endif
     #endif
   #endif
 #endif

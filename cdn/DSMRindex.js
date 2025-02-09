@@ -45,7 +45,7 @@ const MONTHS_IN_YEAR_NL    = ["Januari","Februari","Maart","April","Mei","Juni",
   var newVersionMsg         = "";
   let NRGStatusTimer		= 0;
   
-  var tlgrmInterval         = 10;
+//   var tlgrmInterval         = 10;
   var ed_tariff1            = 0;
   var ed_tariff2            = 0;
   var er_tariff1            = 0;
@@ -1147,9 +1147,9 @@ function show_hide_column2(table, col_no, do_show) {
 	switch (activeTab) {
 		case "bActualTab" : 
 			refreshSmActual();
-		    if (tlgrmInterval < 10)
+// 		    if (tlgrmInterval < 10)
             	actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
-      		else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
+//       		else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
       		break;
 		case "bPlafondTab":
 			refreshData();
@@ -1373,7 +1373,7 @@ function show_hide_column2(table, col_no, do_show) {
 	  document.getElementById('message').innerHTML = newVersionMsg;
 	  console.log(newVersionMsg);
 
-	  tlgrmInterval = obj.telegraminterval;
+// 	  tlgrmInterval = obj.telegraminterval;
       if (firmwareVersion > 20000) document.getElementById("resetWifi").removeAttribute('hidden');
 //       if (firmwareVersion > 20102) document.getElementById("update").removeAttribute('hidden');
 		

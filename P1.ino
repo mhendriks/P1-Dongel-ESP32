@@ -57,9 +57,7 @@ void IRAM_ATTR dtr_out_int() {
 
 //==================================================================================
 void SetupP1Out(){
-#ifndef ULTRA
-  if ( (P1Status.dev_type != PRO_H20_2) && (P1Status.dev_type != P1EP) ) return;
-#endif
+  if ( !P1Out ) return; 
   //setup ports
   pinMode(O1_DTR_IO, INPUT);
   if ( P1_LED != -1 ) {
@@ -143,7 +141,6 @@ void handleSlimmemeter()
     slimmeMeter.loop();
     if (slimmeMeter.available()) {
       ToggleLED(LED_ON);
-//      CapTelegram = "/" + slimmeMeter.raw() + "!" + slimmeMeter.GetCRC_str(); //capture last telegram
       CapTelegram = slimmeMeter.CompleteRaw();
       Out1Avail = true;
       if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
@@ -174,13 +171,15 @@ void SMCheckOnce(){
     smID = DSMRdata.identification;
   } // check id 
 
+  if ( !DSMRdata.energy_delivered_tariff1_present && DSMRdata.energy_delivered_total_present  ) bUseEtotals = true;
+
   if (DSMRdata.p1_version_be_present) {
     DSMRdata.p1_version = DSMRdata.p1_version_be;
     DSMRdata.p1_version_be_present  = false;
     DSMRdata.p1_version_present     = true;
-    DSMR_NL = false;
+    // DSMR_NL = false;
   } //p1_version_be_present
-  if ( ! DSMRdata.energy_delivered_tariff1_present) bWarmteLink = true;
+  if ( ! DSMRdata.energy_delivered_tariff1_present && !DSMRdata.energy_delivered_total_present ) bWarmteLink = true;
   mbusWater = MbusTypeAvailable(7);  
   if (mbusWater) WtrMtr = true;
   mbusGas = MbusTypeAvailable(3);  
@@ -207,7 +206,7 @@ void processSlimmemeter() {
       else {
         //use the keys from the initial check; saves processing power
         DSMRdata.identification = smID;
-        if ( !DSMR_NL ){
+        if ( DSMRdata.p1_version_be_present ){
           DSMRdata.p1_version = DSMRdata.p1_version_be;
           DSMRdata.p1_version_be_present  = false;
           DSMRdata.p1_version_present     = true;
@@ -215,15 +214,15 @@ void processSlimmemeter() {
       }
         
       modifySmFaseInfo();
-  if ( bWarmteLink ) { // IF HEATLINK
+      if ( bWarmteLink ) { // IF HEATLINK
       
-      DSMRdata.timestamp = DSMRdata.mbus1_delivered.timestamp;
-      DSMRdata.timestamp_present = true;
-      gasDelivered = MbusDelivered(1); //always #1
-      gasDeliveredTimestamp = mbusDeliveredTimestamp;
+        DSMRdata.timestamp = DSMRdata.mbus1_delivered.timestamp;
+        DSMRdata.timestamp_present = true;
+        gasDelivered = MbusDelivered(1); //always #1
+        gasDeliveredTimestamp = mbusDeliveredTimestamp;
 
-  } else  {
-    if (!DSMRdata.timestamp_present) { 
+      } else  {
+        if (!DSMRdata.timestamp_present) { 
           if (Verbose2) DebugTln(F("NTP Time set"));
         if ( getLocalTime(&tm) ) {
             DSTactive = tm.tm_isdst;
@@ -234,18 +233,18 @@ void processSlimmemeter() {
         }
           DSMRdata.timestamp         = cMsg;
           DSMRdata.timestamp_present = true;
-    } //!timestamp present
+      } //!timestamp present
 
-    //-- handle mbus delivered values
-    if (mbusWater) {
-      waterDelivered = MbusDelivered(mbusWater);
-      waterDeliveredTimestamp = mbusDeliveredTimestamp;
-    }
-    if (mbusGas) {
-      gasDelivered = MbusDelivered(mbusGas);
-      gasDeliveredTimestamp = mbusDeliveredTimestamp;
-    }
-  } //end
+      //-- handle mbus delivered values
+      if (mbusWater) {
+        waterDelivered = MbusDelivered(mbusWater);
+        waterDeliveredTimestamp = mbusDeliveredTimestamp;
+      }
+      if (mbusGas) {
+        gasDelivered = MbusDelivered(mbusGas);
+        gasDeliveredTimestamp = mbusDeliveredTimestamp;
+      }
+      } //no warmte link
         
       processTelegram();
       if (Verbose2) DSMRdata.applyEach(showValues());
@@ -283,6 +282,7 @@ void processTelegram(){
 #endif  
   
   ProcessMaxVoltage();
+  // ShellyStateMngr();
 
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 

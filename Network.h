@@ -28,6 +28,7 @@ void P1Reboot();
 void SwitchLED( byte mode, uint32_t color);
 void startETH();
 void startWiFi(const char* hostname, int timeOut);
+void w5500_powerDown();
 
 String MAC_Address();
 String  IP_Address();
@@ -65,6 +66,18 @@ void PostMacIP() {
   http.end();  
 }
 
+// #include "driver/adc.h"
+
+void WifiOff(){
+  if ( WiFi.isConnected() ) WiFi.disconnect(true,true);
+  // adc_power_off();
+  btStop();
+  WiFi.mode(WIFI_OFF);
+  esp_wifi_stop();
+  esp_wifi_deinit();
+  WiFi.setSleep(true);
+}
+
 //int WifiDisconnect = 0;
 bool bNoNetworkConn = false;
 bool bEthUsage = false;
@@ -80,11 +93,15 @@ static void onNetworkEvent (WiFiEvent_t event) {
       break;
     case ARDUINO_EVENT_ETH_CONNECTED: //3
       DebugTln("\nETH Connected");
+      WifiOff();
+      netw_state = NW_ETH;
+      bEthUsage = true; //set only once 
       break;
     case ARDUINO_EVENT_ETH_GOT_IP: //5
       {
         WiFiManager manageWiFi;
-        if ( WiFi.isConnected() ) WiFi.disconnect();
+        // if ( WiFi.isConnected() ) WiFi.disconnect();
+        WifiOff();
         LogFile("ETH GOT IP", true);
         netw_state = NW_ETH;
         bEthUsage = true; //set only once 
@@ -117,7 +134,7 @@ static void onNetworkEvent (WiFiEvent_t event) {
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
         Debug(" )\n\n");
         WifiReconnect = 0;
-        if ( netw_state == NW_ETH ) WiFi.disconnect();
+        if ( netw_state == NW_ETH ) WifiOff();
         else netw_state = NW_WIFI;
         bNoNetworkConn = false;
         break;
@@ -184,14 +201,15 @@ void WifiWatchDog(){
 void startWiFi(const char* hostname, int timeOut) 
 {  
 #if not defined ETHERNET || defined ULTRA
-//not needed anymore
-// #ifdef ULTRA
-//   //lets wait on ethernet first for 2.5sec and consume some time to charge the capacitors
-//   uint8_t timeout = 0;
-//   while ( (netw_state == NW_NONE) && (timeout++ < 25) ) {
-//     delay(100); 
-//   } 
-// #endif 
+#ifdef ULTRA
+  //lets wait on ethernet first for 3.5sec and consume some time to charge the capacitors
+  uint8_t timeout = 0;
+  while ( (netw_state == NW_NONE) && (timeout++ < 35) ) {
+    delay(100); 
+  } 
+  // w5500_powerDown();
+#endif 
+  
   if ( netw_state != NW_NONE ) return;
   WiFi.setHostname(hostname);
   WiFi.enableIpV6();
@@ -236,6 +254,10 @@ void startWiFi(const char* hostname, int timeOut)
     P1Reboot(); //timeout 
   }
   manageWiFi.stopWebPortal();
+  if ( netw_state == NW_ETH ) {
+    WifiOff();
+    delay(500);
+  }
   SwitchLED( LED_ON, LED_BLUE );
 #else 
   Debugln(F("NO WIFI SUPPORT"));
@@ -327,6 +349,42 @@ void startMDNS(const char *Hostname)
 
 #include <WebServer_ESP32_SC_W5500.h>
 
+/*
+#define W5500_MR 0x002E  // Mode Register adres
+#define W5500_WRITE 0x04 // SPI Write Command (inclusief Block Select Bits)
+
+// Zet de W5500 in Power-Down Mode
+void w5500_powerDown() {
+    digitalWrite(CS_GPIO, LOW);  // Selecteer W5500
+
+    SPI.transfer((W5500_MR >> 8) & 0xFF); // Hoog byte van adres
+    SPI.transfer(W5500_MR & 0xFF);        // Laag byte van adres
+    SPI.transfer(W5500_WRITE);            // Schrijfcommando met Block Select Bits
+
+    SPI.transfer(6<<3); // Bit 4 zetten (Power Down Mode)
+
+    digitalWrite(CS_GPIO, HIGH); // Deselecteer W5500
+}
+
+void w5500_wakeup() {
+    digitalWrite(CS_GPIO, LOW);  
+
+    SPI.transfer((W5500_MR >> 8) & 0xFF);
+    SPI.transfer(W5500_MR & 0xFF);
+    SPI.transfer(W5500_WRITE);
+
+    SPI.transfer(0x00); // Alle bits op 0 → W5500 weer actief
+
+    digitalWrite(CS_GPIO, HIGH); 
+}
+
+
+void disableSPI() {
+    SPI.end();  // Stopt de SPI-bus en verlaagt stroomverbruik
+    pinMode(CS_GPIO, OUTPUT);
+    digitalWrite(CS_GPIO, HIGH);  // Voorkomt ongewenste communicatie
+}
+*/
 void startETH(){
   ETH.begin( MISO_GPIO, MOSI_GPIO, SCK_GPIO, CS_GPIO, INT_GPIO, SPI_CLOCK_MHZ, ETH_SPI_HOST );
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);

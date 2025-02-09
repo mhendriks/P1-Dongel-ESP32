@@ -20,10 +20,31 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 "Reset when the vdd voltage is not stable","RTC Watch dog reset digital core and rtc module"};
 
 void SetConfig(){
+#ifdef NRG_DONGLE
+  /* check if slot is in use
+  S1 S2
+  0 0 -> NONE
+  0 1 -> n/a
+  1 0 -> H20
+  1 1 -> RS485
+  */
+  pinMode(SENSE1, INPUT); //4
+  pinMode(SENSE2, INPUT); //21
+  byte board = digitalRead(SENSE1) << 1 + digitalRead(SENSE2);
+  Debugf("\n--P1NRGD: check ext board [%d]\n",board);
+  switch ( board ) {
+    case 0: Debugln("--P1NRGD: No board");break;
+    case 1: Debugln("--P1NRGD: N/A");break;
+    case 2: Debugln("--P1NRGD: H20");WtrMtr = true;break;
+    case 3: Debugln("--P1NRGD: RS485");break;
+  }
+  Debugln();
+#endif 
 #ifdef ULTRA
   UseRGB = true; 
   IOWater = IO_WATER;
   WtrMtr = false;
+  P1Out = true;
 #else    
   switch ( P1Status.dev_type ) {
     case PRO       : UseRGB = false; 
@@ -51,7 +72,12 @@ void SetConfig(){
                      IOWater = -1;
                      P1Out = true;
                      WtrMtr = false;
-                     break;                           
+                     break;       
+    case P1NRG:      UseRGB = false; 
+                     IOWater = IO_WATER_SENSOR;
+                     P1Out = true;
+                    //  WtrMtr = true;
+                     break;                                          
   }
 #endif 
   //pin modes
