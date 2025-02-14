@@ -16,11 +16,7 @@ char Onefield[25];
 bool onlyIfPresent = false;
 
 const static PROGMEM char infoArray[][25]   = { "identification","p1_version","equipment_id" }; //waardes dient redelijk statisch zijn niet elke keer versturen
-#ifndef SE_VERSION
-  const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3","peak_pwr_last_q", "highest_peak_pwr"};
-#else
-  const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_total","energy_delivered_tariff2","energy_returned_total","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3" };
-#endif
+const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3","peak_pwr_last_q", "highest_peak_pwr"};
 
 DynamicJsonDocument jsonDoc(4100);  // generic doc to return, clear() before use!
 
@@ -53,11 +49,6 @@ struct buildJson {
      strncpy(Name,String(Item::name).c_str(),25);
 
       if (isInFieldsArray(Name)) {
-        
-        #ifdef SE_VERSION     
-        if (strcmp(Name, "energy_delivered_total") == 0) strcpy(Name,"energy_delivered_tariff1");
-        else if (strcmp(Name, "energy_returned_total") == 0) strcpy(Name,"energy_returned_tariff1");
-        #endif
         
         if (i.present()) {          
           jsonDoc[Name]["value"] = value_to_json(i.val());

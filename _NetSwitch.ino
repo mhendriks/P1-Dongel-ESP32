@@ -23,7 +23,7 @@ void fShellyProc( void * pvParameters ){
 }
 
 void SetupNetSwitch(){
-  if( xTaskCreate( fShellyProc, "shelly", 4*1024, NULL, 3, NULL ) == pdPASS ) DebugTln(F("Task ShellyProc succesfully created"));
+  if( xTaskCreate( fShellyProc, "netswitch", 4*1024, NULL, 3, NULL ) == pdPASS ) DebugTln(F("Netswitch task succesfully created"));
 }
 
 uint32_t uptimeSEC(){

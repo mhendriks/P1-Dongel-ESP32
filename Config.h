@@ -36,6 +36,7 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
       #include "hw_profile_p1_eth_az.h"
     #else 
       #ifdef ETH_P1EP
+        #define VIRTUAL_P1
         #include "hw_profile_p1ep.h"
       #else 
         #include "hw_profile_p1_eth.h"
@@ -90,11 +91,7 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
   #define OPT6
 // #endif
 
-#ifdef SE_VERSION
-  #define OPT7 "[SE]"
-#else 
-  #define OPT7
-#endif
+  #define OPT7 "[EU]"
 
 #ifdef VIRTUAL_P1
   #define OPT8  "[VIRT_P1]" 

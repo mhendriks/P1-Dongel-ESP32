@@ -211,6 +211,10 @@ void startWiFi(const char* hostname, int timeOut)
 #endif 
   
   if ( netw_state != NW_NONE ) return;
+  
+  //lower calibration power
+  esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+
   WiFi.setHostname(hostname);
   WiFi.enableIpV6();
 //  WiFi.setMinSecurity(WIFI_AUTH_WEP);

@@ -155,12 +155,9 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) 
     slot = actSlot;
 //    DebugTln("actslot: "+actSlot);
 //    DebugT(F("update date: "));Debugln(key);
-    //create record
-#ifdef SE_VERSION
-    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_total, 0, (float)DSMRdata.energy_returned_total, 0, (float)gasDelivered, (float)P1Status.wtr_m3+(float)P1Status.wtr_l/1000.0);
-#else    
-    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_tariff1, (float)DSMRdata.energy_delivered_tariff2, (float)DSMRdata.energy_returned_tariff1, (float)DSMRdata.energy_returned_tariff2, (float)gasDelivered, mbusWater?(float)waterDelivered : (float)P1Status.wtr_m3+(float)P1Status.wtr_l/1000.0);
-#endif    
+    
+  snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_tariff1, (float)DSMRdata.energy_delivered_tariff2, (float)DSMRdata.energy_returned_tariff1, (float)DSMRdata.energy_returned_tariff2, (float)gasDelivered, mbusWater?(float)waterDelivered : (float)P1Status.wtr_m3+(float)P1Status.wtr_l/1000.0);
+  
   }
   //DebugT("update timeslot: ");Debugln(slot);
   //goto writing starting point  

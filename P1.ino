@@ -171,8 +171,7 @@ void SMCheckOnce(){
     smID = DSMRdata.identification;
   } // check id 
 
-  if ( !DSMRdata.energy_delivered_tariff1_present && DSMRdata.energy_delivered_total_present  ) bUseEtotals = true;
-
+  if ( DSMRdata.energy_delivered_total_present && !DSMRdata.energy_delivered_tariff1_present ) bUseEtotals = true;
   if (DSMRdata.p1_version_be_present) {
     DSMRdata.p1_version = DSMRdata.p1_version_be;
     DSMRdata.p1_version_be_present  = false;
@@ -212,7 +211,13 @@ void processSlimmemeter() {
           DSMRdata.p1_version_present     = true;
         } 
       }
-        
+      if ( bUseEtotals ){
+        DSMRdata.energy_delivered_tariff1_present = true;
+        DSMRdata.energy_delivered_tariff1 = DSMRdata.energy_delivered_total;
+        DSMRdata.energy_returned_tariff1_present = true;
+        DSMRdata.energy_returned_tariff1 = DSMRdata.energy_returned_total;
+      }
+
       modifySmFaseInfo();
       if ( bWarmteLink ) { // IF HEATLINK
       

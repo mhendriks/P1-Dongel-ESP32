@@ -37,6 +37,10 @@ WENSEN
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
 
+4.10.6
+- add EU version -> Total Energy = Total Energy 1
+- remove SE version 
+
 4.11.0 
 - Shelly Powersocket aansturen op basis van drempel en aan / uit
 - NeoPixelwrite implementeren ipv eigen oplossing
@@ -74,14 +78,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //FEATURES
 #define DEV_PAIRING
 #define MBUS
-// #define SE_VERSION
 //#define MQTT_DISABLE
 //#define NO_STORAGE
 //#define VOLTAGE_MON
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 // #define MQTTKB
-//define NETSWITCH
+// #define NETSWITCH
 
 #include "DSMRloggerAPI.h"
 
@@ -165,10 +168,6 @@ void setup()
   ReadSolarConfigs();
   delay(500);
   setCpuFrequencyMhz(Freq); //restore original clockspeed
-
-//#ifdef VIRTUAL_P1
-//  SetupVitrualP1();
-//#endif  
 
 } // setup()
 
