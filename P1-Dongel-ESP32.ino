@@ -40,6 +40,9 @@ WENSEN
 4.10.6
 - add EU version -> Total Energy = Total Energy 1
 - remove SE version 
+- add totals to modbus tcp
+- refactor modbus tcp
+- undefined fix html
 
 4.11.0 
 - Shelly Powersocket aansturen op basis van drempel en aan / uit

@@ -35,7 +35,6 @@ Unavailable value : MBUS_VAL_UNAVAILABLE
 
 // Set up a Modbus server
 ModbusServerWiFi MBserver;
-
 const uint8_t MY_SERVER(MBUS_DEV_ID);
 
 // Worker function for serverID=1, function code 0x03 or 0x04
@@ -51,7 +50,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
   DebugTf("MBUS - addr : %d | wrds : %d\n",addr, wrds);
 
   // address + wrds valid?
-  if (addr > 35 || !wrds || (addr + wrds) > 34) {
+  if (addr > 32 || !wrds || (addr + wrds) > 34) {
     // No. Return error response
     response.setError(request.getServerID(), request.getFunctionCode(), ILLEGAL_DATA_ADDRESS);
     return response;
@@ -59,75 +58,62 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
   
   // Prepare response
   response.add(request.getServerID(), request.getFunctionCode(), (uint8_t)(wrds * 2));
-  uint16_t utc_comp = 3600;
-  if ( actTimestamp[12] == 'S') utc_comp = 7200;
+  // uint16_t utc_comp = 3600;
+  // if ( actTimestamp[12] == 'S') utc_comp = 7200;
 
   for ( int i = 0; i < wrds; i=i+2 ) {
+    mbus_val = MBUS_VAL_UNAVAILABLE;
     switch( addr + i) {
       case 0: //time UTC
-              mbus_val = (uint32_t) (actT - utc_comp);
+              mbus_val = (uint32_t)(actT - (actTimestamp[12] == 'S' ? 7200 : 3600));
               break;
       case 2: //energy_delivered_tariff1
-              if ( !DSMRdata.energy_delivered_tariff1_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-              else mbus_val = (uint32_t)(DSMRdata.energy_delivered_tariff1*1000);
+                if ( DSMRdata.energy_delivered_tariff1_present && !bUseEtotals ) mbus_val = (uint32_t)(DSMRdata.energy_delivered_tariff1.int_val());
               break;           
       case 4: //energy_delivered_tariff2
-              if ( !DSMRdata.energy_delivered_tariff2_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-              else mbus_val = (uint32_t)(DSMRdata.energy_delivered_tariff2*1000);
+                if ( DSMRdata.energy_delivered_tariff2_present && !bUseEtotals ) mbus_val = (uint32_t)(DSMRdata.energy_delivered_tariff2.int_val());
               break;
       case 6: //energy_returned_tariff1
-                if ( !DSMRdata.energy_returned_tariff1_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(DSMRdata.energy_returned_tariff1*1000);
+                if ( DSMRdata.energy_returned_tariff1_present && !bUseEtotals ) mbus_val = (uint32_t)(DSMRdata.energy_returned_tariff1.int_val());
               break;
       case 8: //energy_returned_tariff2
-                if ( !DSMRdata.energy_returned_tariff2_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(DSMRdata.energy_returned_tariff2*1000);
+                if ( DSMRdata.energy_returned_tariff2_present && !bUseEtotals ) mbus_val = (uint32_t)(DSMRdata.energy_returned_tariff2.int_val());
               break;
       case 10: // 
-              mbus_val = MBUS_VAL_UNAVAILABLE;
+                if ( DSMRdata.energy_delivered_total_present ) mbus_val = (uint32_t)(DSMRdata.energy_delivered_total.int_val());
               break;
       case 12: //
-              mbus_val = MBUS_VAL_UNAVAILABLE;
+                if ( DSMRdata.energy_returned_total_present ) mbus_val = (uint32_t)(DSMRdata.energy_returned_total.int_val());
               break;
       case 14: //energy_delivered
-                if ( !DSMRdata.power_delivered_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(DSMRdata.power_delivered*1000);
+                if ( DSMRdata.power_delivered_present ) mbus_val = (uint32_t)(DSMRdata.power_delivered.int_val());
               break;
       case 16: //energy_returned
-                if ( !DSMRdata.power_returned_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(DSMRdata.power_returned*1000);
+                if ( DSMRdata.power_returned_present ) mbus_val = (uint32_t)(DSMRdata.power_returned.int_val());
               break;
       case 18: //U1 
-                 if ( !DSMRdata.voltage_l1_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(DSMRdata.voltage_l1*1000);
+                 if ( DSMRdata.voltage_l1_present ) mbus_val = (uint32_t)(DSMRdata.voltage_l1.int_val());
               break;
       case 20: //U2
-                if ( !DSMRdata.voltage_l2_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(DSMRdata.voltage_l2*1000);
+                if ( DSMRdata.voltage_l2_present ) mbus_val = (uint32_t)(DSMRdata.voltage_l2.int_val());
               break;                
       case 22: //U3
-                if ( !DSMRdata.voltage_l3_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(DSMRdata.voltage_l3*1000);
+                if ( DSMRdata.voltage_l3_present ) mbus_val = (uint32_t)(DSMRdata.voltage_l3.int_val());
               break;
       case 24: //I1 
-                if ( !DSMRdata.current_l1_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(DSMRdata.current_l1*1000);
+                if ( DSMRdata.current_l1_present ) mbus_val = (uint32_t)(DSMRdata.current_l1.int_val());
               break;
       case 26: //I2
-                if ( !DSMRdata.current_l2_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(DSMRdata.current_l2*1000);
+                if ( DSMRdata.current_l2_present ) mbus_val = (uint32_t)(DSMRdata.current_l2.int_val());
               break;                
       case 28: //I3
-                if ( !DSMRdata.current_l3_present ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(DSMRdata.current_l3*1000);
+                if ( DSMRdata.current_l3_present ) mbus_val = (uint32_t)(DSMRdata.current_l3.int_val());
               break;
       case 30: //gas timestamp   
-                if ( !mbusGas ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - utc_comp);
+                if ( mbusGas ) mbus_val = (uint32_t)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600));
               break;
       case 32: //gas
-                if ( !mbusGas ) mbus_val = MBUS_VAL_UNAVAILABLE;
-                else mbus_val = (uint32_t)(gasDelivered * 1000);
+                if ( mbusGas ) mbus_val = (uint32_t)(gasDelivered * 1000);
               break;        
       default: //wrong value
               DebugT(F("MBUS WRONG VALUE -- addr: "));Debugln(addr + i);

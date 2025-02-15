@@ -2421,8 +2421,8 @@ function formatFailureLog(svalue) {
 					switch(data[i].type){
 					case "s":
 						sInput.setAttribute("type", "text");
-						sInput.setAttribute("maxlength", data[i].maxlen);
-						sInput.setAttribute("placeholder", "<max " + data[i].maxlen +" tekens>");
+						sInput.setAttribute("maxlength", data[i].max);
+						sInput.setAttribute("placeholder", "<max " + data[i].max +" tekens>");
 						break;
 					case "f":
 						sInput.setAttribute("type", "number");
