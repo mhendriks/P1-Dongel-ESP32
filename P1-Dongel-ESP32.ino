@@ -37,13 +37,6 @@ WENSEN
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
 
-4.10.6
-- add EU version -> Total Energy = Total Energy 1
-- remove SE version 
-- add totals to modbus tcp
-- refactor modbus tcp
-- undefined fix html
-
 4.11.0 
 - Shelly Powersocket aansturen op basis van drempel en aan / uit
 - NeoPixelwrite implementeren ipv eigen oplossing
