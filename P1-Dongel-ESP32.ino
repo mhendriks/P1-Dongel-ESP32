@@ -57,7 +57,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-#define DEBUG
+// #define DEBUG
 // #define XTRA_LOG
 
 //PROFILES
