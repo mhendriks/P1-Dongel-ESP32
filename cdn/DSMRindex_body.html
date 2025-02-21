@@ -34,7 +34,8 @@
       <li><a id='bSettings'      class='nav-img nav-item' href="#Settings" ><span class="iconify" data-icon="mdi-cog"></span></a>    
 		<ul>
 			<li><a id='bEid'   	 	  data-i18n-key="mnu-eid" class='tabButton nav-item' href="#EID" style="display:none">Setup EnergyID</a></li>
-			<li><a id='bNRGM'   	  data-i18n-key="mnu-nrgm" class='tabButton nav-item' href="#NRGM" style="display:none">Koppelen...</a></li>
+			<li><a id='bNRGM'   	  data-i18n-key="mnu-nrgm" class='tabButton nav-item' href="#NRGM" style="display:none">Koppelen</a></li>
+			<li><a id='bNETSW'   	  data-i18n-key="mnu-netsw" class='tabButton nav-item' href="#NETSW" style="display:none" onclick="fetchNetSwitchConfig()">NetSwitch</a></li>
 			<li><a id='bEditSettings' data-i18n-key="mnu-settings" class='tabButton nav-item' href="#Settings" >Settings</a></li>
 			<li><a id='bEditMonths'   data-i18n-key="mnu-editmonths" class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
 			<li><a id='bReset'   	  data-i18n-key="mnu-reset" class='tabButton nav-item' href="#Reset" >Reset/boot</a></li>
@@ -510,10 +511,63 @@
 				<input type="number" id="siteid" name="siteid" placeholder="bv 125231"><br><br>
 			</div>	
 		<hr>						
-			<div class=align-c><button type="button" onclick="SolarSendData()">Opslaan</button></div>
+			<div class=align-c><button type="button" onclick="SolarSendData()">OPSLAAN</button></div>
 		</form>    
 		</div>
     </section>  
+	
+	<section id="NETSW" class="tabName">
+		<div id=eid-setup>
+<!-- 
+		<i id=pulse_ico class="iconify" data-icon="mdi-pulse"></i>
+ -->
+		<h1 class=align-c>NetSwitch</h1>
+<!-- 
+		<div>Schakel Shelly toestel op basis van Netbelasting</div>
+		</br>
+ -->
+    <label class=ntsw>Zodra het netvermogen boven (min = terugleveren)
+    <input class=ntsw type="number" id="value" value="100" oninput="NetSwitchUpdateBar()">
+	</label>
+
+    <label class=ntsw>Watt komt, gaat het Shelly toestel </label>
+    <select class=ntsw id="switch_on" onchange="NetSwitchUpdateBar()">
+        <option value="true" >Aan</option>
+        <option value="false" selected>Uit</option>
+    </select>
+    
+    <div class="bar-container" >
+        <div class="bar-container-inner" onclick="BarOnClick()">
+        <div class="bar-fill-left" id="barFillLeft">Aan</div>
+        <div class="bar-divider"></div>
+        <div class="bar-fill-right" id="barFillRight">Uit</div>
+        </div>
+        <div class="bar-text" id="barText">100 Watt</div>
+    </div>
+    
+    <hr>
+    <label class=ntsw>Inschakelvertraging (seconden)</label>
+    <input class=ntsw type="number" id="time_true" min="10" max="3600" value="60" >
+
+    <label class=ntsw >Uitschakelvertraging (seconden)</label>
+    <input class=ntsw type="number" id="time_false" min="10" max="3600" value="120" >
+
+	<hr>
+    <label class=ntsw>IP-adres of hostname</label>
+    <input class=ntsw type="text" id="device" placeholder="ip of hostnaam" >
+
+    <label class=ntsw>Relais ID (default 0):</label>
+    <input class=ntsw type="number" id="relay" value="0" min="0" max="4" maxlength="1" >
+
+    <label class=ntsw>Default stand</label>
+	<select class=ntsw id="default">
+        <option value="true" >Aan</option>
+        <option value="false" selected>Uit</option>
+    </select><br>
+    <br>
+	<div class=align-c><button onclick="SendNetSwitchJson()">OPSLAAN</button></div>
+	</div>
+    </section> 	
 	
 	<section id="NRGM" class="tabName">
 		<div id=eid-setup>

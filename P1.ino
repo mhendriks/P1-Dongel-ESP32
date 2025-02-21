@@ -140,7 +140,7 @@ void handleSlimmemeter()
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
     slimmeMeter.loop();
     if (slimmeMeter.available()) {
-      ToggleLED(LED_ON);
+      SwitchLED(LED_ON, LED_GREEN);
       CapTelegram = slimmeMeter.CompleteRaw();
       Out1Avail = true;
       if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
@@ -153,7 +153,7 @@ void handleSlimmemeter()
         Debugf("Telegram Raw (%d)\n%s\n", slimmeMeter.raw().length(), CapTelegram.c_str() ); 
         showRaw = false; //only 1 reading
       } else processSlimmemeter();
-      ToggleLED(LED_OFF);
+      SwitchLED(LED_OFF, LED_GREEN);
     } //available
 } // handleSlimmemeter()
 
@@ -287,7 +287,7 @@ void processTelegram(){
 #endif  
   
   ProcessMaxVoltage();
-  // ShellyStateMngr();
+  NetSwitchStateMngr();
 
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 

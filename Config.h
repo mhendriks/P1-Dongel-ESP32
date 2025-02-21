@@ -27,14 +27,16 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
       #define ETHERNET
   #endif    
   #define VIRTUAL_P1
-  #define MBUS
-  #define DEV_PAIRING
+  #define NETSWITCH
+  // #define MBUS //default
+  // #define DEV_PAIRING //default
   #include "hw_profile_ultra.h"
 #else
   #ifdef ETHERNET
     #ifdef __Az__
       #include "hw_profile_p1_eth_az.h"
     #else 
+      #define NETSWITCH
       #ifdef ETH_P1EP
         #define VIRTUAL_P1
         #include "hw_profile_p1ep.h"
@@ -65,33 +67,32 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
   #define OPT1
 #endif
 
+#define OPT2 "[EU]"
+#define OPT3  "[EID]" 
+
 #ifdef MBUS
-  #define OPT2  "[MODBUS]"
+  #define OPT4  "[MODBUS]"
 #else
-  #define OPT2  
+  #define OPT4  
 #endif
  
 #ifdef DEV_PAIRING
-  #define OPT3  "[PAIR]"  
+  #define OPT5  "[PAIR]"  
 #else
-  #define OPT3  
+  #define OPT5  
 #endif
-
-#define OPT4  "[EID]" 
 
 #ifdef POST_TELEGRAM
-  #define OPT5  "[POST]" 
+  #define OPT6  "[POST]" 
 #else
-  #define OPT5
+  #define OPT6
 #endif
 
-// #ifdef SMQTT
-//   #define OPT6  "[SMQTT]" 
-// #else
-  #define OPT6
-// #endif
-
-  #define OPT7 "[EU]"
+#ifdef NETSWITCH 
+ #define OPT7 "[NETSW]"
+ #else
+  #define OPT7
+#endif
 
 #ifdef VIRTUAL_P1
   #define OPT8  "[VIRT_P1]" 

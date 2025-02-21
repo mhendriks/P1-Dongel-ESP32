@@ -1,50 +1,48 @@
 #ifdef NETSWITCH
 
-StaticJsonDocument<2048> docTriggers;
-time_t ShellyDrempelTime = 0;
-time_t ShellyNoDrempelTime = 0;
+StaticJsonDocument<256> docTriggers;
 time_t ShellyStateTrue = 0;
 time_t ShellyStateFalse = 0;
 bool bShellySwitch = false;
 bool lastToggleState;
+bool bNetSwitchConfigRead = false;
 
-
-void fShellyProc( void * pvParameters ){
-  DebugTln(F("Enable Shelly processor"));
-  readtriggers(); 
+void fNetSwitchProc( void * pvParameters ){
+  DebugTln(F("Enable NetSwitch processing"));
+  readtriggers();
   //set default value and force to switch
   lastToggleState = docTriggers["device"]["default"].as<int>();
   bShellySwitch = true;
   while(true) {
-    handleShelly();
+    handleNetSwitch();
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+  DebugTln(F("!!! DISABLE NetSwitch processing"));
   vTaskDelete(NULL);
 }
 
 void SetupNetSwitch(){
-  if( xTaskCreate( fShellyProc, "netswitch", 4*1024, NULL, 3, NULL ) == pdPASS ) DebugTln(F("Netswitch task succesfully created"));
+  if( xTaskCreate( fNetSwitchProc, "netswitch", 4*1024, NULL, 3, NULL ) == pdPASS ) DebugTln(F("Netswitch task succesfully created"));
 }
 
 uint32_t uptimeSEC(){
     return (uint32_t)(esp_log_timestamp()/1000);
 }
 
-uint32_t uptimeMIN(){
-  return (uint32_t) esp_timer_get_time()/60000000;
-}
+// uint32_t uptimeMIN(){
+//   return (uint32_t) esp_timer_get_time()/60000000;
+// }
 
 bool loadNetSwitchConfig(const char *filename) {
-
   File file = LittleFS.open(filename, "r");
   if (!file) {
-    Debugln("Configuratiebestand niet gevonden.");
+    Debugln("Config not found");
     return false;
   }
-
+  docTriggers.clear();
   DeserializationError error = deserializeJson(docTriggers, file);
   if (error) {
-    Debug("Fout bij JSON-parsen: ");Debugln(error.c_str());
+    Debug("Error JSON-parse: ");Debugln(error.c_str());
     file.close();
     return false;
   }
@@ -54,20 +52,21 @@ bool loadNetSwitchConfig(const char *filename) {
 }
 
 void readtriggers(){
-  if ( loadNetSwitchConfig("/netswitch.json") ) {
+  bNetSwitchConfigRead = loadNetSwitchConfig("/netswitch.json");
+  if ( bNetSwitchConfigRead ) {
 #ifdef DEBUG
-    Debug("value: ");Debugln(docTriggers["value"].as<int>());
-    Debug("switch_on: ");Debugln(docTriggers["switch_on"].as<bool>());
-    Debug("time-true (sec): ");Debugln(docTriggers["time_true"].as<int>());
+    Debug("value.          : ");Debugln(docTriggers["value"].as<int>());
+    Debug("switch_on.      : ");Debugln(docTriggers["switch_on"].as<bool>());
+    Debug("time-true (sec) : ");Debugln(docTriggers["time_true"].as<int>());
     Debug("time-false (sec): ");Debugln(docTriggers["time_false"].as<int>());
-    Debug("device name: ");Debugln(docTriggers["device"]["name"].as<const char*>());
-    Debug("relay: ");Debugln(docTriggers["device"]["relay"].as<int>());
-    Debug("default state: ");Debugln(docTriggers["device"]["default"].as<int>());
+    Debug("device name.    : ");Debugln(docTriggers["device"]["name"].as<const char*>());
+    Debug("relay           : ");Debugln(docTriggers["device"]["relay"].as<int>());
+    Debug("default state.  : ");Debugln(docTriggers["device"]["default"].as<int>());
 #endif
   }
 }
 
-void ShellyStateMngr(){
+void NetSwitchStateMngr(){
   //every time new p1 values are available
   int32_t Phouse = DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val();
   Debugf("Phouse = %d\n",Phouse);
@@ -87,15 +86,16 @@ void ShellyStateMngr(){
   }
   ShellyDevMngr();
 }
-void handleShelly(){
-  if ( bShellySwitch ) {
+
+void handleNetSwitch(){
+  if ( bShellySwitch && bNetSwitchConfigRead ) {
     bShellySwitch = false;
-    toggleShellySocket(lastToggleState);
+    toggleNetSwitchSocket(lastToggleState);
   }
 }
 
 // / Functie om de Shelly Power Plug aan of uit te zetten
-void toggleShellySocket(bool turnOn) {
+void toggleNetSwitchSocket(bool turnOn) {
   if ( netw_state != NW_NONE ) {
     HTTPClient http;
     String url = String("http://") + docTriggers["device"]["name"].as<const char*>() + String("/relay/") + docTriggers["device"]["relay"].as<const char*>() + String("?turn=") + (turnOn ? "on" : "off");
@@ -109,7 +109,7 @@ void toggleShellySocket(bool turnOn) {
     if (httpResponseCode == 200) {
       String payload = http.getString();
       Debug("response: ");Debugln(payload);
-      Debug("Succes: Shelly Power Plug is ");
+      Debug("Succes - Shelly Power Plug is ");
       Debugln(turnOn ? "on" : "off");
     } else {
       Debug("Error by API call, HTTP-code: ");
@@ -134,6 +134,8 @@ void ShellyDevMngr(){
     bShellySwitch = true;
   }
 }
+
 #else
   void SetupNetSwitch(){}
+  void NetSwitchStateMngr(){}
 #endif

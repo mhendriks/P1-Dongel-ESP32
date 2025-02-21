@@ -7,6 +7,12 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */  
+// #if ARDUINO_USB_CDC_ON_BOOT
+//   #define USBSerial HWCDCSerial
+// #else
+//   HWCDC USBSerial;
+// #endif
+
 #include "Config.h"
 
 // water sensor
@@ -26,12 +32,13 @@ bool                 WtrMtr         = false;
 #include <LittleFS.h>
 #include <dsmr2.h>               // https://github.com/mhendriks/dsmr2Lib
 #include <esp_now.h>             //https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
-#include <SingleNeoPixel.h>      //https://github.com/mhendriks/NeoPixel
 
-SingleNeoPixel rgb(RGBLED_PIN);
+
+// #include <SingleNeoPixel.h>      //https://github.com/mhendriks/NeoPixel
+// SingleNeoPixel rgb(RGBLED_PIN);
 
 #ifdef MBUS
-#include "ModbusServerWiFi.h"
+  #include "ModbusServerWiFi.h"
 #endif
 
 #define JSON_BUFF_MAX     255

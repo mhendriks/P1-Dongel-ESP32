@@ -86,7 +86,7 @@ void SetConfig(){
   if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP);   
   
   Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);
-  if ( UseRGB ) rgb.begin();
+  // if ( UseRGB ) rgb.begin();
   
   // sign of life = ON during setup or change config
   SwitchLED( LED_ON, LED_BLUE );
@@ -107,7 +107,7 @@ void FacReset() {
 void ToggleLED(byte mode) {
   if ( UseRGB ) { 
     if ( LEDenabled ) SwitchLED( mode, LED_GREEN ); 
-    else { rgb.setPixel(LED_BLACK); }; 
+    else { neopixelWrite(RGBLED_PIN,0,0,0); /*rgb.setPixel(LED_BLACK);*/ }; 
   } // PRO_BRIDGE
   else if ( LEDenabled ) digitalWrite(LED, !digitalRead(LED)); else digitalWrite(LED, LED_OFF);
 }
@@ -122,16 +122,17 @@ void SwitchLED( byte mode, uint32_t color) {
 if ( UseRGB ) {
     if ( LEDenabled ) {
       uint32_t value = 0; //off mode
-      if ( mode == LED_ON ) value = color; 
+      if ( mode == LED_ON ) value = BRIGHTNESS; 
       if ( color != LED_GREEN ) ClearRGB();
       switch ( color ) {
       case LED_RED:   R_value = value; break;
       case LED_GREEN: G_value = value; break;
       case LED_BLUE:  B_value = value; break;  
       } 
-    }
-    rgb.setPixel(R_value+G_value+B_value);
-//    neopixelWrite(RGBLED_PIN,20,20,20); ///white
+    } else ClearRGB();
+    // rgb.setPixel(R_value+G_value+B_value);
+    neopixelWrite(RGBLED_PIN,R_value,G_value,B_value); 
+    // rgbLedWrite(RGBLED_PIN,R_value,G_value,B_value); //sdk 3.0
    } else {
       digitalWrite(LED, color==LED_RED?LED_OFF:mode);
    }

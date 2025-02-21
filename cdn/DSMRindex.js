@@ -13,7 +13,6 @@
 const APIHOST = window.location.protocol+'//'+window.location.host;
 const APIGW = APIHOST+'/api/';
 
-
 const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
 const URL_DEVICE_INFO   = APIGW + "v2/dev/info";
 const URL_DEVICE_TIME   = APIGW + "v2/dev/time";
@@ -62,6 +61,7 @@ const MONTHS_IN_YEAR_NL    = ["Januari","Februari","Maart","April","Mei","Juni",
   var SolarActive 			= false;
   var Pi_today				= 0;
   var Pd_today				= 0;
+  var conf_netswitch 		= false;
     
   //The Data Access Layer for the DSMR
   // - acts as an cache between frontend and server
@@ -306,8 +306,6 @@ let cfgGaugeSolar = {
 cfgGaugeSolar.options.plugins.labels.render = renderLabelSolar;
 function renderLabelSolar(args){return args.value + "W";}
 
-
-
 let cfgGaugeELEKTRA2 = structuredClone(cfgDefaultTREND);
 cfgGaugeELEKTRA2.options.title.text = "kWh";
 cfgGaugeELEKTRA2.options.plugins.labels.render = renderLabelElektra;
@@ -343,34 +341,58 @@ function ShowHidePV(){
 }
 
 
+function SendNetSwitchJson() {
+		let data = {
+			value: parseInt(document.getElementById("value").value),
+			switch_on: document.getElementById("switch_on").value === "true",
+			time_true: parseInt(document.getElementById("time_true")?.value || 60),
+			time_false: parseInt(document.getElementById("time_false")?.value || 120),
+			device: {
+				name: document.getElementById("device").value,
+				relay: document.getElementById("relay").value,
+				default: document.getElementById("default").value
+			}
+		};
+		
+	let jsonBlob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    let formData = new FormData();
+    formData.append("file", jsonBlob, "netswitch.json");
+		
+	fetch("/upload", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.text())
+    .then(result => window.alert("NetSwitch config saved"))
+    .catch(error => console.error("Error:", error));
+  }
+
 function SolarSendData() {
-	const wp = Number(document.getElementById('wp').value);
-	const interval = Number(document.getElementById('interval').value);
-	const token = document.getElementById('token').value;
-	const siteid = Number(document.getElementById('siteid').value);
-	const gw_url = document.getElementById('gw_url').value;
-	
+
 	const jsonData = {
-		"gateway-url": gw_url,
-		"wp": wp,
-		"refresh-interval": interval,
-		"token": token,
-		"expire": 0,
-		"siteid": siteid
+		"gateway-url"     : document.getElementById('gw_url').value,
+		wp                : parseInt(document.getElementById('wp').value),
+		"refresh-interval": parseInt(document.getElementById('interval').value),
+		token             : document.getElementById('token').value,
+		expire            : 0,
+		siteid            : parseInt(document.getElementById('siteid').value)
 	};
 
-	const xhr = new XMLHttpRequest();
-	if ( document.getElementById('pv_enphase').checked ) xhr.open("POST", "/config/enphase", true);
-	else xhr.open("POST", "/config/solaredge", true);
-	xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+	if ( document.getElementById('pv_enphase').checked ) var filename = "enphase.json";
+	else var filename = "solaredge.json";
 
-	xhr.onreadystatechange = function () {
-		if (xhr.readyState === 4 && xhr.status === 200) {
-			alert("Data sent successfully");
-		}
-	};
+	let jsonBlob = new Blob([JSON.stringify(jsonData, null, 2)], { type: "application/json" });
+    let formData = new FormData();
+    formData.append("file", jsonBlob, filename );
+		
+	fetch("/upload", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.text())
+    .then(result => window.alert("Solar config saved"))
+    .catch(error => console.error("Error:", error));
 
-	xhr.send(JSON.stringify(jsonData));
 }
 
 function loadIcons(){
@@ -582,7 +604,6 @@ function nrgm_start_stop(cmd){
     nrgm_getstatus();
 	NRGStatusTimer = setInterval(nrgm_getstatus, 5000); //every 5 sec
 }
-
 
 function nrgm_getstatus(){
 	document.getElementById('nrgstatus').innerHTML = "ophalen...";  
@@ -1125,6 +1146,85 @@ function show_hide_column2(table, col_no, do_show) {
     }
   }
   
+  
+  function BarOnClick() {
+    
+//     console.log("BaronClick");
+    if ( document.getElementById("switch_on").value === "true") document.getElementById("switch_on").value = "false";
+    else document.getElementById("switch_on").value = "true";
+    NetSwitchUpdateBar();
+    
+    }
+  
+  //============================================================================  
+function NetSwitchUpdateBar() {
+	let switchOn = document.getElementById("switch_on").value === "true";
+	let barFillLeft = document.getElementById("barFillLeft");
+	let barFillRight = document.getElementById("barFillRight");
+	let barText = document.getElementById("barText");
+	let value = document.getElementById("value").value;
+	
+	barText.innerText = value + " Watt";
+	
+	if ( !switchOn ) {
+		barFillLeft.style.background = "green";
+		barFillRight.style.background = "red";
+		barFillLeft.innerHTML = "Aan";
+		barFillRight.innerHTML = "Uit";
+	} else {
+		barFillLeft.style.background = "red";
+		barFillRight.style.background = "green";
+		barFillLeft.innerHTML = "Uit";
+		barFillRight.innerHTML = "Aan";
+	}
+}
+
+
+  //============================================================================    
+function fetchNetSwitchConfig() {
+    fetch("/netswitch.json")  // Vraag JSON-bestand op van de ESP32-server
+        .then(response => response.json())  // Converteer het antwoord naar JSON
+        .then(data => {
+            // HTML-elementen ophalen
+        document.getElementById("value").value = data.value;
+        document.getElementById("switch_on").value = data.switch_on ? "true" : "false";
+        document.getElementById("time_true").value = data.time_true || 60;
+        document.getElementById("time_false").value = data.time_false || 120;
+        document.getElementById("device").value = data.device.name;
+        document.getElementById("relay").value = data.device.relay;
+        document.getElementById("default").value = data.device.default;
+        NetSwitchUpdateBar();
+        })
+        .catch(error => console.error("Fout bij ophalen van JSON:", error));
+}
+
+  //============================================================================  
+function SendNetSwitchJson() {
+		let data = {
+			value: parseInt(document.getElementById("value").value),
+			switch_on: document.getElementById("switch_on").value === "true",
+			time_true: parseInt(document.getElementById("time_true")?.value || 60),
+			time_false: parseInt(document.getElementById("time_false")?.value || 120),
+			device: {
+				name: document.getElementById("device").value,
+				relay: document.getElementById("relay").value,
+				default: document.getElementById("default").value
+			}
+		};
+		
+	let jsonBlob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    let formData = new FormData();
+    formData.append("file", jsonBlob, "netswitch.json");
+		
+	fetch("/upload", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.text())
+    .then(result => window.alert("NetSwitch config saved"))
+    .catch(error => console.error("Error:", error));
+  }
+  
   //============================================================================  
   // handle opening the current selected tab (from onclick menuitems)
   function openTab() {
@@ -1321,7 +1421,13 @@ function show_hide_column2(table, col_no, do_show) {
     var tableRef = document.getElementById('tb_info');
         //clear table
 		while (tableRef.hasChildNodes()) { tableRef.removeChild(tableRef.lastChild);}
+		console.log("dev info compileoptions: " + obj.compileoptions );
+		if ( obj.compileoptions.includes("[NETSW]") ) {
+			console.log("INCLUDES [NETSW]");
+			conf_netswitch = true;
+			if ( conf_netswitch ) document.getElementById("bNETSW").style.display = "block"; else document.getElementById("bNETSW").style.display = "none";
 
+		}
 		//add latest software version
 		ReadVersionManifest();
 		if (LastVersion != "") {
@@ -1491,6 +1597,7 @@ function show_hide_column2(table, col_no, do_show) {
     document.getElementById("actualTable").classList.remove("afterglow");
     Spinner(true);
     var data = objDAL.getActual();
+//     console.log("objDAL: " + JSON.stringify(data));
     //copyActualToChart(data);
     if (presentationType == "TAB")
       showActualTable(data);
@@ -2285,8 +2392,8 @@ function formatFailureLog(svalue) {
         "dev-pairing" in json ? pairing_enabled = json["dev-pairing"]: pairing_enabled = false;
         "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
 
-        console.log("eid_enabled: " + eid_enabled);
-		console.log("dev-pairing: " + pairing_enabled);
+//         console.log("eid_enabled: " + eid_enabled);
+// 		console.log("dev-pairing: " + pairing_enabled);
 		
         if ( eid_enabled ) document.getElementById("bEid").style.display = "block"; else document.getElementById("bEid").style.display = "none";
         if ( pairing_enabled ) document.getElementById("bNRGM").style.display = "block"; else document.getElementById("bNRGM").style.display = "none";

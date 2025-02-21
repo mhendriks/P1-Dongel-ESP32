@@ -37,15 +37,13 @@ WENSEN
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
 
-4.11.0 
-- Shelly Powersocket aansturen op basis van drempel en aan / uit
-- NeoPixelwrite implementeren ipv eigen oplossing
+4.11.1
+- inlezen van solar config in frontend
 
 docs
 - long / short press aanpassing
 - partitioning -> oude versie moet flashen
 - core versie = altijd device pairing aan + mqtt + mqtt auto discovery HA
-- andere versies EID / Modbus TCP
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -59,7 +57,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-// #define DEBUG
+#define DEBUG
 // #define XTRA_LOG
 
 //PROFILES
@@ -80,7 +78,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 // #define MQTTKB
-// #define NETSWITCH
 
 #include "DSMRloggerAPI.h"
 
