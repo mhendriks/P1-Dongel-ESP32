@@ -9,12 +9,11 @@
 */  
 
 //SDK 3.x.x
-// #if ARDUINO_USB_CDC_ON_BOOT
-//   #define USBSerial HWCDCSerial
-// #else
-//   HWCDC USBSerial;
-// #endif
-
+#if ARDUINO_USB_CDC_ON_BOOT
+  #define USBSerial HWCDCSerial
+#else
+  HWCDC USBSerial;
+#endif
 
 #include "Config.h"
 

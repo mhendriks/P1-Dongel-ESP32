@@ -351,46 +351,19 @@ void startMDNS(const char *Hostname)
 
 #ifdef ETHERNET
 
-#include <WebServer_ESP32_SC_W5500.h>
+// #include <WebServer_ESP32_SC_W5500.h>
+#include <ETH.h>
+#include <SPI.h>
 
-/*
-#define W5500_MR 0x002E  // Mode Register adres
-#define W5500_WRITE 0x04 // SPI Write Command (inclusief Block Select Bits)
+#define ETH_TYPE            ETH_PHY_W5500
+#define ETH_RST            -1
+#define ETH_ADDR            1
 
-// Zet de W5500 in Power-Down Mode
-void w5500_powerDown() {
-    digitalWrite(CS_GPIO, LOW);  // Selecteer W5500
-
-    SPI.transfer((W5500_MR >> 8) & 0xFF); // Hoog byte van adres
-    SPI.transfer(W5500_MR & 0xFF);        // Laag byte van adres
-    SPI.transfer(W5500_WRITE);            // Schrijfcommando met Block Select Bits
-
-    SPI.transfer(6<<3); // Bit 4 zetten (Power Down Mode)
-
-    digitalWrite(CS_GPIO, HIGH); // Deselecteer W5500
-}
-
-void w5500_wakeup() {
-    digitalWrite(CS_GPIO, LOW);  
-
-    SPI.transfer((W5500_MR >> 8) & 0xFF);
-    SPI.transfer(W5500_MR & 0xFF);
-    SPI.transfer(W5500_WRITE);
-
-    SPI.transfer(0x00); // Alle bits op 0 → W5500 weer actief
-
-    digitalWrite(CS_GPIO, HIGH); 
-}
-
-
-void disableSPI() {
-    SPI.end();  // Stopt de SPI-bus en verlaagt stroomverbruik
-    pinMode(CS_GPIO, OUTPUT);
-    digitalWrite(CS_GPIO, HIGH);  // Voorkomt ongewenste communicatie
-}
-*/
 void startETH(){
-  ETH.begin( MISO_GPIO, MOSI_GPIO, SCK_GPIO, CS_GPIO, INT_GPIO, SPI_CLOCK_MHZ, ETH_SPI_HOST );
+  SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO);
+  ETH.enableIPv6();
+  ETH.begin(ETH_TYPE, ETH_ADDR, CS_GPIO, INT_GPIO, ETH_RST, SPI);
+  // ETH.begin( MISO_GPIO, MOSI_GPIO, SCK_GPIO, CS_GPIO, INT_GPIO, SPI_CLOCK_MHZ, ETH_SPI_HOST );
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
 }
 #else
