@@ -7,6 +7,8 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */  
+#ifndef _DSMRAPI_H
+#define _DSMRAPI_H
 
 //SDK 3.x.x
 #if ARDUINO_USB_CDC_ON_BOOT
@@ -25,7 +27,9 @@ volatile time_t      WtrPrevReading = 0;
 bool                 WtrMtr         = false;
 #define              DEBOUNCETIMER 1700
 
+#include <WiFi.h>        
 #include <WiFiClientSecure.h>        
+#include <WebServer.h>
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
@@ -33,8 +37,8 @@ bool                 WtrMtr         = false;
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <dsmr2.h>               // https://github.com/mhendriks/dsmr2Lib
+#include "esp_chip_info.h"
 #include <esp_now.h>             //https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
-
 
 // #include <SingleNeoPixel.h>      //https://github.com/mhendriks/NeoPixel
 // SingleNeoPixel rgb(RGBLED_PIN);
@@ -48,6 +52,17 @@ bool                 WtrMtr         = false;
 #define MQTT_RECONNECT_DEFAULT_TIME 10 //seconds
 
 P1Reader    slimmeMeter(&Serial1, DTR_IO);
+
+void LogFile(const char* payload, bool toDebug = false);
+void P1Reboot();
+
+WebServer httpServer(80);
+NetServer ws_raw(82);
+
+time_t tWifiLost        = 0;
+byte  WifiReconnect     = 0;
+IPAddress staticIP, gateway, subnet, dns;
+bool bFixedIP = false;
 
 #ifdef VIRTUAL_P1
   char virtual_p1_ip[20] ="";
@@ -350,8 +365,12 @@ bool      bAutoUpdate = false;
   char pt_end_point[60];
 #endif
 
+#include <ESPmDNS.h>  
+#include <Update.h>
+#include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager
+#include <HTTPClient.h>
+#include "NetTypes.h"        //included in #include "ESPTelnet.h"
 #include "_Button.h"
-#include "Network.h"
 
 //===========================================================================================
 // setup timers 
@@ -361,6 +380,7 @@ DECLARE_TIMER_SEC(publishMQTTtimer,   60, SKIP_MISSED_TICKS); // interval time b
 DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);
 DECLARE_TIMER_SEC(StatusTimer,        10); //first time = 10 sec usual 30min (see loop)
 
+#endif
 /***************************************************************************
 *
 * Permission is hereby granted, free of charge, to any person obtaining a

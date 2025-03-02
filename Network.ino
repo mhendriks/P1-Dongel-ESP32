@@ -9,29 +9,20 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-#include <ESPmDNS.h>        
-#include <Update.h>
-#include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager
-#include <HTTPClient.h>
-#include "NetTypes.h"
 
-WebServer httpServer(80);
-NetServer ws_raw(82);
+#include "DSMRloggerAPI.h"
 
-time_t tWifiLost        = 0;
-byte  WifiReconnect     = 0;
-IPAddress staticIP, gateway, subnet, dns;
-bool bFixedIP = false;
 
-void LogFile(const char*, bool);
-void P1Reboot();
-void SwitchLED( byte mode, uint32_t color);
-void startETH();
-void startWiFi(const char* hostname, int timeOut);
-void w5500_powerDown();
 
-String MAC_Address();
-String  IP_Address();
+// void LogFile(const char*, bool);
+// void P1Reboot();
+// void SwitchLED( byte mode, uint32_t color);
+// void startETH();
+// void startWiFi(const char* hostname, int timeOut);
+// void w5500_powerDown();
+
+// String MAC_Address();
+// String  IP_Address();
 
 void GetMacAddress(){
 
@@ -216,7 +207,7 @@ void startWiFi(const char* hostname, int timeOut)
   esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
 
   WiFi.setHostname(hostname);
-  WiFi.enableIpV6();
+  WiFi.enableIPv6();
 //  WiFi.setMinSecurity(WIFI_AUTH_WEP);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   

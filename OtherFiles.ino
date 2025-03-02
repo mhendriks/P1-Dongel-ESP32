@@ -181,10 +181,10 @@ void readSettings(bool show)
   settingERT1 = doc["EnergyReturnedT1"];
   settingERT2 = doc["EnergyReturnedT2"];
   settingGDT = doc["GASDeliveredT"];
-  if (doc.containsKey("WaterDelivered")) settingWDT = doc["WaterDelivered"];
+  if (doc["WaterDelivered"].is<bool>()) settingWDT = doc["WaterDelivered"];
   settingENBK = doc["EnergyVasteKosten"];
   settingGNBK = doc["GasVasteKosten"];
-  if (doc.containsKey("WaterVasteKosten")) settingWNBK = doc["WaterVasteKosten"];
+  if (doc["WaterVasteKosten"].is<float>()) settingWNBK = doc["WaterVasteKosten"];
   settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
 //  settingTelegramInterval = doc["TelegramInterval"];
@@ -198,41 +198,41 @@ void readSettings(bool show)
   settingMQTTinterval = doc["MQTTinterval"];
   strcpy(settingMQTTtopTopic, doc["MQTTtopTopic"]);
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
-  if (doc.containsKey("mqtt_tls")) bMQTToverTLS = doc["mqtt_tls"];
+  if (doc["mqtt_tls"].is<bool>()) bMQTToverTLS = doc["mqtt_tls"];
   
   CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
   LEDenabled = doc["LED"];
-  if (doc.containsKey("ota")) strcpy(BaseOTAurl, doc["ota"]);
+  if (doc["ota"].is<const char*>()) strcpy(BaseOTAurl, doc["ota"]);
 #ifdef NO_STORAGE
   EnableHistory = false;
 #else  
-  if (doc.containsKey("enableHistory")) EnableHistory = doc["enableHistory"];
+  if (doc["enableHistory"].is<bool>()) EnableHistory = doc["enableHistory"];
 #endif
-  if (doc.containsKey("watermeter") && (P1Status.dev_type != PRO_H20_2) ) WtrMtr = doc["watermeter"];
-  if (doc.containsKey("waterfactor")) WtrFactor = doc["waterfactor"];
+  if (doc["watermeter"].is<bool>() && (P1Status.dev_type != PRO_H20_2) ) WtrMtr = doc["watermeter"];
+  if (doc["waterfactor"].is<float>()) WtrFactor = doc["waterfactor"];
 
-  if (doc.containsKey("HAdiscovery")) EnableHAdiscovery = doc["HAdiscovery"];
-  if (doc.containsKey("auto-update")) bAutoUpdate = doc["auto-update"];
-  if (doc.containsKey("pre40")) bPre40 = doc["pre40"];
-  if (doc.containsKey("raw-port")) bRawPort = doc["raw-port"];
-  if (doc.containsKey("led-prt")) bLED_PRT = doc["led-prt"];
+  if (doc["HAdiscovery"].is<bool>()) EnableHAdiscovery = doc["HAdiscovery"];
+  if (doc["auto-update"].is<bool>()) bAutoUpdate = doc["auto-update"];
+  if (doc["pre40"].is<bool>()) bPre40 = doc["pre40"];
+  if (doc["raw-port"].is<bool>()) bRawPort = doc["raw-port"];
+  if (doc["led-prt"].is<bool>()) bLED_PRT = doc["led-prt"];
 
-  if (doc.containsKey("eid-enabled")) bEID_enabled = doc["eid-enabled"];
+  if (doc["eid-enabled"].is<bool>()) bEID_enabled = doc["eid-enabled"];
 #ifdef VOLTAGE_MON
-  if (doc.containsKey("max-volt")) MaxVoltage = doc["max-volt"];
+  if (doc["max-volt"].is<bool>()) MaxVoltage = doc["max-volt"];
 #endif  
 
 #ifdef POST_TELEGRAM
-  if (doc.containsKey("pt_port")) pt_port = doc["pt_port"];
-  if (doc.containsKey("pt_interval")) pt_interval = doc["pt_interval"];
-  if (doc.containsKey("pt_end_point")) strcpy(pt_end_point, doc["pt_end_point"]);
+  if (doc["pt_port"].is<int>()) pt_port = doc["pt_port"];
+  if (doc["pt_interval"].is<int>()) pt_interval = doc["pt_interval"];
+  if (doc["pt_end_point"].is<const char*>()) strcpy(pt_end_point, doc["pt_end_point"]);
 #endif
 
 #ifdef VIRTUAL_P1
-  if (doc.containsKey("virtual_p1_ip")) strcpy(virtual_p1_ip, doc["virtual_p1_ip"]);  
+  if (doc["virtual_p1_ip"].is<const char*>()) strcpy(virtual_p1_ip, doc["virtual_p1_ip"]);  
 #endif  
 
-  if (doc.containsKey("act-json-mqtt")) bActJsonMQTT = doc["act-json-mqtt"];
+  if (doc["act-json-mqtt"].is<bool>()) bActJsonMQTT = doc["act-json-mqtt"];
 
   const char* temp = doc["basic-auth"]["user"];
   if (temp) strcpy(bAuthUser, temp);
@@ -383,7 +383,7 @@ void updateSetting(const char *field, const char *newValue)
 } // updateSetting()
 
 //=======================================================================
-void LogFile(const char* payload, bool toDebug = false) {
+void LogFile(const char* payload, bool toDebug) {
   if (toDebug) DebugTln(payload);
   if (!FSmounted) return;
   File LogFile = LittleFS.open("/P1.log", "a"); // open for appending  

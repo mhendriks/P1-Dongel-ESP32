@@ -14,7 +14,6 @@ WENSEN
 - SSE of websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
 - Roberto: P1 H2O watersensor gegevens apart versturen (MQTT) van P1 
-- Sluipverbruik bijhouden
 - optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
 - #18 water en gas ook in de enkele json string (mqtt)
@@ -27,8 +26,7 @@ WENSEN
 - Harold B: Dark-mode frontend
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
 - Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
-- issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering )
-- support https mqtt connection
+- front-end: issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering )
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 - RNGhours files vergroten (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
@@ -37,13 +35,23 @@ WENSEN
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
 
+- experimenteel: Inzichten vanaf opstarten dongle
+    - sluipverbruik (meten tussen 23u - 06u, uitgaande dat er dan geen teruglevering is)
+    - loadbalancing over de fases heen
+    - Pmax per fase 
+    - Overspanning per fase (gewist om 00:00)
+    - detail P per fase afgelopen uur (sample eens per 10s)
 
 4.12.0
-- SDK 3.1.3
-- inlezen van solar config in frontend
+√ SDK 3.1.3
+√ utilisation info
+√ Calculate current I = P/U because this is more accurate. NL is 0  and BE 1 decimal
+- checken dev_pairing
+√ containskey migration to .is<>
+- ArduinoJson 7.x update
 
-docs
-- partitioning -> oude versie moet flashen
+4.12.1
+- inlezen van solar config in frontend
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:

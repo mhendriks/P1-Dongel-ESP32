@@ -28,6 +28,12 @@ char PeerHostname[30];
 
 int chan;
 
+struct {
+  // uint32_t  reboots;
+  uint8_t   mac[6];
+  uint8_t   peers;      
+} Pref;
+
 typedef struct struct_pairing {
     uint8_t msgType;
     char    ssid[32];    //max 32
@@ -80,9 +86,10 @@ void StopPairing(){
     WiFi.mode(WIFI_STA); //set wifi to STA  
 }
 
-
-void OnDataRecv(const uint8_t * mac_addr, const uint8_t *incomingData, int len) { 
-  Debugf("%i bytes of data received from : ",len);printMAC(mac_addr);Debugln();
+void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
+// void OnDataRecv(const uint8_t * mac_addr, const uint8_t *incomingData, int len) { 
+  // Debugf("%i bytes of data received from : ",len);printMAC(mac_addr);Debugln();
+    Debug("msgTyp: ");Debugln( incomingData[0] );
     switch ( (uint8_t)incomingData[0] ){
       case CONFIRMED:
         PairingStatus = _CONFIRMED;
@@ -97,8 +104,9 @@ void OnDataRecv(const uint8_t * mac_addr, const uint8_t *incomingData, int len) 
         Debug("msgType: ");Debugln(recvdata.msgType);
         Debug("host: ");Debugln(recvdata.host);
         strncpy(PeerHostname,recvdata.host,sizeof(PeerHostname));
-        addPeer(mac_addr);
-        esp_err_t result = esp_now_send(mac_addr, (uint8_t *) &pairingData, sizeof(pairingData));
+        memcpy(Pref.mac, info->src_addr,6);
+        addPeer(Pref.mac);
+        esp_err_t result = esp_now_send(Pref.mac, (uint8_t *) &pairingData, sizeof(pairingData));
       }  else Debugln("Incorrect pw");
         break;
       case DATA:
@@ -152,7 +160,7 @@ bool readWifiCredentials(){
   }
   SettingsFile.close();
   Debugln("wifi.json Deserialised");
-  if ( !doc.containsKey("ssid") || !doc.containsKey("pw") ) return false;
+  if ( !doc["ssid"].is<const char*>() || !doc["pw"].is<const char*>() ) return false;
 
   strcpy( pairingData.ssid, doc["ssid"] );
   strcpy( pairingData.pw, doc["pw"] );

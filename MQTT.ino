@@ -143,7 +143,7 @@ void MqttReconfig(String payload){
   DynamicJsonDocument doc(3000); 
   DeserializationError error = deserializeJson(doc, payload);
   if (error) return;
-  if ( doc.containsKey("broker") && doc.containsKey("port") && doc.containsKey("user") && doc.containsKey("pass") ){
+  if ( doc["broker"].is<const char*>() && doc["port"].is<int>() && doc["user"].is<const char*>() && doc["pass"].is<const char*>() ){
     //test connection
     MQTTSend( "msg", "MQTT: reconfig check connection", true );
     char MqttID[30+13];

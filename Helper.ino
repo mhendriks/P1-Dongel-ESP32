@@ -107,7 +107,7 @@ void FacReset() {
 void ToggleLED(byte mode) {
   if ( UseRGB ) { 
     if ( LEDenabled ) SwitchLED( mode, LED_GREEN ); 
-    else { neopixelWrite(RGBLED_PIN,0,0,0); /*rgb.setPixel(LED_BLACK);*/ }; 
+    else { rgbLedWrite(RGBLED_PIN,0,0,0); /*rgb.setPixel(LED_BLACK);*/ }; 
   } // PRO_BRIDGE
   else if ( LEDenabled ) digitalWrite(LED, !digitalRead(LED)); else digitalWrite(LED, LED_OFF);
 }
@@ -130,8 +130,8 @@ if ( UseRGB ) {
       case LED_BLUE:  B_value = value; break;  
       } 
     } else ClearRGB();
-    neopixelWrite(RGBLED_PIN,R_value,G_value,B_value); 
-    // rgbLedWrite(RGBLED_PIN,R_value,G_value,B_value); //sdk 3.0
+    // neopixelWrite(RGBLED_PIN,R_value,G_value,B_value); 
+    rgbLedWrite(RGBLED_PIN,R_value,G_value,B_value); //sdk 3.0
    } else {
       digitalWrite(LED, color==LED_RED?LED_OFF:mode);
    }
@@ -421,11 +421,11 @@ int stricmp(const char *a, const char *b)
 
 
 //===========================================================================================
-float formatFloat(float v, int dec)
-{
-  return (String(v, dec).toFloat());
+// float formatFloat(float v, int dec)
+// {
+//   return (String(v, dec).toFloat());
 
-} //  formatFloat()
+// } //  formatFloat()
 
 //===========================================================================================
 float strToFloat(const char *s, int dec)

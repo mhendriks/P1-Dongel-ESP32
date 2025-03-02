@@ -201,18 +201,18 @@ void sendDeviceInfo()
   doc["sdkversion"] = String( ESP.getSdkVersion() );
   doc["cpufreq"] ["value"] = ESP.getCpuFreqMHz();
   doc["cpufreq"]["unit"] = "MHz";
-  doc["sketchsize"] ["value"] = formatFloat( (ESP.getSketchSize() / 1024.0), 3);
+  doc["sketchsize"] ["value"] = (uint32_t)(ESP.getSketchSize() / 1024.0);
   doc["sketchsize"]["unit"] = "kB";
   
   // SDK 3.x
-  // doc["utilization"] ["value"] = 100-ulTaskGetIdleRunTimePercent() ;
-  // doc["utilization"]["unit"] = "%";
+  doc["utilization"] ["value"] = 100-ulTaskGetIdleRunTimePercent() ;
+  doc["utilization"]["unit"] = "%";
   
-  doc["freesketchspace"] ["value"] = formatFloat( (ESP.getFreeSketchSpace() / 1024.0), 3);
+  doc["freesketchspace"] ["value"] = (uint32_t)(ESP.getFreeSketchSpace() / 1024.0);
   doc["freesketchspace"]["unit"] = "kB";
-  doc["flashchipsize"] ["value"] = formatFloat((ESP.getFlashChipSize() / 1024.0 ), 3);
-  doc["flashchipsize"]["unit"] = "kB";
-  doc["FSsize"] ["value"] = formatFloat( (LittleFS.totalBytes() / (1024.0)), 0);
+  doc["flashchipsize"] ["value"] = (uint32_t)(ESP.getFlashChipSize() / 1024 / 1024 );
+  doc["flashchipsize"]["unit"] = "MB";
+  doc["FSsize"] ["value"] = (uint32_t)(LittleFS.totalBytes() / (1024.0));
   doc["FSsize"]["unit"] = "kB";
   doc["compileoptions"] = ALL_OPTIONS;
 
