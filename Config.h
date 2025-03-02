@@ -34,7 +34,11 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
 #else
   #ifdef ETHERNET
     #ifdef __Az__
-      #include "hw_profile_p1_eth_az.h"
+      #ifdef ETH_P1EP
+        #include "hw_profile_p1ep_az.h"
+      #else
+        #include "hw_profile_p1_eth_az.h"
+      #endif
     #else 
       #define NETSWITCH
       #ifdef ETH_P1EP

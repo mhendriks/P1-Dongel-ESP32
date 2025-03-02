@@ -37,8 +37,12 @@ WENSEN
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
 
-4.11.1
+4.11.2
 - inlezen van solar config in frontend
+
+4.12.0
+- SDK 3.1.3
+
 
 docs
 - long / short press aanpassing
@@ -61,7 +65,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES
-// #define ULTRA         //ultra (mini) dongle
+#define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE   

@@ -59,6 +59,7 @@ void setupFSexplorer()
 
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
   httpServer.on("/login", HTTP_GET, []() { auth(); });
+  httpServer.on("/api/v1/data", HTTP_GET, []() { auth(); HWapi(); });
   httpServer.on(UriBraces("/api/v2/dev/{}"),[]() { auth(); handleDevApi(); });
   httpServer.on(UriBraces("/api/v2/sm/{}"),[](){ auth(); handleSmApi(); });
   httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){ auth(); handleSmApiField(); });

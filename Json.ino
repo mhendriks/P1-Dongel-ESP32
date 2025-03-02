@@ -39,6 +39,69 @@ void JsonWater(){
   jsonDoc["water"]["unit"]  = "m3";
 }
 
+void HWapi() {
+    StaticJsonDocument<700> jsonDoc;
+    #define F3DEC(...) serialized(String(__VA_ARGS__,3))
+
+    jsonDoc["wifi_ssid"] = WiFi.SSID();  
+    jsonDoc["wifi_strength"] = WiFi.RSSI();
+    jsonDoc["smr_version"] = DSMRdata.p1_version;
+    jsonDoc["meter_model"] = DSMRdata.identification;
+    jsonDoc["unique_id"] = DSMRdata.equipment_id;
+
+    // Energieverbruik en teruglevering
+    jsonDoc["active_tariff"] = DSMRdata.electricity_tariff.toInt();
+    jsonDoc["total_power_import_kwh"] = F3DEC(DSMRdata.energy_delivered_total + DSMRdata.energy_delivered_tariff1 + DSMRdata.energy_delivered_tariff2);
+    jsonDoc["total_power_import_t1_kwh"] = F3DEC(DSMRdata.energy_delivered_tariff1.val());
+    jsonDoc["total_power_import_t2_kwh"] = F3DEC(DSMRdata.energy_delivered_tariff2.val());
+    jsonDoc["total_power_export_kwh"] = F3DEC(DSMRdata.energy_returned_total + DSMRdata.energy_returned_tariff1 + DSMRdata.energy_returned_tariff2);
+    jsonDoc["total_power_export_t1_kwh"] = F3DEC(DSMRdata.energy_returned_tariff1.val());
+    jsonDoc["total_power_export_t2_kwh"] = F3DEC(DSMRdata.energy_returned_tariff2.val());
+
+    // Huidige stroomwaarden
+    jsonDoc["active_power_w"] = (int32_t)(DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val());
+    jsonDoc["active_power_l1_w"] = (int32_t)(DSMRdata.power_delivered_l1.int_val() - DSMRdata.power_returned_l1.int_val());
+    jsonDoc["active_power_l2_w"] = (int32_t)(DSMRdata.power_delivered_l2.int_val() - DSMRdata.power_returned_l2.int_val());
+    jsonDoc["active_power_l3_w"] = (int32_t)(DSMRdata.power_delivered_l3.int_val() - DSMRdata.power_returned_l3.int_val());
+    
+    // Spanning en stroom
+    jsonDoc["active_voltage_l1_v"] = F3DEC(DSMRdata.voltage_l1.val());
+    jsonDoc["active_voltage_l2_v"] = F3DEC(DSMRdata.voltage_l2.val());
+    jsonDoc["active_voltage_l3_v"] = F3DEC(DSMRdata.voltage_l3.val());
+    jsonDoc["active_current_l1_a"] = F3DEC((DSMRdata.voltage_l1_present&&DSMRdata.voltage_l1.val())?jsonDoc["active_power_l1_w"].as<float>()/DSMRdata.voltage_l1.val():0);
+    jsonDoc["active_current_l2_a"] = F3DEC((DSMRdata.voltage_l2_present&&DSMRdata.voltage_l2.val())?jsonDoc["active_power_l2_w"].as<float>()/DSMRdata.voltage_l2.val():0);
+    jsonDoc["active_current_l3_a"] = F3DEC((DSMRdata.voltage_l3_present&&DSMRdata.voltage_l3.val())?jsonDoc["active_power_l3_w"].as<float>()/DSMRdata.voltage_l3.val():0);
+
+    // Fouten en storingen  
+    // jsonDoc["any_power_fail_count"] = DSMRdata.electricity_failures;
+    // jsonDoc["long_power_fail_count"] = DSMRdata.electricity_long_failures;
+    // jsonDoc["voltage_sag_l1_count"] = DSMRdata.electricity_sags_l1;
+    // jsonDoc["voltage_sag_l2_count"] = DSMRdata.electricity_sags_l2;
+    // jsonDoc["voltage_sag_l3_count"] = DSMRdata.electricity_sags_l3;
+    // jsonDoc["voltage_swell_l1_count"] = DSMRdata.electricity_swells_l1;
+    // jsonDoc["voltage_swell_l2_count"] = DSMRdata.electricity_swells_l2;
+    // jsonDoc["voltage_swell_l3_count"] = DSMRdata.electricity_swells_l3;
+
+    // Gasverbruik via M-Bus
+    // jsonDoc["gas_unique_id"] = ;
+    jsonDoc["total_gas_m3"] = F3DEC(gasDelivered);
+    jsonDoc["gas_timestamp"] = gasDeliveredTimestamp;
+
+    // Externe apparaten (zoals gasmeter)
+    // JsonArray external = jsonDoc.createNestedArray("external");
+    // JsonObject gasMeter = external.createNestedObject();
+    // gasMeter["unique_id"] = DSMRdata.mbus1_equipment_id_tc;
+    // gasMeter["type"] = "gas_meter";
+    // gasMeter["timestamp"] = DSMRdata.mbus1_timestamp;
+    // gasMeter["value"] = DSMRdata.mbus1_delivered;
+    // gasMeter["unit"] = "m3";
+
+    String jsonString;
+    serializeJson(jsonDoc, jsonString);
+    sendJsonBuffer(  jsonString.c_str() );
+
+    // return jsonString;
+}
 //--------------------------
 
 struct buildJson {

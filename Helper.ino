@@ -130,7 +130,6 @@ if ( UseRGB ) {
       case LED_BLUE:  B_value = value; break;  
       } 
     } else ClearRGB();
-    // rgb.setPixel(R_value+G_value+B_value);
     neopixelWrite(RGBLED_PIN,R_value,G_value,B_value); 
     // rgbLedWrite(RGBLED_PIN,R_value,G_value,B_value); //sdk 3.0
    } else {

@@ -140,7 +140,7 @@ void handleSlimmemeter()
   //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
     slimmeMeter.loop();
     if (slimmeMeter.available()) {
-      SwitchLED(LED_ON, LED_GREEN);
+      ToggleLED(LED_ON);
       CapTelegram = slimmeMeter.CompleteRaw();
       Out1Avail = true;
       if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
@@ -153,7 +153,7 @@ void handleSlimmemeter()
         Debugf("Telegram Raw (%d)\n%s\n", slimmeMeter.raw().length(), CapTelegram.c_str() ); 
         showRaw = false; //only 1 reading
       } else processSlimmemeter();
-      SwitchLED(LED_OFF, LED_GREEN);
+      ToggleLED(LED_OFF);
     } //available
 } // handleSlimmemeter()
 

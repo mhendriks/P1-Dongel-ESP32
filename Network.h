@@ -39,7 +39,7 @@ void GetMacAddress(){
   strcpy( macStr, _mac.c_str() );
   _mac.replace( ":","" );
   strcpy( macID, _mac.c_str() );
-  USBPrint( "MacStr: " );USBPrintln( macStr ); //only at setup
+  USBPrint( "MacStr : " );USBPrintln( macStr ); //only at setup
 //  USBSerial.print( "MacID: " );USBSerial.println( macID );
 }
 
@@ -105,7 +105,7 @@ static void onNetworkEvent (WiFiEvent_t event) {
         LogFile("ETH GOT IP", true);
         netw_state = NW_ETH;
         bEthUsage = true; //set only once 
-        SwitchLED( LED_ON , LED_BLUE ); //Ethernet available = RGB LED Blue
+        SwitchLED( LED_ON, LED_BLUE ); //Ethernet available = RGB LED Blue
         // tLastConnect = 0;
         break;
       }
@@ -325,7 +325,7 @@ void startNetwork()
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   WaitOnNetwork();
   GetMacAddress();
-  USBPrint("ip-adres: ");USBPrintln(IP_Address());
+  USBPrint("ip-addr: ");USBPrintln(IP_Address());
 }
 
 //===========================================================================================
