@@ -21,7 +21,7 @@ void ReadSolarConfig( SolarSource src ){
 
   DebugT("ReadSolarConfig: ");Debugln(solarSystem->file_name);
   
-  StaticJsonDocument<800> doc; 
+  JsonDocument doc; 
   File SolarFile = LittleFS.open( solarSystem->file_name, "r");
   if ( !SolarFile ) {
       DebugTln("Error reading SolarFile");
@@ -110,7 +110,7 @@ void GetSolarData( SolarSource src, bool forceUpdate ){
 //  payload = "{\"g_sn\":1902457183,\"g_ver\":\"ME-121001-V1.0.6(201704012008)\",\"time\":1723404273,\"g_time\":9168,\"g_err\":0,\"mac\":\"bc-54-f9-f5-73-bc\",\"auto_ip\":1,\"ip\":\"192.168.0.38\",\"sub\":\"255.255.255.0\",\"gate\":\"192.168.0.1\",\"auto_dns\":1,\"dns\":\"208.67.222.222\",\"dns_bak\":\"208.67.222.222\",\"i_status\":16,\"i_type\":1283,\"i_num\":1,\"i_sn\":\"110E301842200080\",\"i_ver_m\":\"\",\"i_ver_s\":\"\",\"i_modle\":\"\",\"i_pow\":\"\",\"i_pow_n\":88,\"i_eday\":\"8.451\",\"i_eall\":\"8012.0\",\"i_alarm\":\"F22F23\",\"i_last_t\":0,\"l_a_agr\":2,\"l_a_ip\":\"8.211.53.112\",\"l_a_port\":10000}";
     
   // Parse JSON object in response
-  DynamicJsonDocument solarDoc(1024);
+ JsonDocument solarDoc;
   DeserializationError error = deserializeJson(solarDoc, payload);
   if (error) {
     Debugln("Error deserialisation solarDoc");

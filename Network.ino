@@ -277,7 +277,7 @@ bool loadFixedIPConfig(const char *filename) {
     return false;
   }
 
-  StaticJsonDocument<512> doc;
+  JsonDocument doc;
   DeserializationError error = deserializeJson(doc, file);
   if (error) {
     Debugln("Fout bij het parsen van JSON-bestand.");

@@ -18,7 +18,7 @@ bool onlyIfPresent = false;
 const static PROGMEM char infoArray[][25]   = { "identification","p1_version","equipment_id" }; //waardes dient redelijk statisch zijn niet elke keer versturen
 const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3","peak_pwr_last_q", "highest_peak_pwr"};
 
-DynamicJsonDocument jsonDoc(4100);  // generic doc to return, clear() before use!
+JsonDocument jsonDoc;  // generic doc to return, clear() before use!
 
 void JsonGas(){
   if (!gasDelivered) return;
@@ -40,7 +40,7 @@ void JsonWater(){
 }
 
 void HWapi() {
-    StaticJsonDocument<700> jsonDoc;
+    JsonDocument jsonDoc;
     #define F3DEC(...) serialized(String(__VA_ARGS__,3))
 
     jsonDoc["wifi_ssid"] = WiFi.SSID();  
@@ -174,7 +174,7 @@ void sendDeviceTime()
 
 void sendDeviceInfo() 
 {
-  DynamicJsonDocument doc(1500);
+  JsonDocument doc;
   doc["fwversion"] = Firmware.Version;
 //  snprintf(cMsg, sizeof(cMsg), "%s %s", __DATE__, __TIME__);
   doc["compiled"] = __DATE__ " " __TIME__;
@@ -251,7 +251,7 @@ void sendDeviceInfo()
 //=======================================================================
 void sendDeviceSettings() {
   DebugTln(F("sending device settings ...\r"));
-  DynamicJsonDocument doc(2100);
+  JsonDocument doc;
 
   // Helper macro to add a setting to the JSON document
 #define ADD_SETTING(name, type, min, max, value) \

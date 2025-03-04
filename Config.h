@@ -23,11 +23,11 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
 
 //PROFILES
 #ifdef ULTRA
-  #ifndef ETHERNET 
-      #define ETHERNET
-  #endif    
-  #define VIRTUAL_P1
-  #define NETSWITCH
+  // #ifndef ETHERNET 
+  //     #define ETHERNET
+  // #endif    
+  // #define VIRTUAL_P1
+  // #define NETSWITCH
   // #define MBUS //default
   // #define DEV_PAIRING //default
   #include "hw_profile_ultra.h"

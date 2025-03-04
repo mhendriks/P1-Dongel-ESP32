@@ -35,20 +35,23 @@ WENSEN
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
 
+Default checks
+- wifi
+- port 82
+- MQTT
+- webserver
+- EID
+- dev_pairing
+- ethernet
+- 4h test on 151
+
+
 - experimenteel: Inzichten vanaf opstarten dongle
     - sluipverbruik (meten tussen 23u - 06u, uitgaande dat er dan geen teruglevering is)
     - loadbalancing over de fases heen
     - Pmax per fase 
     - Overspanning per fase (gewist om 00:00)
     - detail P per fase afgelopen uur (sample eens per 10s)
-
-4.12.0
-√ SDK 3.1.3
-√ utilisation info
-√ Calculate current I = P/U because this is more accurate. NL is 0  and BE 1 decimal
-- checken dev_pairing
-√ containskey migration to .is<>
-- ArduinoJson 7.x update
 
 4.12.1
 - inlezen van solar config in frontend
@@ -69,7 +72,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES
-// #define ULTRA         //ultra (mini) dongle
+#define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE   
@@ -86,6 +89,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 // #define MQTTKB
+// #define MB_RTU
 
 #include "DSMRloggerAPI.h"
 
@@ -165,6 +169,7 @@ void setup()
 
 #ifdef MBUS
   mbusSetup();
+  SetupMB_RTU();
 #endif  
   ReadSolarConfigs();
   delay(500);

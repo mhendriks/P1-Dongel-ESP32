@@ -140,7 +140,7 @@ void MqttReconfig(String payload){
   // 2) test new connection
   // 3) when okay copy new config and restart mqtt process
   
-  DynamicJsonDocument doc(3000); 
+  JsonDocument doc; 
   DeserializationError error = deserializeJson(doc, payload);
   if (error) return;
   if ( doc["broker"].is<const char*>() && doc["port"].is<int>() && doc["user"].is<const char*>() && doc["pass"].is<const char*>() ){

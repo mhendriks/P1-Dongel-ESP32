@@ -75,7 +75,7 @@ States
    HTTPClient http;
   String payload;
   int httpResponseCode;
-  StaticJsonDocument<3000> doc;
+  JsonDocument doc;
 
   http.begin( EID_PROV_URL );
   http.addHeader( "Content-Type"          , "application/json" );

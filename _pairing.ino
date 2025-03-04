@@ -148,7 +148,7 @@ bool readWifiCredentials(){
   if ( !FSmounted || !LittleFS.exists("/wifi.json") ) return false;
   Debugln("wifi.json exists");
   
-  StaticJsonDocument<200> doc; 
+  JsonDocument doc; 
   File SettingsFile = LittleFS.open("/wifi.json", "r");
   if (!SettingsFile) return false;
   Debugln("wifi.json read");

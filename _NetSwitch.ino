@@ -1,6 +1,6 @@
 #ifdef NETSWITCH
 
-StaticJsonDocument<256> docTriggers;
+JsonDocument docTriggers;
 time_t ShellyStateTrue = 0;
 time_t ShellyStateFalse = 0;
 bool bShellySwitch = false;

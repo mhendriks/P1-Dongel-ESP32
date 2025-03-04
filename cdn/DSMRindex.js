@@ -3436,6 +3436,7 @@ function formatFailureLog(svalue) {
 	  ,[ "mqtt_tls",	  		  "MQTT over tls"]
 	  ,[ "dev-pairing",	  		  "Peer2Peer communication"]
 	  ,[ "eid-enabled",	  		  "EnergyID aan/uit"]		  		  		  
+	  ,[ "utilization",	  		  "CPU gebruik"]
   ];
 
 /*

@@ -142,3 +142,27 @@ void mbusSetup(){
 }
 
 #endif //MBUS
+
+#ifdef MB_RTU
+
+// #define MBUS_RTU_DEV_ID       1
+#define MBUS_RTU_BAUD         9600
+#define MBUS_RTU_SERIAL       SERIAL_8E1
+#define MBUS_RTU_TIMEOUT      2000
+
+#include "ModbusServerRTU.h"
+#include "DSMRloggerAPI.h"
+
+ModbusServerRTU MBserverRTU( MBUS_RTU_TIMEOUT, RTSPIN );
+
+void SetupMB_RTU(){
+  Serial2.end();
+  RTUutils::prepareHardwareSerial(Serial2);
+  Serial2.begin( MBUS_RTU_BAUD, MBUS_RTU_SERIAL, RXPIN, TXPIN );  
+  MBserverRTU.registerWorker(MBUS_DEV_ID, READ_HOLD_REGISTER, &MBusHandleRequest);//FC03
+  MBserverRTU.registerWorker(MBUS_DEV_ID, READ_INPUT_REGISTER, &MBusHandleRequest);//FC04
+  MBserverRTU.begin(Serial2);
+}
+#else
+void SetupMB_RTU(){}
+#endif

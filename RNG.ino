@@ -105,7 +105,7 @@ void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) 
   byte slot = 0;
   uint8_t actSlot = CalcSlot(ringfiletype, bPrev);
 
-  StaticJsonDocument<145> rec;
+  JsonDocument rec;
 
   char buffer[DATA_RECLEN];
   if (strlen(JsonRec) > 1) {
