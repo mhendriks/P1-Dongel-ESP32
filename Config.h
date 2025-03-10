@@ -7,6 +7,11 @@
 #define P1EP        5
 #define P1NRG       6
 
+#define MOD_RS485   0
+#define MOD_NONE    1
+#define MOD_H20     2
+
+
 #define APIURL              "http://api.smart-stuff.nl/v1/register.php"
 #define LED_ON              LOW
 #define LED_OFF             HIGH

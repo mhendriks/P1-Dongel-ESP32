@@ -63,7 +63,6 @@ void setupFSexplorer()
   httpServer.on(UriBraces("/api/v2/dev/{}"),[]() { auth(); handleDevApi(); });
   httpServer.on(UriBraces("/api/v2/sm/{}"),[](){ auth(); handleSmApi(); });
   httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){ auth(); handleSmApiField(); });
-  // httpServer.on(UriBraces("/config/{}"), HTTP_POST, [](){auth(); ConfigApi(); });
 
   httpServer.on("/eid/getclaim",[](){ auth(); EIDGetClaim(); });
 #ifdef DEV_PAIRING
@@ -92,31 +91,6 @@ void setupFSexplorer()
   DebugTln( F("HTTP server started\r") );
   
 } // setupFSexplorer()
-
-// void ConfigApi() {
-//   String FileName;
-  
-//   if ( !httpServer.args() ) { httpServer.send(400); return;} //missing data
-//   String payload = httpServer.arg("plain");
-//   DebugTln(payload);
-//   DebugTln(httpServer.pathArg(0));
-//   if (httpServer.pathArg(0) == "enphase" ) FileName = "/enphase.json";
-//   if (httpServer.pathArg(0) == "solaredge" ) FileName = "/solaredge.json";
- 
-//   if ( FileName.length() ) {
-//     File file = LittleFS.open(FileName.c_str(), "w");
-//     if (!file) {
-//       DebugTln(F("open file FAILED!!!\r\n"));
-//       httpServer.send(400);
-//     }  
-//     else {
-//       file.print(payload); 
-//       httpServer.send(200);
-//       ReadSolarConfigs();
-//     }  
-//     file.close();
-//   }
-// }  
 
 //=====================================================================================
 void APIlistFiles()             // Senden aller Daten an den Client
@@ -269,13 +243,6 @@ bool freeSpace(uint16_t const& printsize)
   return (LittleFS.totalBytes() - (LittleFS.usedBytes() * 1.05) > printsize) ? true : false;
   
 } // freeSpace()
-
-//=====================================================================================
-//void updateFirmware()
-//{
-//  DebugTln(F("Redirect to updateIndex .."));
-//  doRedirect("Update", 1, "/updateIndex", false,false);      
-//} // updateFirmware()
 
 //=====================================================================================
 void resetWifi()

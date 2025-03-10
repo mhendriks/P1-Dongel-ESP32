@@ -33,10 +33,10 @@ void SetConfig(){
   byte board = digitalRead(SENSE1) << 1 + digitalRead(SENSE2);
   Debugf("\n--P1NRGD: check ext board [%d]\n",board);
   switch ( board ) {
-    case 0: Debugln("--P1NRGD: No board");break;
-    case 1: Debugln("--P1NRGD: N/A");break;
-    case 2: Debugln("--P1NRGD: H20");WtrMtr = true;break;
-    case 3: Debugln("--P1NRGD: RS485");break;
+    case 0: Debugln("--P1NRGD: No board");Module = MOD_NONE;break;
+    case 1: Debugln("--P1NRGD: N/A");Module = MOD_NONE;break;
+    case 2: Debugln("--P1NRGD: H20");Module = MOD_H20;WtrMtr = true; break;
+    case 3: Debugln("--P1NRGD: RS485"); Module = MOD_RS485; break;
   }
   Debugln();
 #endif 
@@ -75,7 +75,7 @@ void SetConfig(){
                      break;       
     case P1NRG:      UseRGB = false; 
                      IOWater = IO_WATER_SENSOR;
-                     P1Out = true;
+                     if ( Module != MOD_RS485 ) P1Out = true;
                     //  WtrMtr = true;
                      break;                                          
   }

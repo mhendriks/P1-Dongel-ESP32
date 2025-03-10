@@ -85,12 +85,12 @@ static void onNetworkEvent (WiFiEvent_t event) {
     case ARDUINO_EVENT_ETH_CONNECTED: //3
       DebugTln("\nETH Connected");
       WifiOff();
-      netw_state = NW_ETH;
+      // netw_state = NW_ETH;
       bEthUsage = true; //set only once 
       break;
     case ARDUINO_EVENT_ETH_GOT_IP: //5
       {
-        WiFiManager manageWiFi;
+        // WiFiManager manageWiFi;
         // if ( WiFi.isConnected() ) WiFi.disconnect();
         WifiOff();
         LogFile("ETH GOT IP", true);
@@ -310,13 +310,13 @@ bool validateConfig() {
 //===========================================================================================
 void startNetwork()
 {
-  WiFi.onEvent(onNetworkEvent);
+  Network.onEvent(onNetworkEvent);
   if ( loadFixedIPConfig("/fixedip.json") ) bFixedIP = validateConfig();
   startETH();
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   WaitOnNetwork();
   GetMacAddress();
-  USBPrint("ip-addr: ");USBPrintln(IP_Address());
+  USBPrint("Ip-addr: ");USBPrintln(IP_Address());
 }
 
 //===========================================================================================
@@ -357,6 +357,7 @@ void startETH(){
   // ETH.begin( MISO_GPIO, MOSI_GPIO, SCK_GPIO, CS_GPIO, INT_GPIO, SPI_CLOCK_MHZ, ETH_SPI_HOST );
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
 }
+
 #else
   void startETH(){}
 #endif //def ETHERNET
@@ -365,7 +366,6 @@ String IP_Address(){
 #ifdef ETHERNET
   if ( netw_state == NW_ETH ) return ETH.localIP().toString();
   else return WiFi.localIP().toString();
-  
 #else
   return WiFi.localIP().toString();
 #endif

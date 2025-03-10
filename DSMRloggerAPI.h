@@ -264,6 +264,7 @@ int8_t IOWater = 0;
 bool UseRGB = false; 
 volatile unsigned long      Tpressed = 0;
 volatile bool bButtonPressed = false;
+uint8_t Module = MOD_NONE;
 
 struct Status {
    uint32_t           reboots;
