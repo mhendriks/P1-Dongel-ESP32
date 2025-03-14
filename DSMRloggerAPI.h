@@ -265,6 +265,7 @@ bool UseRGB = false;
 volatile unsigned long      Tpressed = 0;
 volatile bool bButtonPressed = false;
 uint8_t Module = MOD_NONE;
+uint8_t SelMap = 0;
 
 struct Status {
    uint32_t           reboots;

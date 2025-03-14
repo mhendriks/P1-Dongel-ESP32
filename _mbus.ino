@@ -135,16 +135,16 @@ std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint8_t SelMap = 0;
 uint16_t MaxReg[3] = {34, 206, 24};
 
 // Change active mapping
 void setModbusMapping(int mappingChoice) {
+    SelMap = mappingChoice;
     switch (mappingChoice) {
-        case 1: selectedMapping = &mapping_default; break;
-        case 2: selectedMapping = &mapping_sdm630; break;
-        // case 3: selectedMapping = &mapping_dtsu666; break;
-        default: selectedMapping = &mapping_default; break; // Fallback naar mapping1
+        case 0: selectedMapping = &mapping_default; break;
+        case 1: selectedMapping = &mapping_sdm630; break;
+        // case 2: selectedMapping = &mapping_dtsu666; break;
+        default: selectedMapping = &mapping_default; break; // Fallback naar default
     }
 }
 

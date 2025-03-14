@@ -118,6 +118,7 @@ void writeSettings() {
   docw["act-json-mqtt"] = bActJsonMQTT;
   docw["raw-port"] = bRawPort;
   docw["led-prt"] = bLED_PRT;
+  docw["mb_map"] = SelMap;
 
 #ifdef VOLTAGE_MON
   docw["max-volt"] = MaxVoltage;
@@ -205,7 +206,7 @@ void readSettings(bool show)
   if (doc["ota"].is<const char*>()) strcpy(BaseOTAurl, doc["ota"]);
 #ifdef NO_STORAGE
   EnableHistory = false;
-#else  
+#else
   if (doc["enableHistory"].is<bool>()) EnableHistory = doc["enableHistory"];
 #endif
   if (doc["watermeter"].is<bool>() && (P1Status.dev_type != PRO_H20_2) ) WtrMtr = doc["watermeter"];
@@ -239,6 +240,7 @@ void readSettings(bool show)
   
   temp = doc["basic-auth"]["pass"];
   if (temp) strcpy(bAuthPW, temp);
+  if (doc["mb_map"].is<int>()) setModbusMapping(doc["mb_map"]);
   
   SettingsFile.close();
   //end json

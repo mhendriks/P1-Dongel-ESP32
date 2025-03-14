@@ -12,18 +12,6 @@
 
 #include "DSMRloggerAPI.h"
 
-
-
-// void LogFile(const char*, bool);
-// void P1Reboot();
-// void SwitchLED( byte mode, uint32_t color);
-// void startETH();
-// void startWiFi(const char* hostname, int timeOut);
-// void w5500_powerDown();
-
-// String MAC_Address();
-// String  IP_Address();
-
 void GetMacAddress(){
 
   String _mac = MAC_Address();
@@ -33,7 +21,6 @@ void GetMacAddress(){
   USBPrint( "MacStr : " );USBPrintln( macStr ); //only at setup
 //  USBSerial.print( "MacID: " );USBSerial.println( macID );
 }
-
 
 /***===========================================================================================
     POST MAC + IP
@@ -56,8 +43,6 @@ void PostMacIP() {
 
   http.end();  
 }
-
-// #include "driver/adc.h"
 
 void WifiOff(){
   if ( WiFi.isConnected() ) WiFi.disconnect(true,true);
@@ -125,7 +110,7 @@ static void onNetworkEvent (WiFiEvent_t event) {
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
         Debug(" )\n\n");
         WifiReconnect = 0;
-        if ( netw_state == NW_ETH ) WifiOff();
+        if ( bEthUsage ) WifiOff();
         else netw_state = NW_WIFI;
         bNoNetworkConn = false;
         break;
@@ -237,19 +222,19 @@ void startWiFi(const char* hostname, int timeOut)
 
   //handle wifi webinterface timeout and connection (timeOut in sec)
   uint16_t i = 0;
-  while ( (i++ < timeOut*10) && (netw_state == NW_NONE) ){
+  while ( (i++ < timeOut*10) && (netw_state == NW_NONE) && !bEthUsage ){
     Debug("*");
     delay(100);
     manageWiFi.process();
     SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE); //fast blinking
   }
   Debugln();
-  if ( netw_state == NW_NONE ) {
+  if ( netw_state == NW_NONE && !bEthUsage ) {
     LogFile("WIFI: failed to connect and hit timeout",true);
     P1Reboot(); //timeout 
   }
   manageWiFi.stopWebPortal();
-  if ( netw_state == NW_ETH ) {
+  if ( netw_state == NW_ETH || bEthUsage ) {
     WifiOff();
     delay(500);
   }

@@ -7,10 +7,10 @@
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
-*/                           
+*/
 
 volatile bool dtr1         = false;
-bool Out1Avail    = false;
+bool          Out1Avail    = false;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void SetupSMRport(){
@@ -18,14 +18,15 @@ void SetupSMRport(){
   delay(100); //give it some time
   DebugT(F("P1 serial set to ")); 
   if(bPre40){
-    Serial1.begin(9600, SERIAL_7E1, RxP1, TXP1, true); //p1 serial input
+    Serial1.begin(9600, SERIAL_7E1, RxP1, TXO1); //p1 serial input
     slimmeMeter.doChecksum(false);
-    Debugln(F("9600 baud / 7E1"));  
+    Debugln(F("9600 baud / 7E1"));
   } else {
-    Serial1.begin(115200, SERIAL_8N1, RxP1, TXP1, true); //p1 serial input
+    Serial1.begin(115200, SERIAL_8N1, RxP1, TXO1); //p1 serial INPUT
     slimmeMeter.doChecksum(true);
     Debugln(F("115200 baud / 8N1"));
   }
+  Serial1.setRxInvert(true); //only Rx
   delay(100); //give it some time
 }
 //==================================================================================
@@ -74,7 +75,7 @@ void SetupP1Out(){
   //initial host dtr when p1 device is connected before power up the bridge
   if ( digitalRead(O1_DTR_IO) == HIGH ) SetDTR(true);
 
-  Serial.begin(115200, SERIAL_8N1, -1, TXO1, false);
+  // Serial.begin(115200, SERIAL_8N1, -1, TXO1, false);
 
   Debugln("SetupP1Out executed");
  
@@ -84,8 +85,8 @@ void P1OutBridge(){
   if ( P1Out && dtr1 && Out1Avail ) {
 
     if ( P1_LED >= 0 ) digitalWrite(P1_LED, HIGH);
-    Serial.println(CapTelegram);
-    Serial.flush();
+    Serial1.println(CapTelegram);
+    Serial1.flush();
     Out1Avail = false; 
     if ( digitalRead(O1_DTR_IO) == LOW ) SetDTR(false);
     if ( P1_LED >= 0 ) digitalWrite(P1_LED, LOW);

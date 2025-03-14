@@ -52,17 +52,19 @@ Default checks
     - Overspanning per fase (gewist om 00:00)
     - detail P per fase afgelopen uur (sample eens per 10s)
 
-4.12.1
-- fix incorrect current high powers
-
 4.12.2
-- inlezen van solar config in frontend
-- check p1ep insturen mac/ip
+x fix: check p1ep insturen mac/ip
 √ refactor modbus handler with mapper logic
-√ add SDM630 emulation to modbus mapper
-x RTU support NRG Dongle (Pro+)
-- MB mapper select via settings
+√ add SDM630 emulation to modbus mapper (0= defaut, 1=sdm630)
+√ P1 Out changed supporting Ultra's/Ethernet Pro+ and NRG Dongle (Pro+)) !!! P1 Out serial settings are corresponding with the smart meter settings
+x RTU support for Ultra's and NRG Dongle (Pro+)
+√ MB mapper select via settings
+√ p1 process runs on core 0 when using dual core models (ultra)
 
+4.12.3
+- inlezen van solar config in frontend
+- Ultra: shutdown ETH on Wifi usage
+- add MB mapper > 2 = DTSU666
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -80,10 +82,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
-// #define ULTRA         //ultra (mini) dongle
+#define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
-#define NRG_DONGLE   
+// #define NRG_DONGLE   
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 // #define __Az__
 
@@ -170,7 +172,9 @@ void setup()
   SetupSMRport();
   
 //create a task that will be executed in the fP1Reader() function, with priority 2
-  if( xTaskCreate( fP1Reader, "p1-reader", 30000, NULL, 2, &tP1Reader ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
+  // if( xTaskCreate( fP1Reader, "p1-reader", 30000, NULL, 2, &tP1Reader ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
+  //p1 task runs always on core 0. On the dual core models Arduino runs on core 1. It isn't possible that the process runs on both cores.
+  if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*20, NULL, 1, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
 
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
 
