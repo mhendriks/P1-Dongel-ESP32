@@ -300,6 +300,7 @@ bool        bRawPort = false;
 bool        bLED_PRT = true;
 bool        P1Out = false;
 byte        RxP1 = RXP1;
+byte        TxO1 = TXO1;
 //bool        bWriteFiles = false;
 
 //vitals

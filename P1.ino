@@ -18,11 +18,11 @@ void SetupSMRport(){
   delay(100); //give it some time
   DebugT(F("P1 serial set to ")); 
   if(bPre40){
-    Serial1.begin(9600, SERIAL_7E1, RxP1, TXO1); //p1 serial input
+    Serial1.begin(9600, SERIAL_7E1, RxP1, TxO1); //p1 serial input
     slimmeMeter.doChecksum(false);
     Debugln(F("9600 baud / 7E1"));
   } else {
-    Serial1.begin(115200, SERIAL_8N1, RxP1, TXO1); //p1 serial INPUT
+    Serial1.begin(115200, SERIAL_8N1, RxP1, TxO1); //p1 serial INPUT
     slimmeMeter.doChecksum(true);
     Debugln(F("115200 baud / 8N1"));
   }

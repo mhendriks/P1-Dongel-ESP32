@@ -73,10 +73,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
-// #define ULTRA         //ultra (mini) dongle
+#define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
-#define NRG_DONGLE   
+// #define NRG_DONGLE   
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 // #define __Az__
 
@@ -172,7 +172,7 @@ void setup()
 
   //create a task that will be executed in the fP1Reader() function, with priority 1
   //p1 task runs always on core 0. On the dual core models Arduino runs on core 1. It isn't possible that the process runs on both cores.
-  if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*20, NULL, 1, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
+  if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*20, NULL, 2, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
 
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
 

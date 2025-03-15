@@ -65,6 +65,7 @@ void SetConfig(){
     case PRO_H20_2:  UseRGB = false; 
                      IOWater = 3;
                      RxP1 = 4;
+                     TxO1 = 10;
                      P1Out = true;
                      WtrMtr = true;
                      break;    
