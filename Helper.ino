@@ -30,7 +30,7 @@ void SetConfig(){
   */
   pinMode(SENSE1, INPUT); //4
   pinMode(SENSE2, INPUT); //21
-  byte board = digitalRead(SENSE1) << 1 + digitalRead(SENSE2);
+  byte board = digitalRead(SENSE1) * 2 + digitalRead(SENSE2);
   Debugf("\n--P1NRGD: check ext board [%d]\n",board);
   switch ( board ) {
     case 0: Debugln("--P1NRGD: No board");Module = MOD_NONE;break;

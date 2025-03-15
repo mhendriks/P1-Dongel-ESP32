@@ -73,31 +73,36 @@ std::map<uint16_t, ModbusMapping> mapping_default = {
 
 // Modbus mapping SDM630 = 1, see https://www.eastroneurope.com/images/uploads/products/protocol/SDM630_MODBUS_Protocol.pdf
 
+union {
+  float    f;
+  uint32_t u;
+} map_temp;
+
 std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
-    {0,   {ModbusDataType::FLOAT, []() { return DSMRdata.voltage_l1_present ? DSMRdata.voltage_l1 : MBUS_VAL_UNAVAILABLE; }}},
-    {2,   {ModbusDataType::FLOAT, []() { return DSMRdata.voltage_l2_present ? DSMRdata.voltage_l2 : MBUS_VAL_UNAVAILABLE; }}},
-    {4,   {ModbusDataType::FLOAT, []() { return DSMRdata.voltage_l3_present ? DSMRdata.voltage_l3 : MBUS_VAL_UNAVAILABLE; }}},
-    {6,   {ModbusDataType::FLOAT, []() { return (DSMRdata.voltage_l1_present && DSMRdata.power_delivered_l1_present) ? DSMRdata.power_delivered_l1 / DSMRdata.voltage_l1 * 1000.0 :MBUS_VAL_UNAVAILABLE; }}},
-    {8,   {ModbusDataType::FLOAT, []() { return (DSMRdata.voltage_l2_present && DSMRdata.power_delivered_l2_present) ? DSMRdata.power_delivered_l2 / DSMRdata.voltage_l2 * 1000.0 :MBUS_VAL_UNAVAILABLE;     }}},
-    {10,  {ModbusDataType::FLOAT, []() { return (DSMRdata.voltage_l3_present && DSMRdata.power_delivered_l3_present) ? DSMRdata.power_delivered_l3 / DSMRdata.voltage_l3 * 1000.0 :MBUS_VAL_UNAVAILABLE; }}},
-    {12,  {ModbusDataType::FLOAT, []() { return DSMRdata.power_delivered_l1_present ? -DSMRdata.power_returned_l1.int_val() + DSMRdata.power_delivered_l1.int_val() :MBUS_VAL_UNAVAILABLE;}}},
-    {14,  {ModbusDataType::FLOAT, []() { return DSMRdata.power_delivered_l2_present ? -DSMRdata.power_returned_l2.int_val() + DSMRdata.power_delivered_l2.int_val() :MBUS_VAL_UNAVAILABLE; }}},
-    {16,  {ModbusDataType::FLOAT, []() { return DSMRdata.power_delivered_l3_present ? -DSMRdata.power_returned_l3.int_val() + DSMRdata.power_delivered_l3.int_val() :MBUS_VAL_UNAVAILABLE; }}},
+    {0,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {2,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l2.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {4,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l3.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {6,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l1_present ? DSMRdata.current_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {8,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l2_present ? DSMRdata.current_l2.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {10,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l3_present ? DSMRdata.current_l3.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {12,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l1_present ? (-DSMRdata.power_returned_l1.val() + DSMRdata.power_delivered_l1.val()) * 1000.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
+    {14,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l2_present ? (-DSMRdata.power_returned_l2.val() + DSMRdata.power_delivered_l2.val()) * 1000.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
+    {16,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l3_present ? (-DSMRdata.power_returned_l3.val() + DSMRdata.power_delivered_l3.val()) * 1000.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
     {24,  {ModbusDataType::FLOAT, []() { return mapping_sdm630[12].valueGetter(); }}}, // Alias P1
     {26,  {ModbusDataType::FLOAT, []() { return mapping_sdm630[14].valueGetter(); }}}, // Alias P2
     {28,  {ModbusDataType::FLOAT, []() { return mapping_sdm630[16].valueGetter(); }}}, // Alias P3
-    {52,  {ModbusDataType::FLOAT, []() { return DSMRdata.power_delivered_present ? -DSMRdata.power_returned.int_val() + DSMRdata.power_delivered.int_val() :MBUS_VAL_UNAVAILABLE;}}},
+    {52,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_present ? (-DSMRdata.power_returned.val() + DSMRdata.power_delivered.val()) * 1000.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
     {60,  {ModbusDataType::FLOAT, []() { return mapping_sdm630[52].valueGetter(); }}}, // Alias voor 52
-    {62,  {ModbusDataType::FLOAT, []() { return DSMRdata.power_returned > 0 ? -1.0 : 1.0; }}},
-    {30,  {ModbusDataType::FLOAT, []() { return DSMRdata.power_returned_l1 > 0 ? -1.0 : 1.0; }}},
-    {32,  {ModbusDataType::FLOAT, []() { return DSMRdata.power_returned_l2_present ? (DSMRdata.power_returned_l2 > 0 ? -1.0 : 1.0) :MBUS_VAL_UNAVAILABLE; }}},
-    {34,  {ModbusDataType::FLOAT, []() { return DSMRdata.power_returned_l3_present ? (DSMRdata.power_returned_l3 > 0 ? -1.0 : 1.0) :MBUS_VAL_UNAVAILABLE; }}},
-    {70,  {ModbusDataType::FLOAT, []() { return 50.0; }}},
-    {72,  {ModbusDataType::FLOAT, []() { return DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff2 + DSMRdata.energy_delivered_tariff1 :MBUS_VAL_UNAVAILABLE; }}},
-    {74,  {ModbusDataType::FLOAT, []() { return DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff2 + DSMRdata.energy_returned_tariff1 :MBUS_VAL_UNAVAILABLE; }}},
-    {200, {ModbusDataType::FLOAT, []() { return (DSMRdata.voltage_l1_present && DSMRdata.voltage_l2_present) ? calculateLineVoltage(DSMRdata.voltage_l1, DSMRdata.voltage_l2) :MBUS_VAL_UNAVAILABLE; }}},
-    {202, {ModbusDataType::FLOAT, []() { return (DSMRdata.voltage_l2_present && DSMRdata.voltage_l3_present) ? calculateLineVoltage(DSMRdata.voltage_l2, DSMRdata.voltage_l3) :MBUS_VAL_UNAVAILABLE; }}},
-    {204, {ModbusDataType::FLOAT, []() { return (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) :MBUS_VAL_UNAVAILABLE; }}}
+    {62,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned > 0 ? -1.0 : 1.0; return map_temp.u; }}},
+    {30,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l1 > 0 ? -1.0 : 1.0; return map_temp.u; }}},
+    {32,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l2_present ? (DSMRdata.power_returned_l2 > 0 ? -1.0 : 1.0) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {34,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l3_present ? (DSMRdata.power_returned_l3 > 0 ? -1.0 : 1.0) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {70,  {ModbusDataType::FLOAT, []() { map_temp.f = 50.0; return map_temp.u; }}},
+    {72,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff2 + DSMRdata.energy_delivered_tariff1 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {74,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff2 + DSMRdata.energy_returned_tariff1 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {200, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l1_present && DSMRdata.voltage_l2_present) ? calculateLineVoltage(DSMRdata.voltage_l1, DSMRdata.voltage_l2) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {202, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l2_present && DSMRdata.voltage_l3_present) ? calculateLineVoltage(DSMRdata.voltage_l2, DSMRdata.voltage_l3) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {204, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}}
 };
 
 // Modbus mapping CHINT DTSU666
@@ -183,7 +188,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
             if ( type == ModbusDataType::UINT32 ){
               val.u = (*selectedMapping)[currentAddr].valueGetter();
             } else if ( type == ModbusDataType::FLOAT ){
-              val.f = (*selectedMapping)[currentAddr].valueGetter();
+              val.u = (float)(*selectedMapping)[currentAddr].valueGetter();
             }    
         } else {
             Debugf("MBUS WRONG VALUE -- addr: %d\n", currentAddr);
@@ -237,11 +242,16 @@ void mbusSetup(){
 ModbusServerRTU MBserverRTU( MBUS_RTU_TIMEOUT, RTSPIN );
 
 void SetupMB_RTU(){
-#ifdef NRG_DONGLE
+#ifndef ULTRA  
+  if ( Module != MOD_RS485 ) {
+    DebugTln("Setup Modbus RTU TERMINATED");
+    return;
+  }
   #define RTU_SERIAL Serial
-#else
+#else 
   #define RTU_SERIAL Serial2
-#endif  
+#endif
+  DebugTln("Setup Modbus RTU");
   RTU_SERIAL.end();
   RTUutils::prepareHardwareSerial(RTU_SERIAL);
   RTU_SERIAL.begin( MBUS_RTU_BAUD, MBUS_RTU_SERIAL, RXPIN, TXPIN );
