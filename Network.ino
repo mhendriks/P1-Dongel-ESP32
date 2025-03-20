@@ -327,20 +327,21 @@ void startMDNS(const char *Hostname)
 
 #ifdef ETHERNET
 
-// #include <WebServer_ESP32_SC_W5500.h>
-#include <ETH.h>
-#include <SPI.h>
+#include <WebServer_ESP32_SC_W5500.h>
+// #include <ETH.h>
+// #include <SPI.h>
 
 #define ETH_TYPE            ETH_PHY_W5500
 #define ETH_RST            -1
 #define ETH_ADDR            1
 
 void startETH(){
-  SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO);
-  ETH.enableIPv6();
-  ETH.begin(ETH_TYPE, ETH_ADDR, CS_GPIO, INT_GPIO, ETH_RST, SPI);
-  // ETH.begin( MISO_GPIO, MOSI_GPIO, SCK_GPIO, CS_GPIO, INT_GPIO, SPI_CLOCK_MHZ, ETH_SPI_HOST );
+  // SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO);
+  // ETH.enableIpV6();
+  // ETH.begin(ETH_TYPE, ETH_ADDR, CS_GPIO, INT_GPIO, ETH_RST, SPI);//sdk3.0
+  ETH.begin( MISO_GPIO, MOSI_GPIO, SCK_GPIO, CS_GPIO, INT_GPIO, SPI_CLOCK_MHZ, ETH_SPI_HOST ); //SC_W5500
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
+
 }
 
 #else

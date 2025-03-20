@@ -54,15 +54,14 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
       #endif  
     #endif
   #else
-    #ifdef __Az__
-      #include "hw_profile_p1_pro_az.h"
-    #else
       #ifdef NRG_DONGLE
         #include "hw_profile_nrgd.h"
       #else
         #include "hw_profile_p1_pro.h"
       #endif
-    #endif
+      #ifdef __Az__
+        #include "hw_az.h"
+      #endif
   #endif
 #endif
 
