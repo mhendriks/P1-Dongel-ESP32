@@ -52,9 +52,8 @@ Default checks
     - Overspanning per fase (gewist om 00:00)
     - detail P per fase afgelopen uur (sample eens per 10s)
 
-4.12.3
+4.12.4
 - inlezen van solar config in frontend
-- Ultra: shutdown ETH on Wifi usage
 - add MB mapper > 2 = DTSU666
 
 ************************************************************************************
@@ -69,13 +68,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
-#define DEBUG
+// #define DEBUG
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
-// #define ULTRA         //ultra (mini) dongle
-#define ETHERNET      //ethernet dongle
-#define ETH_P1EP          //ethernet pro+ dongle
+#define ULTRA         //ultra (mini) dongle
+// #define ETHERNET      //ethernet dongle
+// #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE   
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 // #define __Az__
@@ -92,7 +91,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define MB_RTU
 
 #include "DSMRloggerAPI.h"
-#include "esp_mac.h"
 
 void setup() 
 {
@@ -103,18 +101,6 @@ void setup()
   USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, Firmware.Version ); 
   Debugf("Original cpu speed: %d\n",Freq);
   PushButton.begin(IO_BUTTON);
-
-  uint8_t mac_eth[6] = { 0xFE, 0xED, 0xDE, 0xAD, 0xBE, 0xEF };
-  esp_read_mac(mac_eth, ESP_MAC_ETH);
-  USBPrint("---Ethernet MAC: ");
-  for (int i = 0; i < 5; i++) {
-    USBPrintf("%02X:", mac_eth[i]);
-  }
-  USBPrintf("%02X\n", mac_eth[5]);
-
-  esp_base_mac_addr_set( mac_eth );
-  
-  // esp_iface_mac_addr_set(baseMac,ESP_MAC_WIFI_SOFTAP);
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   SetConfig();

@@ -46,7 +46,6 @@ void PostMacIP() {
 
 void WifiOff(){
   if ( WiFi.isConnected() ) WiFi.disconnect(true,true);
-  // adc_power_off();
   btStop();
   WiFi.mode(WIFI_OFF);
   esp_wifi_stop();
@@ -59,6 +58,7 @@ bool bNoNetworkConn = false;
 bool bEthUsage = false;
 
 // Network event -> Ethernet is dominant
+// https://github.com/espressif/arduino-esp32/blob/master/libraries/Network/src/NetworkEvents.h
 static void onNetworkEvent (WiFiEvent_t event) {
   switch (event) {
 #ifdef ETHERNET  
@@ -72,6 +72,9 @@ static void onNetworkEvent (WiFiEvent_t event) {
       WifiOff();
       // netw_state = NW_ETH;
       bEthUsage = true; //set only once 
+      break;
+    case ARDUINO_EVENT_ETH_GOT_IP6: //7
+      LogFile("ETH GOT IP V6", true);
       break;
     case ARDUINO_EVENT_ETH_GOT_IP: //5
       {
@@ -110,8 +113,11 @@ static void onNetworkEvent (WiFiEvent_t event) {
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
         Debug(" )\n\n");
         WifiReconnect = 0;
-        if ( bEthUsage ) WifiOff();
-        else netw_state = NW_WIFI;
+        if ( bEthUsage ) WifiOff();        
+        else {
+          enterPowerDownMode(); //disable ETH
+          netw_state = NW_WIFI;
+        }
         bNoNetworkConn = false;
         break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
@@ -126,7 +132,7 @@ static void onNetworkEvent (WiFiEvent_t event) {
 #endif        
         break;
     default:
-        sprintf(cMsg,"WiFi-event : %d | rssi: %d | channel : %i",event, WiFi.RSSI(), WiFi.channel());
+        sprintf(cMsg,"Network-event : %d | rssi: %d | channel : %i",event, WiFi.RSSI(), WiFi.channel());
         LogFile(cMsg, true);
         break;
     }
@@ -182,7 +188,9 @@ void startWiFi(const char* hostname, int timeOut)
   uint8_t timeout = 0;
   while ( (netw_state == NW_NONE) && (timeout++ < 35) ) {
     delay(100); 
+    Debug(".");
   } 
+  Debugln();
   // w5500_powerDown();
 #endif 
   
@@ -327,25 +335,82 @@ void startMDNS(const char *Hostname)
 
 #ifdef ETHERNET
 
-#include <WebServer_ESP32_SC_W5500.h>
-// #include <ETH.h>
-// #include <SPI.h>
+#include <ETH.h>
+#include <SPI.h>
+#include "esp_mac.h"
 
 #define ETH_TYPE            ETH_PHY_W5500
 #define ETH_RST            -1
 #define ETH_ADDR            1
 
+//workaround to use the ESP_MAC_ETH mac address instead of local mac address
+class EthernetClass {
+public:
+  bool myBeginSPI(ETHClass& eth, eth_phy_type_t type, int32_t phy_addr, uint8_t *mac_addr, int cs, int irq, int rst, SPIClass *spi, int sck, int miso, int mosi, spi_host_device_t spi_host, uint8_t spi_freq_mhz);
+};
+
+bool EthernetClass::myBeginSPI(ETHClass& eth, eth_phy_type_t type, int32_t phy_addr, uint8_t *mac_addr, int cs, int irq, int rst, SPIClass *spi, int sck, int miso, int mosi, spi_host_device_t spi_host, uint8_t spi_freq_mhz) {
+  return eth.beginSPI(type, phy_addr, mac_addr, cs, irq, rst, spi, sck, miso, mosi, spi_host, spi_freq_mhz);
+}
+
+EthernetClass myEthernet;
+
 void startETH(){
+  
+  //derive ETH mac address
+  uint8_t mac_eth[6] = { 0xFE, 0xED, 0xDE, 0xAD, 0xBE, 0xEF };
+  esp_read_mac(mac_eth, ESP_MAC_ETH);
+  
   // SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO);
-  // ETH.enableIpV6();
-  // ETH.begin(ETH_TYPE, ETH_ADDR, CS_GPIO, INT_GPIO, ETH_RST, SPI);//sdk3.0
-  ETH.begin( MISO_GPIO, MOSI_GPIO, SCK_GPIO, CS_GPIO, INT_GPIO, SPI_CLOCK_MHZ, ETH_SPI_HOST ); //SC_W5500
+  ETH.enableIPv6();
+  // ETH.begin(ETH_TYPE, ETH_ADDR, CS_GPIO, INT_GPIO, ETH_RST, SPI2_HOST ,SCK_GPIO, MISO_GPIO, MOSI_GPIO); //sdk3.0
+  myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, CS_GPIO, INT_GPIO, ETH_RST, NULL, SCK_GPIO, MISO_GPIO, MOSI_GPIO, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
 
 }
 
+void W5500_Read_PHYCFGR() {
+    digitalWrite(CS_GPIO, LOW);
+
+    // Stuur het PHYCFGR-adres met het "read" bit (bit 15 = 1)
+    SPI.transfer16(0x802E); // 0x802E = 0x002E met "read" bit ingesteld
+    uint8_t phycfgr = SPI.transfer(0x00); // Ontvang data
+
+    digitalWrite(CS_GPIO, HIGH);
+
+#ifdef DEBUG
+    // Print registerwaarde en status
+    Debug("PHYCFGR Register: 0x");
+    Debugln(phycfgr, HEX);
+
+    Debug("PHY Status - ");
+    Debug((phycfgr & 0x40) ? "Software control, " : "Auto mode, ");
+    Debug((phycfgr & 0x4) ? "Full Duplex, " : "Half Duplex, ");
+    Debug((phycfgr & 0x2) ? "100 Mbps, " : "10 Mbps, ");
+    Debugln((phycfgr & 0x1) ? "Link UP, " : "Link DOWN, ");
+#endif
+
+}
+
+void enterPowerDownMode() {
+  // Select the W5500 chip
+  W5500_Read_PHYCFGR();
+
+  digitalWrite(CS_GPIO, LOW);
+  SPI.transfer((0x002E >> 8) & 0x7F); // Upper address byte
+  SPI.transfer(0x002E & 0xFF);        // Lower address byte
+  SPI.transfer(0x04);               // Control byte (W5500 write)
+  SPI.transfer(0x70);              // Data to write
+  digitalWrite(CS_GPIO, HIGH);
+  
+  // ETH.end(); //controler stopped and this will throw an error
+  delay(500);
+  W5500_Read_PHYCFGR();
+}
+
 #else
   void startETH(){}
+  void enterPowerDownMode(){}
 #endif //def ETHERNET
 
 String IP_Address(){
