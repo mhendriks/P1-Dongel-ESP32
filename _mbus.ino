@@ -69,6 +69,8 @@ std::map<uint16_t, ModbusMapping> mapping_default = {
     { 28, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l3_present) ? (uint32_t)DSMRdata.current_l3.int_val() : MBUS_VAL_UNAVAILABLE; } }},
     { 30, { ModbusDataType::UINT32, []() { return (mbusGas) ? (uint32_t)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600)) : MBUS_VAL_UNAVAILABLE; } }},
     { 32, { ModbusDataType::UINT32, []() { return (mbusGas) ? (uint32_t)(gasDelivered * 1000) : MBUS_VAL_UNAVAILABLE; } }},
+    { 34, { ModbusDataType::UINT32, []() { return (DSMRdata.electricity_tariff_present) ? (uint32_t)atoi(DSMRdata.electricity_tariff.c_str()) : MBUS_VAL_UNAVAILABLE; } }},
+    { 36, { ModbusDataType::UINT32, []() { return (DSMRdata.peak_pwr_last_q_present) ? (uint32_t)DSMRdata.peak_pwr_last_q.int_val() : MBUS_VAL_UNAVAILABLE; } }},
 };
 
 // Modbus mapping SDM630 = 1, see https://www.eastroneurope.com/images/uploads/products/protocol/SDM630_MODBUS_Protocol.pdf
@@ -140,7 +142,7 @@ std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[3] = {34, 206, 24};
+uint16_t MaxReg[3] = {38, 206, 24};
 
 // Change active mapping
 void setModbusMapping(int mappingChoice) {

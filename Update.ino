@@ -20,17 +20,26 @@ void update_finished() {
 
 void update_started() {
   LogFile("OTA UPDATE started", true);
-  if (bWebUpdate) httpServer.send(200, "text/html", "OTA update gestart, duurt ca. 2 - 3 minuten...");
+  if (bWebUpdate) {
+    httpServer.sendHeader("Location", "/#UpdateStart");
+    httpServer.send ( 303, "text/html", "");
+    // //handle redirect otherwise the browser will stay in pending
+    int cnt = 0;
+    while (cnt++ < 10) {
+      httpServer.handleClient();
+      delay(100);
+    }
+  }
 }
 
 void update_progress(int cur, int total) {
-  Debugf("HTTP update process at %d of %d bytes...\r", cur, total);
+  Debugf( "HTTP update process at %d of %d bytes = %d%%\r", cur, total, (cur * 100) / total );
 }
 
 void update_error(int err) {
   Debugf("HTTP update fatal error code %d | %s\n", err, httpUpdate.getLastErrorString().c_str());
   LogFile("OTA ERROR: no update",false);
-  if (bWebUpdate) httpServer.send(200, "text/html", "OTA ERROR: " + err);
+  // if (bWebUpdate) httpServer.send(500, "text/html", "OTA ERROR: " + err);
 }
 
 //---------------
@@ -56,10 +65,13 @@ void RemoteUpdate(const char* versie, bool sketch){
 
   Debugln(F("\n!!! OTA UPDATE !!!"));
 
+
   if (bWebUpdate) {
     if (httpServer.argName(0) != "version") {
-        httpServer.send(200, "text/html", "OTA ERROR: No version argument");
+        // httpServer.send(500, "text/html", "OTA ERROR: No version argument");
         LogFile("OTA ERROR: missing version argument",true );
+        httpServer.sendHeader("Location", "/#UpdateStart?error=no_argument");
+        httpServer.send ( 303, "text/html", "");
         bWebUpdate = false;
         return;
     }
@@ -68,6 +80,9 @@ void RemoteUpdate(const char* versie, bool sketch){
   else if ( strlen(versie) ) _versie = versie; 
        else {   
               LogFile("OTA ERROR: missing version argument", true);
+              // httpServer.send(500, "text/html", "OTA ERROR: missing version argument");
+              httpServer.sendHeader("Location", "/#UpdateStart?error=missing_argument");
+              httpServer.send ( 303, "text/html", "");
               bWebUpdate = false; 
               return; 
             }
@@ -99,6 +114,11 @@ void RemoteUpdate(const char* versie, bool sketch){
   switch (ret) {
       case HTTP_UPDATE_FAILED:
         Debugf("OTA ERROR: (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+
+        if (bWebUpdate) {
+          httpServer.sendHeader("Location", "/#UpdateStart?error=failed");
+          httpServer.send ( 303, "text/html", "");
+        }
         break;
 
       case HTTP_UPDATE_NO_UPDATES:

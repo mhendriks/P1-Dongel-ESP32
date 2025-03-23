@@ -1068,10 +1068,15 @@ function bootsTrapMain()
 	
   //goto tab after reload FSExplorer
 	if (location.hash == "#FileExplorer") { document.getElementById('bFSExplorer').click(); }
-
+	if ( location.hash.startsWith("#UpdateStart") ) {
+		var cmd = location.hash.split('#')[1].split('?');
+// 		console.log( "command: "  + cmd );
+		UpdateStart( cmd[1] && cmd[0] ? cmd[1] : "" );
+	}
   //handle the redirect after REBOOT / RESET / UPDATE
 	if (location.hash.split('#')[1].split('?')[0] == "Redirect") { handleRedirect(); }
-
+	if (location.hash.split('#')[1].split('?')[0] == "Updating") { console.log("updating redirect"); }
+	
 	//reselect Dash when Home icon has been clicked
  	document.getElementById("Home").addEventListener("click", function() { document.getElementById('bDashTab').click(); });
  	
@@ -1178,7 +1183,6 @@ function NetSwitchUpdateBar() {
 		barFillRight.innerHTML = "Aan";
 	}
 }
-
 
   //============================================================================    
 function fetchNetSwitchConfig() {
@@ -1475,7 +1479,7 @@ function SendNetSwitchJson() {
 	  console.log("firmwareVersion["+firmwareVersion+"] >= GitHubVersion["+GitHubVersion+"]");
 	  if (GitHubVersion == 0 || firmwareVersion >= GitHubVersion)
 			newVersionMsg = "";
-	  else  newVersionMsg = " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
+	  else newVersionMsg = " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
 	  document.getElementById('message').innerHTML = newVersionMsg;
 	  console.log(newVersionMsg);
 
@@ -1488,13 +1492,71 @@ function SendNetSwitchJson() {
 		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>Klik voor update</a>";
 		  else VerCel3.innerHTML = "laatste versie";
 	  }
+//TEST
+// 	  VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>Klik voor update</a>";
+	
   }
     
-    
-  function RemoteUpdate() {
-  	let text = "Press a button!\nEither OK or Cancel.";
-  if (confirm("Heeft u eerst de RNG Files gedownload?\n\nKlik OK om door te gaan") == true) location.href = '/remote-update?version=' + LastVersion;
-  }
+function closeUpdate() {
+	document.getElementById("updatePopup").style.visibility = "hidden";
+	document.location.href="/";
+	// location.reload();
+}    
+
+let progress = 0;
+let progressBar, statusText, checkInterval, update_interval; 
+
+function UpdateStart( msg ){
+	console.log("Updatestatus msg: " + msg );
+// 	console.log("Updatestatus error: " + msg.split('=')[1] );
+
+	document.getElementById("updatePopup").style.visibility = "visible";
+	progressBar = document.getElementById("progressBar");
+	statusText = document.getElementById("updatestatus");
+	
+	if ( msg && msg.split('=')[0] == "error") {
+		statusText.innerText = "Error: " + msg.split('=')[1];
+	} else {
+		statusText.innerText = "Update gestart...";
+		progress = 0;
+		updateProgress();
+	}
+}
+        
+function RemoteUpdate() {        
+// 	document.location.href = "/remote-update?version";
+	document.location.href = "/remote-update?version=" + LastVersion;
+}
+
+function updateProgress() {
+	 update_interval = setInterval(() => {
+		if (progress < 90) {
+			progress += 5; // 18 seconden naar 90%
+			progressBar.style.width = progress + "%";
+		} else {
+			clearInterval(update_interval);
+			checkESPOnline(); // Start controle ESP32 na 90%
+		}
+	}, 1000);
+}
+
+function checkESPOnline() {
+	statusText.innerText = "Wachten op herstart...";
+
+	checkInterval = setInterval(() => {
+		fetch("/api/v2/dev/info")
+			.then(response => {
+				if (response.status === 200) {
+					clearInterval(checkInterval);
+					progressBar.style.width = "100%";
+					statusText.innerText = "Update voltooid!";
+				}
+			})
+			.catch(() => {
+				console.log("ESP nog niet online...");
+			});
+	}, 2000); // Check elke 2 seconden
+}
   
   //get new devinfo==============================================================  
   function refreshDevInfo()
@@ -3435,8 +3497,8 @@ function formatFailureLog(svalue) {
       ,[ "water_delivered_ts",	  "Tijdcode Watermeterstand"]
 	  ,[ "mqtt_tls",	  		  "MQTT over tls"]
 	  ,[ "dev-pairing",	  		  "Peer2Peer communication"]
-	  ,[ "eid-enabled",	  		  "EnergyID aan/uit"]		  		  		  
-	  ,[ "utilization",	  		  "CPU gebruik"]
+	  ,[ "eid-enabled",	  		  "EnergyID aan/uit"]	
+	  ,[ "utilization",	  		  "CPU gebruik"]	  		  
   ];
 
 /*

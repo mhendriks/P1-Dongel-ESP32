@@ -53,6 +53,14 @@ Default checks
     - detail P per fase afgelopen uur (sample eens per 10s)
 
 4.12.4
+√ webpage text and color changes (Thanks Hans)
+√ webpage proper name for utilisation
+√ Modbus: Tariff high/low in Modbus general registers (34)
+√ Modbus: Peak last Quarter (BE) in Modbus general registers (36)
+√ changed: 303 response when updating/update error
+√ add update popup on webpage
+
+4.12.5
 - inlezen van solar config in frontend
 - add MB mapper > 2 = DTSU666
 
@@ -72,7 +80,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
-#define ULTRA         //ultra (mini) dongle
+// #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE   

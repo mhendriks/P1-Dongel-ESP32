@@ -217,17 +217,17 @@ function ensureChartsReady()
 	  waterData = createChartDataContainerWithStack();
     
     //create datasets ED & ER
-    var dsED1 = createDatasetBAR('false', 'red',    "Gebruikt T1", "STACK");
-    var dsED2 = createDatasetBAR('false', 'orange', "Gebruikt T2", "STACK");
-    var dsER1 = createDatasetBAR('false', 'green',  "Opgewekt T1", "STACK");
-    var dsER2 = createDatasetBAR('false', 'lightgreen', "Opgewekt T2", "STACK");
+    var dsED1 = createDatasetBAR('false', 'red',    "Verbruik T1", "STACK");
+    var dsED2 = createDatasetBAR('false', 'orange', "Verbruik T2", "STACK");
+    var dsER1 = createDatasetBAR('false', 'green',  "Teruglevering T1", "STACK");
+    var dsER2 = createDatasetBAR('false', 'lightgreen', "Teruglevering T2", "STACK");
     
     // GAS
-    var dsG1 = createDatasetLINE('false', 'blue', "Gas Gebruikt");
-    if ( Dongle_Config == "p1-q") dsG1.label = "Warmte Gebruikt";
+    var dsG1 = createDatasetLINE('false', 'blue', "Gasverbruik");
+    if ( Dongle_Config == "p1-q") dsG1.label = "Warmteverbruik";
    
     // WATER
-    var dsW1 = createDatasetLINE('false', 'blue', "Water Gebruikt");
+    var dsW1 = createDatasetLINE('false', 'blue', "Waterverbruik");
   
     var p = 0;
     var fTarif1 = false;
@@ -286,19 +286,19 @@ function ensureChartsReady()
     gasData   = createChartDataContainerWithStack();    
 	  waterData = createChartDataContainerWithStack();
 
-    listPeriods = ["Gebruikt deze periode", "Gebruikt vorige periode", "Opgewekt T1 deze periode", "Opgewekt T1 vorige periode"];
+    listPeriods = ["Verbruik deze periode", "Verbruik vorige periode", "Opgewekt T1 deze periode", "Opgewekt T1 vorige periode"];
     
     // ED this & prev
-    var dsED1 = createDatasetBAR('false', 'rgba(255,0,  0, 1)', "Gebruikt T1 deze periode",   "DP");    
-    var dsED2 = createDatasetBAR('false', 'rgba(255,0,  0,.5)', "Gebruikt T1 vorige periode", "RP");
-    var dsED3 = createDatasetBAR('false', 'rgba(255,165,0, 1)', "Gebruikt T2 deze periode",   "DP");
-    var dsED4 = createDatasetBAR('false', 'rgba(255,165,0,.5)', "Gebruikt T2 vorige periode", "RP");
+    var dsED1 = createDatasetBAR('false', 'rgba(255,0,  0, 1)', "Verbruik T1 deze periode",   "DP");    
+    var dsED2 = createDatasetBAR('false', 'rgba(255,0,  0,.5)', "Verbruik T1 vorige periode", "RP");
+    var dsED3 = createDatasetBAR('false', 'rgba(255,165,0, 1)', "Verbruik T2 deze periode",   "DP");
+    var dsED4 = createDatasetBAR('false', 'rgba(255,165,0,.5)', "Verbruik T2 vorige periode", "RP");
 
     // ER this & prev
-    var dsER1 = createDatasetBAR('false', 'rgba(0, 255,0, 1)', "Opgewekt T1 deze periode",  "DP");
-    var dsER2 = createDatasetBAR('false', 'rgba(0, 255,0,.5)', "Opgewekt T1 vorige periode","RP");
-    var dsER3 = createDatasetBAR('false', 'rgba(74,240,0, 1)', "Opgewekt T2 deze periode",  "DP");
-    var dsER4 = createDatasetBAR('false', 'rgba(74,240,0,.5)', "Opgewekt T2 vorige periode","RP");
+    var dsER1 = createDatasetBAR('false', 'rgba(0, 255,0, 1)', "Teruglevering T1 deze periode",  "DP");
+    var dsER2 = createDatasetBAR('false', 'rgba(0, 255,0,.5)', "Teruglevering T1 vorige periode","RP");
+    var dsER3 = createDatasetBAR('false', 'rgba(74,240,0, 1)', "Teruglevering T2 deze periode",  "DP");
+    var dsER4 = createDatasetBAR('false', 'rgba(74,240,0,.5)', "Teruglevering T2 vorige periode","RP");
 
     // GD this & prev
     var dsGD1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", "Gas deze periode");
@@ -548,18 +548,18 @@ function ensureChartsReady()
     var dcGX = createChartDataContainerWithStack();
 
     //ED L1..3
-    var dsED1 = createDatasetBAR('false', 'red', "Gebruikt L1", "A");    
-    var dsED2 = createDatasetBAR('false', 'tomato', "Gebruikt L2", "A");    
-    var dsED3 = createDatasetBAR('false', 'salmon', "Gebruikt L3", "A");
+    var dsED1 = createDatasetBAR('false', 'red', "Vermogen L1", "A");    
+    var dsED2 = createDatasetBAR('false', 'darkorange', "Vermogen L2", "A");    
+    var dsED3 = createDatasetBAR('false', 'MistyRose', "Vermogen L3", "A");
 
     //ER L1..3
-    var dsER1 = createDatasetBAR('false', 'yellowgreen', "Opgewekt L1", "A");
-    var dsER2 = createDatasetBAR('false', 'springgreen', "Opgewekt L2", "A");
-    var dsER3 = createDatasetBAR('false', 'green',       "Opgewekt L3", "A");
+    var dsER1 = createDatasetBAR('false', 'yellowgreen', "Teruglevering L1", "A");
+    var dsER2 = createDatasetBAR('false', 'springgreen', "Teruglevering L2", "A");
+    var dsER3 = createDatasetBAR('false', 'green',       "Teruglevering L3", "A");
     
     //GD
-    var dsG1 = createDatasetLINE('false', 'blue', "Gas verbruikt");
-    if(Dongle_Config == "p1-q") dsG1.label = "Warmte verbruikt";
+    var dsG1 = createDatasetLINE('false', 'blue', "Gasverbruik");
+    if(Dongle_Config == "p1-q") dsG1.label = "Warmteverbruik";
     dsG1.spanGaps = true;
 
     // Fill datasets

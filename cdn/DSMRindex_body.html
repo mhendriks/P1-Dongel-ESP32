@@ -774,6 +774,18 @@
   </section>  <!-- END Dash Tab --> 
   
   <div hidden id="loader"></div>
+  <div id="update">
+     <div class="overlay" id="updatePopup">
+        <div class="popup">
+            <h2>Software Update</h2>
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <p id="updatestatus"></p>
+            <button onclick="closeUpdate()">Sluiten</button>
+        </div>
+    </div>  </div> <!-- update -->
+  </div>
   <!-- REST -->
   <div style="margin: 30px;">
     <canvas id="dataChart" style="display: none;" width="900" height="300"></canvas>

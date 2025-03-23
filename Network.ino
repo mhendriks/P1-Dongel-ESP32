@@ -414,6 +414,7 @@ void enterPowerDownMode() {
 #endif //def ETHERNET
 
 String IP_Address(){
+
 #ifdef ETHERNET
   if ( netw_state == NW_ETH ) return ETH.localIP().toString();
   else return WiFi.localIP().toString();
