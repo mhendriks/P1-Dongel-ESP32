@@ -71,6 +71,9 @@ std::map<uint16_t, ModbusMapping> mapping_default = {
     { 32, { ModbusDataType::UINT32, []() { return (mbusGas) ? (uint32_t)(gasDelivered * 1000) : MBUS_VAL_UNAVAILABLE; } }},
     { 34, { ModbusDataType::UINT32, []() { return (DSMRdata.electricity_tariff_present) ? (uint32_t)atoi(DSMRdata.electricity_tariff.c_str()) : MBUS_VAL_UNAVAILABLE; } }},
     { 36, { ModbusDataType::UINT32, []() { return (DSMRdata.peak_pwr_last_q_present) ? (uint32_t)DSMRdata.peak_pwr_last_q.int_val() : MBUS_VAL_UNAVAILABLE; } }},
+    { 38, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l1_present) ? (int32_t)DSMRdata.power_delivered_l1.int_val() - (int32_t)DSMRdata.power_returned_l1.int_val() : MBUS_VAL_UNAVAILABLE; } }},
+    { 40, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l2_present) ? (int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val() : MBUS_VAL_UNAVAILABLE; } }},
+    { 42, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l3_present) ? (int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val() : MBUS_VAL_UNAVAILABLE; } }},
 };
 
 // Modbus mapping SDM630 = 1, see https://www.eastroneurope.com/images/uploads/products/protocol/SDM630_MODBUS_Protocol.pdf
@@ -78,6 +81,7 @@ std::map<uint16_t, ModbusMapping> mapping_default = {
 union {
   float    f;
   uint32_t u;
+  int32_t  i;
 } map_temp;
 
 std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
@@ -140,9 +144,14 @@ std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
 //     {0x2020, {ModbusDataType::FLOAT, mapping_dtsu666[0x2018].valueGetter}},  // Alias voor 0x2018
 // };
 
+// uint16_t getMaxKey(const std::map<uint16_t, ModbusMapping>& mapping) {
+//     if (mapping.empty()) return 0; // Of een andere passende foutwaarde
+//     return mapping.rbegin()->first; // Laatste sleutel in gesorteerde map
+// }
+
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[3] = {38, 206, 24};
+uint16_t MaxReg[3] = {44, 206, 24};
 
 // Change active mapping
 void setModbusMapping(int mappingChoice) {
@@ -178,7 +187,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
     union uMbusData {
       float    f;
       uint32_t u;
-      int32_t  s;
+      int32_t  i;
       uint8_t  b[4];
     } val;
 
@@ -191,7 +200,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
               val.u = (*selectedMapping)[currentAddr].valueGetter();
             } else if ( type == ModbusDataType::FLOAT ){
               val.u = (float)(*selectedMapping)[currentAddr].valueGetter();
-            }    
+            }     
         } else {
             Debugf("MBUS WRONG VALUE -- addr: %d\n", currentAddr);
             val.u = MBUS_VAL_UNAVAILABLE;
@@ -199,6 +208,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
 
 #ifdef DEBUG
         Debugf("\n--MODBUS uint32 : %u\n", val.u);
+        Debugf("--MODBUS int32  : %i\n", val.i);
         Debugf("--MODBUS HEX    : %08X\n", val.u);
         Debugf("--MODBUS FLOAT  : %f\n",   val.f);
         Debugf("--MODBUS Bytes  : [%d] [%d]\n", val.b[1], val.b[0]);

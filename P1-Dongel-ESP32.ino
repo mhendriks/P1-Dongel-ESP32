@@ -48,19 +48,18 @@ Default checks
 - experimenteel: Inzichten vanaf opstarten dongle
     - sluipverbruik (meten tussen 23u - 06u, uitgaande dat er dan geen teruglevering is)
     - loadbalancing over de fases heen
-    - Pmax per fase 
+    - V en I max per fase (gewist om 00:00)
+    - Pmax per fase  (gewist om 00:00)
     - Overspanning per fase (gewist om 00:00)
     - detail P per fase afgelopen uur (sample eens per 10s)
 
-4.12.4
-√ webpage text and color changes (Thanks Hans)
-√ webpage proper name for utilisation
-√ Modbus: Tariff high/low in Modbus general registers (34)
-√ Modbus: Peak last Quarter (BE) in Modbus general registers (36)
-√ changed: 303 response when updating/update error
-√ add update popup on webpage
-
 4.12.5
+√ Frontend: Rename l1 -> L1 etc (thanks Hans)
+√ Frontend: bugfix month graph y label (thanks Hans)
+√ mqtt handling in worker thread (mqtt issues holds up the total proces) (thanks Eric)
+
+4.13.0
+- ESPAsyncWebServer
 - inlezen van solar config in frontend
 - add MB mapper > 2 = DTSU666
 
@@ -81,8 +80,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
 // #define ULTRA         //ultra (mini) dongle
-// #define ETHERNET      //ethernet dongle
-// #define ETH_P1EP          //ethernet pro+ dongle
+#define ETHERNET      //ethernet dongle
+#define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE   
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 // #define __Az__
@@ -133,10 +132,6 @@ void setup()
   startTelnet();
   startMDNS(settingHostname);
   startNTP();
-#ifndef MQTT_DISABLE
-  MQTTSetBaseInfo();
-  MQTTsetServer();
-#endif  
 
 //================ Check necessary files ============================
   if (!DSMRfileExist(settingIndexPage, false) ) {
@@ -180,47 +175,54 @@ void setup()
   //create a task that will be executed in the fP1Reader() function, with priority 1
   //p1 task runs always on core 0. On the dual core models Arduino runs on core 1. It isn't possible that the process runs on both cores.
   if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*20, NULL, 2, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
-
+  if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*10, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
 
 } // setup()
 
-
 //P1 reader task
 void fP1Reader( void * pvParameters ){
-    DebugTln(F("Enable slimme meter..."));
-    SetupP1Out();
-    slimmeMeter.enable(false);
+  DebugTln(F("Enable slimme meter..."));
+  SetupP1Out();
+  slimmeMeter.enable(false);
 #ifdef ULTRA
-    digitalWrite(DTR_IO, LOW); //default on
+  digitalWrite(DTR_IO, LOW); //default on
 #endif   
-    while(true) {
-      handleSlimmemeter();
-      P1OutBridge();
-      vTaskDelay(10 / portTICK_PERIOD_MS);
-    }
+  while(true) {
+    handleSlimmemeter();
+    P1OutBridge();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+}
+
+void fMqtt( void * pvParameters ){
+#ifndef MQTT_DISABLE    
+  DebugTln(F("Start MQTT Thread"));
+  MQTTSetBaseInfo();
+  MQTTsetServer();
+  while(true) {
+    handleMQTT();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+#endif      
 }
 
 void loop () { 
-        
-        httpServer.handleClient();
-        handleMQTT();   
-        yield();
-      
-       if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
-          P1StatusWrite();
-          MQTTSentStaticInfo();
-          CHANGE_INTERVAL_MIN(StatusTimer, 30);
-       }
-       WifiWatchDog();
-       handleKeyInput();
-       handleRemoteUpdate();
-       PushButton.handler();
-       handleWater();
-       handleEnergyID();  
-       PostTelegram();
-       GetSolarDataN();
-       handleVirtualP1();
+  httpServer.handleClient();      
+  if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
+    P1StatusWrite();
+    MQTTSentStaticInfo();
+    CHANGE_INTERVAL_MIN(StatusTimer, 30);
+  }
+  WifiWatchDog();
+  handleKeyInput();
+  handleRemoteUpdate();
+  PushButton.handler();
+  handleWater();
+  handleEnergyID();  
+  PostTelegram();
+  GetSolarDataN();
+  handleVirtualP1();
 } // loop()
 
 

@@ -374,6 +374,8 @@ void MQTTSendVictronData(){
 
 //===========================================================================================
 void sendMQTTData() {
+  
+  bSendMQTT = false; 
 
 //TODO: log to file on error or reconnect
 #ifndef ETHERNET
@@ -416,8 +418,6 @@ void sendMQTTData() {
 #ifdef VICTRON_GRID
   MQTTSendVictronData();
 #endif
-
-  bSendMQTT = false; 
 
   }
 }

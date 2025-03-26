@@ -178,6 +178,8 @@ function ensureChartsReady()
     
     //console.log("Now in showMonthsGraph()..");
     copyMonthsToChart(data, type);
+
+    myElectrChart.options.scales.yAxes[0].scaleLabel.labelString = "kWh";
     myElectrChart.data = electrData;
     myElectrChart.update();
 
@@ -315,7 +317,7 @@ function ensureChartsReady()
     //
     // fill datasets
     //
-	  var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
+	var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
     var stop = start - 12;
     var i;
     var slotyearbefore = 0;
