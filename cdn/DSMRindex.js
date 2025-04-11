@@ -340,7 +340,6 @@ function ShowHidePV(){
 	}
 }
 
-
 function SendNetSwitchJson() {
 		let data = {
 			value: parseInt(document.getElementById("value").value),
@@ -366,6 +365,109 @@ function SendNetSwitchJson() {
     .then(result => window.alert("NetSwitch config saved"))
     .catch(error => console.error("Error:", error));
   }
+  
+function InsightData(){
+	fetch(APIHOST+"/api/v2/stats", {"setTimeout": 5000})
+        .then(response => response.json())
+        .then(data => {
+            const eenheden = {
+                "U1piek": "V",
+                "U2piek": "V",
+                "U3piek": "V",
+                "I1piek": "A",
+                "I2piek": "A",
+                "I3piek": "A",
+                "Psluip": "W",
+                "P1max": "W",
+                "P2max": "W",
+                "P3max": "W",
+                "TU1over": "sec",
+                "TU2over": "sec",
+                "TU3over": "sec",
+                "start_time": "uu:mm"
+            };
+
+            const namen = {
+                "U1piek": "Spanning Piek L1",
+                "U2piek": "Spanning Piek L2",
+                "U3piek": "Spanning Piek L3",
+                "I1piek": "Stroom Piek L1",
+                "I2piek": "Stroom Piek L2",
+                "I3piek": "Stroom Piek L3",
+                "Psluip": "Sluipverbruik",
+                "P1max": "Vermogen Piek L1",
+                "P2max": "Vermogen Piek L2",
+                "P3max": "Vermogen Piek L3",
+                "TU1over": "Tijd Overspanning L1",
+                "TU2over": "Tijd Overspanning L2",
+                "TU3over": "Tijd Overspanning L3",
+                "start_time": "Starttijd meting"
+            };
+            
+            const beschrijvingen = {
+				"U1piek": "Piekspanning fase 1 vandaag",
+				"U2piek": "Piekspanning fase 2 vandaag",
+				"U3piek": "Piekspanning fase 3 vandaag",
+				"I1piek": "Piekstroom fase 1 vandaag, afname of teruglevering",
+				"I2piek": "Piekstroom fase 2 vandaag, afname of teruglevering",
+				"I3piek": "Piekstroom fase 3 vandaag, afname of teruglevering",
+				"Psluip": "Sluipverbruik in Watt tussen 00:00 en 06:00",
+				"P1max": "Piekvermogen fase 1 vandaag, alleen afname",
+				"P2max": "Piekvermogen fase 2 vandaag, alleen afname",
+				"P3max": "Piekvermogen fase 3 vandaag, alleen afname",
+				"TU1over": "Aantal seconde dat fase 1 boven de 253V is geweest",
+                "TU2over": "Aantal seconde dat fase 2 boven de 253V is geweest",
+                "TU3over": "Aantal seconde dat fase 3 boven de 253V is geweest",
+				"start_time": "Starttijd meting of 00:00 of tijd dat de dongle reboot"
+			};
+
+            const tbody = document.getElementById("InsightsTableBody");
+            tbody.innerHTML = ""; // maak eerst leeg
+
+            for (const key in data) {
+                if (!(key in namen)) continue; // alleen bekende sleutels tonen
+
+                const row = document.createElement("tr");
+                const naamCell = document.createElement("td");
+               	naamCell.textContent = key;
+            	naamCell.title = beschrijvingen[key] || key;  // Tooltip
+                const waardeCell = document.createElement("td");
+                const eenheidCell = document.createElement("td");
+
+                naamCell.textContent = namen[key] || key;
+
+                let waarde = data[key];
+				
+                if (key.startsWith("U")) {
+                    waarde = (waarde / 1000).toFixed(1); // mV → V
+                } else if (key.startsWith("I")) {
+                    waarde = (waarde / 1000).toFixed(3); // mA → A
+                } else if (key === "start_time") {
+//                     const datum = new Date(waarde * 1000);
+                    let uur  = Math.trunc(waarde/3600 % 24);
+                    let minuten  = Math.trunc(waarde/60 % 60);
+                    waarde = String(uur).padStart(2, '0') + ":" + String(minuten).padStart(2, '0');
+                    
+                } else if (key.startsWith("Psl")) {
+                	if ( waarde == 0xFFFFFFFF ) waarde = "-";
+                }
+
+                waardeCell.textContent = waarde;
+                eenheidCell.textContent = eenheden[key] || "";
+                eenheidCell.style.textAlign = "center";
+
+                row.appendChild(naamCell);
+                row.appendChild(waardeCell);
+                row.appendChild(eenheidCell);
+                tbody.appendChild(row);
+            }
+        })
+        .catch(err => {
+            console.error("Fout bij ophalen van stats:", err);
+            const tbody = document.getElementById("InsightsTableBody");
+            tbody.innerHTML = `<tr><td colspan="3">Geen data beschikbaar.<br>Functie beschikbaar vanaf versie 4.13.0</td></tr>`;
+        });
+}
 
 function SolarSendData() {
 
@@ -485,6 +587,11 @@ document.addEventListener("visibilitychange", visibilityListener);
 window.addEventListener('popstate', function (event) {
 	activeTab = "b" + location.hash.slice(1, location.hash.length);
 	openTab();
+});
+
+window.addEventListener('hashchange', () => {
+  console.log('Hash changed:', window.location.hash);
+  // Handle the hash change here
 });
 
 //============================================================================  
@@ -791,8 +898,8 @@ function UpdateDash()
 			//min - max waarde
 			if (minV == 0.0 || Vmin_now < minV) { minV = Vmin_now; }
 			if (Vmax_now > maxV) { maxV = Vmax_now; }
-			document.getElementById(`power_delivered_2max`).innerHTML = Number(maxV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
-			document.getElementById(`power_delivered_2min`).innerHTML = Number(minV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
+// 			document.getElementById(`power_delivered_2max`).innerHTML = Number(maxV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
+// 			document.getElementById(`power_delivered_2min`).innerHTML = Number(minV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
 
 			//update gauge
 			gaugeV.data.datasets[0].data=[v1-207,253-json.voltage_l1.value];
@@ -860,14 +967,14 @@ function UpdateDash()
 		if (minKW == 0.0 || nvKW < minKW) { minKW = nvKW;}
 		if (nvKW> maxKW){ maxKW = nvKW; }
 		
-		if (Act_Watt){		
-			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW * 1000).toFixed(0);                    
-			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW * 1000).toFixed(0);           
-			document.getElementsByName('power').forEach(function(ele, idx) { ele.innerHTML = 'Watt'; }) //for all elements
-		} else {
-			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} );                    
-			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} );                        
-		}
+// 		if (Act_Watt){		
+// 			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW * 1000).toFixed(0);                    
+// 			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW * 1000).toFixed(0);           
+// 			document.getElementsByName('power').forEach(function(ele, idx) { ele.innerHTML = 'Watt'; }) //for all elements
+// 		} else {
+// 			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} );                    
+// 			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} );                        
+// 		}
 		
     // stop here if there is no history enabled
 		if (!EnableHist) {Spinner(false);return;}
@@ -1039,7 +1146,8 @@ function bootsTrapMain()
 {
   console.log("bootsTrapMain()");
 //   loadIcons();
-  getDevSettings();
+
+   getDevSettings();
 
   createDashboardGauges();
 
@@ -1067,6 +1175,10 @@ function bootsTrapMain()
 // 	console.log("location-hash-split: " + location.hash.split('#')[1].split('?')[0]);
 	
   //goto tab after reload FSExplorer
+  	console.log( "location.hash: " + location.hash);
+    console.log( "location.hash split 0: " + location.hash.split('#')[1] );
+	console.log( "location.hash split ?: " + location.hash.split('#')[1].split('?')[0] );
+	console.log( "location.hash split ?2: " + location.hash.split('#')[1].split('?')[1] );
 	if (location.hash == "#FileExplorer") { document.getElementById('bFSExplorer').click(); }
 	if ( location.hash.startsWith("#UpdateStart") ) {
 		var cmd = location.hash.split('#')[1].split('?');
@@ -1255,6 +1367,10 @@ function SendNetSwitchJson() {
             	actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
 //       		else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
       		break;
+
+		case "bInsightsTab":
+			InsightData();
+			break;
 		case "bPlafondTab":
 			refreshData();
 			break;

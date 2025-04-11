@@ -111,9 +111,22 @@ std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
     {204, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}}
 };
 
+// https://www.socomec.it/sites/default/files/2021-05/COUNTIS-E27-MODBUS_COMMUNICATION-TABLE_2017-08_CMT_EN.html
+std::map<uint16_t, ModbusMapping> mapping_alfen_socomec = {
+    { 0xC560, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l1_present ? (uint32_t)DSMRdata.current_l1.int_val() : MBUS_VAL_UNAVAILABLE); } }},
+    { 0xC562, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l2_present ? (uint32_t)DSMRdata.current_l2.int_val() : MBUS_VAL_UNAVAILABLE); } }},
+    { 0xC564, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l3_present ? (uint32_t)DSMRdata.current_l3.int_val() : MBUS_VAL_UNAVAILABLE); } }},
+
+    { 0xC566, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l1_present ? (uint32_t)DSMRdata.current_l1.int_val()+DSMRdata.current_l2.int_val()+DSMRdata.current_l3.int_val() : MBUS_VAL_UNAVAILABLE); } }},
+
+    { 0xC570, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l1_present ? (-DSMRdata.power_returned_l1.int_val() + DSMRdata.power_delivered_l1.int_val()) * 10 :MBUS_VAL_UNAVAILABLE); } }},
+    { 0xC572, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l2_present ? (-DSMRdata.power_returned_l2.int_val() + DSMRdata.power_delivered_l2.int_val()) * 10 :MBUS_VAL_UNAVAILABLE); } }},
+    { 0xC574, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l3_present ? (-DSMRdata.power_returned_l3.int_val() + DSMRdata.power_delivered_l3.int_val()) * 10 :MBUS_VAL_UNAVAILABLE); } }},
+};
+
 // Modbus mapping CHINT DTSU666
-// std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
-//     {0x0,   {ModbusDataType::INT16, []() { return 204; }}},
+std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
+    {0x0,   {ModbusDataType::INT16, []() { return 204; }}},
 //     {0x1,   {ModbusDataType::INT16, []() { return 701; }}},
 //     {0x2,   {ModbusDataType::INT16, []() { return 0; }}},
 //     {0x3,   {ModbusDataType::INT16, []() { return 0; }}},
@@ -142,7 +155,7 @@ std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
 //     {0x201E, {ModbusDataType::FLOAT, mapping_dtsu666[0x2016].valueGetter}},  // Alias voor 0x2016
 //     {0x2018, {ModbusDataType::FLOAT, []() { return DSMRdata.power_delivered_l3_present ? (DSMRdata.power_returned_l3 + DSMRdata.power_delivered_l3) * (DSMRdata.power_returned_l3 ? -10.0 : 10.0) : 0.0; }}},
 //     {0x2020, {ModbusDataType::FLOAT, mapping_dtsu666[0x2018].valueGetter}},  // Alias voor 0x2018
-// };
+};
 
 // uint16_t getMaxKey(const std::map<uint16_t, ModbusMapping>& mapping) {
 //     if (mapping.empty()) return 0; // Of een andere passende foutwaarde
@@ -151,7 +164,7 @@ std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[3] = {44, 206, 24};
+uint16_t MaxReg[4] = {44, 206, 24, 0xC574+2};
 
 // Change active mapping
 void setModbusMapping(int mappingChoice) {
@@ -159,7 +172,8 @@ void setModbusMapping(int mappingChoice) {
     switch (mappingChoice) {
         case 0: selectedMapping = &mapping_default; break;
         case 1: selectedMapping = &mapping_sdm630; break;
-        // case 2: selectedMapping = &mapping_dtsu666; break;
+        case 2: selectedMapping = &mapping_dtsu666; break;
+        case 3: selectedMapping = &mapping_alfen_socomec; break;
         default: selectedMapping = &mapping_default; break; // Fallback naar default
     }
 }
@@ -251,11 +265,12 @@ void mbusSetup(){
 #include "ModbusServerRTU.h"
 #include "DSMRloggerAPI.h"
 
-ModbusServerRTU MBserverRTU( MBUS_RTU_TIMEOUT, RTSPIN );
+// ModbusServerRTU MBserverRTU( MBUS_RTU_TIMEOUT, RTSPIN );
+ModbusServerRTU* MBserverRTU;
 
 void SetupMB_RTU(){
 #ifndef ULTRA  
-  if ( Module != MOD_RS485 ) {
+  if ( Module != _MOD_RS485 ) {
     DebugTln("Setup Modbus RTU TERMINATED");
     return;
   }
@@ -266,10 +281,13 @@ void SetupMB_RTU(){
   DebugTln("Setup Modbus RTU");
   RTU_SERIAL.end();
   RTUutils::prepareHardwareSerial(RTU_SERIAL);
-  RTU_SERIAL.begin( MBUS_RTU_BAUD, MBUS_RTU_SERIAL, RXPIN, TXPIN );
-  MBserverRTU.registerWorker(MBUS_DEV_ID, READ_HOLD_REGISTER, &MBusHandleRequest);//FC03
-  MBserverRTU.registerWorker(MBUS_DEV_ID, READ_INPUT_REGISTER, &MBusHandleRequest);//FC04
-  MBserverRTU.begin(RTU_SERIAL);
+  RTU_SERIAL.begin( MBUS_RTU_BAUD, MBUS_RTU_SERIAL, mb_rx, mb_tx );
+
+  MBserverRTU = new ModbusServerRTU(MBUS_RTU_TIMEOUT, mb_rts);
+
+  MBserverRTU->registerWorker(MBUS_DEV_ID, READ_HOLD_REGISTER, &MBusHandleRequest);//FC03
+  MBserverRTU->registerWorker(MBUS_DEV_ID, READ_INPUT_REGISTER, &MBusHandleRequest);//FC04
+  MBserverRTU->begin(RTU_SERIAL);
 }
 #else
 void SetupMB_RTU(){}

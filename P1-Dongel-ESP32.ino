@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
-**  Copyright (c) 2024 Smartstuff / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2025 Smartstuff / based on DSMR Api Willem Aandewiel
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
@@ -10,15 +10,13 @@ WENSEN
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
 - auto switch 3 - 1 fase max fuse
-- temparatuur ook opnemen in grafieken (A van Dijken)
+- temperatuur ook opnemen in grafieken (A van Dijken)
 - SSE of websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
 - Roberto: P1 H2O watersensor gegevens apart versturen (MQTT) van P1 
 - optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
 - #18 water en gas ook in de enkele json string (mqtt)
-- spanning bij houden igv teruglevering (+% teruglevering weergeven van de dag/uur/maand)
-- loadbalancing bijhouden over de fases
 - grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
 - Consistentie tijd-assen, links oud, rechts nieuw
   - in Actueel staat de laatste meting rechts en de oudste meting links
@@ -45,21 +43,21 @@ Default checks
 - ethernet
 - 4h test on 151
 
-- experimenteel: Inzichten vanaf opstarten dongle
-    - sluipverbruik (meten tussen 23u - 06u, uitgaande dat er dan geen teruglevering is)
+- Insights: Inzichten vanaf opstarten dongle / 00:00 reset
     - loadbalancing over de fases heen
-    - V en I max per fase (gewist om 00:00)
-    - Pmax per fase  (gewist om 00:00)
-    - Overspanning per fase (gewist om 00:00)
     - detail P per fase afgelopen uur (sample eens per 10s)
 
-4.12.5
-√ Frontend: Rename l1 -> L1 etc (thanks Hans)
-√ Frontend: bugfix month graph y label (thanks Hans)
-√ mqtt handling in worker thread (mqtt issues holds up the total proces) (thanks Eric)
+4.13.1
+- check and repair rng files on startup
 
-4.13.0
-- ESPAsyncWebServer
+
+
+- winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
+--> oplossing : 
+
+bool isDSTTransition(int lastHour, int currentHour) {
+    return (lastHour == 1 && currentHour == 3); // Detecteer de sprong
+}
 - inlezen van solar config in frontend
 - add MB mapper > 2 = DTSU666
 
@@ -79,11 +77,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
-// #define ULTRA         //ultra (mini) dongle
-#define ETHERNET      //ethernet dongle
-#define ETH_P1EP          //ethernet pro+ dongle
+#define ULTRA         //ultra (mini) dongle
+// #define ETHERNET      //ethernet dongle
+// #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE   
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
+
+//SPECIAL
 // #define __Az__
 
 //FEATURES
@@ -108,7 +108,6 @@ void setup()
   USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, Firmware.Version ); 
   Debugf("Original cpu speed: %d\n",Freq);
   PushButton.begin(IO_BUTTON);
-
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   SetConfig();
   lastReset = getResetReason();
@@ -124,6 +123,8 @@ void setup()
   if (!LittleFS.exists(SETTINGS_FILE)) writeSettings(); //otherwise the dongle crashes some times on the first boot
   else readSettings(true);
 
+//=============scan and repair RNG files ===========================
+  // CheckRingFile(RINGDAYS);
 //=============start Networkstuff ==================================
   
   startNetwork();

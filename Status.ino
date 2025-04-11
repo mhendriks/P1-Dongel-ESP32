@@ -38,7 +38,7 @@ void P1StatusRead(){
     P1Status.wtr_l = preferences.getUInt("wtr_l", 0);
 #ifdef ETHERNET
   #ifdef ETH_P1EP
-      P1Status.dev_type = P1EP;
+      P1Status.dev_type = _P1EP;
   #else
       P1Status.dev_type = PRO_ETH;
   #endif    

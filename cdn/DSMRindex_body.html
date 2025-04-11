@@ -17,6 +17,8 @@
       <li><a id='Home'   		class='nav-img' href="#DashTab" onclick="activeTab='bDashTab';openTab()"><span class="iconify" data-icon="mdi-chart-box-outline"></span></a></li>
 	  <li><a id='bDashTab'    	data-i18n-key="mnu-dash" class='tabButton nav-item active' href="#DashTab">Dash</a></li>
 	  <li><a id='bActualTab'    data-i18n-key="mnu-actual" class='tabButton nav-item' href="#ActualTab" >Actueel</a></li>
+	  <li><a id='bInsightsTab'    data-i18n-key="mnu-insghts" class='tabButton nav-item' href="#InsightsTab" >Insights</a></li>
+	  	  
       <li><a id='bHoursTab'     data-i18n-key="mnu-hour" class='tabButton nav-item' href="#HoursTab" >Uur</a></li>
       <li><a id='bDaysTab'      data-i18n-key="mnu-day" class='tabButton nav-item' href="#DaysTab" >Dag</a></li>
       <li><a id='bMonthsTab'    data-i18n-key="mnu-month" class='tabButton nav-item' href="#MonthsTab" >Maand</a></li>
@@ -375,6 +377,10 @@
     <td><a href="api/v2/sm/telegram" target="_blank">api/v2/sm/telegram</a></td>
     <td>raw telegram as send by the Smart Meter including all \"\\r\\n\" line endings</td>
   </tr>
+  <tr>
+    <td><a href="api/v2/stats" target="_blank">api/v2/stats</a></td>
+    <td>daily statistics (eg. peak values)</td>
+  </tr>
     <tr>
     <td><a href="api/v2/hist/hours" target="_blank">api/v2/hist/hours</a></td>
     <td>History data per hour in JSON format</td>
@@ -390,6 +396,10 @@
   <tr>
     <td><a href="/Frontend.json" target="_blank">/Frontend.json</a></td>
     <td>Downloaden van een bestand. In dit geval Frontend.json</td>
+  </tr>
+  <tr>
+    <td><a href="/api/v1/data" target="_blank">/api/v1/data</a></td>
+    <td>HW v1 data api format</td>
   </tr>
   <tr>
     <td>History data file structure (month, day, hour)</td>
@@ -605,6 +615,34 @@
 		</div>
     </section>  
 
+
+<!-- START InsightsTab -->
+  <section id="InsightsTab" class="tabName">
+    <!-- START actueelTab Dummy -->
+        <h2 data-i18n-key="tle-insights">Daily Insights</h2>
+    <div id="insights" >
+      <table id="InsightsTable">
+      <thead>
+        <tr>
+            <th data-i18n-key="lbl-name">Naam</th>
+            <th data-i18n-key="lbl-value">Waarde</th>
+            <th style="text-align: center;" data-i18n-key="lbl-unit">Eenheid</th>
+        </tr>
+      </thead>
+		<tbody id="InsightsTableBody">
+		</tbody>
+      <tfoot>
+        <tr>
+            <td colspan=3 data-i18n-key="lbl-sm-data">Ga met de muis over de naam heen om meer info te krijgen</td>
+        </tr>
+      <tfoot>
+      </table>
+    </div>
+  
+  </section>  <!-- END Insights Tab -->
+
+
+
 <!-- START ActualTab Tab -->
   <section id="ActualTab" class="tabName">
     <!-- START actueelTab Dummy -->
@@ -657,8 +695,11 @@
             <hr/>
             <div style="text-align:center" data-i18n-key="lbl-actual-kwh">Actueel [<span name="power">kW</span>]</div>
             <h2 id="power_delivered">0.0</h2>
+<!-- 
             <h3>max: <span id="power_delivered_1max">0.0</span> <span name="power">kW</span></h3>
             <h3>min: <span id="power_delivered_1min">0.0</span> <span name="power">kW</span></h3>
+ -->
+
         </div>
 		</a>
         <div class=card id=dash_solar style="display:none">
@@ -753,8 +794,10 @@
             <hr/>
             <div style="text-align:center" data-i18n-key="lbl-nbr-phases">Aantal fases</div>
             <h2 id="fases">1</h2>
+<!-- 
             <h3>max: <span id="power_delivered_2max">0.0</span> Volt</h3>
             <h3>min: <span id="power_delivered_2min">0.0</span> Volt</h3>
+ -->
         </div>
          <div class=card id=l8 style="display:none">
             <h1 id=Qh ><span class="iconify" data-icon="mdi-heat-wave"></span><span data-i18n-key="dsh-heat">Warmte<span></h1>
@@ -768,8 +811,6 @@
             <div style="text-align:center">Vandaag [kJ]</div>
             <h2 id="Q">0.0</h2>
         </div>
-
-
     </div> <!-- outer -->  
   </section>  <!-- END Dash Tab --> 
   

@@ -39,6 +39,34 @@ void JsonWater(){
   jsonDoc["water"]["unit"]  = "m3";
 }
 
+void StatsApi(){
+  JsonDocument doc; // Pas de grootte aan indien nodig
+ 
+  doc["I1piek"]  = P1Stats.I1piek;
+  doc["I2piek"]  = P1Stats.I2piek;
+  doc["I3piek"]  = P1Stats.I3piek;
+  
+  doc["P1max"]   = P1Stats.P1max;
+  doc["P2max"]   = P1Stats.P2max;
+  doc["P3max"]   = P1Stats.P3max;
+  
+  doc["U1piek"]  = P1Stats.U1piek;
+  doc["U2piek"]  = P1Stats.U2piek;
+  doc["U3piek"]  = P1Stats.U3piek;
+
+  doc["TU1over"] = P1Stats.TU1over;
+  doc["TU2over"] = P1Stats.TU2over;
+  doc["TU3over"] = P1Stats.TU3over;
+  
+  doc["Psluip"]  = P1Stats.Psluip;
+  doc["start_time"] = P1Stats.StartTime;
+
+  String json;
+  serializeJson(doc, json);
+  sendJsonBuffer( json.c_str() );
+
+}
+
 void HWapi() {
     JsonDocument jsonDoc;
     #define F3DEC(...) serialized(String(__VA_ARGS__,3))

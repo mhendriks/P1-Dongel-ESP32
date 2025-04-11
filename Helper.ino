@@ -11,6 +11,21 @@
 #define _HELPER
 
 #include "rom/rtc.h"
+#include "esp_efuse.h"
+#include "esp_efuse_table.h"
+// #include <array>
+// #include <map>
+
+// ------------------ ENUMS & CONSTANTS ------------------ //
+enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S };
+// enum class MODtype { MOD_NONE, MOD_IO, MOD_H20, MOD_RS485 };
+const char HWTypeNames[][5] = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S" };
+
+// ------------------ GLOBAL VARIABLES ------------------ //
+uint16_t HardwareType = UNDETECTED; 
+uint16_t HardwareVersion = 0; 
+uint8_t  ModuleType = 0;
+byte     rgbled_io = RGBLED_PIN;
 
 #define _getChipId() (uint64_t)ESP.getEfuseMac()
 
@@ -19,7 +34,24 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 "RTC Watch dog Reset digital core","Instrusion tested to reset CPU","Time Group reset CPU","Software reset CPU","RTC Watch dog Reset CPU","for APP CPU, reseted by PRO CPU",
 "Reset when the vdd voltage is not stable","RTC Watch dog reset digital core and rtc module"};
 
-void SetConfig(){
+// ------------------ HARDWARE DETECTIE ------------------ //
+//detect hardware type if burned in efuse
+void DetectHW() {
+    uint32_t waarde = 0;
+    if (esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA, &waarde, 32) != ESP_OK) {
+        Debugln("!Fout bij uitlezen van eFuse!");
+        return;
+    }
+
+    HardwareType = (waarde >> 16) & 0xFFFF;
+    HardwareVersion = waarde & 0xFFFF;
+    
+    Debugf("Hardwaretype: %s\n", HWTypeNames[HardwareType]);
+    Debugf("Versienummer: %d\n", HardwareVersion);
+}
+
+//detect hardware type if burned in efuse
+void DetectModule() {
 #ifdef NRG_DONGLE
   /* check if slot is in use
   S1 S2
@@ -33,19 +65,37 @@ void SetConfig(){
   byte board = digitalRead(SENSE1) * 2 + digitalRead(SENSE2);
   Debugf("\n--P1NRGD: check ext board [%d]\n",board);
   switch ( board ) {
-    case 0: Debugln("--P1NRGD: No board");Module = MOD_NONE;break;
-    case 1: Debugln("--P1NRGD: N/A");Module = MOD_NONE;break;
-    case 2: Debugln("--P1NRGD: H20");Module = MOD_H20;WtrMtr = true; break;
-    case 3: Debugln("--P1NRGD: RS485"); Module = MOD_RS485; break;
+    case 0: Debugln("--P1NRGD: No board");Module = _MOD_NONE;break;
+    case 1: Debugln("--P1NRGD: N/A");Module = _MOD_NONE;break;
+    case 2: Debugln("--P1NRGD: H20");Module = _MOD_H20;WtrMtr = true; break;
+    case 3: Debugln("--P1NRGD: RS485"); Module = _MOD_RS485; break;
   }
   Debugln();
-#endif 
+#endif   
+
 #ifdef ULTRA
+  //first solution with fixed slot positions
+  // h20 slot 1
+  // rs485 slot 2
+  if ( HardwareType == P1U ) {
+    IOWater   = 43; //slot 1 for now
+    rgbled_io =  9;
+    mb_rx     = 36; //slot 2
+    mb_tx     = 39; //slot 2
+    mb_rts    = 38; //slot 2
+  } else {
+    IOWater = IO_WATER;
+  }
   UseRGB = true; 
-  IOWater = IO_WATER;
-  WtrMtr = false;
   P1Out = true;
-#else    
+#endif
+
+}
+
+void SetConfig(){
+  DetectHW();
+  DetectModule();
+#ifndef ULTRA
   switch ( P1Status.dev_type ) {
     case PRO       : UseRGB = false; 
                      IOWater = 5;
@@ -69,18 +119,18 @@ void SetConfig(){
                      P1Out = true;
                      WtrMtr = true;
                      break;    
-    case P1EP:       UseRGB = false; 
+    case _P1EP:      UseRGB = false; 
                      IOWater = -1;
                      P1Out = true;
                      WtrMtr = false;
                      break;       
     case P1NRG:      UseRGB = false; 
                      IOWater = IO_WATER_SENSOR;
-                     if ( Module != MOD_RS485 ) P1Out = true;
+                     if ( Module != _MOD_RS485 ) P1Out = true;
                     //  WtrMtr = true;
                      break;                                          
   }
-#endif 
+#endif
   //pin modes
   pinMode(DTR_IO, OUTPUT);
   pinMode(LED, OUTPUT);
@@ -108,7 +158,7 @@ void FacReset() {
 void ToggleLED(byte mode) {
   if ( UseRGB ) { 
     if ( LEDenabled ) SwitchLED( mode, LED_GREEN ); 
-    else { rgbLedWrite(RGBLED_PIN,0,0,0); /*rgb.setPixel(LED_BLACK);*/ }; 
+    else { rgbLedWrite(rgbled_io,0,0,0); /*rgb.setPixel(LED_BLACK);*/ }; 
   } // PRO_BRIDGE
   else if ( LEDenabled ) digitalWrite(LED, !digitalRead(LED)); else digitalWrite(LED, LED_OFF);
 }
@@ -131,8 +181,7 @@ if ( UseRGB ) {
       case LED_BLUE:  B_value = value; break;  
       } 
     } else ClearRGB();
-    // neopixelWrite(RGBLED_PIN,R_value,G_value,B_value); 
-    rgbLedWrite(RGBLED_PIN,R_value,G_value,B_value); //sdk 3.0
+    rgbLedWrite(rgbled_io,R_value,G_value,B_value); //sdk 3.0
    } else {
       digitalWrite(LED, color==LED_RED?LED_OFF:mode);
    }

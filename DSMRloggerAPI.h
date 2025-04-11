@@ -264,8 +264,9 @@ int8_t IOWater = 0;
 bool UseRGB = false; 
 volatile unsigned long      Tpressed = 0;
 volatile bool bButtonPressed = false;
-uint8_t Module = MOD_NONE;
+uint8_t Module = _MOD_NONE;
 uint8_t SelMap = 0;
+uint32_t currentDay = 0;
 
 struct Status {
    uint32_t           reboots;
@@ -277,7 +278,24 @@ struct Status {
    bool               FirstUse;
    E_eid_states       eid_state;
 } P1Status;
-  
+
+struct stats{
+  uint32_t StartTime = 0;
+  uint32_t U1piek = 0;
+  uint32_t U2piek = 0;
+  uint32_t U3piek = 0;
+  uint32_t TU1over = 0;
+  uint32_t TU2over = 0;
+  uint32_t TU3over = 0;
+  uint32_t I1piek = 0;
+  uint32_t I2piek = 0;
+  uint32_t I3piek = 0;
+  uint32_t Psluip = 0xFFFFFFFF;
+  uint32_t P1max  = 0;
+  uint32_t P2max  = 0;
+  uint32_t P3max  = 0;
+} P1Stats;
+
 MyData      DSMRdata;
 struct tm   tm;
 bool        DSTactive;
@@ -367,6 +385,11 @@ bool      bAutoUpdate = false;
   uint16_t pt_interval = 60;
   char pt_end_point[60];
 #endif
+
+//modbus
+int8_t mb_rx  = RXPIN;
+int8_t mb_tx  = TXPIN;
+int8_t mb_rts = RTSPIN;
 
 #include <ESPmDNS.h>  
 #include <Update.h>

@@ -185,6 +185,7 @@ void SMCheckOnce(){
   mbusGas = MbusTypeAvailable(3);  
   DebugTf("mbusWater: %d\r\n",mbusWater);
   DebugTf("mbusGas: %d\r\n",mbusGas);
+  ResetStats();
 }
 //==================================================================================
 void processSlimmemeter() {
@@ -274,15 +275,15 @@ void processTelegram(){
   newT = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), true); // update system time
   
   //cal current more accurate; only works with SMR 5 meters
-  if ( DSMRdata.voltage_l1_present ){
+  if ( DSMRdata.voltage_l1_present && DSMRdata.voltage_l1 ){
     DSMRdata.current_l1._value = (uint32_t)((DSMRdata.power_delivered_l1.int_val() + DSMRdata.power_returned_l1.int_val())/DSMRdata.voltage_l1*1000);
     DSMRdata.current_l1_present = true;
   }
-  if ( DSMRdata.voltage_l2_present ){
+  if ( DSMRdata.voltage_l2_present && DSMRdata.voltage_l2 ){
     DSMRdata.current_l2._value = (uint32_t)((DSMRdata.power_delivered_l2.int_val() + DSMRdata.power_returned_l2.int_val())/DSMRdata.voltage_l2*1000);
     DSMRdata.current_l2_present = true;
   }
-  if ( DSMRdata.voltage_l3_present ){
+  if ( DSMRdata.voltage_l3_present && DSMRdata.voltage_l3 ){
     DSMRdata.current_l3._value = (uint32_t)((DSMRdata.power_delivered_l3.int_val() + DSMRdata.power_returned_l3.int_val())/DSMRdata.voltage_l3*1000);
     DSMRdata.current_l3_present = true;
   }
@@ -292,7 +293,14 @@ void processTelegram(){
   if ( ( minute(actT) != minute(newT) ) || P1Status.FirstUse ) writeRingFiles(); //bWriteFiles = true; //handled in main flow
 #else
   DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
-  if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) writeRingFiles(); //bWriteFiles = true; //handled in main flow
+  if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) {
+    writeRingFiles(); //bWriteFiles = true; //handled in main flow
+    //check dag overgang
+    if ( currentDay != (newT/(uint32_t)(3600*24)) ) {
+      ResetStats();
+      currentDay = newT/(3600*24);
+    }
+  }
 #endif
   
   //handle mqtt
@@ -300,6 +308,7 @@ void processTelegram(){
   if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1) bSendMQTT = true; //handled in main flow
 #endif  
   
+  ProcessStats();
   ProcessMaxVoltage();
   NetSwitchStateMngr();
 
@@ -331,6 +340,75 @@ void modifySmFaseInfo()
   } // No Fase Info
   
 } //  modifySmFaseInfo()
+
+void ResetStats(){
+  P1Stats.I1piek = 0;
+  P1Stats.I2piek = 0;
+  P1Stats.I3piek = 0;
+  P1Stats.U1piek = 0;
+  P1Stats.U2piek = 0;
+  P1Stats.U3piek = 0;
+  P1Stats.P1max = 0;
+  P1Stats.P2max = 0;
+  P1Stats.P3max = 0;
+  P1Stats.Psluip = 0xFFFFFFFF;
+  P1Stats.TU1over = 0;
+  P1Stats.TU2over = 0;
+  P1Stats.TU3over = 0;
+  P1Stats.StartTime = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), false);
+}
+
+// unsigned long overspanningL1 = 0;
+// unsigned long overspanningL2 = 0;
+// unsigned long overspanningL3 = 0;
+
+unsigned long startTijdL1 = 0;
+unsigned long startTijdL2 = 0;
+unsigned long startTijdL3 = 0;
+
+bool overspanningActiefL1 = false;
+bool overspanningActiefL2 = false;
+bool overspanningActiefL3 = false;
+
+
+void controleerOverspanning(int spanning, uint32_t &overspanningTotaal, unsigned long &startTijd, bool &overspanning) {
+  if (spanning > 253) {
+    if (!overspanning) {
+      startTijd = millis();
+      overspanning = true;
+    }
+  } else {
+    if (overspanning) {
+      overspanningTotaal += (millis() - startTijd) / 1000;
+      overspanning = false;
+    }
+  }
+}
+
+void ProcessStats(){
+  if ( DSMRdata.current_l1_present && DSMRdata.current_l1.int_val() > P1Stats.I1piek ) P1Stats.I1piek = DSMRdata.current_l1.int_val();
+  if ( DSMRdata.current_l2_present && DSMRdata.current_l2.int_val() > P1Stats.I2piek ) P1Stats.I2piek = DSMRdata.current_l2.int_val();
+  if ( DSMRdata.current_l3_present && DSMRdata.current_l3.int_val() > P1Stats.I3piek ) P1Stats.I3piek = DSMRdata.current_l3.int_val();
+  
+  if ( DSMRdata.power_delivered_l1_present && DSMRdata.power_delivered_l1.int_val() > P1Stats.P1max ) P1Stats.P1max = DSMRdata.power_delivered_l1.int_val();
+  if ( DSMRdata.power_delivered_l2_present && DSMRdata.power_delivered_l2.int_val() > P1Stats.P2max ) P1Stats.P2max = DSMRdata.power_delivered_l2.int_val();
+  if ( DSMRdata.power_delivered_l3_present && DSMRdata.power_delivered_l3.int_val() > P1Stats.P3max ) P1Stats.P3max = DSMRdata.power_delivered_l3.int_val();
+
+  if ( DSMRdata.voltage_l1_present ) {
+    if ( DSMRdata.voltage_l1.int_val() > P1Stats.U1piek ) P1Stats.U1piek = DSMRdata.voltage_l1.int_val(); 
+    controleerOverspanning(DSMRdata.voltage_l1, P1Stats.TU1over, startTijdL1, overspanningActiefL1);
+  }
+  if ( DSMRdata.voltage_l2_present ) {
+    if ( DSMRdata.voltage_l2.int_val() > P1Stats.U2piek ) P1Stats.U2piek = DSMRdata.voltage_l2.int_val(); 
+    controleerOverspanning(DSMRdata.voltage_l2, P1Stats.TU2over, startTijdL2, overspanningActiefL2);
+  }
+  if ( DSMRdata.voltage_l3_present ) {
+    if ( DSMRdata.voltage_l3.int_val() > P1Stats.U3piek ) P1Stats.U3piek = DSMRdata.voltage_l3.int_val();
+    controleerOverspanning(DSMRdata.voltage_l3, P1Stats.TU3over, startTijdL3, overspanningActiefL3);
+  }  
+  if ( (hour() < 6) && (DSMRdata.power_delivered.int_val() < P1Stats.Psluip) && DSMRdata.power_delivered.int_val() ) P1Stats.Psluip = DSMRdata.power_delivered.int_val();
+  // overspannning bijhouden per etmaal; seconden tellen boven de 253V per fase
+}
 
 //==================================================================================
 byte MbusTypeAvailable(byte type){
