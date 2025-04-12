@@ -257,7 +257,6 @@ void mbusSetup(){
 
 #ifdef MB_RTU
 
-// #define MBUS_RTU_DEV_ID       1
 #define MBUS_RTU_BAUD         9600
 #define MBUS_RTU_SERIAL       SERIAL_8E1
 #define MBUS_RTU_TIMEOUT      2000
@@ -265,19 +264,18 @@ void mbusSetup(){
 #include "ModbusServerRTU.h"
 #include "DSMRloggerAPI.h"
 
-// ModbusServerRTU MBserverRTU( MBUS_RTU_TIMEOUT, RTSPIN );
 ModbusServerRTU* MBserverRTU;
 
 void SetupMB_RTU(){
-#ifndef ULTRA  
-  if ( Module != _MOD_RS485 ) {
+
+  // Debugf("mb_rx : %d \n",mb_rx);
+  // Debugf("mb_tx : %d \n",mb_tx);
+  // Debugf("mb_rts: %d \n",mb_rts);
+
+  if ( mb_rx == -1 ) {
     DebugTln("Setup Modbus RTU TERMINATED");
     return;
   }
-  #define RTU_SERIAL Serial
-#else 
-  #define RTU_SERIAL Serial2
-#endif
   DebugTln("Setup Modbus RTU");
   RTU_SERIAL.end();
   RTUutils::prepareHardwareSerial(RTU_SERIAL);

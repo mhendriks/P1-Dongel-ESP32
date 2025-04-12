@@ -13,18 +13,14 @@
 #include "rom/rtc.h"
 #include "esp_efuse.h"
 #include "esp_efuse_table.h"
-// #include <array>
-// #include <map>
 
 // ------------------ ENUMS & CONSTANTS ------------------ //
 enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S };
-// enum class MODtype { MOD_NONE, MOD_IO, MOD_H20, MOD_RS485 };
 const char HWTypeNames[][5] = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S" };
 
 // ------------------ GLOBAL VARIABLES ------------------ //
 uint16_t HardwareType = UNDETECTED; 
 uint16_t HardwareVersion = 0; 
-uint8_t  ModuleType = 0;
 byte     rgbled_io = RGBLED_PIN;
 
 #define _getChipId() (uint64_t)ESP.getEfuseMac()
@@ -50,44 +46,73 @@ void DetectHW() {
     Debugf("Versienummer: %d\n", HardwareVersion);
 }
 
+void DetectModule(int8_t slot){
+  /* check slot module
+  S1 S2
+   0  0 -> NONE
+   0  1 -> n/a
+   1  0 -> H20
+   1  1 -> RS485
+  */
+  
+  pinMode(active_mod_conf->io_conf[slot].sense1, INPUT);
+  pinMode(active_mod_conf->io_conf[slot].sense2, INPUT);
+  modType[slot] = digitalRead(active_mod_conf->io_conf[slot].sense1) * 2 + digitalRead(active_mod_conf->io_conf[slot].sense2);
+#ifdef DEBUG  
+  Debugf("\n-- MODULE: type = %d\n",modType[slot]);
+  switch ( modType[slot] ) {
+    case 0: Debugln("-- MODULE: No board\n");break;
+    case 1: Debugln("-- MODULE: IO+\n"); break;
+    case 2: Debugln("-- MODULE: H20\n"); break;
+    case 3: Debugln("-- MODULE: RS485\n"); break;
+  }
+#endif  
+}
+
+//using double module will active only module in slot 2
+void ActivateModule( int8_t slot ){
+  if ( modType[slot] == -1 ) return;
+  switch ( modType[slot] ) {
+  case 0: //NO BOARD
+          break;
+  case 1: //IO+ Do Nothing for now
+          break;              
+  case 2: //H20
+          IOWater = active_mod_conf->io_conf[slot].wtr_s0;
+          WtrMtr = true;
+          break;              
+  case 3: //RS485
+          mb_rx  = active_mod_conf->io_conf[slot].mb_rx;
+          mb_tx  = active_mod_conf->io_conf[slot].mb_tx;
+          mb_rts = active_mod_conf->io_conf[slot].mb_rts;
+          break;              
+  }
+}
+
 //detect hardware type if burned in efuse
 void DetectModule() {
 #ifdef NRG_DONGLE
-  /* check if slot is in use
-  S1 S2
-  0 0 -> NONE
-  0 1 -> n/a
-  1 0 -> H20
-  1 1 -> RS485
-  */
-  pinMode(SENSE1, INPUT); //4
-  pinMode(SENSE2, INPUT); //21
-  byte board = digitalRead(SENSE1) * 2 + digitalRead(SENSE2);
-  Debugf("\n--P1NRGD: check ext board [%d]\n",board);
-  switch ( board ) {
-    case 0: Debugln("--P1NRGD: No board");Module = _MOD_NONE;break;
-    case 1: Debugln("--P1NRGD: N/A");Module = _MOD_NONE;break;
-    case 2: Debugln("--P1NRGD: H20");Module = _MOD_H20;WtrMtr = true; break;
-    case 3: Debugln("--P1NRGD: RS485"); Module = _MOD_RS485; break;
-  }
-  Debugln();
+  DetectModule(0); 
+  ActivateModule(0);
 #endif   
 
 #ifdef ULTRA
-  //first solution with fixed slot positions
-  // h20 slot 1
-  // rs485 slot 2
   if ( HardwareType == P1U ) {
-    IOWater   = 43; //slot 1 for now
-    rgbled_io =  9;
-    mb_rx     = 36; //slot 2
-    mb_tx     = 39; //slot 2
-    mb_rts    = 38; //slot 2
+    rgbled_io =  9; //Ultra V2
+    active_mod_conf = &module_config[1];
+    DetectModule(0); 
+    ActivateModule(0);
+    DetectModule(1); 
+    ActivateModule(1);
   } else {
-    IOWater = IO_WATER;
+    IOWater = IO_WATER; //Ultra V1
+    mb_rx   = RXPIN;
+    mb_tx   = TXPIN;
+    mb_rts  = RTSPIN;
   }
   UseRGB = true; 
   P1Out = true;
+  
 #endif
 
 }
@@ -125,15 +150,13 @@ void SetConfig(){
                      WtrMtr = false;
                      break;       
     case P1NRG:      UseRGB = false; 
-                     IOWater = IO_WATER_SENSOR;
-                     if ( Module != _MOD_RS485 ) P1Out = true;
-                    //  WtrMtr = true;
+                     P1Out = true;
                      break;                                          
   }
 #endif
   //pin modes
   pinMode(DTR_IO, OUTPUT);
-  pinMode(LED, OUTPUT);
+  if ( LED !=-1  ) pinMode(LED, OUTPUT);
   if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP);   
   
   Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);

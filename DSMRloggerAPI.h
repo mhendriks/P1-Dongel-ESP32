@@ -260,11 +260,10 @@ void SetConfig();
   PubSubClient MQTTclient(wifiClient);
 
 //config + button
-int8_t IOWater = 0;
+int8_t IOWater = -1;
 bool UseRGB = false; 
 volatile unsigned long      Tpressed = 0;
 volatile bool bButtonPressed = false;
-uint8_t Module = _MOD_NONE;
 uint8_t SelMap = 0;
 uint32_t currentDay = 0;
 
@@ -387,9 +386,9 @@ bool      bAutoUpdate = false;
 #endif
 
 //modbus
-int8_t mb_rx  = RXPIN;
-int8_t mb_tx  = TXPIN;
-int8_t mb_rts = RTSPIN;
+int8_t mb_rx  = -1;
+int8_t mb_tx  = -1;
+int8_t mb_rts = -1;
 
 #include <ESPmDNS.h>  
 #include <Update.h>

@@ -4,13 +4,8 @@
 #define PRO_ETH     2
 #define PRO_H20_B   3
 #define PRO_H20_2   4
-#define _P1EP        5
+#define _P1EP       5
 #define P1NRG       6
-
-#define _MOD_RS485   0
-#define _MOD_NONE    1
-#define _MOD_H20     2
-
 
 #define APIURL              "http://api.smart-stuff.nl/v1/register.php"
 #define LED_ON              LOW
@@ -64,6 +59,24 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
       #endif
   #endif
 #endif
+
+// config MODULES
+struct mod_io {
+    int8_t sense1, sense2, mb_rx, mb_tx, mb_rts, wtr_s0, in, out;
+};
+
+struct mod_conf {
+    int8_t mod_ports;
+    mod_io io_conf[2];
+};
+
+mod_conf module_config[2] = {
+ { 1, {{  4, 21,  5,  7,  6,  6, -1, -1 }, { -1, -1, -1, -1, -1, -1, -1, -1 }} }, /* NRGD     */
+ { 2, {{ 42, 45, 41, 44, 43, 43, -1, -1 }, { 37, 40, 36, 39, 38, 38, -1, -1 }} }  /* ULTRA V2 */
+};
+
+int8_t modType[2] = {-1,-1};
+mod_conf *active_mod_conf = &module_config[0];
 
 //FETAURES
   bool    bEID_enabled = false;
