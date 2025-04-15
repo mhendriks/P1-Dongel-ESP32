@@ -3,11 +3,175 @@
 **  Program  : JsonCalls, part of DSMRloggerAPI
 **  Version  : v4.2.1
 **
-**  Copyright (c) 2023 Martijn Hendriks
+**  Copyright (c) 2025 Smartstuff
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
+
+struct RingRecord {
+  char date[9];
+  float values[6];
+};
+
+RingRecord ringRecords[15];
+int recordCount = 0;
+int actSlot = 0;
+
+RingRecord repaired[30];
+int repairedCount = 0;
+
+time_t date2epoch(const char* date){
+  struct tm tNew = {};
+  if (strlen(date) != 8) return 0;
+
+  sscanf(date, "%2d%2d%2d%2d", &tNew.tm_year, &tNew.tm_mon, &tNew.tm_mday, &tNew.tm_hour);
+  tNew.tm_hour = 23; //hard end of day 
+  tNew.tm_year += 100;
+  tNew.tm_mon -= 1;
+
+  time_t ts = mktime(&tNew);
+  return ts > 0 ? ts : 0;
+}
+
+bool isPreviousDay(const char* newerDate, const char* olderDate) {
+
+  time_t dateNew = date2epoch(newerDate);
+  time_t dateOld = date2epoch(olderDate);
+  
+  // Debug("dateNew: ");Debugln(dateNew);
+  // Debug("dateOld: ");Debugln(dateOld);
+  
+  // Debug("(dateNew - dateOld): ");Debugln((dateNew - dateOld));
+  
+  return (dateNew - dateOld) == 86400;
+}
+
+void printRec(struct RingRecord* recs, int count) {
+  for (int i = 0; i < count; ++i) {
+    Debugf("Record %2d - date: %s | values: ", i, recs[i].date);
+    for (int j = 0; j < 6; ++j)
+      Debugf("%.3f ", recs[i].values[j]);
+    Debugln();
+  }
+}
+
+void epochToDate(time_t ts, char* out) {
+  struct tm* t = localtime(&ts);
+  snprintf(out, 9, "%02d%02d%02d%02d", t->tm_year % 100, t->tm_mon + 1, t->tm_mday, t->tm_hour);
+}
+
+#define DAY_SEC 86400
+#define NUM_VALUES 6
+
+void repairRingRecords( RingRecord* records, int len) {
+  for (int i = 0; i < len - 1; i++) {
+    time_t tCurrent = date2epoch(records[i].date);
+    time_t tNext = date2epoch(records[i + 1].date);
+
+    if (tCurrent == 0 || tNext == 0) {
+      Debugf("❌ Ongeldige datum bij record %d of %d\n", i, i + 1);
+      continue;
+    }
+
+    // Verwacht dat tNext precies 1 dag eerder is
+    if ((tCurrent - tNext) != DAY_SEC) {
+      Debugf("📉 Afwijking bij record %d ➝ %d\n", i, i + 1);
+
+      // Zoek eerstvolgende correcte record
+      int j = i + 2;
+      while (j < len) {
+        time_t tCandidate = date2epoch(records[j].date);
+        if (tCandidate != 0 && (tCurrent - tCandidate) % DAY_SEC == 0) break;
+        j++;
+      }
+
+      if (j >= len) {
+        // Geen geldig record meer gevonden: vul rest met kopieën van i
+        Debugln("⚠️ Geen volgend correct record — kopieer vanaf huidig record naar einde");
+
+        for (int k = i + 1; k < len; k++) {
+          time_t tNew = tCurrent - ((k - i) * DAY_SEC);
+          epochToDate(tNew, records[k].date);
+          for (int v = 0; v < NUM_VALUES; v++) {
+            records[k].values[v] = records[i].values[v];
+          }
+          Debugf("📋 Record %d gekopieerd van %d (datum: %s)\n", k, i, records[k].date);
+        }
+        break;  // Niks meer te doen
+      }
+
+      int gap = j - i;
+      time_t tStart = tCurrent;
+      time_t tEnd = date2epoch(records[j].date);
+
+      for (int k = 1; k < gap; k++) {
+        time_t tNew = tStart - (DAY_SEC * k);
+        epochToDate(tNew, records[i + k].date);
+
+        float f = (float)k / gap;
+        for (int v = 0; v < NUM_VALUES; v++) {
+          float v1 = records[i].values[v];
+          float v2 = records[j].values[v];
+          records[i + k].values[v] = v1 + (v2 - v1) * f;
+        }
+
+        Debugf("🔧 Record %d hersteld (date: %s)\n", i + k, records[i + k].date);
+      }
+
+      i = j - 1; // spring verder
+    }
+  }
+
+  Debugln("✅ Herstel voltooid.");
+}
+
+
+void CheckRingFile(E_ringfiletype ringfiletype) {
+  File f = LittleFS.open(RingFiles[ringfiletype].filename, "r");
+  if (!f) {
+    Serial.println("Kan bestand niet openen.");
+    return;
+  }
+
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, f);
+  f.close();
+  if (err) {
+    Debug("Parse fout: ");Debugln(err.c_str());
+    return;
+  }
+
+  actSlot = doc["actSlot"].as<int>();
+  int total = doc["data"].size();
+  
+  Debugln("json to array");
+  for (int i = 0; i < total; i++) {
+    int idx = (total + actSlot - i) % total;
+    strncpy(ringRecords[i].date, doc["data"][idx]["date"], 9);
+    for (int j = 0; j < 6; j++) {
+      ringRecords[i].values[j] = doc["data"][idx]["values"][j].as<float>();
+    }
+    Debugf("i: %02d - idx: %02d - date: %s\n",i,idx,ringRecords[i].date);
+  }
+  Debugln("VOOR herstel");
+  printRec(ringRecords,total);
+
+  repairRingRecords(ringRecords, total);
+  Debugln("NA herstel");
+  printRec(ringRecords,total);
+  
+  // Check op 1 dag verschil tussen elke 2 records
+  // for (int i = 1; i < total; i++) {
+  //   if (!isPreviousDay(ringRecords[i - 1].date, ringRecords[i].date)) {
+  //     Debug("Datumverschil ongeldig tussen ");
+  //     Debug(ringRecords[i - 1].date);
+  //     Debug(" en ");
+  //     Debugln(ringRecords[i].date);
+  //   } else Debugln("No gap between records");
+  // }
+}
+
 
 void CheckRingExists(){
   for (byte i = 0; i< 3; i++){

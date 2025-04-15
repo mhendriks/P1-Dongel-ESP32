@@ -67,10 +67,20 @@ void StatsApi(){
 
 }
 
+void HWapi_root() {
+  String MACID = macID;
+  MACID.toLowerCase();
+  String jsonString = "{\"product_name\":\"P1 Dongle\",\"product_type\":\"HWE-P1\",\"serial\":\"";  
+  jsonString += MACID;
+  jsonString += "\",\"firmware_version\":\"" _VERSION_ONLY "\",\"api_version\":\"v1\"}";
+
+  sendJsonBuffer(  jsonString.c_str() );
+}
+
 void HWapi() {
     JsonDocument jsonDoc;
     #define F3DEC(...) serialized(String(__VA_ARGS__,3))
-
+    
     jsonDoc["wifi_ssid"] = WiFi.SSID();  
     jsonDoc["wifi_strength"] = WiFi.RSSI();
     jsonDoc["smr_version"] = DSMRdata.p1_version;

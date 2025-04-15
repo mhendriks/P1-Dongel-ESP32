@@ -327,7 +327,16 @@ void startMDNS(const char *Hostname)
 {
   DebugTf("[1] mDNS setup as [%s.local]\r\n", Hostname);
   if ( !MDNS.begin(Hostname) ) DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
-  MDNS.addService("http", "tcp", 80);
+  else {
+    MDNS.addService( Hostname, "tcp", 80);
+    MDNS.addService( "p1dongle", "tcp", 80);
+    //test with Homey
+    // MDNS.addService( "hwenergy", "tcp", 80); 
+    // MDNS.addServiceTxt("hwenergy", "tcp", "product_type", "HWE-P1");
+    // MDNS.addServiceTxt("hwenergy", "tcp", "serial", "5c2faf1a6c08");
+    // MDNS.addServiceTxt("hwenergy", "tcp", "api_enabled", "1");
+    
+  }
   
 } // startMDNS()
 

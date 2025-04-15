@@ -124,6 +124,14 @@ std::map<uint16_t, ModbusMapping> mapping_alfen_socomec = {
     { 0xC574, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l3_present ? (-DSMRdata.power_returned_l3.int_val() + DSMRdata.power_delivered_l3.int_val()) * 10 :MBUS_VAL_UNAVAILABLE); } }},
 };
 
+/*
+
+50544 0xC570
+50546 0xC572
+50548 0xC574
+
+*/
+
 // Modbus mapping CHINT DTSU666
 std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
     {0x0,   {ModbusDataType::INT16, []() { return 204; }}},

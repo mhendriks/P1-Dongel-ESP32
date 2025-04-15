@@ -32,6 +32,7 @@ WENSEN
 - RNGDays 31 days
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
+- HA auto update ala : https://www.zigbee2mqtt.io/guide/usage/ota_updates.html#automatic-checking-for-available-updates
 
 Default checks
 - wifi
@@ -49,6 +50,7 @@ Default checks
 
 4.13.2
 - check and repair rng files on startup
+- testje met Homey op basis van HW P1 Dongle en P1 slimme meter plugin
 
 
 
@@ -80,7 +82,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
-// #define NRG_DONGLE   
+#define NRG_DONGLE   
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
 //SPECIAL

@@ -164,7 +164,7 @@ void SetConfig(){
   
   // sign of life = ON during setup or change config
   SwitchLED( LED_ON, LED_BLUE );
-  delay(2000);
+  delay(1300);
   SwitchLED( LED_OFF, LED_BLUE );
   
 }

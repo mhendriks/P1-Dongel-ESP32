@@ -311,6 +311,7 @@ void processTelegram(){
   ProcessStats();
   ProcessMaxVoltage();
   NetSwitchStateMngr();
+  // PostHomey();
 
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
