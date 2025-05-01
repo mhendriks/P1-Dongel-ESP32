@@ -78,11 +78,9 @@ static void onNetworkEvent (WiFiEvent_t event) {
       break;
     case ARDUINO_EVENT_ETH_GOT_IP: //5
       {
-        // WiFiManager manageWiFi;
-        // if ( WiFi.isConnected() ) WiFi.disconnect();
+        netw_state = NW_ETH;
         WifiOff();
         LogFile("ETH GOT IP", true);
-        netw_state = NW_ETH;
         bEthUsage = true; //set only once 
         SwitchLED( LED_ON, LED_BLUE ); //Ethernet available = RGB LED Blue
         // tLastConnect = 0;
@@ -330,12 +328,14 @@ void startMDNS(const char *Hostname)
   else {
     MDNS.addService( Hostname, "tcp", 80);
     MDNS.addService( "p1dongle", "tcp", 80);
-    //test with Homey
-    // MDNS.addService( "hwenergy", "tcp", 80); 
-    // MDNS.addServiceTxt("hwenergy", "tcp", "product_type", "HWE-P1");
-    // MDNS.addServiceTxt("hwenergy", "tcp", "serial", "5c2faf1a6c08");
-    // MDNS.addServiceTxt("hwenergy", "tcp", "api_enabled", "1");
-    
+    MDNS.addServiceTxt("p1dongle", "tcp", "id", String(macID).c_str() );
+#ifdef ULTRA    
+    MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1U" );    
+#elif defined (ETHERNET)
+    MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1E" );    
+#else
+    MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1P" );    
+#endif
   }
   
 } // startMDNS()

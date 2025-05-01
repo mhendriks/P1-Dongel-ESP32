@@ -11,6 +11,8 @@
 ***************************************************************************      
 */
 
+uint64_t uptime();
+
 /*---- start macro's ------------------------------------------------------------------*/
 #ifdef DEBUG
   //DEBUG MODE
@@ -21,7 +23,7 @@
   #define DebugFlush()    ({ USBSerial.flush(); TelnetStream.flush(); })
   #define USBPrint(...)   ({ Debug(__VA_ARGS__);})
   #define USBPrintf(...)  ({ Debugf(__VA_ARGS__);})
-  #define USBPrintln(...) ({ Debugln(__VA_ARGS__);})                       
+  #define USBPrintln(...) ({ Debugln(__VA_ARGS__);})                      
 
 #else
   //NORMAL MODE
@@ -62,6 +64,20 @@ void _debugBOL(const char *fn, int line)
   USBSerial.print (_bol);
 #endif  
   TelnetStream.print (_bol);
+}
+
+bool HWMarks[3] = { 0,0,0 };
+
+void PrintHWMark(const int id){
+#ifdef INSIGHTS
+      if (uptime() % 10 == 0) 
+      {
+        if ( !HWMarks[id] ) { 
+          Debugf("--HighWaterMark %s: %d - heap: %d\n", pcTaskGetName(NULL), uxTaskGetStackHighWaterMark(NULL),ESP.getFreeHeap());
+          HWMarks[id]=true;
+        } 
+      } else HWMarks[id]=false; //every minut
+#endif
 }
 
 #endif

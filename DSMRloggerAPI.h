@@ -28,6 +28,7 @@ bool                 WtrMtr         = false;
 #define              DEBOUNCETIMER 1700
 
 #include <WiFi.h>        
+#include "Insights.h"
 #include <WiFiClientSecure.h>        
 #include <WebServer.h>
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
@@ -39,9 +40,6 @@ bool                 WtrMtr         = false;
 #include <dsmr2.h>               // https://github.com/mhendriks/dsmr2Lib
 #include "esp_chip_info.h"
 #include <esp_now.h>             //https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
-
-// #include <SingleNeoPixel.h>      //https://github.com/mhendriks/NeoPixel
-// SingleNeoPixel rgb(RGBLED_PIN);
 
 #ifdef MBUS
   #include "ModbusServerWiFi.h"
@@ -73,6 +71,17 @@ TaskHandle_t tP1Reader; //  own proces for P1 reading
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS, RINGVOLTAGE};
 enum  SolarSource { ENPHASE, SOLAR_EDGE };
+
+//test
+struct RingRecord {
+  char date[9];
+  float values[6];
+};
+
+RingRecord RNGDayRec[15];
+
+void printRecordArray(const RingRecord* records, int slots, const char* label);
+bool loadRingfile(E_ringfiletype type);
 
 typedef struct {
     char filename[17];

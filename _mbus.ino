@@ -17,38 +17,17 @@ const uint8_t MY_SERVER(MBUS_DEV_ID);
 // Modbus data types
 enum class ModbusDataType { UINT32, INT16, FLOAT };
 
+union {
+  float    f;
+  uint32_t u;
+  int32_t  i;
+} map_temp;
+
 // Struct om registerwaarden op te halen
 struct ModbusMapping {
     ModbusDataType type;
     std::function<uint32_t()> valueGetter;
 };
-
-/***
-
-DEFAULT MAPPING
-
-ALL : UINT32 - 4321
-Unavailable value : MBUS_VAL_UNAVAILABLE
-
-0 energy meter sample timestamp epoch UTC | dword
-2 energy_delivered_tariff1 | dword
-4 energy_delivered_tariff2 | dword
-6 energy_returned_tariff1 | dword
-8 energy_returned_tariff2 | dword
-10 energy_delivered_total | dword
-12 energy_returned_total | dword
-14 power_delivered | dword
-16 power_returned | dword
-18 U1 (mV) | dword
-20 U2 (mV) | dword
-22 U3 (mV) | dword
-24 I1 (mA) | dword (todo indication delivered / injected)
-26 I2 (mA) | dword (todo indication delivered / injected)
-28 I3 (mA) | dword (todo indication delivered / injected)
-30 Gas Timestamp epoch UTC | dword
-32 Gas delivered | dword
-
-*/
 
 // Modbus mapping default = 0
 std::map<uint16_t, ModbusMapping> mapping_default = {
@@ -77,12 +56,6 @@ std::map<uint16_t, ModbusMapping> mapping_default = {
 };
 
 // Modbus mapping SDM630 = 1, see https://www.eastroneurope.com/images/uploads/products/protocol/SDM630_MODBUS_Protocol.pdf
-
-union {
-  float    f;
-  uint32_t u;
-  int32_t  i;
-} map_temp;
 
 std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
     {0,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
@@ -119,50 +92,42 @@ std::map<uint16_t, ModbusMapping> mapping_alfen_socomec = {
 
     { 0xC566, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l1_present ? (uint32_t)DSMRdata.current_l1.int_val()+DSMRdata.current_l2.int_val()+DSMRdata.current_l3.int_val() : MBUS_VAL_UNAVAILABLE); } }},
 
-    { 0xC570, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l1_present ? (-DSMRdata.power_returned_l1.int_val() + DSMRdata.power_delivered_l1.int_val()) * 10 :MBUS_VAL_UNAVAILABLE); } }},
-    { 0xC572, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l2_present ? (-DSMRdata.power_returned_l2.int_val() + DSMRdata.power_delivered_l2.int_val()) * 10 :MBUS_VAL_UNAVAILABLE); } }},
-    { 0xC574, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l3_present ? (-DSMRdata.power_returned_l3.int_val() + DSMRdata.power_delivered_l3.int_val()) * 10 :MBUS_VAL_UNAVAILABLE); } }},
+    { 0xC570 /* 50544 */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l1_present ? (int32_t)(( DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }},
+    { 0xC572 /* 50546 */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l2_present ? (int32_t)(( DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }},
+    { 0xC574 /* 50548 */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l3_present ? (int32_t)(( DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }}
 };
 
-/*
+std::map<uint16_t, ModbusMapping> mapping_abb_b21 = {
+    {0x5B00,   {ModbusDataType::UINT32, []() { return ( DSMRdata.voltage_l1_present ? (uint32_t)(DSMRdata.voltage_l1 * 10) : MBUS_VAL_UNAVAILABLE);  }}},
+    {0x5B02,   {ModbusDataType::UINT32, []() { return ( DSMRdata.voltage_l1_present ? (uint32_t)(DSMRdata.voltage_l2 * 10): MBUS_VAL_UNAVAILABLE);  }}},
+    {0x5B04,   {ModbusDataType::UINT32, []() { return ( DSMRdata.voltage_l1_present ? (uint32_t)(DSMRdata.voltage_l3 * 10) : MBUS_VAL_UNAVAILABLE);  }}},
 
-50544 0xC570
-50546 0xC572
-50548 0xC574
+    { 0x5B0C, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l1_present ? (uint32_t)DSMRdata.current_l1.int_val()/10 : MBUS_VAL_UNAVAILABLE); } }},
+    { 0x5B0E, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l2_present ? (uint32_t)DSMRdata.current_l2.int_val()/10 : MBUS_VAL_UNAVAILABLE); } }},
+    { 0x5B10, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l3_present ? (uint32_t)DSMRdata.current_l3.int_val()/10 : MBUS_VAL_UNAVAILABLE); } }},
 
-*/
+    { 0x5B14,        { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_present ? (int32_t)(( DSMRdata.power_delivered.val() - DSMRdata.power_returned.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }},
+    { 0x5B16 /*  */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l1_present ? (int32_t)(( DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }},
+    { 0x5B18 /*  */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l2_present ? (int32_t)(( DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }},
+    { 0x5B1A /*  */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l3_present ? (int32_t)(( DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }}
+};
 
 // Modbus mapping CHINT DTSU666
 std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
-    {0x0,   {ModbusDataType::INT16, []() { return 204; }}},
-//     {0x1,   {ModbusDataType::INT16, []() { return 701; }}},
-//     {0x2,   {ModbusDataType::INT16, []() { return 0; }}},
-//     {0x3,   {ModbusDataType::INT16, []() { return 0; }}},
-//     {0x5,   {ModbusDataType::INT16, []() { return 0; }}},
-//     {0x6,   {ModbusDataType::INT16, []() { return 1; }}},
-//     {0x7,   {ModbusDataType::INT16, []() { return 10; }}},
-//     {0xA, {ModbusDataType::INT16, []() { return 0; }}},
-//     {0xC, {ModbusDataType::INT16, []() { return 0; }}},
-//     {0x2C, {ModbusDataType::INT16, []() { return 3; }}},
-//     {0x2D, {ModbusDataType::INT16, []() { 
-//         // if (Baudrate == 1200) return 0;
-//         // if (Baudrate == 2400) return 1;
-//         // if (Baudrate == 4800) return 2;
-//         return 3;
-//     }}},
-//     {0x2E, {ModbusDataType::INT16, []() { return MBUS_DEV_ID; }}},
-//     {0x2012, {ModbusDataType::FLOAT, []() { return DSMRdata.power_delivered_l1_present ? 
-//         -10.0 * DSMRdata.power_returned_l1 + 10.0 * DSMRdata.power_delivered_l1 +
-//         -10.0 * DSMRdata.power_returned_l2 + 10.0 * DSMRdata.power_delivered_l2 +
-//         -10.0 * DSMRdata.power_returned_l3 + 10.0 * DSMRdata.power_delivered_l3 : 0.0;
-//     }}},
-//     {0x201A, {ModbusDataType::FLOAT, mapping_dtsu666[0x2012].valueGetter}},  // Alias voor 0x2012
-//     {0x2014, {ModbusDataType::FLOAT, []() { return DSMRdata.power_delivered_l1_present ? (DSMRdata.power_returned_l1 + DSMRdata.power_delivered_l1) * (DSMRdata.power_returned_l1 ? -10.0 : 10.0) : 0.0; }}},
-//     {0x201C, {ModbusDataType::FLOAT, mapping_dtsu666[0x2014].valueGetter}},  // Alias voor 0x2014
-//     {0x2016, {ModbusDataType::FLOAT, []() { return DSMRdata.power_delivered_l2_present ? (DSMRdata.power_returned_l2 + DSMRdata.power_delivered_l2) * (DSMRdata.power_returned_l2 ? -10.0 : 10.0) : 0.0; }}},
-//     {0x201E, {ModbusDataType::FLOAT, mapping_dtsu666[0x2016].valueGetter}},  // Alias voor 0x2016
-//     {0x2018, {ModbusDataType::FLOAT, []() { return DSMRdata.power_delivered_l3_present ? (DSMRdata.power_returned_l3 + DSMRdata.power_delivered_l3) * (DSMRdata.power_returned_l3 ? -10.0 : 10.0) : 0.0; }}},
-//     {0x2020, {ModbusDataType::FLOAT, mapping_dtsu666[0x2018].valueGetter}},  // Alias voor 0x2018
+  //U
+    {0x2006,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l1.val() * 10.0: MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {0x2008,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l2.val() * 10.0: MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {0x200A,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l3.val() * 10.0: MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+  //I
+    {0x200C,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l1_present ? DSMRdata.current_l1.int_val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {0x200E,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l2_present ? DSMRdata.current_l2.int_val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {0x2010,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l3_present ? DSMRdata.current_l3.int_val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+
+  //P
+    {0x2012,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_present ? (-DSMRdata.power_returned.val() + DSMRdata.power_delivered.val()) * 100.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
+    {0x2014,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l1_present ? (-DSMRdata.power_returned_l1.val() + DSMRdata.power_delivered_l1.val()) * 100.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
+    {0x2016,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l2_present ? (-DSMRdata.power_returned_l2.val() + DSMRdata.power_delivered_l2.val()) * 100.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
+    {0x2018,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l3_present ? (-DSMRdata.power_returned_l3.val() + DSMRdata.power_delivered_l3.val()) * 100.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}} 
 };
 
 // uint16_t getMaxKey(const std::map<uint16_t, ModbusMapping>& mapping) {
@@ -172,7 +137,7 @@ std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[4] = {44, 206, 24, 0xC574+2};
+uint16_t MaxReg[6] = { 44, 206, 24, 0xC574+2, 100, 0x5B1A+2 };
 
 // Change active mapping
 void setModbusMapping(int mappingChoice) {
@@ -180,8 +145,10 @@ void setModbusMapping(int mappingChoice) {
     switch (mappingChoice) {
         case 0: selectedMapping = &mapping_default; break;
         case 1: selectedMapping = &mapping_sdm630; break;
-        case 2: selectedMapping = &mapping_dtsu666; break;
+        // case 2: selectedMapping = &mapping_dtsu666; break;
         case 3: selectedMapping = &mapping_alfen_socomec; break;
+        // case 4: selectedMapping = &mapping_em330; break;
+        // case 5: selectedMapping = &mapping_abb_b21; break;
         default: selectedMapping = &mapping_default; break; // Fallback naar default
     }
 }

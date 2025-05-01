@@ -243,7 +243,7 @@ void sendDeviceInfo()
   doc["sketchsize"]["unit"] = "kB";
   
   // SDK 3.x
-  doc["utilization"] ["value"] = 100-ulTaskGetIdleRunTimePercent() ;
+  doc["utilization"] ["value"] = ulTaskGetIdleRunTimePercent();
   doc["utilization"]["unit"] = "%";
   
   doc["freesketchspace"] ["value"] = (uint32_t)(ESP.getFreeSketchSpace() / 1024.0);

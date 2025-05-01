@@ -44,15 +44,31 @@ Default checks
 - ethernet
 - 4h test on 151
 
-- Insights: Inzichten vanaf opstarten dongle / 00:00 reset
+- Daily Insights: Inzichten vanaf opstarten dongle / 00:00 reset
     - loadbalancing over de fases heen
     - detail P per fase afgelopen uur (sample eens per 10s)
 
 4.13.2
+- fix: somoco emulation for Alphen chargers
+- add: modbus mapping dtsu666
+- add: modbus mapping abb b21
+
+4.13.3
+- fix cpu utilization
+- mDNS changes
+- fix: issue with status led 
+- WDT reset in threats
+- optimize stack threats size
+- add Insights option incl threat heap size print
+
+4.13.4
 - check and repair rng files on startup
-- testje met Homey op basis van HW P1 Dongle en P1 slimme meter plugin
 
 
+task wtd
+- https://forum.arduino.cc/t/watchdog-reset-esp32-if-stuck-more-than-120-seconds/1266565/2
+- https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/wdts.html
+- https://esp32.com/viewtopic.php?t=31155
 
 - winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
 --> oplossing : 
@@ -75,14 +91,17 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 */
 /******************** compiler options  ********************************************/
+
+#define INSIGHTS_KEY "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiMjczMmQyMmUtOGNkNS00OTdmLThmN2QtMjUzYjVjMGQzNTQ5IiwiZXhwIjoxOTg4MDAyMzg4LCJpYXQiOjE2NzI2NDIzODgsImlzcyI6ImUzMjJiNTljLTYzY2MtNGU0MC04ZWEyLTRlNzc2NjU0NWNjYSIsInN1YiI6IjAyOTcxNTljLTJlZjctNDUwMS1iOWQ1LWU5MjBjZmQ0Yjg1YyJ9.tCazdcRy5slY23mpot0sml-kJfU_CIR96MDYvYA7oJWiXVPebRKS955erNYxu6tVxcAsbjM6tg4YmN_gInayyUiNGV5pyWYC0Grer20sw5A93jc83NOEx4hz9kBh8lHHiH_MIBVsc846j6yOvogEfkQ22BNhxHPsAizs3ZAqnU3t1E_YrFHj9YlZhz-z-da8U2hNBfhsY_E0yUzza3ehJ0SK4Acef5XWp54hB7rTvxYXnZqx-nYcAU1oyQErzY0FuoDfqR20-yYLtswka6EcFkKrCSs0uLpzpyC8qM2AApKTerIWAjzajsqFJRyeOiTz8kFdfPpKIE3QC985yeXAXw"
 // #define DEBUG
+#define INSIGHTS
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
 // #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
-#define NRG_DONGLE   
+// #define NRG_DONGLE   
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
 //SPECIAL
@@ -100,6 +119,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define MB_RTU
 
 #include "DSMRloggerAPI.h"
+#include <esp_task_wdt.h>
 
 void setup() 
 {
@@ -110,6 +130,7 @@ void setup()
   USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, Firmware.Version ); 
   Debugf("Original cpu speed: %d\n",Freq);
   PushButton.begin(IO_BUTTON);
+
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   SetConfig();
   lastReset = getResetReason();
@@ -125,13 +146,23 @@ void setup()
   if (!LittleFS.exists(SETTINGS_FILE)) writeSettings(); //otherwise the dongle crashes some times on the first boot
   else readSettings(true);
 
-//=============scan and repair RNG files ===========================
+//=============scan, repair and convert RNG files ==================
   // CheckRingFile(RINGDAYS);
+  // loadRingfile(RINGDAYS);
+  // printRecordArray(RNGDayRec, RingFiles[RINGDAYS].slots, "RINGDAYS");
+  // saveRingfile(RINGDAYS);
+
+  // patchJsonFile_Add7thValue(RINGMONTHS);
+  // patchJsonFile_Add7thValue(RINGHOURS);
+  // convertRingfileWithSlotExpansion(RINGDAYS,32);
 //=============start Networkstuff ==================================
   
   startNetwork();
   PostMacIP(); //post mac en ip
   delay(100);
+#ifdef INSIGHTS  
+  if ( Insights.begin(INSIGHTS_KEY) ) Debugf("ESP Insights enabled Node ID %s\n", Insights.nodeID());
+#endif  
   startTelnet();
   startMDNS(settingHostname);
   startNTP();
@@ -177,8 +208,8 @@ void setup()
 
   //create a task that will be executed in the fP1Reader() function, with priority 1
   //p1 task runs always on core 0. On the dual core models Arduino runs on core 1. It isn't possible that the process runs on both cores.
-  if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*20, NULL, 2, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
-  if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*10, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
+  if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 2, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
+  if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*8, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
 
 } // setup()
@@ -188,12 +219,15 @@ void fP1Reader( void * pvParameters ){
   DebugTln(F("Enable slimme meter..."));
   SetupP1Out();
   slimmeMeter.enable(false);
+  esp_task_wdt_add(nullptr);
 #ifdef ULTRA
   digitalWrite(DTR_IO, LOW); //default on
 #endif   
   while(true) {
+    PrintHWMark(0);
     handleSlimmemeter();
     P1OutBridge();
+    esp_task_wdt_reset();
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
@@ -203,8 +237,11 @@ void fMqtt( void * pvParameters ){
   DebugTln(F("Start MQTT Thread"));
   MQTTSetBaseInfo();
   MQTTsetServer();
+  esp_task_wdt_add(nullptr);
   while(true) {
+    PrintHWMark(1);
     handleMQTT();
+    esp_task_wdt_reset();
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 #endif      
@@ -226,6 +263,8 @@ void loop () {
   PostTelegram();
   GetSolarDataN();
   handleVirtualP1();
+  PrintHWMark(2);
+
 } // loop()
 
 

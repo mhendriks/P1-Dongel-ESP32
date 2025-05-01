@@ -373,7 +373,7 @@ bool overspanningActiefL3 = false;
 
 
 void controleerOverspanning(int spanning, uint32_t &overspanningTotaal, unsigned long &startTijd, bool &overspanning) {
-  if (spanning > 253) {
+  if (spanning >= 253) {
     if (!overspanning) {
       startTijd = millis();
       overspanning = true;
