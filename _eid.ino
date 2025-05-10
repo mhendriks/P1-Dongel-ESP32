@@ -72,7 +72,7 @@ States
 2) ENROLLED -> gekoppeld
  
  */  
-   HTTPClient http;
+  HTTPClient http;
   String payload;
   int httpResponseCode;
   JsonDocument doc;
@@ -106,7 +106,7 @@ States
   
     DeserializationError error = deserializeJson(doc, payload);
     if (error) {
-      DebugTln(F("error parsing the paylod from claim response"));
+      DebugTln(F("error parsing the payload from claim response"));
       httpServer.send(400);
     } else {
       //well parsed

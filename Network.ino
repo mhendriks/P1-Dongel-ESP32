@@ -198,7 +198,7 @@ void startWiFi(const char* hostname, int timeOut)
   esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
 
   WiFi.setHostname(hostname);
-  WiFi.enableIPv6();
+  // WiFi.enableIPv6();
 //  WiFi.setMinSecurity(WIFI_AUTH_WEP);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   
@@ -302,6 +302,7 @@ bool validateConfig() {
 void startNetwork()
 {
   Network.onEvent(onNetworkEvent);
+  // Network.enableIPv6();  
   if ( loadFixedIPConfig("/fixedip.json") ) bFixedIP = validateConfig();
   startETH();
   startWiFi(settingHostname, 240);  // timeout 4 minuten
@@ -370,9 +371,7 @@ void startETH(){
   uint8_t mac_eth[6] = { 0xFE, 0xED, 0xDE, 0xAD, 0xBE, 0xEF };
   esp_read_mac(mac_eth, ESP_MAC_ETH);
   
-  // SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO);
-  ETH.enableIPv6();
-  // ETH.begin(ETH_TYPE, ETH_ADDR, CS_GPIO, INT_GPIO, ETH_RST, SPI2_HOST ,SCK_GPIO, MISO_GPIO, MOSI_GPIO); //sdk3.0
+  // ETH.enableIPv6();
   myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, CS_GPIO, INT_GPIO, ETH_RST, NULL, SCK_GPIO, MISO_GPIO, MOSI_GPIO, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
 

@@ -145,10 +145,10 @@ void setModbusMapping(int mappingChoice) {
     switch (mappingChoice) {
         case 0: selectedMapping = &mapping_default; break;
         case 1: selectedMapping = &mapping_sdm630; break;
-        // case 2: selectedMapping = &mapping_dtsu666; break;
+        case 2: selectedMapping = &mapping_dtsu666; break;
         case 3: selectedMapping = &mapping_alfen_socomec; break;
         // case 4: selectedMapping = &mapping_em330; break;
-        // case 5: selectedMapping = &mapping_abb_b21; break;
+        case 5: selectedMapping = &mapping_abb_b21; break;
         default: selectedMapping = &mapping_default; break; // Fallback naar default
     }
 }

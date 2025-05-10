@@ -11,7 +11,7 @@ void fNetSwitchProc( void * pvParameters ){
   DebugTln(F("Enable NetSwitch processing"));
   readtriggers();
   //set default value and force to switch
-  lastToggleState = docTriggers["device"]["default"].as<int>();
+  lastToggleState = docTriggers["device"]["default"].as<bool>();
   bShellySwitch = true;
   while(true) {
     handleNetSwitch();
@@ -54,19 +54,25 @@ bool loadNetSwitchConfig(const char *filename) {
 void readtriggers(){
   bNetSwitchConfigRead = loadNetSwitchConfig("/netswitch.json");
   if ( bNetSwitchConfigRead ) {
+    if ( docTriggers["device"]["dongle_io"].as<int>() > 0 ) {
+      pinMode(docTriggers["device"]["dongle_io"].as<int>(), OUTPUT);
+      digitalWrite(docTriggers["device"]["dongle_io"].as<int>(), docTriggers["device"]["default"].as<bool>());
+    }
 #ifdef DEBUG
-    Debug("value.          : ");Debugln(docTriggers["value"].as<int>());
-    Debug("switch_on.      : ");Debugln(docTriggers["switch_on"].as<bool>());
+    Debug("value           : ");Debugln(docTriggers["value"].as<int>());
+    Debug("switch_on       : ");Debugln(docTriggers["switch_on"].as<bool>());
     Debug("time-true (sec) : ");Debugln(docTriggers["time_true"].as<int>());
     Debug("time-false (sec): ");Debugln(docTriggers["time_false"].as<int>());
-    Debug("device name.    : ");Debugln(docTriggers["device"]["name"].as<const char*>());
+    Debug("dongl io        : ");Debugln(docTriggers["device"]["dongle_io"].as<int>());
+    Debug("device name     : ");Debugln(docTriggers["device"]["name"].as<const char*>());
     Debug("relay           : ");Debugln(docTriggers["device"]["relay"].as<int>());
-    Debug("default state.  : ");Debugln(docTriggers["device"]["default"].as<int>());
+    Debug("default state   : ");Debugln(docTriggers["device"]["default"].as<bool>());
 #endif
   }
 }
 
 void NetSwitchStateMngr(){
+  if ( strlen(docTriggers["device"]["name"].as<const char*>()) == 0 && docTriggers["device"]["dongle_io"].as<int>() == 0  ) return;
   //every time new p1 values are available
   int32_t Phouse = DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val();
   // Debugf("Phouse = %d\n",Phouse);
@@ -96,7 +102,13 @@ void handleNetSwitch(){
 
 // / Functie om de Shelly Power Plug aan of uit te zetten
 void toggleNetSwitchSocket(bool turnOn) {
-  if ( netw_state != NW_NONE ) {
+  if ( docTriggers["device"]["dongle_io"].as<int>() > 0 ) {
+    Debugf("IO changed to %s \n",turnOn?"True":"False");
+    digitalWrite(docTriggers["device"]["dongle_io"].as<int>(), turnOn);
+    return;
+  }
+  //no dongle io switching
+  if ( netw_state != NW_NONE && strlen(docTriggers["device"]["name"].as<const char*>()) ) {
     HTTPClient http;
     String url = String("http://") + docTriggers["device"]["name"].as<const char*>() + String("/relay/") + docTriggers["device"]["relay"].as<const char*>() + String("?turn=") + (turnOn ? "on" : "off");
     Debug("url: ");Debugln(url);

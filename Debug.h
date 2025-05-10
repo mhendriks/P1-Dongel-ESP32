@@ -69,7 +69,7 @@ void _debugBOL(const char *fn, int line)
 bool HWMarks[3] = { 0,0,0 };
 
 void PrintHWMark(const int id){
-#ifdef INSIGHTS
+#ifdef XTRA_LOG
       if (uptime() % 10 == 0) 
       {
         if ( !HWMarks[id] ) { 

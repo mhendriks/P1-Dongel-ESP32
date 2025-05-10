@@ -540,17 +540,17 @@
     <input class=ntsw type="number" id="value" value="100" oninput="NetSwitchUpdateBar()">
 	</label>
 
-    <label class=ntsw>Watt komt, gaat het Shelly toestel </label>
+    <label class=ntsw>Watt komt, gaat het Shelly toestel of IO </label>
     <select class=ntsw id="switch_on" onchange="NetSwitchUpdateBar()">
-        <option value="true" >Aan</option>
-        <option value="false" selected>Uit</option>
+        <option value="true" >ON</option>
+        <option value="false" selected>OFF</option>
     </select>
     
     <div class="bar-container" >
         <div class="bar-container-inner" onclick="BarOnClick()">
-        <div class="bar-fill-left" id="barFillLeft">Aan</div>
+        <div class="bar-fill-left" id="barFillLeft">ON</div>
         <div class="bar-divider"></div>
-        <div class="bar-fill-right" id="barFillRight">Uit</div>
+        <div class="bar-fill-right" id="barFillRight">OFF</div>
         </div>
         <div class="bar-text" id="barText">100 Watt</div>
     </div>
@@ -561,19 +561,25 @@
 
     <label class=ntsw >Uitschakelvertraging (seconden)</label>
     <input class=ntsw type="number" id="time_false" min="10" max="3600" value="120" >
-
+	
+	<label class=ntsw>State on startup</label>
+	<select class=ntsw id="default">
+        <option value="true" >ON</option>
+        <option value="false" selected>OFF</option>
+    </select>
 	<hr>
-    <label class=ntsw>IP-adres of hostname</label>
+	<p>Make a choice to enable shelly or dongle IO. When IO = 0 shelly is active. Any other value disables Shelly function.</p>
+	<label class=ntsw>Dongle IO number</label>
+    <input class=ntsw type="number" id="dongle_io" value="0" min="0" max="44" maxlength="1" >
+	<div id=shelly_conf>
+	<hr>
+    <label class=ntsw>IP address or hostname</label>
     <input class=ntsw type="text" id="device" placeholder="ip of hostnaam" >
 
     <label class=ntsw>Relais ID (default 0):</label>
     <input class=ntsw type="number" id="relay" value="0" min="0" max="4" maxlength="1" >
 
-    <label class=ntsw>Default stand</label>
-	<select class=ntsw id="default">
-        <option value="true" >Aan</option>
-        <option value="false" selected>Uit</option>
-    </select><br>
+    </div><br>
     <br>
 	<div class=align-c><button onclick="SendNetSwitchJson()">OPSLAAN</button></div>
 	</div>

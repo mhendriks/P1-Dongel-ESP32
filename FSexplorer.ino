@@ -46,9 +46,26 @@ void serveStaticWithAuth(const char* uri, const char* fileName) {
   });
 }
 
+// #include <AsyncTCP.h>
+// #include <ESPAsyncWebServer.h>
+
+// AsyncWebServer server(81);
+// AsyncWebSocket ws("/ws");
+
+// void serveStaticWithAuth2( const char* uri, const char* filename) {
+//   server.serveStatic(uri, LittleFS, filename)
+//     .setAuthentication("admin", "password"); // Pas dit aan aan jouw auth-systeem
+// }
+
 //=====================================================================================
 void setupFSexplorer()
 { 
+
+//test AsyncWebServer
+// serveStaticWithAuth2( "/api/v2/hist/hours", RingFiles[RINGHOURS].filename);
+// serveStaticWithAuth2( "/api/v2/hist/days", RingFiles[RINGDAYS].filename);
+// serveStaticWithAuth2( "/api/v2/hist/months", RingFiles[RINGMONTHS].filename);
+
 
  // Serve static files with authentication
   serveStaticWithAuth("/api/v2/hist/hours", RingFiles[RINGHOURS].filename);
@@ -91,6 +108,7 @@ void setupFSexplorer()
     
   });
   httpServer.begin();
+  // server.begin();
   DebugTln( F("HTTP server started\r") );
   
 } // setupFSexplorer()

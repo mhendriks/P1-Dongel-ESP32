@@ -339,32 +339,6 @@ function ShowHidePV(){
 		document.getElementById('gw_url').value = "";
 	}
 }
-
-function SendNetSwitchJson() {
-		let data = {
-			value: parseInt(document.getElementById("value").value),
-			switch_on: document.getElementById("switch_on").value === "true",
-			time_true: parseInt(document.getElementById("time_true")?.value || 60),
-			time_false: parseInt(document.getElementById("time_false")?.value || 120),
-			device: {
-				name: document.getElementById("device").value,
-				relay: document.getElementById("relay").value,
-				default: document.getElementById("default").value
-			}
-		};
-		
-	let jsonBlob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    let formData = new FormData();
-    formData.append("file", jsonBlob, "netswitch.json");
-		
-	fetch("/upload", {
-        method: "POST",
-        body: formData
-    })
-    .then(response => response.text())
-    .then(result => window.alert("NetSwitch config saved"))
-    .catch(error => console.error("Error:", error));
-  }
   
 function InsightData(){
 	fetch(APIHOST+"/api/v2/stats", {"setTimeout": 5000})
@@ -1191,6 +1165,7 @@ function bootsTrapMain()
 	
 	//reselect Dash when Home icon has been clicked
  	document.getElementById("Home").addEventListener("click", function() { document.getElementById('bDashTab').click(); });
+    document.getElementById('dongle_io').addEventListener('input', NTSWupdateVisibility);
  	
  	BurnupBootstrap();
   } // bootsTrapMain()
@@ -1286,13 +1261,13 @@ function NetSwitchUpdateBar() {
 	if ( !switchOn ) {
 		barFillLeft.style.background = "green";
 		barFillRight.style.background = "red";
-		barFillLeft.innerHTML = "Aan";
-		barFillRight.innerHTML = "Uit";
+		barFillLeft.innerHTML = "ON";
+		barFillRight.innerHTML = "OFF";
 	} else {
 		barFillLeft.style.background = "red";
 		barFillRight.style.background = "green";
-		barFillLeft.innerHTML = "Uit";
-		barFillRight.innerHTML = "Aan";
+		barFillLeft.innerHTML = "OFF";
+		barFillRight.innerHTML = "ON";
 	}
 }
 
@@ -1306,28 +1281,39 @@ function fetchNetSwitchConfig() {
         document.getElementById("switch_on").value = data.switch_on ? "true" : "false";
         document.getElementById("time_true").value = data.time_true || 60;
         document.getElementById("time_false").value = data.time_false || 120;
+        document.getElementById("dongle_io").value = data.device.dongle_io;
         document.getElementById("device").value = data.device.name;
         document.getElementById("relay").value = data.device.relay;
         document.getElementById("default").value = data.device.default;
         NetSwitchUpdateBar();
+        NTSWupdateVisibility();
         })
         .catch(error => console.error("Fout bij ophalen van JSON:", error));
 }
 
-  //============================================================================  
+  //============================================================================   
+function NTSWupdateVisibility() {
+    const dongleIO = parseInt(document.getElementById('dongle_io').value);
+    const displayStyle = (dongleIO === 0) ? 'block' : 'none';
+
+    document.getElementById('shelly_conf').style.display = displayStyle;
+}
+
 function SendNetSwitchJson() {
+// 	console.log("send data");
 		let data = {
 			value: parseInt(document.getElementById("value").value),
 			switch_on: document.getElementById("switch_on").value === "true",
 			time_true: parseInt(document.getElementById("time_true")?.value || 60),
 			time_false: parseInt(document.getElementById("time_false")?.value || 120),
 			device: {
+				dongle_io: document.getElementById("dongle_io").value,
 				name: document.getElementById("device").value,
 				relay: document.getElementById("relay").value,
 				default: document.getElementById("default").value
 			}
 		};
-		
+// 	console.log("nsw data: " + JSON.stringify(data) );	
 	let jsonBlob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     let formData = new FormData();
     formData.append("file", jsonBlob, "netswitch.json");

@@ -54,12 +54,14 @@ Default checks
 - add: modbus mapping abb b21
 
 4.13.3
-- fix cpu utilization
-- mDNS changes
-- fix: issue with status led 
-- WDT reset in threats
-- optimize stack threats size
-- add Insights option incl threat heap size print
+√ removed: cpu utilisation - unreliable
+√ mDNS changes
+√ fix: issue with status led 
+√ WDT feed in threat loop
+√ optimize stack threat size
+√ removes IPv6 enable -> issues with some Proxumus routers
+√ add Insights option incl threat heap size print
+√ add Netswitch toggles IO pin
 
 4.13.4
 - check and repair rng files on startup
@@ -92,13 +94,12 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-#define INSIGHTS_KEY "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiMjczMmQyMmUtOGNkNS00OTdmLThmN2QtMjUzYjVjMGQzNTQ5IiwiZXhwIjoxOTg4MDAyMzg4LCJpYXQiOjE2NzI2NDIzODgsImlzcyI6ImUzMjJiNTljLTYzY2MtNGU0MC04ZWEyLTRlNzc2NjU0NWNjYSIsInN1YiI6IjAyOTcxNTljLTJlZjctNDUwMS1iOWQ1LWU5MjBjZmQ0Yjg1YyJ9.tCazdcRy5slY23mpot0sml-kJfU_CIR96MDYvYA7oJWiXVPebRKS955erNYxu6tVxcAsbjM6tg4YmN_gInayyUiNGV5pyWYC0Grer20sw5A93jc83NOEx4hz9kBh8lHHiH_MIBVsc846j6yOvogEfkQ22BNhxHPsAizs3ZAqnU3t1E_YrFHj9YlZhz-z-da8U2hNBfhsY_E0yUzza3ehJ0SK4Acef5XWp54hB7rTvxYXnZqx-nYcAU1oyQErzY0FuoDfqR20-yYLtswka6EcFkKrCSs0uLpzpyC8qM2AApKTerIWAjzajsqFJRyeOiTz8kFdfPpKIE3QC985yeXAXw"
 // #define DEBUG
-#define INSIGHTS
+// #define INSIGHTS
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
-// #define ULTRA         //ultra (mini) dongle
+#define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE   
@@ -209,7 +210,7 @@ void setup()
   //create a task that will be executed in the fP1Reader() function, with priority 1
   //p1 task runs always on core 0. On the dual core models Arduino runs on core 1. It isn't possible that the process runs on both cores.
   if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 2, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
-  if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*8, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
+  if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*6, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
 
 } // setup()

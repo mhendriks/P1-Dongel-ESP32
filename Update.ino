@@ -88,6 +88,7 @@ void RemoteUpdate(const char* versie, bool sketch){
             }
   
   vTaskSuspend(tP1Reader);
+  esp_task_wdt_delete(tP1Reader);
 
   otaFile = strcmp(versie,"4-sketch-latest") == 0 ? "" : "DSMR-API-V";
   otaFile += _versie + "_" + flashSize + "Mb.bin"; 
@@ -133,7 +134,8 @@ void RemoteUpdate(const char* versie, bool sketch){
   Debugln();
   UpdateRequested = false;
   bWebUpdate = false;
-  vTaskResume(tP1Reader); //ook als het hiet goed is gegaan weer starten met lezen
+  esp_task_wdt_add(tP1Reader);
+  vTaskResume(tP1Reader); //error -> start P1 proces 
 } //RemoteUpdate
 
 //---------------
