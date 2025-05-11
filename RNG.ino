@@ -9,17 +9,221 @@
 ***************************************************************************      
 */
 
-struct RingRecord {
-  char date[9];
-  float values[6];
-};
-
-RingRecord ringRecords[15];
 int recordCount = 0;
 int actSlot = 0;
 
 RingRecord repaired[30];
 int repairedCount = 0;
+
+bool convertRingfileWithSlotExpansion(E_ringfiletype type, uint8_t newSlotCount) {
+  const S_ringfile& file = RingFiles[type];
+  File f = LittleFS.open(file.filename, "r");
+  if (!f) {
+    Debugln("ERROR: input file open failed.");
+    return false;
+  }
+
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, f);
+  f.close();
+  if (err) {
+    Debug("JSON parse error: ");
+    Debugln(err.c_str());
+    return false;
+  }
+
+  JsonArray oldData = doc["data"];
+
+  struct Record {
+    char date[9];
+    float values[7];
+  };
+
+  Record newRecords[newSlotCount];
+  
+  //fill all data with defaults
+  for (int i = 0; i < newSlotCount; i++) {
+    strcpy(newRecords[i].date, "20000000");
+    for (int j = 0; j < 7; j++) newRecords[i].values[j] = 0.000;
+  }
+
+  // Oude records inladen op basis van nieuwe slotpositie
+  for (JsonObject obj : oldData) {
+    const char* date = obj["date"] | "";
+    
+    if (strcmp(date, "20000000") == 0) continue; // skip
+
+    time_t t1 = epoch(date, strlen(date), false);
+    uint32_t nr = (type == RINGMONTHS)
+      ? ((year(t1) - 1) * 12) + month(t1)
+      : t1 / RingFiles[type].seconds;
+    uint8_t slot = nr % newSlotCount;
+
+    strncpy(newRecords[slot].date, date, 9);
+    JsonArray values = obj["values"];
+    for (int i = 0; i < 6; i++) {
+      newRecords[slot].values[i] = values[i] | 0.0;
+    }
+    newRecords[slot].values[6] = 0.000;
+  }
+
+  // actSlot bepalen: slot van laatste geldige datum
+  const char* lastDate = oldData[oldData.size() - 1]["date"];
+  time_t t_last = epoch(lastDate, strlen(lastDate), false);
+  uint32_t nr_last = (type == RINGMONTHS)
+      ? ((year(t_last) - 1) * 12) + month(t_last)
+      : t_last / RingFiles[type].seconds;
+  uint8_t actSlot = nr_last % newSlotCount;
+
+  // Bestand wegschrijven
+  File fout = LittleFS.open("/RNGdays32_7.json", "w");
+  if (!fout) {
+    Debugln("ERROR: output file open failed.");
+    return false;
+  }
+
+  fout.printf("{\"actSlot\":%d,\"data\":[\n", actSlot);
+  for (int i = 0; i < newSlotCount; i++) {
+    fout.printf("{\"date\":\"%s\",\"values\":[", newRecords[i].date);
+    for (int j = 0; j < 7; j++) {
+      fout.printf("%10.3f", newRecords[i].values[j]);
+      if (j < 6) fout.print(",");
+    }
+    fout.print("]}");
+    fout.print(i < newSlotCount - 1 ? ",\n" : "\n");
+  }
+  fout.print("]}");
+  fout.close();
+
+  Debugln("Conversie succesvol");
+  return true;
+}
+
+
+bool patchJsonFile_Add7thValue(E_ringfiletype type) {
+  const S_ringfile& file = RingFiles[type];
+  File fin = LittleFS.open(file.filename, "r");
+  if (!fin) {
+    Debugln("ERROR: input file");
+    return false;
+  }
+
+  String outname = String(file.filename);
+  outname.replace(".json", "_7.json");
+  File fout = LittleFS.open(outname, "w");
+  if (!fout) {
+    Debugln("ERROR: output file.");
+    fin.close();
+    return false;
+  }
+
+  int linenr = 0;
+  while (fin.available()) {
+    String line = fin.readStringUntil('\n');
+    // Skip eerste en laatste regel (actSlot en afsluitende ]})
+    if ( linenr > 0 && linenr <= file.slots ) line.replace("]}", ",     0.000]}");
+    fout.println(line);
+    linenr++;
+  }
+
+  fin.close();
+  fout.close();
+  Debugln("Conversie succesvol");
+  return true;
+}
+
+
+void printRecordArray(const RingRecord* records, int slots, const char* label = nullptr) {
+  if (label) {
+    Debug("=== ");
+    Debug(label);
+    Debugln(" ===");
+  }
+
+  for (int i = 0; i < slots; i++) {
+    Debug("Slot ");
+    Debug(i);
+    Debug(" | Date: ");
+    Debug(records[i].date);
+    Debug(" | Values: ");
+
+    for (int j = 0; j < 6; j++) {
+      Debug(records[i].values[j], 3);
+      if (j < 5) Debug(", ");
+    }
+
+    Debugln();
+  }
+}
+
+
+bool loadRingfile(E_ringfiletype type) {
+  File f = LittleFS.open(RingFiles[type].filename, "r");
+  if (!f) {
+    Debugln("Fout bij openen bestand");
+    return false;
+  }
+
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, f);
+  f.close();
+
+  if (err) {
+    Debug("Fout bij JSON parsing: ");
+    Debugln(err.c_str());
+    return false;
+  }
+
+  actSlot = doc["actSlot"] | 0;
+  JsonArray data = doc["data"];
+  int i = 0;
+  for (JsonObject obj : data) {
+    if (i >= RingFiles[type].slots) break;
+    strncpy(RNGDayRec[i].date, obj["date"] | "", 9);
+
+    JsonArray values = obj["values"];
+    for (int j = 0; j < 6; j++) {
+      RNGDayRec[i].values[j] = values[j] | 0.0;
+    }
+    i++;
+  }
+
+  return true;
+}
+
+bool saveRingfile(E_ringfiletype type) {
+  const S_ringfile& file = RingFiles[type];
+  File f = LittleFS.open("/testDays.json", "w");
+  if (!f) {
+    Debug("Kan bestand niet openen voor schrijven: ");
+    Debugln(file.filename);
+    return false;
+  }
+  f.print("{\"actSlot\":");
+  f.print(actSlot);
+  f.print(",\"data\":[\n");
+
+  for (int i = 0; i < file.slots; i++) {
+    f.print("{\"date\":\"");
+    f.print(RNGDayRec[i].date);
+    f.print("\",\"values\":[");
+
+    // Handmatig met vaste spacing en precisie
+    for (int j = 0; j < 6; j++) {
+      f.printf("%10.3f", RNGDayRec[i].values[j]);
+      if (j < 5) f.print(", ");
+    }
+
+    f.print("]}");
+    if (i < file.slots - 1) f.print(",\n");
+  }
+
+  f.print("\n]}");
+  f.close();
+
+  Debug("Bestand opgeslagen in correct formaat: "); Debugln(file.filename);
+  return true;
+}
 
 time_t date2epoch(const char* date){
   struct tm tNew = {};
@@ -127,57 +331,57 @@ void repairRingRecords( RingRecord* records, int len) {
 }
 
 
-void CheckRingFile(E_ringfiletype ringfiletype) {
-  File f = LittleFS.open(RingFiles[ringfiletype].filename, "r");
-  if (!f) {
-    Serial.println("Kan bestand niet openen.");
-    return;
-  }
+// void CheckRingFile(E_ringfiletype ringfiletype) {
+//   File f = LittleFS.open(RingFiles[ringfiletype].filename, "r");
+//   if (!f) {
+//     Serial.println("Kan bestand niet openen.");
+//     return;
+//   }
 
-  JsonDocument doc;
-  DeserializationError err = deserializeJson(doc, f);
-  f.close();
-  if (err) {
-    Debug("Parse fout: ");Debugln(err.c_str());
-    return;
-  }
+//   JsonDocument doc;
+//   DeserializationError err = deserializeJson(doc, f);
+//   f.close();
+//   if (err) {
+//     Debug("Parse fout: ");Debugln(err.c_str());
+//     return;
+//   }
 
-  actSlot = doc["actSlot"].as<int>();
-  int total = doc["data"].size();
+//   actSlot = doc["actSlot"].as<int>();
+//   int total = doc["data"].size();
   
-  Debugln("json to array");
-  for (int i = 0; i < total; i++) {
-    int idx = (total + actSlot - i) % total;
-    strncpy(ringRecords[i].date, doc["data"][idx]["date"], 9);
-    for (int j = 0; j < 6; j++) {
-      ringRecords[i].values[j] = doc["data"][idx]["values"][j].as<float>();
-    }
-    Debugf("i: %02d - idx: %02d - date: %s\n",i,idx,ringRecords[i].date);
-  }
-  Debugln("VOOR herstel");
-  printRec(ringRecords,total);
+//   Debugln("json to array");
+//   for (int i = 0; i < total; i++) {
+//     int idx = (total + actSlot - i) % total;
+//     strncpy(ringRecords[i].date, doc["data"][idx]["date"], 9);
+//     for (int j = 0; j < 6; j++) {
+//       ringRecords[i].values[j] = doc["data"][idx]["values"][j].as<float>();
+//     }
+//     Debugf("i: %02d - idx: %02d - date: %s\n",i,idx,ringRecords[i].date);
+//   }
+//   Debugln("VOOR herstel");
+//   printRec(ringRecords,total);
 
-  repairRingRecords(ringRecords, total);
-  Debugln("NA herstel");
-  printRec(ringRecords,total);
+//   repairRingRecords(ringRecords, total);
+//   Debugln("NA herstel");
+//   printRec(ringRecords,total);
   
-  // Check op 1 dag verschil tussen elke 2 records
-  // for (int i = 1; i < total; i++) {
-  //   if (!isPreviousDay(ringRecords[i - 1].date, ringRecords[i].date)) {
-  //     Debug("Datumverschil ongeldig tussen ");
-  //     Debug(ringRecords[i - 1].date);
-  //     Debug(" en ");
-  //     Debugln(ringRecords[i].date);
-  //   } else Debugln("No gap between records");
-  // }
-}
+//   // Check op 1 dag verschil tussen elke 2 records
+//   // for (int i = 1; i < total; i++) {
+//   //   if (!isPreviousDay(ringRecords[i - 1].date, ringRecords[i].date)) {
+//   //     Debug("Datumverschil ongeldig tussen ");
+//   //     Debug(ringRecords[i - 1].date);
+//   //     Debug(" en ");
+//   //     Debugln(ringRecords[i].date);
+//   //   } else Debugln("No gap between records");
+//   // }
+// }
 
 
 void CheckRingExists(){
   for (byte i = 0; i< 3; i++){
     if ( !LittleFS.exists(RingFiles[i].filename) ) {
       createRingFile( (E_ringfiletype)i );
-      P1SetDevFirstUse( true ); //when one or more files are missing first use mode triggers
+      P1SetDevFirstUse( true ); //when one or more files are missing first use mode is triggered
       DebugTln(F("First Use mode"));
     }
   }
@@ -237,7 +441,7 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, bool prev_slot)
 
 //===========================================================================================
 
-uint8_t CalcSlot(E_ringfiletype ringfiletype, char* Timestamp) 
+uint8_t CalcSlot(E_ringfiletype ringfiletype, const char* Timestamp) 
 {
   //slot positie bepalen
   uint32_t  nr = 0;

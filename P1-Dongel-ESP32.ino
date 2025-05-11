@@ -48,20 +48,6 @@ Default checks
     - loadbalancing over de fases heen
     - detail P per fase afgelopen uur (sample eens per 10s)
 
-4.13.2
-- fix: somoco emulation for Alphen chargers
-- add: modbus mapping dtsu666
-- add: modbus mapping abb b21
-
-4.13.3
-√ removed: cpu utilisation - unreliable
-√ mDNS changes
-√ fix: issue with status led 
-√ WDT feed in threat loop
-√ optimize stack threat size
-√ removes IPv6 enable -> issues with some Proxumus routers
-√ add Insights option incl threat heap size print
-√ add Netswitch toggles IO pin
 
 4.13.4
 - check and repair rng files on startup
@@ -99,7 +85,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
-#define ULTRA         //ultra (mini) dongle
+// #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE   
