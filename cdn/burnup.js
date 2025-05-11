@@ -2,7 +2,7 @@
 		plugin by Mar10us
 */
 
-const APIGW = window.location.protocol+'//'+window.location.host+'/api/';
+const // APIGW = window.location.protocol+'//'+window.location.host+'/api/';
 const URL_HISTORY_HOURS = APIGW + "../RNGhours.json";
 const URL_HISTORY_DAYS = APIGW + "../RNGdays.json";
 const URL_HISTORY_MONTHS = APIGW + "../RNGmonths.json";
