@@ -12,3 +12,6 @@ ap
 *.bin
 *.elf
 *.map
+*.sh
+*.zip
+build

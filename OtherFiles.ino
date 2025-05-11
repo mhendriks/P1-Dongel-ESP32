@@ -80,7 +80,7 @@ void writeSettings() {
     
   DebugTln(F("Start writing setting data to json settings file"));
   
-  DynamicJsonDocument docw(3000); 
+  JsonDocument docw; 
   docw["Hostname"] = settingHostname;
   docw["EnergyDeliveredT1"] = settingEDT1;
   docw["EnergyDeliveredT2"] = settingEDT2;
@@ -157,7 +157,7 @@ void readSettings(bool show)
   
   DebugT(F("Reading settings:.."));
   
-  DynamicJsonDocument doc(3000); 
+  JsonDocument doc; 
   DeserializationError error = deserializeJson(doc, SettingsFile);
   if (error) {
     Debugln();

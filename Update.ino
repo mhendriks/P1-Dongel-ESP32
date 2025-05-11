@@ -126,7 +126,7 @@ void ReadManifest() {
   http.end();
     
   // Parse JSON object in response
-  DynamicJsonDocument manifest(256);
+  JsonDocument manifest;
 
 } //ReadManifest
 
