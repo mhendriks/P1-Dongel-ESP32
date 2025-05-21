@@ -374,7 +374,7 @@ void updateSetting(const char *field, const char *newValue)
    }
   if (!stricmp(field, "pre40")) {
     bPre40 = (stricmp(newValue, "true") == 0?true:false);    
-    SetupSMRport();
+    SetupP1In();
   }
   if (!stricmp(field, "raw-port")) bRawPort = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "act-json-mqtt")) bActJsonMQTT = (stricmp(newValue, "true") == 0?true:false);  

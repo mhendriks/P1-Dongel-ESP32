@@ -13,7 +13,7 @@ volatile bool dtr1         = false;
 bool          Out1Avail    = false;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
-void SetupSMRport(){
+void SetupP1In(){
   Serial1.end();
   delay(100); //give it some time
   DebugT(F("P1 serial set to ")); 

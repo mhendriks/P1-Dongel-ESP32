@@ -121,13 +121,17 @@ static void onNetworkEvent (WiFiEvent_t event) {
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
         tWifiLost = millis();
         if ( netw_state != NW_ETH ) netw_state = NW_NONE;
+        if ( !bNoNetworkConn ) LogFile("Wifi connection lost",true);
+        bNoNetworkConn = true;
         break;           
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: //5
 #ifdef ULTRA
         if ( netw_state != NW_ETH ) SwitchLED( LED_ON, LED_RED );
 #else
         SwitchLED( LED_OFF, LED_BLUE );
-#endif        
+#endif      
+        if ( !bNoNetworkConn ) LogFile("Wifi connection lost",true);
+        bNoNetworkConn = true;
         break;
     default:
         sprintf(cMsg,"Network-event : %d | rssi: %d | channel : %i",event, WiFi.RSSI(), WiFi.channel());
@@ -147,39 +151,42 @@ void configModeCallback (WiFiManager *myWiFiManager)
 } // configModeCallback()
 
 //===========================================================================================
-void WifiWatchDog(){
-#if not defined ETHERNET || defined ULTRA
-  //try to reconnect or reboot when wifi is down
-  if ( bEthUsage ) return; //leave when ethernet is prefered network
-  if ( WiFi.status() != WL_CONNECTED ){
-    if ( !bNoNetworkConn ) {
-      LogFile("Wifi connection lost",true); //log only once 
-      tWifiLost = millis();
-      bNoNetworkConn = true;
-    }
+// void WifiWatchDog(){
+// #if not defined ETHERNET || defined ULTRA
+//   //try to reconnect or reboot when wifi is down
+//   if ( bEthUsage ) return; //leave when ethernet is prefered network
+//   if ( WiFi.status() != WL_CONNECTED ){
+//     if ( !bNoNetworkConn ) {
+//       LogFile("Wifi connection lost",true); //log only once 
+//       tWifiLost = millis();
+//       bNoNetworkConn = true;
+//     }
     
-    if ( (millis() - tWifiLost) >= 20000 ) {
-      DebugTln("WifiLost > 20.000, disconnect");
-      WiFi.disconnect();
-      delay(100); //give it some time
-      WiFi.reconnect();
-//      Wifi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // better to disconnect and begin?
-      tWifiLost = millis();
-      WifiReconnect++;
-      DebugT("WifiReconnect: ");Debug(WifiReconnect);
-      return;
-   }
-    if (WifiReconnect >= 3) {
-      LogFile("Wifi -> Reboot because of timeout",true); //log only once 
-      P1Reboot(); //after 3 x 20.000 millis
-    }
-  }
-#endif  
-}
+//     if ( (millis() - tWifiLost) >= 20000 ) {
+//       DebugTln("WifiLost > 20.000, disconnect");
+//       WiFi.disconnect();
+//       delay(100); //give it some time
+//       WiFi.reconnect();
+// //      Wifi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // better to disconnect and begin?
+//       tWifiLost = millis();
+//       WifiReconnect++;
+//       DebugT("WifiReconnect: ");Debug(WifiReconnect);
+//       return;
+//    }
+//     if (WifiReconnect >= 3) {
+//       LogFile("Wifi -> Reboot because of timeout",true); //log only once 
+//       P1Reboot(); //after 3 x 20.000 millis
+//     }
+//   }
+// #endif  
+// }
 
 //===========================================================================================
+#include <esp_wifi.h>
+
 void startWiFi(const char* hostname, int timeOut) 
 {  
+
 #if not defined ETHERNET || defined ULTRA
 #ifdef ULTRA
   //lets wait on ethernet first for 3.5sec and consume some time to charge the capacitors
@@ -196,6 +203,16 @@ void startWiFi(const char* hostname, int timeOut)
   
   //lower calibration power
   esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+  
+  // WiFi.mode(WIFI_STA);
+  // wifi_config_t sta_config;
+  // esp_err_t ret = esp_wifi_get_config(WIFI_IF_STA, &sta_config);
+
+  // if (ret == ESP_OK) {
+  // Debug("getWiFiPass: ");Debugln( (char*)sta_config.sta.password );
+  // Debug("getWiFiSSID: ");Debugln( (char*)sta_config.sta.ssid );
+
+  // }
 
   WiFi.setHostname(hostname);
   // WiFi.enableIPv6();
@@ -207,8 +224,8 @@ void startWiFi(const char* hostname, int timeOut)
   if ( bFixedIP ) WiFi.config(staticIP, gateway, subnet, dns);
   WiFiManager manageWiFi;
   LogFile("Wifi Starting",true);
-  SwitchLED( LED_OFF, LED_BLUE );
-  
+  SwitchLED( LED_OFF, LED_BLUE );  
+
   manageWiFi.setConfigPortalBlocking(false);
   manageWiFi.setDebugOutput(false);
   manageWiFi.setShowStaticFields(true); // force show static ip fields
@@ -223,7 +240,8 @@ void startWiFi(const char* hostname, int timeOut)
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
   manageWiFi.setAPCallback(configModeCallback);
 
-  manageWiFi.setTimeout(timeOut);  // in seconden ...
+  // manageWiFi.setTimeout(timeOut);  // in seconden ...
+  manageWiFi.setConfigPortalTimeout(timeOut); //config portal timeout in seconds
   manageWiFi.autoConnect(_HOTSPOT);
 
   //handle wifi webinterface timeout and connection (timeOut in sec)

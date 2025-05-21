@@ -51,6 +51,8 @@ Default checks
 
 4.13.4
 - check and repair rng files on startup
+- hostname aanpassen met laatste 3 segmenten mac-adres
+
 
 
 task wtd
@@ -80,7 +82,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 
@@ -182,8 +184,6 @@ void setup()
   SetupNetSwitch();
 
 //================ Start Slimme Meter ===============================
-  
-  SetupSMRport();
 
 #ifdef MBUS
   mbusSetup();
@@ -204,9 +204,10 @@ void setup()
 //P1 reader task
 void fP1Reader( void * pvParameters ){
   DebugTln(F("Enable slimme meter..."));
+  esp_task_wdt_add(nullptr);
+  SetupP1In();
   SetupP1Out();
   slimmeMeter.enable(false);
-  esp_task_wdt_add(nullptr);
 #ifdef ULTRA
   digitalWrite(DTR_IO, LOW); //default on
 #endif   
@@ -241,7 +242,7 @@ void loop () {
     MQTTSentStaticInfo();
     CHANGE_INTERVAL_MIN(StatusTimer, 30);
   }
-  WifiWatchDog();
+  // WifiWatchDog();
   handleKeyInput();
   handleRemoteUpdate();
   PushButton.handler();

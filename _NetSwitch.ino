@@ -72,7 +72,7 @@ void readtriggers(){
 }
 
 void NetSwitchStateMngr(){
-  if ( strlen(docTriggers["device"]["name"].as<const char*>()) == 0 && docTriggers["device"]["dongle_io"].as<int>() == 0  ) return;
+  if ( !bNetSwitchConfigRead ) return;
   //every time new p1 values are available
   int32_t Phouse = DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val();
   // Debugf("Phouse = %d\n",Phouse);
