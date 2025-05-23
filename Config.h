@@ -27,6 +27,7 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
   #define VIRTUAL_P1
   #define MBUS
   #define ESPNOW
+  #define EID
   #include "hw_profile_ultra.h"
 #else
   #ifdef ETHERNET

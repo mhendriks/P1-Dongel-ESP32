@@ -44,7 +44,10 @@ ISSUES
 - arduinojson 7.x
 - crash eerste keer opstartem
 - auto detect slimme meter
-- 
+
+5.0.5
+- laatste 3 segementen toevoegen aan de hostnaam
+- hostname niet aanpasbaar maken in de webinterface
 
 TODO
 - flag NoRebootOnNoWiFi
@@ -87,7 +90,7 @@ Settings for P1 Dongle Pro hardware:
 //#define AP_ONLY
 //#define MQTT_DISABLE
 //#define NO_STORAGE
-// #define EID
+#define EID
 //#define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 //#define SMQTT
