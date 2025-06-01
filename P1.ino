@@ -407,7 +407,7 @@ void ProcessStats(){
     if ( DSMRdata.voltage_l3.int_val() > P1Stats.U3piek ) P1Stats.U3piek = DSMRdata.voltage_l3.int_val();
     controleerOverspanning(DSMRdata.voltage_l3, P1Stats.TU3over, startTijdL3, overspanningActiefL3);
   }  
-  if ( (hour() < 6) && (DSMRdata.power_delivered.int_val() < P1Stats.Psluip) && DSMRdata.power_delivered.int_val() ) P1Stats.Psluip = DSMRdata.power_delivered.int_val();
+  if ( (hour() < 5) && (DSMRdata.power_delivered.int_val() < P1Stats.Psluip) && DSMRdata.power_delivered.int_val() ) P1Stats.Psluip = DSMRdata.power_delivered.int_val();
   // overspannning bijhouden per etmaal; seconden tellen boven de 253V per fase
 }
 

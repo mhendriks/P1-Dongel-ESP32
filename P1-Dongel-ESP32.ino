@@ -52,8 +52,8 @@ Default checks
 4.13.4
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
-
-
+√ sluipverbruik tussen 24 - 05u
+- fix: modbus in apart proces afhandelen is nu soms blocking 
 
 task wtd
 - https://forum.arduino.cc/t/watchdog-reset-esp32-if-stuck-more-than-120-seconds/1266565/2
