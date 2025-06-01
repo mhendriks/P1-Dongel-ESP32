@@ -107,14 +107,39 @@ void RemoteUpdate(const char* versie, bool sketch){
 
 //---------------
 
-void ReadManifest() {
+// void ReadManifest() {
+//   HTTPClient http;
+//   String ota_manifest = BaseOTAurl;
+//   ota_manifest += "version-manifest-v5.json";
+//   http.begin(wifiClient, ota_manifest.c_str() );
+    
+//   int httpResponseCode = http.GET();
+//   if ( httpResponseCode<=0 ) { 
+//     Debug(F("Error code: "));Debugln(httpResponseCode);
+//     return; //leave on error
+//   }
+  
+//   Debugln( F("Version Manifest") );
+//   Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
+//   String payload = http.getString();
+//   Debugln(payload);
+//   http.end();
+    
+//   // Parse JSON object in response
+//   JsonDocument manifest;
+
+// } //ReadManifest
+
+
+void ReadManifest( const char* link ) {
   HTTPClient http;
-  String ota_manifest = BaseOTAurl;
-  ota_manifest += "version-manifest-v5.json";
-  http.begin(wifiClient, ota_manifest.c_str() );
+  String ota_manifest = "http://ota.smart-stuff.nl/manifest/" + String(link) + "/manifest.json";
+  // ota_manifest += "version-manifest.json";
+  Debugln( ota_manifest );
+  http.begin( ota_manifest.c_str() );
     
   int httpResponseCode = http.GET();
-  if ( httpResponseCode<=0 ) { 
+  if ( httpResponseCode <= 0 ) { 
     Debug(F("Error code: "));Debugln(httpResponseCode);
     return; //leave on error
   }
@@ -124,12 +149,18 @@ void ReadManifest() {
   String payload = http.getString();
   Debugln(payload);
   http.end();
-    
-  // Parse JSON object in response
-  JsonDocument manifest;
+  
+  JsonDocument doc;
+
+  if ( deserializeJson(doc, payload) ) return;
+
+  strcpy(client_ota_data.update_url, doc["url"]);
+  strcpy(client_ota_data.version, doc["version"]);
+
+  Debugln(client_ota_data.update_url);
+  Debugln(client_ota_data.version);
 
 } //ReadManifest
-
 
 /***************************************************************************
 *

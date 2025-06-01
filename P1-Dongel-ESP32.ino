@@ -73,7 +73,7 @@ Settings for P1 Dongle Pro hardware:
   - Upload Speed: "961600"
 */
 /******************** compiler options  ********************************************/
-// #define DEBUG
+#define DEBUG
 
 //PROFILES
 #define ULTRA         //ultra dongle
@@ -223,6 +223,7 @@ void loop () {
        PostTelegram();
        GetSolarDataN();
        handleVirtualP1();
+       handleP2P();
 } // loop()
 
 /***************************************************************************

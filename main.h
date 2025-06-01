@@ -24,6 +24,14 @@ volatile time_t      WtrPrevReading = 0;
 bool                 WtrMtr         = false;
 #define              DEBOUNCETIMER 1700
 
+struct OTA_VER {
+  uint8_t type;           // == MSG_TYPE_VER_REQ
+  char version[8];        // bijv. "1.2.3"
+  char manifest[10];      // bijv. "main" of "prod"
+  char update_url[35];      // bijv. "main" of "prod"
+  char file[35];
+} client_ota_data;
+
 #include <WiFi.h>
 #include <WiFiClientSecure.h>  
 #include <WebServer.h>
