@@ -11,6 +11,24 @@
 #define __ESPNOW
 
 #include <CRC32.h> // Voor CRC32 berekening, zorg dat deze bibliotheek geïnstalleerd is
+#include "espnow.h" // Voor CRC32 berekening, zorg dat deze bibliotheek geïnstalleerd is
+
+String SolarProdActual();
+String SolarProdToday();
+uint32_t SolarWpTotal();
+
+// --- Globale variabelen voor ACK-mechanisme ---
+volatile bool ackReceived = false;
+volatile uint16_t lastAckPacketId = 0;
+volatile bool lastAckSuccess = false;
+
+command_t Command;
+uint8_t P2PType = 0;
+uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+ActualData_t ActualData;
+tariff_t TariffData;
+char updateURL[60],updateFile[35];
+bool bESPNowInit = false;
 
 /*
   to activate call StartESPNOW in setup
@@ -28,111 +46,36 @@
 
 */
 
-#define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
-// #define MACSTR "%02X:%02X:%02X:%02X:%02X:%02X"
-#define MACSTR2 "%02x%02x%02x%02x%02x%02x"
-#define PEER_NAME_CONTAINS "NRGM35"
-const int ESP_NOW_CHUNK_SIZE = 232; 
-// const int ESP_NOW_CHUNK_SIZE = 1450; //from SDK 3.3.0
+void ReadManifest( const char* link ) {
+  HTTPClient http;
+  String ota_manifest = "http://ota.smart-stuff.nl/manifest/" + String(link) + "/manifest.json";
+  // ota_manifest += "version-manifest.json";
+  Debugln( ota_manifest );
+  http.begin( ota_manifest.c_str() );
+    
+  int httpResponseCode = http.GET();
+  if ( httpResponseCode <= 0 ) { 
+    Debug(F("Error code: "));Debugln(httpResponseCode);
+    return; //leave on error
+  }
+  
+  Debugln( F("Version Manifest") );
+  Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
+  String payload = http.getString();
+  Debugln(payload);
+  http.end();
+  
+  JsonDocument doc;
 
-// #define RSSI_THRESHOLD -40 // Define an acceptable RSSI threshold
+  if ( deserializeJson(doc, payload) ) return;
 
-String SolarProdActual();
-String SolarProdToday();
-uint32_t SolarWpTotal();
-uint8_t P2PType = 0;
+  strcpy(client_ota_data.update_url, doc["url"]);
+  strcpy(client_ota_data.version, doc["version"]);
 
-// --- Globale variabelen voor ACK-mechanisme ---
-volatile bool ackReceived = false;
-volatile uint16_t lastAckPacketId = 0;
-volatile bool lastAckSuccess = false;
+  Debugln(client_ota_data.update_url);
+  Debugln(client_ota_data.version);
 
-// enum _pairStatus { _INACTIVE, _WAITING, _PAIRING, _CONFIRMED, } PairingStatus = _INACTIVE;
-enum MessageType { COMMAND, CONFIRMED, NRGACTUALS, NRGTARIFS, NRGSTATIC, UPD_DATA, UPD_VER_RSP, UPD_VER_REQ, UPD_ACK, UPD_GO_UPDATE, } messageType;
-
-enum sAction { CONN_REQUEST, CONN_RESPONSE, CONN_CLEAR, PAIRING, ASK_TARIF, ASK_STATIC }; 
-
-uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
-esp_now_peer_info_t peerInfo = {};
-
-typedef struct  {
-    uint8_t msgType = COMMAND;
-    sAction action = CONN_RESPONSE;       // command
-    uint8_t channel;
-    char host[20];
-} __attribute__((packed)) command_t;
-
-command_t Command;
-int chan;
-
-typedef struct {
-  uint8_t   type = NRGACTUALS;       // PEER_ACTUALS
-  time_t    epoch;      // sec from 1/1/1970
-  uint32_t  P;          // W
-  uint32_t  Pr;         // W
-  uint32_t  e_t1;       // Wh
-  uint32_t  e_t2;       // Wh
-  uint32_t  e_t1r;      // Wh
-  uint32_t  e_t2r;      // Wh
-  uint32_t  Gas;        // dm3/Liter
-  uint32_t  Water;      // dm3/Liter
-  uint32_t  Psolar;     // W  
-  uint32_t  Esolar;     // Wh  
-} sActualData;
-
-// typedef struct struct_pairing {
-//     uint8_t msgType;
-//     char    ssid[32];    //max 32
-//     char    pw[63];      //max 63
-//     char    host[30];    //max 30
-//     uint8_t ipAddr[4];  //max 4
-// } struct_pairing;
-
-//all values x 100.000
-typedef struct { 
-    uint8_t   msgType = NRGTARIFS;
-    uint32_t  Efixed;   //per maand in centen
-    uint32_t  Et1;      //per kwh in centen
-    uint32_t  Et2;      //per kwh in centen
-    uint32_t  Et1r;     //terugleververgoeding per kwh in centen
-    uint32_t  Et2r;     //terugleververgoeding per kwh in centen
-    uint32_t  Gfixed;   //per maand in centen
-    uint32_t  G;        //per m3 in centen
-    uint32_t  Wfixed;   //per maand in centen
-    uint32_t  W;        //per m3 in centen
-    uint32_t  Efine;    //terugleverboete per Kwh in centen
-} sTariff;
-
-struct { 
-    uint8_t   msgType = NRGSTATIC;
-    uint16_t  WpSolar;    //watt peak solar system
-    char      ssid[32];   //wifi ssid
-    char      pw[63];     //wifi password
-} Static;
-
-// Structuur voor ESP-NOW data (moet overeenkomen met de Slave)
-typedef struct {
-  uint8_t type = UPD_DATA;
-  uint32_t totalSize;
-  uint32_t currentOffset;
-  uint16_t chunkSize;
-  uint16_t packetId; // Uniek ID voor elk verzonden pakket
-  uint8_t data[ESP_NOW_CHUNK_SIZE];
-  bool isLastChunk;
-  uint32_t crc32;    // CRC/checksum voor data integriteit
-} __attribute__((packed)) esp_now_update_data_t;
-
-// Structuur voor ESP-NOW ACK (van Slave naar Master, moet overeenkomen met de Slave)
-typedef struct {
-  uint8_t type = UPD_ACK;
-  uint16_t packetId;      // Het ID van het ontvangen pakket
-  bool success;           // True als het pakket succesvol is ontvangen
-  uint32_t currentOffset; // De laatst succesvol ontvangen offset
-} __attribute__((packed)) esp_now_ack_data_t;
-
-sActualData ActualData;
-sTariff TariffData;
+} //ReadManifest
 
 void procesACK(const uint8_t *incomingData){
   esp_now_ack_data_t ackData;
@@ -194,7 +137,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
               Debugln("CONN_REQUEST: pair mode en juiste hostname");
               memcpy(Pref.mac, info->src_addr,6);
               AddPeer(Pref.mac);
-              bPairingmode = false;
+              bPairingmode = 0;
               Pref.peers = 1;
               P1StatusWrite();
               Command.action = PAIRING;
@@ -233,20 +176,17 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 #endif  
 }
 
-
 void AddPeer( uint8_t * peer_mac ){
-    memcpy(peerInfo.peer_addr, peer_mac, 6);
-    peerInfo.channel = 0; // Use default channel
-    peerInfo.encrypt = false;
-    esp_now_add_peer(&peerInfo);
+  esp_now_peer_info_t peerInfo = {};
+  memcpy(peerInfo.peer_addr, peer_mac, 6);
+  peerInfo.channel = 0; // Use default channel
+  peerInfo.encrypt = false;
+  esp_now_add_peer(&peerInfo);
 }
-
-bool bESPNowInit = false;
 
 void StartESPNOW(){
 #ifdef ETHERNET
-  if ( readWifiCredentials() ) WiFi.begin(Static.ssid, Static.pw);
-  else WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_STA);
 #endif  
   if (esp_now_init() != ESP_OK) {
   Debugln("Error initializing ESP-NOW");
@@ -262,38 +202,6 @@ void StartESPNOW(){
 
   bESPNowInit = true;
 }
-
-#ifdef ETHERNET
-bool readWifiCredentials(){
-  // Static.ssid = '\0';
-  // Static.pw = '\0';
-  if ( !FSmounted || !LittleFS.exists("/wifi.json") ) return false;
-  // Debugln("wifi.json exists");
-  
-  StaticJsonDocument<200> doc;
-  File SettingsFile = LittleFS.open("/wifi.json", "r");
-  if (!SettingsFile) return false;
-  // Debugln("wifi.json read");
-  
-  DeserializationError error = deserializeJson(doc, SettingsFile);
-  if (error) {
-    SettingsFile.close();
-    return false;
-  }
-  SettingsFile.close();
-  Debugln("wifi.json read and deserialised");
-  if ( !doc.containsKey("ssid") || !doc.containsKey("pw") ) return false;
-
-  strcpy( Static.ssid, doc["ssid"] );
-  strcpy( Static.pw, doc["pw"] );
-
-#ifdef DEBUG  
-  Debug("ssid: ");Debugln(Static.ssid);
-  Debug("pw  : ");Debugln(Static.pw);
-#endif
-  return true;
-}
-#endif
 
 void sendStatic() {
 // #ifdef ETHERNET 
@@ -335,7 +243,6 @@ void SendTariffData(){
   // Debugf( "TariffData.G      : %i\n", TariffData.G );
 
   esp_now_send(NULL, (uint8_t *) &TariffData, sizeof(TariffData));
-
 }
 
 void P2PSendActualData(){
@@ -359,7 +266,6 @@ void P2PSendActualData(){
   esp_now_send(NULL, (uint8_t *) &ActualData, sizeof(ActualData));
 
   // Debug("Senddata Ptot: ");Debugln(ActualData.P+ActualData.Pr);
-
 }
 
 bool sendUpdateViaESPNOWFromHTTP(const char* url) {
@@ -496,10 +402,12 @@ bool sendUpdateViaESPNOWFromHTTP(const char* url) {
   return true;
 }
 
-char updateURL[60],updateFile[35];
-
 void handleP2P(){
-  if ( !P2PType ) return;
+  if ( bPairingmode && (millis() - bPairingmode) > PAIR_TIMEOUT ) { 
+    bPairingmode = 0; 
+    Debugln("-P- Timeout disable PAIRING mode");
+  }
+  if ( !P2PType || bPairingmode ) return;
   switch ( P2PType ) {
     case UPD_VER_REQ: {
       client_ota_data.version[0] = '\0';

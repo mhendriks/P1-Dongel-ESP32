@@ -202,7 +202,6 @@ void fP1Reader( void * pvParameters ){
 }
 
 void loop () { 
-        
         httpServer.handleClient();
         handleMQTT();   
         yield();

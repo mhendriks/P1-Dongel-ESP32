@@ -130,38 +130,6 @@ void RemoteUpdate(const char* versie, bool sketch){
 
 // } //ReadManifest
 
-
-void ReadManifest( const char* link ) {
-  HTTPClient http;
-  String ota_manifest = "http://ota.smart-stuff.nl/manifest/" + String(link) + "/manifest.json";
-  // ota_manifest += "version-manifest.json";
-  Debugln( ota_manifest );
-  http.begin( ota_manifest.c_str() );
-    
-  int httpResponseCode = http.GET();
-  if ( httpResponseCode <= 0 ) { 
-    Debug(F("Error code: "));Debugln(httpResponseCode);
-    return; //leave on error
-  }
-  
-  Debugln( F("Version Manifest") );
-  Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
-  String payload = http.getString();
-  Debugln(payload);
-  http.end();
-  
-  JsonDocument doc;
-
-  if ( deserializeJson(doc, payload) ) return;
-
-  strcpy(client_ota_data.update_url, doc["url"]);
-  strcpy(client_ota_data.version, doc["version"]);
-
-  Debugln(client_ota_data.update_url);
-  Debugln(client_ota_data.version);
-
-} //ReadManifest
-
 /***************************************************************************
 *
 * Permission is hereby granted, free of charge, to any person obtaining a
