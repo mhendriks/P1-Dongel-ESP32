@@ -55,8 +55,35 @@ std::map<uint16_t, ModbusMapping> mapping_default = {
     { 42, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l3_present) ? (int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val() : MBUS_VAL_UNAVAILABLE; } }},
 };
 
-// Modbus mapping SDM630 = 1, see https://www.eastroneurope.com/images/uploads/products/protocol/SDM630_MODBUS_Protocol.pdf
 
+std::map<uint16_t, ModbusMapping> mapping_mx3xx = {
+    {32774,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {32776,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l2.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {32778,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l3.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {32782,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l1_present ? DSMRdata.current_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {32784,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l2_present ? DSMRdata.current_l2.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {32786,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l3_present ? DSMRdata.current_l3.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {32798,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l1_present ? (-DSMRdata.power_returned_l1.val() + DSMRdata.power_delivered_l1.val()) :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
+    {32800,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l2_present ? (-DSMRdata.power_returned_l2.val() + DSMRdata.power_delivered_l2.val()) :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
+    {32802,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l3_present ? (-DSMRdata.power_returned_l3.val() + DSMRdata.power_delivered_l3.val()) :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
+    {32804,  {ModbusDataType::FLOAT, []() { return mapping_mx3xx[32798].valueGetter(); }}}, // Alias P1
+    {32806,  {ModbusDataType::FLOAT, []() { return mapping_mx3xx[32800].valueGetter(); }}}, // Alias P2
+    {32808,  {ModbusDataType::FLOAT, []() { return mapping_mx3xx[32802].valueGetter(); }}}, // Alias P3
+    {32790,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_present ? (-DSMRdata.power_returned.val() + DSMRdata.power_delivered.val()) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {32792,  {ModbusDataType::FLOAT, []() { return mapping_mx3xx[32790].valueGetter(); }}}, // Alias voor 52
+    // {62,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned > 0 ? -1.0 : 1.0; return map_temp.u; }}},
+    {32816,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l1 > 0 ? -1.0 : 1.0; return map_temp.u; }}},
+    {32818,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l2_present ? (DSMRdata.power_returned_l2 > 0 ? -1.0 : 1.0) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {32820,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l3_present ? (DSMRdata.power_returned_l3 > 0 ? -1.0 : 1.0) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {32780,  {ModbusDataType::FLOAT, []() { map_temp.f = 50.0; return map_temp.u; }}},
+    {33024,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff2 + DSMRdata.energy_delivered_tariff1 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {33030,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff2 + DSMRdata.energy_returned_tariff1 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    // {200, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l1_present && DSMRdata.voltage_l2_present) ? calculateLineVoltage(DSMRdata.voltage_l1, DSMRdata.voltage_l2) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    // {202, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l2_present && DSMRdata.voltage_l3_present) ? calculateLineVoltage(DSMRdata.voltage_l2, DSMRdata.voltage_l3) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    // {204, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}}
+};
+
+// Modbus mapping SDM630 = 1, see https://www.eastroneurope.com/images/uploads/products/protocol/SDM630_MODBUS_Protocol.pdf
 std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
     {0,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
     {2,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l2.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
@@ -137,7 +164,7 @@ std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[6] = { 44, 206, 24, 0xC574+2, 100, 0x5B1A+2 };
+uint16_t MaxReg[6] = { 44, 206, 24, 0xC574+2, 100, 0x5B1A+2, 33030+2 };
 
 // Change active mapping
 void setModbusMapping(int mappingChoice) {
@@ -149,6 +176,7 @@ void setModbusMapping(int mappingChoice) {
         case 3: selectedMapping = &mapping_alfen_socomec; break;
         // case 4: selectedMapping = &mapping_em330; break;
         case 5: selectedMapping = &mapping_abb_b21; break;
+        case 6: selectedMapping = &mapping_mx3xx; break;
         default: selectedMapping = &mapping_default; break; // Fallback naar default
     }
 }

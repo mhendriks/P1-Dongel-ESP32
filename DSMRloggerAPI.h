@@ -66,6 +66,25 @@ bool bFixedIP = false;
   char virtual_p1_ip[20] ="";
 #endif
 
+// connect NRG Monitor via ESPNOW
+time_t bPairingmode = 0;
+
+struct {
+  // uint32_t  reboots;
+  uint8_t   mac[6];
+  uint8_t   peers;      
+} Pref;
+
+ struct { 
+  uint32_t lastUpdDay;
+  uint32_t t1;
+  uint32_t t2;
+  uint32_t t1r;
+  uint32_t t2r;
+  uint32_t gas; //and heat
+  uint32_t water;
+} dataYesterday;
+
 TaskHandle_t tP1Reader; //  own proces for P1 reading
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
@@ -332,6 +351,7 @@ byte        TxO1 = TXO1;
 //vitals
 char      macStr[18] = { 0 };
 char      macID[13];
+char      DongleID[7];
 
 String      CapTelegram;
 char        cMsg[150];

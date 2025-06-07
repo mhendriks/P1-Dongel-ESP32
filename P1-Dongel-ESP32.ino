@@ -51,9 +51,22 @@ Default checks
 
 4.13.4
 - check and repair rng files on startup
-- hostname aanpassen met laatste 3 segmenten mac-adres
-√ sluipverbruik tussen 24 - 05u
 - fix: modbus in apart proces afhandelen is nu soms blocking 
+
+5.1.0
+√ pairing via de webinterface verwijderd
+√ short press = pairing mode
+√ sluipverbruik tussen 24 - 05u
+√ fix: ethernet disconnect dan stopt het p2p proces ...niet meer
+√ Ethernet/Ultra dongle gebruikt altijd eth mac-adres
+√ fix: button handling
+- hostname aanpassen met laatste 3 segmenten mac-adres (bij write lege settingsfile, macadres berekenen op basis van efuse mac)
+- eid aan bij installeren
+- check of het ook blijft werken met Wifi verbinding
+- meten van piek spanning
+
+5.1.x
+- wifi off en espnow
 
 task wtd
 - https://forum.arduino.cc/t/watchdog-reset-esp32-if-stuck-more-than-120-seconds/1266565/2
@@ -97,7 +110,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define __Az__
 
 //FEATURES
-#define DEV_PAIRING
+// #define DEV_PAIRING
 #define MBUS
 //#define MQTT_DISABLE
 //#define NO_STORAGE
@@ -106,9 +119,12 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define POST_TELEGRAM
 // #define MQTTKB
 // #define MB_RTU
+#define ESPNOW
 
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>
+
+Button button(IO_BUTTON);
 
 void setup() 
 {
@@ -118,7 +134,11 @@ void setup()
   DebugBegin(115200);
   USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, Firmware.Version ); 
   Debugf("Original cpu speed: %d\n",Freq);
-  PushButton.begin(IO_BUTTON);
+  
+  // PushButton.begin(IO_BUTTON);
+  // SetupButton();
+  button.begin();
+  GetMacAddress();
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   SetConfig();
@@ -198,7 +218,7 @@ void setup()
   if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 2, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
   if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*6, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
-
+  StartESPNOW();
 } // setup()
 
 //P1 reader task
@@ -214,6 +234,7 @@ void fP1Reader( void * pvParameters ){
   while(true) {
     PrintHWMark(0);
     handleSlimmemeter();
+    button.update();
     P1OutBridge();
     esp_task_wdt_reset();
     vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -245,13 +266,14 @@ void loop () {
   // WifiWatchDog();
   handleKeyInput();
   handleRemoteUpdate();
-  PushButton.handler();
+  // PushButton.handler();
   handleWater();
   handleEnergyID();  
   PostTelegram();
   GetSolarDataN();
   handleVirtualP1();
   PrintHWMark(2);
+  handleP2P();
 
 } // loop()
 

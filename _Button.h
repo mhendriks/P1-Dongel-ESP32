@@ -1,96 +1,78 @@
 #ifndef _BUTTON_H
 #define _BUTTON_H
 
-void P1Reboot();
+// void P1Reboot();
 void FacReset();
 
+enum btn_states { BTN_PRESSED, BTN_RELEASED };
+enum btn_types { BTN_NONE, BTN_LONG_PRESS, BTN_SHORT_PRESS };
+
+volatile btn_states lastState = BTN_RELEASED;
+volatile btn_types ButtonPressed = BTN_NONE;
+
 void  IRAM_ATTR isrButton() {
-    if ( digitalRead(IO_BUTTON) == LOW ) {
-  //    Serial.println("Button PRESSED");
-      Tpressed = millis();
-      bButtonPressed =  false;
-    } else {
-  //    Serial.println("Button RELEASED");
-      Tpressed = (millis() - Tpressed);
-      bButtonPressed =  true;  
-    }
-  }
-
-class Button {
-
-public: 
-   void begin(uint8_t pin){
-      pinMode(pin, INPUT_PULLUP);
-      attachInterrupt(pin, isrButton, CHANGE);
-      DebugTln(F("BUTTON setup completed"));
-    }
   
-  void handler(){
-    if ( !bButtonPressed ) return;
-    bButtonPressed =  false;
-    Debug("Button pressed: ");Debugln(Tpressed);
-    if ( Tpressed  > 5000 ) {   
-      DebugTln(F("Button LONG Press = Factory Reset"));
-      FacReset();
+  btn_states buttonState = BTN_RELEASED; 
+  buttonState = (btn_states)digitalRead(IO_BUTTON);
+  if (buttonState != lastState) {
+    // Serial.println(buttonState ? "Button Released" : "Button Pressed");
+    lastState = buttonState;
+    if ( buttonState == BTN_PRESSED ) {
+      Tpressed = millis();
     }
     else {
-      DebugTln(F("Button SHORT Press = Reboot"));
-      P1Reboot();
+      time_t TimePressed = millis() - Tpressed;
+      // Debugf("Button time: %d \n", TimePressed);
+      ButtonPressed = (TimePressed > 5000) ? BTN_LONG_PRESS : BTN_SHORT_PRESS;
     }
   }
-  
-private:
-  
-} PushButton;
-
-/*
-
-void handleButton(){
-#ifdef AUX_BUTTON
-  if ( Tpressed && ((millis() - Tpressed) > 1500 ) ) handleButtonPressed();
-#endif
 }
 
-#ifdef AUX_BUTTON
-
-void IRAM_ATTR iButton_pressed() {
-  pressed++;
-  Tpressed = millis();
-  //Serial.println("AUX_BUTTON pressed"); // zo min mogelijk tijd tijdens een interupt gebruiken
+void ResetButton(){
+  ButtonPressed = BTN_NONE;
 }
+
+//===========================================================================================
 
 void handleButtonPressed(){
-  DebugTf("Button %d times pressed\n", pressed );
-  switch(pressed){
-  case 1: DebugTln(F("Update ringfiles"));
-          writeRingFiles();
-          break;
-  case 2: DebugTln(F("Reboot"));
-          P1Reboot();
-          break;
-  case 3: DebugTln(F("Reset wifi"));
-          resetWifi();
-          break;
-  case 5: DebugTln(F("/!\\ Factory reset"));
-          FacReset();
-          break;
-  case 8: DebugTln(F("Firmware update naar laaste versie"));
-          RemoteUpdate("4-sketch-latest", true);
-          break;
-  }
-  Tpressed = 0;
-  pressed = 0;
+    if ( ButtonPressed == BTN_SHORT_PRESS ) {
+      ButtonPressed = BTN_NONE;
+      if ( Pref.peers ) return; //already paired 
+      DebugT(F("\n\nSHORT Press : PARING MODE - "));
+      if ( bPairingmode ) bPairingmode = 0;
+      else bPairingmode = millis();
+      Debugln(bPairingmode?"ON":"OFF");
+    }
+    if ( ButtonPressed == BTN_LONG_PRESS ) {
+      DebugTln(F("\n\nButton LONG Press = Factory Reset"));
+      FacReset();
+      ButtonPressed = BTN_NONE;
+    }
 }
 
-#endif
+void handleButton(){
+  if ( ButtonPressed != BTN_NONE) handleButtonPressed();
+}
 
-void setupAuxButton() {
-#ifdef AUX_BUTTON
-  pinMode(AUX_BUTTON, INPUT_PULLUP);
-  attachInterrupt(AUX_BUTTON, iButton_pressed, FALLING);
+//Aux processor task
+void fAuxProc( void * pvParameters ){
+  DebugTln(F("Starting Button handler"));
+  pinMode( IO_BUTTON, INPUT_PULLUP );
+  //TODO gpio_new_pin_glitch_filter(?);
+  attachInterrupt( digitalPinToInterrupt(IO_BUTTON), isrButton, CHANGE );
   DebugTln(F("BUTTON setup completed"));
-//  USBSerial.println(F("BUTTON setup completed"));
-#endif
+
+  while(true) {
+    handleButton();
+    vTaskDelay(25 / portTICK_PERIOD_MS);
+  }
+  // write2Log("TASK", "unexpected task exit fAuxProc",true);
+  vTaskDelete(NULL);
 }
-*/
+
+void SetupButton() {
+  if( xTaskCreatePinnedToCore( fAuxProc, "Aux", 1024*5, NULL, 2, NULL, 0) == pdPASS ) DebugTln(F("Task Aux succesfully created"));
+  // gpio_dump_io_configuration(stdout, 1ULL << 0);
+}
+
 #endif

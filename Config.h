@@ -31,6 +31,7 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
   // #define MBUS //default
   // #define DEV_PAIRING //default
   #include "hw_profile_ultra.h"
+  #undef DEV_PAIRING // 5.1 feature is ESPNOW
 #else
   #ifdef ETHERNET
     #ifdef __Az__

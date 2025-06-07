@@ -53,7 +53,11 @@ void P1StatusRead(){
     if (strlen(P1Status.timestamp)!=13) strcpy(P1Status.timestamp,"010101010101X"); 
     strcpy(actTimestamp, P1Status.timestamp);
     P1Status.eid_state = (E_eid_states) preferences.getUShort("eid_state", EID_IDLE);
-    P1StatusPrint();
+
+  Pref.peers = preferences.getUInt("peers", 0);
+  preferences.getBytes("mac", Pref.mac, 6);
+
+  P1StatusPrint();
 }
 
 void P1SetDevFirstUse(bool first_use){
@@ -74,6 +78,8 @@ void P1StatusWrite(){
     preferences.putShort("wtr_m3", P1Status.wtr_m3);
     preferences.putUInt("wtr_l", P1Status.wtr_l);
     preferences.putUShort("eid_state", (uint16_t)P1Status.eid_state);
+    preferences.putUInt("peers", Pref.peers);
+    preferences.putBytes("mac", Pref.mac, 6);
     DebugTln(F("P1Status successfully writen"));
 }
 
@@ -92,7 +98,10 @@ void P1StatusClear(){
   telegramErrors      = 0;
   mqttCount           = 0;
   P1Status.eid_state  = EID_IDLE;
-  
+  Pref.peers          = 0;
+  memset(Pref.mac, 0, sizeof(Pref.mac));
+
+
   P1StatusWrite();
 }
 

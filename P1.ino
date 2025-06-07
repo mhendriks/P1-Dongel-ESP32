@@ -146,6 +146,11 @@ void handleSlimmemeter()
       Out1Avail = true;
       if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
   
+  #ifdef ESPNOW  
+    // if ( telegramCount % 3 == 1 ) SendActualData();
+    P2PSendActualData();
+  #endif
+
 #ifdef VIRTUAL_P1
   virtSetLastData();
 #endif
@@ -266,6 +271,24 @@ void processSlimmemeter() {
   
 } // handleSlimmeMeter()
 
+//called every hour
+void UpdateYesterday( ){
+#ifdef DEBUG
+  Debug("newT/(uint32_t)(3600*24): ");Debugln(newT/(uint32_t)(3600*24));
+  Debug("dataYesterday.lastUpdDay: ");Debugln( dataYesterday.lastUpdDay);
+#endif  
+  if ( dataYesterday.lastUpdDay == (newT/(uint32_t)(3600*24)) ) return; //do nothing
+  //data yesterday should be changed
+  DebugTln("UpdateUsage data");
+  dataYesterday.t1    = (uint32_t) (DSMRdata.energy_delivered_tariff1 * 1000);
+  dataYesterday.t2    = (uint32_t) (DSMRdata.energy_delivered_tariff2 * 1000);
+  dataYesterday.t1r   = (uint32_t) (DSMRdata.energy_returned_tariff1 * 1000);
+  dataYesterday.t2r   = (uint32_t) (DSMRdata.energy_returned_tariff2 * 1000);
+  dataYesterday.gas   = (uint32_t) (gasDelivered * 1000);
+  dataYesterday.water = (uint32_t) (waterDelivered * 1000);
+  dataYesterday.lastUpdDay = newT/(3600*24);
+}
+
 //==================================================================================
 void processTelegram(){
 //  DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());                                                
@@ -290,11 +313,15 @@ void processTelegram(){
   // has the hour changed write ringfiles
 #ifdef DEBUG
   DebugTf("actMin[%02d] -- newMin[%02d]\r\n", minute(actT), minute(newT));  
-  if ( ( minute(actT) != minute(newT) ) || P1Status.FirstUse ) writeRingFiles(); //bWriteFiles = true; //handled in main flow
+  if ( ( minute(actT) != minute(newT) ) || P1Status.FirstUse ) {
+    writeRingFiles(); //bWriteFiles = true; //handled in main flow
+    UpdateYesterday();
+  }
 #else
   DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
   if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) {
     writeRingFiles(); //bWriteFiles = true; //handled in main flow
+    UpdateYesterday();
     //check dag overgang
     if ( currentDay != (newT/(uint32_t)(3600*24)) ) {
       ResetStats();

@@ -18,7 +18,11 @@ void GetMacAddress(){
   strcpy( macStr, _mac.c_str() );
   _mac.replace( ":","" );
   strcpy( macID, _mac.c_str() );
-  USBPrint( "MacStr : " );USBPrintln( macStr ); //only at setup
+  USBPrint( "MacStr   : " );USBPrintln( macStr ); //only at setup
+
+  strncpy(DongleID, macID + 6, 6);
+  DongleID[6] = '\0';
+  Debug( "DongleID : " );Debugln( DongleID );
 //  USBSerial.print( "MacID: " );USBSerial.println( macID );
 }
 
@@ -45,12 +49,14 @@ void PostMacIP() {
 }
 
 void WifiOff(){
+#ifndef ESPNOW 
   if ( WiFi.isConnected() ) WiFi.disconnect(true,true);
-  btStop();
   WiFi.mode(WIFI_OFF);
   esp_wifi_stop();
   esp_wifi_deinit();
   WiFi.setSleep(true);
+#endif
+  btStop();
 }
 
 //int WifiDisconnect = 0;
@@ -320,12 +326,12 @@ bool validateConfig() {
 void startNetwork()
 {
   Network.onEvent(onNetworkEvent);
+  // Network.hostname(settingHostname);
   // Network.enableIPv6();  
   if ( loadFixedIPConfig("/fixedip.json") ) bFixedIP = validateConfig();
   startETH();
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   WaitOnNetwork();
-  GetMacAddress();
   USBPrint("Ip-addr: ");USBPrintln(IP_Address());
 }
 
@@ -450,12 +456,24 @@ String IP_Address(){
 }
 
 String MAC_Address(){
-#ifdef ETHERNET
-  if ( netw_state == NW_ETH ) return ETH.macAddress();
-  else return WiFi.macAddress();
+  uint8_t efuseMac[6];
+  char macAddressString[13];
+
+  // esp_read_mac( efuseMac, ESP_MAC_BASE );
+  // sprintf(macAddressString, "%02X%02X%02X%02X%02X%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
+  // Debug("ESP_MAC_BASE: ");Debugln(macAddressString);
+
+  // esp_read_mac( efuseMac, ESP_MAC_ETH );
+  // sprintf(macAddressString, "%02X%02X%02X%02X%02X%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
+  // Debug("ESP_MAC_ETH: ");Debugln(macAddressString);
+
+#ifdef ETHERNET 
+  esp_read_mac( efuseMac, ESP_MAC_ETH );
 #else
-  return WiFi.macAddress();
+  esp_read_mac( efuseMac, ESP_MAC_BASE );
 #endif
+  sprintf(macAddressString, "%02X%02X%02X%02X%02X%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
+  return String(macAddressString);
 }
 /***************************************************************************
 *
