@@ -11,7 +11,6 @@
 
 volatile bool dtr1         = false;
 bool          Out1Avail    = false;
-portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void SetupP1In(){
   Serial1.end();

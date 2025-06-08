@@ -80,7 +80,11 @@ int8_t modType[2] = {-1,-1};
 mod_conf *active_mod_conf = &module_config[0];
 
 //FETAURES
+#ifdef ULTRA
+  bool    bEID_enabled = true;
+#else
   bool    bEID_enabled = false;
+#endif  
   enum E_eid_states : uint8_t { EID_IDLE, EID_CLAIMING, EID_ENROLLED };
 
 #ifdef DEBUG

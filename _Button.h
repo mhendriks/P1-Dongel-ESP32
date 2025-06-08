@@ -1,7 +1,7 @@
 #ifndef _BUTTON_H
 #define _BUTTON_H
 
-// void P1Reboot();
+void P1Reboot();
 void FacReset();
 
 enum btn_states { BTN_PRESSED, BTN_RELEASED };
@@ -10,12 +10,11 @@ enum btn_types { BTN_NONE, BTN_LONG_PRESS, BTN_SHORT_PRESS };
 volatile btn_states lastState = BTN_RELEASED;
 volatile btn_types ButtonPressed = BTN_NONE;
 
-void  IRAM_ATTR isrButton() {
-  
-  btn_states buttonState = BTN_RELEASED; 
-  buttonState = (btn_states)digitalRead(IO_BUTTON);
+void IRAM_ATTR isrButton() {
+  btn_states buttonState = (btn_states)digitalRead(IO_BUTTON);
   if (buttonState != lastState) {
-    // Serial.println(buttonState ? "Button Released" : "Button Pressed");
+    portENTER_CRITICAL_ISR(&mux);
+    // Debugln(buttonState ? "Button Released" : "Button Pressed");
     lastState = buttonState;
     if ( buttonState == BTN_PRESSED ) {
       Tpressed = millis();
@@ -25,6 +24,7 @@ void  IRAM_ATTR isrButton() {
       // Debugf("Button time: %d \n", TimePressed);
       ButtonPressed = (TimePressed > 5000) ? BTN_LONG_PRESS : BTN_SHORT_PRESS;
     }
+    portEXIT_CRITICAL_ISR(&mux);
   }
 }
 
@@ -35,19 +35,29 @@ void ResetButton(){
 //===========================================================================================
 
 void handleButtonPressed(){
-    if ( ButtonPressed == BTN_SHORT_PRESS ) {
-      ButtonPressed = BTN_NONE;
-      if ( Pref.peers ) return; //already paired 
+  btn_types btn;
+  portENTER_CRITICAL(&mux);
+  btn = ButtonPressed;
+  ButtonPressed = BTN_NONE;
+  portEXIT_CRITICAL(&mux);
+
+  if (btn != BTN_NONE) {
+    if ( btn == BTN_SHORT_PRESS ) {
+#ifdef ESPNOW      
       DebugT(F("\n\nSHORT Press : PARING MODE - "));
+      if ( Pref.peers ) {Debugln(" already PAIRED -> exit"); return;}
       if ( bPairingmode ) bPairingmode = 0;
       else bPairingmode = millis();
-      Debugln(bPairingmode?"ON":"OFF");
+      Debugln(bPairingmode ? "ON" : "OFF");
+#else 
+      P1Reboot();
+#endif      
     }
-    if ( ButtonPressed == BTN_LONG_PRESS ) {
+    else if ( btn == BTN_LONG_PRESS ) {
       DebugTln(F("\n\nButton LONG Press = Factory Reset"));
       FacReset();
-      ButtonPressed = BTN_NONE;
     }
+  }
 }
 
 void handleButton(){
@@ -67,6 +77,7 @@ void fAuxProc( void * pvParameters ){
     vTaskDelay(25 / portTICK_PERIOD_MS);
   }
   // write2Log("TASK", "unexpected task exit fAuxProc",true);
+  Debugln("unexpected task exit fAuxProc");
   vTaskDelete(NULL);
 }
 

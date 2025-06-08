@@ -48,7 +48,15 @@ void PostMacIP() {
   http.end();  
 }
 
-void WifiOff(){
+void setHostname() {
+  //only once at startup when settingsfile isnt available
+  // char hostname[32]; // Max lengte hostname is 32 karakters
+  // sprintf(settingHostname, "%s-%0X", settingHostname, DongleID);
+  strcat(settingHostname,"-");
+  strcat(settingHostname,DongleID);
+}
+
+void WifiOff() {
 #ifndef ESPNOW 
   if ( WiFi.isConnected() ) WiFi.disconnect(true,true);
   WiFi.mode(WIFI_OFF);

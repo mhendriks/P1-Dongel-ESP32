@@ -48,11 +48,6 @@ Default checks
     - loadbalancing over de fases heen
     - detail P per fase afgelopen uur (sample eens per 10s)
 
-
-4.13.4
-- check and repair rng files on startup
-- fix: modbus in apart proces afhandelen is nu soms blocking 
-
 5.1.0
 √ pairing via de webinterface verwijderd
 √ short press = pairing mode
@@ -60,10 +55,10 @@ Default checks
 √ fix: ethernet disconnect dan stopt het p2p proces ...niet meer
 √ Ethernet/Ultra dongle gebruikt altijd eth mac-adres
 √ fix: button handling
-- hostname aanpassen met laatste 3 segmenten mac-adres (bij write lege settingsfile, macadres berekenen op basis van efuse mac)
-- eid aan bij installeren
-- check of het ook blijft werken met Wifi verbinding
-- meten van piek spanning
+√ eid aan bij installeren (alleen bij Ultra)
+x hostname aanpassen met laatste 3 segmenten mac-adres (bij write lege settingsfile, macadres berekenen op basis van efuse mac)
+√ check of het ook blijft werken met Wifi verbinding
+- meten van piek spanning -> voeding nodig indien ethernet en NRG Monitor. Met Alleen wifi hoogstwaarschijnlijk niet.
 
 5.1.x
 - wifi off en espnow
@@ -80,7 +75,6 @@ bool isDSTTransition(int lastHour, int currentHour) {
     return (lastHour == 1 && currentHour == 3); // Detecteer de sprong
 }
 - inlezen van solar config in frontend
-- add MB mapper > 2 = DTSU666
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -95,7 +89,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 
@@ -124,8 +118,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>
 
-Button button(IO_BUTTON);
-
 void setup() 
 {
   // make_version();
@@ -135,9 +127,7 @@ void setup()
   USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, Firmware.Version ); 
   Debugf("Original cpu speed: %d\n",Freq);
   
-  // PushButton.begin(IO_BUTTON);
-  // SetupButton();
-  button.begin();
+  SetupButton();
   GetMacAddress();
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
@@ -152,7 +142,10 @@ void setup()
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
   P1StatusWrite();
   LogFile("",false); // write reboot status to file
-  if (!LittleFS.exists(SETTINGS_FILE)) writeSettings(); //otherwise the dongle crashes some times on the first boot
+  if (!LittleFS.exists(SETTINGS_FILE)){ 
+    // setHostname();
+    writeSettings(); 
+  } //otherwise the dongle crashes some times on the first boot
   else readSettings(true);
 
 //=============scan, repair and convert RNG files ==================
@@ -234,7 +227,6 @@ void fP1Reader( void * pvParameters ){
   while(true) {
     PrintHWMark(0);
     handleSlimmemeter();
-    button.update();
     P1OutBridge();
     esp_task_wdt_reset();
     vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -266,7 +258,6 @@ void loop () {
   // WifiWatchDog();
   handleKeyInput();
   handleRemoteUpdate();
-  // PushButton.handler();
   handleWater();
   handleEnergyID();  
   PostTelegram();

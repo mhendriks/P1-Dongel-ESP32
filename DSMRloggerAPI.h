@@ -50,6 +50,7 @@ bool                 WtrMtr         = false;
 #define MQTT_RECONNECT_DEFAULT_TIME 10 //seconds
 
 P1Reader    slimmeMeter(&Serial1, DTR_IO);
+portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void LogFile(const char* payload, bool toDebug = false);
 void P1Reboot();
@@ -364,7 +365,7 @@ IPAddress ipDNS, ipGateWay, ipSubnet;
 float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5, settingWDT = 1.04;
 float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
 uint8_t   settingSmHasFaseInfo = 1;
-char      settingHostname[30] = _DEFAULT_HOSTNAME;
+char      settingHostname[32] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 enum tNetwState { NW_NONE, NW_WIFI, NW_ETH};
 uint8_t netw_state = NW_NONE;
