@@ -12,6 +12,28 @@
 
 #include "DSMRloggerAPI.h"
 
+#ifdef ETHERNET
+  #include <ETH.h>
+  #include <SPI.h>
+  #include "esp_mac.h"
+
+  #define ETH_TYPE            ETH_PHY_W5500
+  #define ETH_RST            -1
+  #define ETH_ADDR            1
+
+  //workaround to use the ESP_MAC_ETH mac address instead of local mac address
+  class EthernetClass {
+  public:
+    bool myBeginSPI(ETHClass& eth, eth_phy_type_t type, int32_t phy_addr, uint8_t *mac_addr, int cs, int irq, int rst, SPIClass *spi, int sck, int miso, int mosi, spi_host_device_t spi_host, uint8_t spi_freq_mhz);
+  };
+
+  bool EthernetClass::myBeginSPI(ETHClass& eth, eth_phy_type_t type, int32_t phy_addr, uint8_t *mac_addr, int cs, int irq, int rst, SPIClass *spi, int sck, int miso, int mosi, spi_host_device_t spi_host, uint8_t spi_freq_mhz) {
+    return eth.beginSPI(type, phy_addr, mac_addr, cs, irq, rst, spi, sck, miso, mosi, spi_host, spi_freq_mhz);
+  }
+
+  EthernetClass myEthernet;
+#endif
+
 void GetMacAddress(){
 
   String _mac = MAC_Address();
@@ -65,7 +87,7 @@ static void onNetworkEvent (WiFiEvent_t event) {
   //ETH    
     case ARDUINO_EVENT_ETH_START: //1
       DebugTln("ETH Started");
-      // ETH.setHostname(_HOSTNAME); SDK 3.0 feature
+      ETH.setHostname(settingHostname);
       break;
     case ARDUINO_EVENT_ETH_CONNECTED: //3
       DebugTln("\nETH Connected");
@@ -320,7 +342,7 @@ bool validateConfig() {
 void startNetwork()
 {
   Network.onEvent(onNetworkEvent);
-  // Network.enableIPv6();  
+  // Network.enableIPv6();
   if ( loadFixedIPConfig("/fixedip.json") ) bFixedIP = validateConfig();
   startETH();
   startWiFi(settingHostname, 240);  // timeout 4 minuten
@@ -362,26 +384,6 @@ void startMDNS(const char *Hostname)
 #endif
 
 #ifdef ETHERNET
-
-#include <ETH.h>
-#include <SPI.h>
-#include "esp_mac.h"
-
-#define ETH_TYPE            ETH_PHY_W5500
-#define ETH_RST            -1
-#define ETH_ADDR            1
-
-//workaround to use the ESP_MAC_ETH mac address instead of local mac address
-class EthernetClass {
-public:
-  bool myBeginSPI(ETHClass& eth, eth_phy_type_t type, int32_t phy_addr, uint8_t *mac_addr, int cs, int irq, int rst, SPIClass *spi, int sck, int miso, int mosi, spi_host_device_t spi_host, uint8_t spi_freq_mhz);
-};
-
-bool EthernetClass::myBeginSPI(ETHClass& eth, eth_phy_type_t type, int32_t phy_addr, uint8_t *mac_addr, int cs, int irq, int rst, SPIClass *spi, int sck, int miso, int mosi, spi_host_device_t spi_host, uint8_t spi_freq_mhz) {
-  return eth.beginSPI(type, phy_addr, mac_addr, cs, irq, rst, spi, sck, miso, mosi, spi_host, spi_freq_mhz);
-}
-
-EthernetClass myEthernet;
 
 void startETH(){
   

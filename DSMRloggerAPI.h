@@ -27,6 +27,14 @@ volatile time_t      WtrPrevReading = 0;
 bool                 WtrMtr         = false;
 #define              DEBOUNCETIMER 1700
 
+struct {
+  uint8_t map = 0;
+  uint8_t id = 1;
+  uint16_t baud = 9600;
+  uint32_t parity = SERIAL_8E1;
+  uint16_t port = 502;
+} mb_config;
+
 #include <WiFi.h>        
 #include "Insights.h"
 #include <WiFiClientSecure.h>        

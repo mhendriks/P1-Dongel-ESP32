@@ -6,8 +6,7 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 
-WENSEN
-- detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
+BACKLOG
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
 - auto switch 3 - 1 fase max fuse
 - temperatuur ook opnemen in grafieken (A van Dijken)
@@ -33,6 +32,9 @@ WENSEN
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
 - HA auto update ala : https://www.zigbee2mqtt.io/guide/usage/ota_updates.html#automatic-checking-for-available-updates
+- Daily Insights: Inzichten vanaf opstarten dongle / 00:00 reset
+    - loadbalancing over de fases heen
+    - detail P per fase afgelopen uur (sample eens per 10s)
 
 Default checks
 - wifi
@@ -44,21 +46,11 @@ Default checks
 - ethernet
 - 4h test on 151
 
-- Daily Insights: Inzichten vanaf opstarten dongle / 00:00 reset
-    - loadbalancing over de fases heen
-    - detail P per fase afgelopen uur (sample eens per 10s)
-
-
-4.13.4
+next
+- improvement: modbus in apart process = non-blocking 
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
-√ sluipverbruik tussen 24 - 05u
-- fix: modbus in apart proces afhandelen is nu soms blocking 
-
-task wtd
-- https://forum.arduino.cc/t/watchdog-reset-esp32-if-stuck-more-than-120-seconds/1266565/2
-- https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/wdts.html
-- https://esp32.com/viewtopic.php?t=31155
+- multiligual
 
 - winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
 --> oplossing : 
@@ -67,7 +59,6 @@ bool isDSTTransition(int lastHour, int currentHour) {
     return (lastHour == 1 && currentHour == 3); // Detecteer de sprong
 }
 - inlezen van solar config in frontend
-- add MB mapper > 2 = DTSU666
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -82,7 +73,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 

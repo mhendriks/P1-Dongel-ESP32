@@ -241,7 +241,11 @@ void readSettings(bool show)
   temp = doc["basic-auth"]["pass"];
   if (temp) strcpy(bAuthPW, temp);
   if (doc["mb_map"].is<int>()) setModbusMapping(doc["mb_map"]);
-  
+  if (doc["mb_id"].is<int>()) mb_config.id = doc["mb_id"];
+  if (doc["mb_port"].is<int>()) mb_config.port = doc["mb_port"];
+  if (doc["mb_baud"].is<int>()) mb_config.baud = doc["mb_baud"];
+  if (doc["mb_parity"].is<int>()) mb_config.parity = 134217700 + doc["mb_parity"].as<int>();
+
   SettingsFile.close();
   //end json
 
