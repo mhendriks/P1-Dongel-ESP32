@@ -43,9 +43,12 @@ void handleButtonPressed(){
 
   if (btn != BTN_NONE) {
     if ( btn == BTN_SHORT_PRESS ) {
-#ifdef ESPNOW      
+#ifdef ESPNOW
       DebugT(F("\n\nSHORT Press : PARING MODE - "));
-      if ( Pref.peers ) {Debugln(" already PAIRED -> exit"); return;}
+      if ( Pref.peers ) {
+        Debugln(" already PAIRED -> rePAIR"); 
+        // return;
+      }
       if ( bPairingmode ) bPairingmode = 0;
       else bPairingmode = millis();
       Debugln(bPairingmode ? "ON" : "OFF");

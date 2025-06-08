@@ -126,7 +126,8 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         case PAIRING:
           Debugln("PAIRING");
           memcpy(&Command, incomingData, sizeof(Command));
-          if ( bPairingmode && Pref.peers == 0 ) { //alleen indien peers = 0
+          // if ( bPairingmode && Pref.peers == 0 ) { //alleen indien peers = 0
+          if ( bPairingmode ) { //alleen indien peers = 0
             String hostname = Command.host;
             Debugln("CONN_REQUEST: pair mode");
             if ( hostname.indexOf( PEER_NAME_CONTAINS ) != -1 ) {

@@ -4,7 +4,7 @@
 #define ESP_NOW_CHUNK_SIZE 232
 #define MAX_CHANNEL 13  // 13 in Europe
 #ifdef DEBUG
-  #define PAIR_TIMEOUT 10000 //10sec timeout
+  #define PAIR_TIMEOUT 15000 //10sec timeout
 #else
   #define PAIR_TIMEOUT 120000 //120sec timeout
 #endif
