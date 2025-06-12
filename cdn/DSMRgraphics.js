@@ -219,17 +219,17 @@ function ensureChartsReady()
 	  waterData = createChartDataContainerWithStack();
     
     //create datasets ED & ER
-    var dsED1 = createDatasetBAR('false', 'red',    "Verbruik T1", "STACK");
-    var dsED2 = createDatasetBAR('false', 'orange', "Verbruik T2", "STACK");
-    var dsER1 = createDatasetBAR('false', 'green',  "Teruglevering T1", "STACK");
-    var dsER2 = createDatasetBAR('false', 'lightgreen', "Teruglevering T2", "STACK");
+    var dsED1 = createDatasetBAR('false', 'red',    t("lbl_from_net")+" T1", "STACK");
+    var dsED2 = createDatasetBAR('false', 'orange', t("lbl_from_net")+" T2", "STACK");
+    var dsER1 = createDatasetBAR('false', 'green',  t("lbl_to_net")+" T1", "STACK");
+    var dsER2 = createDatasetBAR('false', 'lightgreen', t("lbl_to_net")+" T2", "STACK");
     
     // GAS
-    var dsG1 = createDatasetLINE('false', 'blue', "Gasverbruik");
-    if ( Dongle_Config == "p1-q") dsG1.label = "Warmteverbruik";
+    var dsG1 = createDatasetLINE('false', 'blue', t("lbl-gas-used"));
+    if ( Dongle_Config == "p1-q") dsG1.label = t("lbl-heat-used");
    
     // WATER
-    var dsW1 = createDatasetLINE('false', 'blue', "Waterverbruik");
+    var dsW1 = createDatasetLINE('false', 'blue', t("lbl-water-used"));
   
     var p = 0;
     var fTarif1 = false;
@@ -288,31 +288,31 @@ function ensureChartsReady()
     gasData   = createChartDataContainerWithStack();    
 	  waterData = createChartDataContainerWithStack();
 
-    listPeriods = ["Verbruik deze periode", "Verbruik vorige periode", "Opgewekt T1 deze periode", "Opgewekt T1 vorige periode"];
+//     listPeriods = ["Verbruik deze periode", "Verbruik vorige periode", "Opgewekt T1 deze periode", "Opgewekt T1 vorige periode"];
     
     // ED this & prev
-    var dsED1 = createDatasetBAR('false', 'rgba(255,0,  0, 1)', "Verbruik T1 deze periode",   "DP");    
-    var dsED2 = createDatasetBAR('false', 'rgba(255,0,  0,.5)', "Verbruik T1 vorige periode", "RP");
-    var dsED3 = createDatasetBAR('false', 'rgba(255,165,0, 1)', "Verbruik T2 deze periode",   "DP");
-    var dsED4 = createDatasetBAR('false', 'rgba(255,165,0,.5)', "Verbruik T2 vorige periode", "RP");
+    var dsED1 = createDatasetBAR('false', 'rgba(255,0,  0, 1)', t("lbl-mth-from-net") + "T1" + t("lbl-mth-current"),   "DP");    
+    var dsED2 = createDatasetBAR('false', 'rgba(255,0,  0,.5)', t("lbl-mth-from-net") + "T1" + t("lbl-mth-prev"), "RP");
+    var dsED3 = createDatasetBAR('false', 'rgba(255,165,0, 1)', t("lbl-mth-from-net") + "T2" + t("lbl-mth-current"),   "DP");
+    var dsED4 = createDatasetBAR('false', 'rgba(255,165,0,.5)', t("lbl-mth-from-net") + "T2" + t("lbl-mth-prev"), "RP");
 
     // ER this & prev
-    var dsER1 = createDatasetBAR('false', 'rgba(0, 255,0, 1)', "Teruglevering T1 deze periode",  "DP");
-    var dsER2 = createDatasetBAR('false', 'rgba(0, 255,0,.5)', "Teruglevering T1 vorige periode","RP");
-    var dsER3 = createDatasetBAR('false', 'rgba(74,240,0, 1)', "Teruglevering T2 deze periode",  "DP");
-    var dsER4 = createDatasetBAR('false', 'rgba(74,240,0,.5)', "Teruglevering T2 vorige periode","RP");
+    var dsER1 = createDatasetBAR('false', 'rgba(0, 255,0, 1)', t("lbl-mth-to-net") + "T1" + t("lbl-mth-current"),  "DP");
+    var dsER2 = createDatasetBAR('false', 'rgba(0, 255,0,.5)', t("lbl-mth-to-net") + "T1" + t("lbl-mth-prev"),"RP");
+    var dsER3 = createDatasetBAR('false', 'rgba(74,240,0, 1)', t("lbl-mth-to-net") + "T2" + t("lbl-mth-current"),  "DP");
+    var dsER4 = createDatasetBAR('false', 'rgba(74,240,0,.5)', t("lbl-mth-to-net") + "T2" + t("lbl-mth-prev"),"RP");
 
     // GD this & prev
-    var dsGD1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", "Gas deze periode");
-    var dsGD2 =  createDatasetLINE('false', "rgba(0,128,255, 1)", "Gas vorige periode");
+    var dsGD1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", t("lbl-mth-gas") + t("lbl-mth-current"));
+    var dsGD2 =  createDatasetLINE('false', "rgba(0,128,255, 1)", t("lbl-mth-gas") + t("lbl-mth-prev"));
     if(Dongle_Config == "p1-q"){ 
       dsGD1.label = "Warmte deze periode";
       dsGD2.label = "Warmte vorige periode";
     }
 
     // WD
-    var dsW1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", "Water deze periode");
-    var dsW2 =  createDatasetLINE('false', "rgba(0,128,255, 1)", "Water vorige periode");
+    var dsW1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", t("lbl-mth-water") + t("lbl-mth-current"));
+    var dsW2 =  createDatasetLINE('false', "rgba(0,128,255, 1)", t("lbl-mth-water") + t("lbl-mth-prev"));
   
     //
     // fill datasets
@@ -464,7 +464,7 @@ function ensureChartsReady()
     else if (type == "Months")
     {
       let MM = parseInt(dateIn.substring(2,4))
-      dateOut = monthNames[MM];
+      dateOut = t("mth-"+MM);//monthNames[MM];
     }
     else if (type == "Actual")
     {

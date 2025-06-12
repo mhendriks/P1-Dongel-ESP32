@@ -359,7 +359,7 @@ uint8_t netw_state = NW_NONE;
 bool      FSmounted = false;
 //MQTT
 #ifndef MQTTKB
-  uint32_t   settingMQTTinterval = 0;
+  uint32_t   settingMQTTinterval = 10;
   char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
 #else
   #include "_mqtt_kb.h"

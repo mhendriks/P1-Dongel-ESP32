@@ -616,6 +616,8 @@ input.ntsw, select.ntsw { width: 100%; padding: 8px; margin: 0px 0 10px;    -web
 .progress {	width: 100%;background: #ddd;border-radius: 5px;margin-top: 20px; }
 .progress-bar {	height: 20px;width: 0%;background: #4CAF50;border-radius: 5px; }
 
+select#languageSelector {background-color: unset; color: #fff; border: none;color: #aaa;}
+
 /*
 ***************************************************************************
 *

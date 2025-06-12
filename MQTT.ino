@@ -74,9 +74,9 @@ void AutoDiscoverHA(){
     SendAutoDiscoverHA("voltage_l2", "voltage", "Voltage l2", "V", "{{ value | round(1) }}","measurement","");
     SendAutoDiscoverHA("voltage_l3", "voltage", "Voltage l3", "V", "{{ value | round(1) }}","measurement","");
     
-    SendAutoDiscoverHA("current_l1", "current", "Current l1", "A", "{{ value | round(0) }}","measurement","");
-    SendAutoDiscoverHA("current_l2", "current", "Current l2", "A", "{{ value | round(0) }}","measurement","");
-    SendAutoDiscoverHA("current_l3", "current", "Current l3", "A", "{{ value | round(0) }}","measurement","");
+    SendAutoDiscoverHA("current_l1", "current", "Current l1", "A", "{{ value | round(3) }}","measurement","");
+    SendAutoDiscoverHA("current_l2", "current", "Current l2", "A", "{{ value | round(3) }}","measurement","");
+    SendAutoDiscoverHA("current_l3", "current", "Current l3", "A", "{{ value | round(3) }}","measurement","");
   
     SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(3) }}","total_increasing","");
     

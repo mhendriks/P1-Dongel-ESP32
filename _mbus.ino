@@ -53,6 +53,7 @@ std::map<uint16_t, ModbusMapping> mapping_default = {
     { 38, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l1_present) ? (int32_t)DSMRdata.power_delivered_l1.int_val() - (int32_t)DSMRdata.power_returned_l1.int_val() : MBUS_VAL_UNAVAILABLE; } }},
     { 40, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l2_present) ? (int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val() : MBUS_VAL_UNAVAILABLE; } }},
     { 42, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l3_present) ? (int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val() : MBUS_VAL_UNAVAILABLE; } }},
+    { 44, { ModbusDataType::UINT32, []() { return (mbusWater) ? (uint32_t)(waterDelivered * 1000) : MBUS_VAL_UNAVAILABLE; } }},
 };
 
 
@@ -164,7 +165,7 @@ std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[7] = { 44, 206, 24, 0xC574+2, 100, 0x5B1A+2, 33030+2 };
+uint16_t MaxReg[7] = { 46, 206, 24, 0xC574+2, 100, 0x5B1A+2, 33030+2 };
 
 
 // Change active mapping

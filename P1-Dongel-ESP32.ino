@@ -50,7 +50,6 @@ next
 - improvement: modbus in apart process = non-blocking 
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
-- multiligual
 
 - winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
 --> oplossing : 
