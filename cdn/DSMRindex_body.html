@@ -14,11 +14,12 @@
   	<div id=messages></div>
 
    	<div class="nav-clock topcorner">
-   		<span id="theTime">2023-01-01 00:31:49</span>
+   		<span id="theTime"></span>
    		<select id="languageSelector" onchange="changeLanguage(this.value)">
 		  <option value="nl">NL</option>
 		  <option value="en">EN</option>
-		</select>
+		  <option value="se">SE</option>
+	</select>
    	</div>
     <ul class="main-navigation" id="myTopnav">
       <li><a id='Home'   		class='nav-img' href="#DashTab" onclick="activeTab='bDashTab';openTab()"><span class="iconify" data-icon="mdi-chart-box-outline"></span></a></li>
@@ -711,15 +712,15 @@
         </div>
 		</a>
         <div class=card id=dash_solar style="display:none">
-            <h1 id=dash_solar_h style="background:#f7b638"><span class="iconify" data-icon="mdi-solar-power-variant"></span><span data-i18n-key="dsh-returned">Productie<span></h1>
+            <h1 id=dash_solar_h style="background:#f7b638"><span class="iconify" data-icon="mdi-solar-power-variant"></span><span data-i18n-key="dsh-solar-production">Productie<span></h1>
             <canvas class="chart-container" id="container-solar"></canvas>
 			<div id=legenda style="padding-top:25px">
 			</div>
     		<hr/>
             <div style="text-align:center" data-i18n-key="lbl-today-kwh">Vandaag [kWh]</div>
             <h2 id=dash_solar_p>0.0</h2>
-            <div style="text-align:center">Zelfvoorzienend: <b><span id="seue">-</span> <span>%</span></b></div>
-            <div style="text-align:center">Zelfverbruik: <b><span id="scr">-</span> <span>%</span></b></div>
+            <div style="text-align:center" ><span data-i18n-key="lbl-solar-self-sufficient">Zelfvoorzienend: </span><b><span id="seue">-</span> <span>%</span></b></div>
+            <div style="text-align:center" ><span data-i18n-key="lbl-solar-self-use">Zelfverbruik: </span><b><span id="scr">-</span> <span>%</span></b></div>
 <!--             <div style="text-align:center">Wh/Wp: <b><span id="wpwh">-</span> <span>%</span></b></div> -->
 
         </div>		

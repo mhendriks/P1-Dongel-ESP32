@@ -56,7 +56,7 @@ std::map<uint16_t, ModbusMapping> mapping_default = {
     { 44, { ModbusDataType::UINT32, []() { return (mbusWater) ? (uint32_t)(waterDelivered * 1000) : MBUS_VAL_UNAVAILABLE; } }},
 };
 
-
+//6: 
 std::map<uint16_t, ModbusMapping> mapping_mx3xx = {
     {32774,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
     {32776,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l2.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},

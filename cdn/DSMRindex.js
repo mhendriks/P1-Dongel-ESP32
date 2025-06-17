@@ -20,6 +20,7 @@ const MAX_SM_ACTUAL     = 15*6; //store the last 15 minutes (each interval is 10
 const MAX_FILECOUNT     = 30;   //maximum filecount on the device is 30
 
 const URL_I18N			   = "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/cdn/lang";
+// const URL_I18N			   = "http://localhost/~martijn/dsmr-api/v5/lang"; //local testing
 const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
 const URL_GITHUB_VERSION   = "https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat";
 
@@ -364,7 +365,6 @@ function changeLanguage(lang) {
 }
 
 function loadTranslations(lang) {
-//   fetch(`http://localhost/~martijn/dsmr-api/v5/lang/${lang}.json`)
   fetch( URL_I18N + `/${lang}.json` )
     .then(response => response.json())
     .then(json => {
@@ -394,40 +394,6 @@ function InsightData(){
                 "TU3over": "sec",
                 "start_time": "uu:mm"
             };
-
-//             const namen = {
-//                 "U1piek": "Spanning Piek L1",
-//                 "U2piek": "Spanning Piek L2",
-//                 "U3piek": "Spanning Piek L3",
-//                 "I1piek": "Stroom Piek L1",
-//                 "I2piek": "Stroom Piek L2",
-//                 "I3piek": "Stroom Piek L3",
-//                 "Psluip": "Sluipverbruik",
-//                 "P1max": "Vermogen Piek L1",
-//                 "P2max": "Vermogen Piek L2",
-//                 "P3max": "Vermogen Piek L3",
-//                 "TU1over": "Tijd Overspanning L1",
-//                 "TU2over": "Tijd Overspanning L2",
-//                 "TU3over": "Tijd Overspanning L3",
-//                 "start_time": "Starttijd meting"
-//             };
-            
-//             const beschrijvingen = {
-// 				"U1piek": "Piekspanning fase 1 vandaag",
-// 				"U2piek": "Piekspanning fase 2 vandaag",
-// 				"U3piek": "Piekspanning fase 3 vandaag",
-// 				"I1piek": "Piekstroom fase 1 vandaag, afname of teruglevering",
-// 				"I2piek": "Piekstroom fase 2 vandaag, afname of teruglevering",
-// 				"I3piek": "Piekstroom fase 3 vandaag, afname of teruglevering",
-// 				"Psluip": "Sluipverbruik in Watt tussen 00:00 en 06:00",
-// 				"P1max": "Piekvermogen fase 1 vandaag, alleen afname",
-// 				"P2max": "Piekvermogen fase 2 vandaag, alleen afname",
-// 				"P3max": "Piekvermogen fase 3 vandaag, alleen afname",
-// 				"TU1over": "Aantal seconde dat fase 1 boven de 253V is geweest",
-//                 "TU2over": "Aantal seconde dat fase 2 boven de 253V is geweest",
-//                 "TU3over": "Aantal seconde dat fase 3 boven de 253V is geweest",
-// 				"start_time": "Starttijd meting of 00:00 of tijd dat de dongle reboot"
-// 			};
 
             const tbody = document.getElementById("InsightsTableBody");
             tbody.innerHTML = ""; // maak eerst leeg
@@ -1631,7 +1597,7 @@ function SendNetSwitchJson() {
 		
 	  //check if update is needed
 	  if (LastVersion != "") {
-		  if ( firmwareVersion > (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>" + t('lbl-click-update') + "</a>";
+		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>" + t('lbl-click-update') + "</a>";
 		  else VerCel3.innerHTML = td("latest_version");//"laatste versie";
 	  }
 //TEST
@@ -1666,7 +1632,6 @@ function UpdateStart( msg ){
 }
         
 function RemoteUpdate() {        
-// 	document.location.href = "/remote-update?version";
 	document.location.href = "/remote-update?version=" + LastVersion;
 }
 
@@ -3484,165 +3449,6 @@ function formatFailureLog(svalue) {
     return Math.round(value * multiplier) / multiplier;
   }
   
- //  //translation array
-//   var translateFields = [
-//            [ "author",                    "Auteur" ]
-//           ,[ "identification",            "Slimme Meter ID" ]
-// 		  ,[ "timestamp",            	  "Tijdcode" ]
-//           ,[ "p1_version",                "P1 Versie" ]
-//           ,[ "energy_delivered_tariff1",  "Energie Afgenomen teller 1" ]
-//           ,[ "energy_delivered_tariff2",  "Energie Afgenomen teller 2" ]
-//           ,[ "energy_returned_tariff1",   "Energie Teruggeleverd teller 1" ]
-//           ,[ "energy_returned_tariff2",   "Energie Teruggeleverd teller 2" ]
-//           ,[ "electricity_tariff",        "Huidig Teller Tarief" ]
-//           ,[ "power_delivered",           "Vermogen Afgenomen" ]
-//           ,[ "power_returned",            "Vermogen Teruggeleverd" ]
-//           ,[ "electricity_threshold",     "Electricity Threshold" ]
-//           ,[ "electricity_switch_position","Electricity Switch Position" ]
-//           ,[ "electricity_failures",      "Electricity Failures" ]
-//           ,[ "electricity_long_failures", "Electricity Long Failures" ]
-//           ,[ "electricity_failure_log",   "Electricity Failure log" ]
-//           ,[ "electricity_sags_l1",       "Electricity Sags L1" ]
-//           ,[ "electricity_sags_l2",       "Electricity Sags L2" ]
-//           ,[ "electricity_sags_l3",       "Electricity Sags L3" ]
-//           ,[ "electricity_swells_l1",     "Electricity Swells L1" ]
-//           ,[ "electricity_swells_l2",     "Electricity Swells L2" ]
-//           ,[ "electricity_swells_l3",     "Electricity Swells L3" ]
-//           ,[ "message_short",             "Korte Boodschap" ]
-//           ,[ "message_long",              "Lange Boodschap" ]
-//           ,[ "voltage_l1",                "Spanning L1" ]
-//           ,[ "voltage_l2",                "Spanning L2" ]
-//           ,[ "voltage_l3",                "Spanning L3" ]
-//           ,[ "current_l1",                "Stroom L1" ]
-//           ,[ "current_l2",                "Stroom L2" ]
-//           ,[ "current_l3",                "Stroom L3" ]
-//           ,[ "power_delivered_l1",        "Vermogen Afgenomen L1" ]
-//           ,[ "power_delivered_l2",        "Vermogen Afgenomen L2" ]
-//           ,[ "power_delivered_l3",        "Vermogen Afgenomen L3" ]
-//           ,[ "power_returned_l1",         "Vermogen Teruggeleverd L1" ]
-//           ,[ "power_returned_l2",         "Vermogen Teruggeleverd L2" ]
-//           ,[ "power_returned_l3",         "Vermogen Teruggeleverd L3" ]
-//           ,[ "gas_device_type",           "Gas Toestel Type" ]
-//           ,[ "gas_equipment_id",          "Gas Toestel ID" ]
-//           ,[ "gas_valve_position",        "Gas Klep Positie" ]
-//           ,[ "gas_delivered",             "Gasmeterstand" ]
-//           ,[ "thermal_device_type",       "Thermal Device Type" ]
-//           ,[ "thermal_equipment_id",      "Thermal Equipment ID" ]
-//           ,[ "thermal_valve_position",    "Thermal Klep Positie" ]
-//           ,[ "thermal_delivered",         "Thermal Gebruikt" ]
-//           ,[ "water_device_type" ,        "Water Device Type" ]
-//           ,[ "water_equipment_id",        "Water Equipment ID" ]
-//           ,[ "water_valve_position",      "Water Klep Positie" ]
-//           ,[ "water_delivered",           "Water Gebruikt" ]
-//           ,[ "slave_device_type",         "Slave Device Type" ]
-//           ,[ "slave_equipment_id",        "Slave Equipment ID" ]
-//           ,[ "slave_valve_position",      "Slave Klep Positie" ]
-//           ,[ "slave_delivered",           "Slave Gebruikt" ]
-//           ,[ "ed_tariff1",                "Energy Afgenomen Tarief-1/kWh" ]
-//           ,[ "ed_tariff2",                "Energy Afgenomen Tarief-2/kWh" ]
-//           ,[ "er_tariff1",                "Energy Teruggeleverd Tarief-1/kWh" ]
-//           ,[ "er_tariff2",                "Energy Teruggeleverd Tarief-2/kWh" ]
-//           ,[ "gd_tariff" ,                "Gas Tarief/m3" ]
-//           ,[ "electr_netw_costs",         "Netwerkkosten Energie/maand" ]
-//           ,[ "gas_netw_costs",            "Netwerkkosten Gas/maand" ]
-// 		  ,[ "water_netw_costs",	  	  "Netwerkkosten Water/maand"]
-// 		  ,[ "w_tariff",	  		  	  "Water Tarief/m3"]  
-//           
-//           ,[ "smhasfaseinfo",             "SM Has Fase Info (0=No, 1=Yes)" ]
-//           ,[ "sm_has_fase_info",          "SM Has Fase Info (0=No, 1=Yes)" ]
-//           ,[ "tlgrm_interval",            "Telegram Lees Interval (Sec.)" ]
-//           ,[ "telegraminterval",          "Telegram Lees Interval (Sec.)" ]
-//           ,[ "index_page",                "Te Gebruiken index.html Pagina" ]
-//           ,[ "mqttbroker",                "MQTT Broker IP/URL" ]
-//           ,[ "mqtt_broker",               "MQTT Broker IP/URL" ]
-//           ,[ "mqttbrokerport",            "MQTT Broker Poort" ]
-//           ,[ "mqtt_broker_port",          "MQTT Broker Poort" ]
-//           ,[ "mqttuser",                  "MQTT Gebruiker" ]
-//           ,[ "mqtt_user",                 "MQTT Gebruiker" ]
-//           ,[ "mqttpasswd",                "Password MQTT Gebruiker" ]
-//           ,[ "mqtt_passwd",               "Password MQTT Gebruiker" ]
-//           ,[ "mqtttoptopic",              "MQTT Top Topic" ]
-//           ,[ "mqtt_toptopic",             "MQTT Top Topic" ]
-//           ,[ "mqttinterval",              "Verzend MQTT Berichten (Sec.)" ]
-//           ,[ "mqtt_interval",             "Verzend MQTT Berichten (Sec.)" ]
-//           ,[ "mqttbroker_connected",      "MQTT broker verbonden" ]
-// 
-//           ,[ "telegramcount",             "Telegrammen verwerkt" ]
-//           ,[ "telegramerrors",            "Telegrammen met fouten" ]          
-//           ,[ "fwversion",                 "Huidige Firmware Versie" ]
-//           ,[ "compiled",                  "Gecompileerd" ]
-//           ,[ "hostname",                  "HostName" ]
-//           ,[ "ipaddress",                 "IP adres" ]
-//           ,[ "macaddress",                "MAC adres" ]
-//           ,[ "indexfile",                 "Te Gebruiken index.html Pagina" ]
-//           ,[ "freeheap",                  "Free Heap Space" ]
-//           ,[ "maxfreeblock",              "Max. Free Heap Blok" ]
-//           ,[ "chipid",                    "Chip ID" ]
-//           ,[ "coreversion",               "ESP Core Versie" ]
-//           ,[ "sdkversion",                "SDK versie" ]
-//           ,[ "cpufreq",                   "CPU Frequency" ]
-//           ,[ "sketchsize",                "Sketch Size" ]
-//           ,[ "freesketchspace",           "Free Sketch Space" ]
-//           ,[ "flashchipid",               "Flash Chip ID" ]
-//           ,[ "flashchipsize",             "Flash Chip Size" ]
-//           ,[ "flashchiprealsize",         "Flash Chip Real Size" ]
-//           ,[ "spiffssize",                "Geheugen omvang" ]
-//           ,[ "FSsize", 					  "File System Size" ]
-//           ,[ "flashchipspeed",            "Flash Chip Speed" ]
-//           ,[ "flashchipmode",             "Flash Chip Mode" ]
-//           ,[ "boardtype",                 "Bord Type" ]
-//           ,[ "compileoptions",            "Compiler Opties" ]
-//           ,[ "ssid",                      "WiFi SSID" ]
-//           ,[ "wifirssi",                  "WiFi RSSI" ]
-//           ,[ "uptime",                    "Up Time [dagen] - [hh:mm]" ]
-//           ,[ "reboots",                   "Aantal keer opnieuw opgestart" ]
-//           ,[ "lastreset",                 "Laatste Reset reden" ]
-//           ,[ "smr_version",               "NL of BE Slimme Meter" ]
-//           ,[ "ShowVoltage",               "Toon spanningmeter in Dashboard" ]
-//           ,[ "Injection",                 "Wordt er stroom opgewekt (bv zonnecellen)" ]
-//           ,[ "Phases",                    "Hoeveel Fases heeft de meter [0-3]<br>[0=check op basis van meterdata]" ]
-//           ,[ "Fuse",                      "Wat is de waarde van de hoofdzekering(en)" ]
-//           ,[ "cdn",               		  "Frontend html/css uit de cloud" ]
-//           ,[ "GasAvailable",			  "Gasmeter beschikbaar? <br>[True = geen check op basis van meterdata]<br>[False = wel checken]"]
-//           ,[ "water",				  	  "Watermeter"]
-//           ,[ "b_auth_user",				  "Basic Auth. Gebruiker"]
-//           ,[ "b_auth_pw",				  "Basic Auth. Wachtwoord"]
-//           ,[ "water_enabl",				  "Watersensor aanwezig"]
-//           ,[ "led",				  		  "LED aan"]
-//           ,[ "ha_disc_enabl",			  "HA Auto discovery"]
-//           ,[ "ota_url",				  	  "Update url (zonder http://)"]
-//   	 	  ,[ "hist",				  	  "Metergegevens lokaal opslaan"]
-// 		  ,[ "auto_update",				  "Automatisch updaten"]
-// 		  ,[ "pre40",				  	  "SMR 2 & 3 support"]
-// 		  ,[ "raw-port",				  "Telegram op poort 82"]
-// 		  ,[ "led-prt",				  	  "Bridge leds aan/uit"]      
-//       ,[ "gas_delivered_timestamp", "Tijdcode Gasmeterstand" ]
-//       ,[ "equipment_id",          "Toestel ID"]
-//       ,[ "mbus1_equipment_id_tc", "Toestel ID MBUS1"]      
-//       ,[ "mbus2_equipment_id_tc", "Toestel ID MBUS2"]
-//       ,[ "mbus3_equipment_id_tc", "Toestel ID MBUS3"]
-//       ,[ "mbus4_equipment_id_tc", "Toestel ID MBUS4"]
-//       ,[ "mbus1_device_type",     "Toestel Type MBUS1"]
-//       ,[ "mbus2_device_type",     "Toestel Type MBUS2"]
-//       ,[ "mbus3_device_type",     "Toestel Type MBUS3"]
-//       ,[ "mbus4_device_type",     "Toestel Type MBUS4"]
-// 
-//       ,[ "mbus1_delivered",       "Toestel Geleverd MBUS1"]
-//       ,[ "mbus1_delivered",       "Toestel Geleverd MBUS2"]
-//       ,[ "mbus1_delivered",       "Toestel Geleverd MBUS3"]
-//       ,[ "mbus1_delivered",       "Toestel Geleverd MBUS4"]
-// 
-//       ,[ "p1_version_be",         "P1 Versie BE"]
-//       ,[ "peak_pwr_last_q",       "Gemiddelde Elektra laatste kwartier"]
-//       ,[ "highest_peak_pwr",      "Piek Elektra huidige maand"]
-//       ,[ "highest_peak_pwr_13mnd","Piek Elektra over 13 maanden"]
-//       ,[ "water_delivered_ts",	  "Tijdcode Watermeterstand"]
-// 	  ,[ "mqtt_tls",	  		  "MQTT over tls"]
-// 	  ,[ "dev-pairing",	  		  "Peer2Peer communication"]
-// 	  ,[ "eid-enabled",	  		  "EnergyID aan/uit"]	
-// 	  ,[ "utilization",	  		  "CPU gebruik"]	  		  
-//   ];
-
 /*
 ***************************************************************************
 *

@@ -27,14 +27,13 @@ BACKLOG
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 - RNGhours files vergroten (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
-- localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
-- detect and repair issues RNG files
 - HA auto update ala : https://www.zigbee2mqtt.io/guide/usage/ota_updates.html#automatic-checking-for-available-updates
 - Daily Insights: Inzichten vanaf opstarten dongle / 00:00 reset
     - loadbalancing over de fases heen
     - detail P per fase afgelopen uur (sample eens per 10s)
+- uptime share with mqtt
 
 Default checks
 - wifi
@@ -47,7 +46,7 @@ Default checks
 - 4h test on 151
 
 next
-- improvement: modbus in apart process = non-blocking 
+- improvement: modbus in own process = non-blocking 
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
 
