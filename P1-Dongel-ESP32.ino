@@ -45,6 +45,10 @@ Default checks
 - ethernet
 - 4h test on 151
 
+--4.14.2
+- watersensor gegevens ook naar eid
+
+
 next
 - improvement: modbus in own process = non-blocking 
 - check and repair rng files on startup

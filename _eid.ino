@@ -310,7 +310,7 @@ void PostEnergyID(){
     Json += JsonBuildMBus("g", epoch(gasDeliveredTimestamp.c_str(), 10, false) - utc_comp, (int)(gasDelivered*1000.0));
   }
 
-  if ( mbusWater ) {
+  if ( WtrMtr ) {
     Json += JsonBuildMBus("w", epoch(waterDeliveredTimestamp.c_str(), 10, false) - utc_comp, (int)(waterDelivered*1000.0));
   }
 

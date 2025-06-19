@@ -25,6 +25,8 @@ void IRAM_ATTR iWater() {
         P1Status.wtr_m3++;
         P1Status.wtr_l = 0;
         CHANGE_INTERVAL_MS(StatusTimer, 100); //schrijf status weg bij elke m3
+        waterDeliveredTimestamp = actTimestamp;
+        waterDelivered = P1Status.wtr_m3 + (P1Status.wtr_l / 1000);
       }
     } else debounces++;
 }
