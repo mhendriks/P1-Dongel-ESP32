@@ -722,8 +722,19 @@
             <div style="text-align:center" ><span data-i18n-key="lbl-solar-self-sufficient">Zelfvoorzienend: </span><b><span id="seue">-</span> <span>%</span></b></div>
             <div style="text-align:center" ><span data-i18n-key="lbl-solar-self-use">Zelfverbruik: </span><b><span id="scr">-</span> <span>%</span></b></div>
 <!--             <div style="text-align:center">Wh/Wp: <b><span id="wpwh">-</span> <span>%</span></b></div> -->
-
-        </div>		
+        </div>
+        
+        <div class=card id=dash_accu style="display:none">
+            <h1 id=dash_solar_h style="background:#007700"><span class="iconify" data-icon="mdi-battery-outline"></span><span data-i18n-key="dsh-accu">Opslag<span></h1>
+            <canvas class="chart-container" id="container-accu"></canvas>
+			<div id=legenda style="padding-top:25px">
+			</div>
+    		<hr/>
+            <div style="text-align:center" data-i18n-key="lbl-today-kw">Power [kW]</div>
+            <h2 id=dash_accu_p>0.0</h2>
+			<div style="text-align:center" ><span data-i18n-key="lbl-accu-status">Status: </span><b><span id="accu-status">-</span></b></div>
+        </div>
+        
 		<a href="#HoursTab" style="display:flex">
         <div class=card id=l3 style="display:block">
             <h1 id=Ph><span class="iconify" data-icon="mdi-lightning-bolt"></span><span data-i18n-key="dsh-energy">Elektra</span></h1>

@@ -1,4 +1,8 @@
 {
+
+"lbl-accu-status":"Status: ",
+"dsh-accu":"Lagring",
+"lbl-today-kw":"Ström [kW]",
 "mnu-dash": "Instrumentpanel",
 "mnu-actual": "Momentant",
 "mnu-insghts": "Insikter",

@@ -1,4 +1,8 @@
 {
+
+"lbl-accu-status":"Status: ",
+"dsh-accu":"Opslag",
+"lbl-today-kw":"Power [kW]",
 "mnu-dash": "Dashboard",
 "mnu-actual": "Actueel",
 "mnu-insghts": "Insights",

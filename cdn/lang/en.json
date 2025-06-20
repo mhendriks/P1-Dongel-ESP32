@@ -1,4 +1,7 @@
 {
+"lbl-accu-status":"Status: ",
+"dsh-accu":"Storage",
+"lbl-today-kw":"Power [kW]",
 "mnu-dash": "Dash",
 "mnu-actual": "Actual",
 "mnu-insghts": "Insights",

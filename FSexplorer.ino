@@ -91,6 +91,7 @@ void setupFSexplorer()
 
   httpServer.on("/api/listfiles", HTTP_GET, [](){ auth(); APIlistFiles(); });
   httpServer.on("/api/v2/gen", HTTP_GET, [](){ auth(); SendSolarJson(); });
+  httpServer.on("/api/v2/accu", HTTP_GET, [](){ auth(); SendAccuJson(); });
   httpServer.on("/FSformat", [](){ auth();formatFS; });
   httpServer.on("/upload", HTTP_POST, []() { auth(); }, handleFileUpload );
   httpServer.on("/ReBoot", [](){ auth();reBootESP(); });
@@ -214,6 +215,7 @@ void handleFileUpload()
     httpServer.sendContent(Header);
     if (upload.filename == "DSMRsettings.json") readSettings(false);
     if (upload.filename == "enphase.json" || upload.filename == "solaredge.json") ReadSolarConfigs();
+    if (upload.filename == "se_accu.json") ReadAccuConfig();
 #ifdef NETSWITCH
     if (upload.filename == "netswitch.json") readtriggers();
 #endif    

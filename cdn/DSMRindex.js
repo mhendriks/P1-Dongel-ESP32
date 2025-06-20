@@ -46,7 +46,6 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   var newVersionMsg         = "";
   let NRGStatusTimer		= 0;
   
-//   var tlgrmInterval         = 10;
   var ed_tariff1            = 0;
   var ed_tariff2            = 0;
   var er_tariff1            = 0;
@@ -61,6 +60,7 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   let settingFontColor 		= 'white';
   var objDAL = null;
   var SolarActive 			= false;
+  var AccuActive			= false;
   var Pi_today				= 0;
   var Pd_today				= 0;
   var conf_netswitch 		= false;
@@ -308,6 +308,43 @@ let cfgGaugeSolar = {
 cfgGaugeSolar.options.plugins.labels.render = renderLabelSolar;
 function renderLabelSolar(args){return args.value + "W";}
 
+let cfgGaugeAccu = {
+  type: 'doughnut',
+  data: {
+    datasets: [
+      {
+        label: "Charge level",
+        backgroundColor: ["#007700", "rgba(0,0,0,0.1)"],
+      }
+    ]
+  },
+  options: {
+    events: [],
+    title: {
+      display: true,
+      text: '%',
+      position: "bottom",
+      padding: -18,
+      fontSize: 17,
+      fontColor: "#000",
+      fontFamily: "Dosis",
+    },
+    responsive: true,
+    circumference: Math.PI,
+    rotation: -Math.PI,
+    plugins: {
+      labels: {
+        render: {},   //structuredClone will fail if there is a function
+        arc: true,
+        fontColor: ["#000", "rgba(0,0,0,0)"],
+      },//labels      
+    }, //plugins
+    legend: { display: false },
+  }, //options
+};
+cfgGaugeAccu.options.plugins.labels.render = renderLabelAccu;
+function renderLabelAccu(args){return args.value + "%";}
+
 let cfgGaugeELEKTRA2 = structuredClone(cfgDefaultTREND);
 cfgGaugeELEKTRA2.options.title.text = "kWh";
 cfgGaugeELEKTRA2.options.plugins.labels.render = renderLabelElektra;
@@ -519,6 +556,9 @@ Iconify.addCollection({
 	   "mdi-solar-power-variant": {
            body: '<path d="M3.33 16H11V13H4L3.33 16M13 16H20.67L20 13H13V16M21.11 18H13V22H22L21.11 18M2 22H11V18H2.89L2 22M11 8H13V11H11V8M15.76 7.21L17.18 5.79L19.3 7.91L17.89 9.33L15.76 7.21M4.71 7.91L6.83 5.79L8.24 7.21L6.12 9.33L4.71 7.91M3 2H6V4H3V2M18 2H21V4H18V2M12 7C14.76 7 17 4.76 17 2H7C7 4.76 9.24 7 12 7Z" fill="currentColor"/>',
        }, 
+	   "mdi-battery-outline": {
+           body: '<path d="M16,20H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" />',
+       }, 
     },
    width: 24,
    height: 24,
@@ -643,6 +683,32 @@ function SetOnSettings(json){
 // 		document.getElementById("gasChart").style.height = "250px";
 	}
 }
+
+function UpdateAccu(){
+	console.log("Update Accu");
+	fetch(APIHOST+"/api/v2/accu", {"setTimeout": 5000})
+      .then(response => response.json())
+      .then(json => {
+			"active" in json ? AccuActive=json.active : AccuActive = false;
+			console.log("AccuActive: "+ AccuActive);
+			if ( AccuActive ) {		
+				console.log("parsed response: "+ JSON.stringify(json));
+				console.log("json.status: "+ json.status);
+				console.log("json.unit: "+ json.unit);
+				console.log("json.currentPower: "+ json.currentPower);
+				console.log("json.chargeLevel: "+ json.chargeLevel);				
+				trend_accu.data.datasets[0].data=[json.chargeLevel,100-json.chargeLevel];	
+				trend_accu.update();
+				document.getElementById('dash_accu_p').innerHTML = formatValue(json.currentPower);
+				document.getElementById('dash_accu').style.display = 'block';
+				document.getElementById('accu-status').innerHTML = json.status;
+
+// 				if ( json.total.daily ) document.getElementById('seue').innerHTML = Number( (json.total.daily-(1000*Pi_today)) / (json.total.daily-(1000*Pi_today)+(Pd_today*1000))*100 ).toFixed(0);
+// 				else document.getElementById('seue').innerHTML = "-";
+
+			}
+      })
+ }
 
 //============================================================================  
 function UpdateSolar(){
@@ -797,6 +863,7 @@ function UpdateDash()
 	var Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
 	console.log("Update dash");
 	if ( SolarActive ) UpdateSolar();
+	if ( AccuActive ) UpdateAccu();
 	
 	setPresentationType('TAB'); //zet grafische mode uit
 	
@@ -1097,6 +1164,7 @@ function createDashboardGauges()
 	gauge3f 	= new Chart(document.getElementById("gauge3f"),     cfgGauge3F);
 	gaugeV 		= new Chart(document.getElementById("gauge-v"),     cfgGaugeVOLTAGE);
 	trend_solar	= new Chart(document.getElementById("container-solar"), cfgGaugeSolar);	
+	trend_accu	= new Chart(document.getElementById("container-accu"), cfgGaugeAccu);	
 }
 
 //callback function for the DAL
@@ -1400,6 +1468,7 @@ function SendNetSwitchJson() {
       		readGitHubVersion();
 			UpdateDash();
 			UpdateSolar();
+			UpdateAccu();
 			clearInterval(tabTimer);
 			clearInterval(actualTimer);  
 			tabTimer = setInterval(UpdateDash, 10 * 1000); // repeat every 10s

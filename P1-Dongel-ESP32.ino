@@ -47,7 +47,7 @@ Default checks
 
 --4.14.2
 - watersensor gegevens ook naar eid
-
+- add: solaredge accu zichtbaar
 
 next
 - improvement: modbus in own process = non-blocking 
@@ -80,7 +80,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
-// #define ULTRA         //ultra (mini) dongle
+#define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE   
@@ -183,6 +183,7 @@ void setup()
   SetupMB_RTU();
 #endif  
   ReadSolarConfigs();
+  ReadAccuConfig();
   delay(500);
   setCpuFrequencyMhz(Freq); //restore original clockspeed
 
@@ -243,6 +244,7 @@ void loop () {
   handleEnergyID();  
   PostTelegram();
   GetSolarDataN();
+  GetAccuDataN();
   handleVirtualP1();
   PrintHWMark(2);
 
