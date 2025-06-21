@@ -268,7 +268,7 @@ void startWiFi(const char* hostname, int timeOut)
 
   //handle wifi webinterface timeout and connection (timeOut in sec)
   uint16_t i = 0;
-  while ( (i++ < timeOut*10) && (netw_state == NW_NONE) && !bEthUsage ){
+  while ( (i++ < timeOut*15) && (netw_state == NW_NONE) && !bEthUsage ){
     Debug("*");
     delay(100);
     manageWiFi.process();
