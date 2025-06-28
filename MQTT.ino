@@ -402,15 +402,14 @@ void sendMQTTData() {
   
   if ( bActJsonMQTT ) {
     String buffer;
-    if ( gasDelivered ) {
+      jsonDoc["water"] = waterDelivered;
+      jsonDoc["water_ts"] = waterDeliveredTimestamp;
       jsonDoc["gas"] = gasDelivered;
       jsonDoc["gas_ts"] = gasDeliveredTimestamp;
-    }
     serializeJson(jsonDoc,buffer);
     MQTTSend("all", buffer, false);
   } else {
 	  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
-
 	  MQTTsendGas();
 	  MQTTsendWater();
   }  

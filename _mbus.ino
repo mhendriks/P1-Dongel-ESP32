@@ -56,7 +56,7 @@ std::map<uint16_t, ModbusMapping> mapping_default = {
     { 44, { ModbusDataType::UINT32, []() { return (WtrMtr) ? (uint32_t)(waterDelivered * 1000) : MBUS_VAL_UNAVAILABLE; } }},
 };
 
-//6: 
+//6: https://www.phoenixcontact.com/nl-nl/producten/energiemetingsmoduul-eem-ma371-2908307#:~:text=EMpro_register_table_1.6.0
 std::map<uint16_t, ModbusMapping> mapping_mx3xx = {
     {32774,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
     {32776,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l2.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
@@ -79,9 +79,11 @@ std::map<uint16_t, ModbusMapping> mapping_mx3xx = {
     {32780,  {ModbusDataType::FLOAT, []() { map_temp.f = 50.0; return map_temp.u; }}},
     {33024,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff2 + DSMRdata.energy_delivered_tariff1 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
     {33030,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff2 + DSMRdata.energy_returned_tariff1 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    // {200, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l1_present && DSMRdata.voltage_l2_present) ? calculateLineVoltage(DSMRdata.voltage_l1, DSMRdata.voltage_l2) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    // {202, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l2_present && DSMRdata.voltage_l3_present) ? calculateLineVoltage(DSMRdata.voltage_l2, DSMRdata.voltage_l3) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    // {204, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}}
+    {  316,  {ModbusDataType::UINT32, []() { uint32_t val = '1'; val = val << 8;val += '3';val = val << 8;val += '6';val = val << 8;val += '0'; return val;    }}},
+    {  318,  {ModbusDataType::UINT32, []() { uint32_t val = '2'; val = val << 8;val += '2';val = val << 8;val += '8';val = val << 8;val += '1'; return val;  }}},
+    {  320,  {ModbusDataType::UINT32, []() { uint32_t val = '9'; val = val << 8;val += '4';val = val << 8;val += NULL;val = val << 8;val += NULL; return val;    }}},
+    {  322,  {ModbusDataType::UINT32, []() { return NULL;    }}},
+    {  324,  {ModbusDataType::INT16, []() { return NULL;    }}},
 };
 
 // Modbus mapping SDM630 = 1, see https://www.eastroneurope.com/images/uploads/products/protocol/SDM630_MODBUS_Protocol.pdf
@@ -208,6 +210,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
       uint32_t u;
       int32_t  i;
       uint8_t  b[4];
+      int16_t  w;
     } val;
 
     while (currentAddr < (address + words)) {
@@ -219,7 +222,10 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
               val.u = (*selectedMapping)[currentAddr].valueGetter();
             } else if ( type == ModbusDataType::FLOAT ){
               val.u = (float)(*selectedMapping)[currentAddr].valueGetter();
-            }     
+            }   else if ( type == ModbusDataType::INT16 ){
+              val.w = (*selectedMapping)[currentAddr].valueGetter();
+            }   
+
         } else {
             Debugf("MBUS WRONG VALUE -- addr: %d\n", currentAddr);
             val.u = MBUS_VAL_UNAVAILABLE;
@@ -240,7 +246,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
                 break;
             }
             case ModbusDataType::INT16: {
-                response.add((int16_t)(val.b[0]));
+                response.add((int16_t)(val.w));
                 currentAddr += 1;
                 break;
             }

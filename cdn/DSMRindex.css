@@ -508,6 +508,7 @@ body > div.bottom.right-0 {
 #messages::before {padding-right:5px}
 
 .card {
+	padding-bottom: 10px;
 	margin: 1rem;
 	background: white;
 	box-shadow: 2px 4px 25px rgba(0, 0, 0, .1);

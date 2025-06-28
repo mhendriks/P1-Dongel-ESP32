@@ -11,6 +11,7 @@
 void GetFile(String filename){
   HTTPClient http;
   if(wifiClient.connect(HOST_DATA_FILES, 443)) {
+    Debugln(PATH_DATA_FILES);
       http.begin(PATH_DATA_FILES + filename);
       int httpResponseCode = http.GET();
 //      Serial.print(F("HTTP Response code: "));Serial.println(httpResponseCode);

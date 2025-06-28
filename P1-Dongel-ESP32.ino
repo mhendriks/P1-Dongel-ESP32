@@ -34,6 +34,7 @@ BACKLOG
     - loadbalancing over de fases heen
     - detail P per fase afgelopen uur (sample eens per 10s)
 - uptime share with mqtt
+- kwartierpiek historie opnemen (wanneer nieuwe piek ontstaat)
 
 Default checks
 - wifi
@@ -45,9 +46,11 @@ Default checks
 - ethernet
 - 4h test on 151
 
---4.14.2
-- watersensor gegevens ook naar eid
-- add: solaredge accu zichtbaar
+--4.14.3
+√  download IndexEdge html file belonging to the manor/minor version of the firmware
+√ add serialnumber mx3xx
+√ piekvermogen tegel op dash (J. Verrept)
+√ fix: water/gas in mqtt #77
 
 next
 - improvement: modbus in own process = non-blocking 
@@ -75,14 +78,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
 // #define ULTRA         //ultra (mini) dongle
-// #define ETHERNET      //ethernet dongle
-// #define ETH_P1EP          //ethernet pro+ dongle
+#define ETHERNET      //ethernet dongle
+#define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE   
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 

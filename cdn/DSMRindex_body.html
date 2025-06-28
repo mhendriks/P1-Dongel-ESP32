@@ -733,8 +733,20 @@
             <div style="text-align:center" data-i18n-key="lbl-today-kw">Power [kW]</div>
             <h2 id=dash_accu_p>0.0</h2>
 			<div style="text-align:center" ><span data-i18n-key="lbl-accu-status">Status: </span><b><span id="accu-status">-</span></b></div>
+        </div>	
+
+  <div class=card id=dash_peak style="display:none">
+            <h1 id=dash_peak><span class="iconify" data-icon="mdi-format-vertical-align-top"></span><span data-i18n-key="dsh-peak">KwartierPiek<span></h1>
+            <canvas class="chart-container" id="container-peak"></canvas>
+			<div id=legenda style="padding-top:25px">
+			</div>
+    		<hr/>
+            <div style="text-align:center" data-i18n-key="lbl-peak-delta">Piekruimte [kW]</div>
+            <h2 id=dash_peak_delta>0.0</h2>
+            <div style="text-align:center" ><span data-i18n-key="lbl-peak-month">Piek deze maand: </span><b><span id="peak_month">-</span> <span>kW</span></b></div>
+<!--             <div style="text-align:center">Wh/Wp: <b><span id="wpwh">-</span> <span>%</span></b></div> -->
         </div>
-        
+                	
 		<a href="#HoursTab" style="display:flex">
         <div class=card id=l3 style="display:block">
             <h1 id=Ph><span class="iconify" data-icon="mdi-lightning-bolt"></span><span data-i18n-key="dsh-energy">Elektra</span></h1>

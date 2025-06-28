@@ -248,7 +248,6 @@ cfgDefaultTREND.data.datasets[0].label = "vandaag";
 cfgDefaultTREND.data.datasets[1].label = "gister";
 cfgDefaultTREND.data.datasets[2].label = "eergisteren";
 
-
 //phases based gauges
 function renderLabelVoltage(args){return args.value + 207 + " V";}
 let cfgGaugeVOLTAGE = structuredClone(cfgDefaultPHASES);
@@ -265,11 +264,6 @@ function renderLabelElektra(args){return args.value + " kWh";}
 let cfgGaugeELEKTRA = structuredClone(cfgDefaultTREND);
 cfgGaugeELEKTRA.options.title.text = "kWh";
 cfgGaugeELEKTRA.options.plugins.labels.render = renderLabelElektra;
-
-// let cfgGaugeSolar = structuredClone(cfgDefaultTREND);
-// cfgGaugeSolar.options.title.text = "kWh";
-// cfgGaugeSolar.options.plugins.labels.render = renderLabelElektra;
-// cfgGaugeSolar.data.datasets[0].label = "Productie";
 
 let cfgGaugeSolar = {
   type: 'doughnut',
@@ -305,45 +299,21 @@ let cfgGaugeSolar = {
     legend: { display: false },
   }, //options
 };
+
+function renderLabelPeak(args){return args.value + "kW";}
+let cfgGaugePeak = structuredClone(cfgGaugeSolar);
+cfgGaugePeak.options.title.text = "kW";
+cfgGaugePeak.options.plugins.labels.render = renderLabelPeak;
+cfgGaugePeak.data.datasets[0].backgroundColor = ["#009900", "rgba(0,0,0,0.1)"];
+
+function renderLabelAccu(args){return args.value + "%";}
+let cfgGaugeAccu = structuredClone(cfgGaugeSolar);
+cfgGaugeAccu.options.title.text = "%";
+cfgGaugeAccu.options.plugins.labels.render = renderLabelAccu;
+cfgGaugeAccu.data.datasets[0].backgroundColor = ["#007700", "rgba(0,0,0,0.1)"];
+
 cfgGaugeSolar.options.plugins.labels.render = renderLabelSolar;
 function renderLabelSolar(args){return args.value + "W";}
-
-let cfgGaugeAccu = {
-  type: 'doughnut',
-  data: {
-    datasets: [
-      {
-        label: "Charge level",
-        backgroundColor: ["#007700", "rgba(0,0,0,0.1)"],
-      }
-    ]
-  },
-  options: {
-    events: [],
-    title: {
-      display: true,
-      text: '%',
-      position: "bottom",
-      padding: -18,
-      fontSize: 17,
-      fontColor: "#000",
-      fontFamily: "Dosis",
-    },
-    responsive: true,
-    circumference: Math.PI,
-    rotation: -Math.PI,
-    plugins: {
-      labels: {
-        render: {},   //structuredClone will fail if there is a function
-        arc: true,
-        fontColor: ["#000", "rgba(0,0,0,0)"],
-      },//labels      
-    }, //plugins
-    legend: { display: false },
-  }, //options
-};
-cfgGaugeAccu.options.plugins.labels.render = renderLabelAccu;
-function renderLabelAccu(args){return args.value + "%";}
 
 let cfgGaugeELEKTRA2 = structuredClone(cfgDefaultTREND);
 cfgGaugeELEKTRA2.options.title.text = "kWh";
@@ -559,6 +529,10 @@ Iconify.addCollection({
 	   "mdi-battery-outline": {
            body: '<path d="M16,20H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" />',
        }, 
+	   "mdi-format-vertical-align-top": {
+           body: '<path d="M8,11H11V21H13V11H16L12,7L8,11M4,3V5H20V3H4Z" />',
+       },        
+       
     },
    width: 24,
    height: 24,
@@ -633,6 +607,7 @@ function SetOnSettings(json){
 		if (!isNaN(json.current_l2.value)) Phases++;
 		if (!isNaN(json.current_l3.value)) Phases++;
 	}
+		
 	if(!EnableHist){
 		//hide menu elements + dashboard item
 		document.getElementById("bHoursTab").style.display = "none";
@@ -894,7 +869,10 @@ function UpdateDash()
 // 2.2 meter met teruglevering
 // json = JSON.parse('{"identification":{"value":"XMX5XMXABCE000060959"},"p1_version":{"value":"-"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220706121611S"},"equipment_id":{"value":"4530303236303030303134363435373135"},"energy_delivered_tariff1":{"value":16120.922,"unit":"kWh"},"energy_delivered_tariff2":{"value":15221.887,"unit":"kWh"},"energy_returned_tariff1":{"value":32.012,"unit":"kWh"},"energy_returned_tariff2":{"value":106.573,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.252,"unit":"kW"},"message_short":{"value":""},"message_long":{"value":""},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-","unit":"A"},"current_l2":{"value":"-","unit":"A"},"current_l3":{"value":"-","unit":"A"},"power_delivered_l1":{"value":"-","unit":"kW"},"power_delivered_l2":{"value":"-","unit":"kW"},"power_delivered_l3":{"value":"-","unit":"kW"},"power_returned_l1":{"value":"-","unit":"kW"},"power_returned_l2":{"value":"-","unit":"kW"},"power_returned_l3":{"value":"-","unit":"kW"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303332353631323431353834373135"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":8979.463,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":8979.463,"unit":"m3"},"gas_delivered_timestamp":{"value":"220706120000S"}}');
 //  json = JSON.parse('{"identification":{"value":"XMX5LGF0000453562119"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"highest_peak_pwr_13mnd":{"value":"-"},"timestamp":{"value":"230310104544W"},"equipment_id":{"value":"4530303531303035333536323131393139"},"energy_delivered_tariff1":{"value":8293.565,"unit":"kWh"},"energy_delivered_tariff2":{"value":9179.965,"unit":"kWh"},"energy_returned_tariff1":{"value":140.447,"unit":"kWh"},"energy_returned_tariff2":{"value":474.874,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0.176,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"(3)(0-0:96.7.19)(190515144214S)(0000000596*s)(210311024815W)(0000001506*s)(221021124654S)(0000000958*s)"},"voltage_l1":{"value":238.5,"unit":"V"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":3,"unit":"A"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":0.176,"unit":"kW"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303339303031393238303734373139"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":5876.51,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":5876.51,"unit":"m3"},"gas_delivered_timestamp":{"value":"230310104504W"}}');
-// json = JSON.parse('{"identification":{"value":"KFM5KAIFA-METER"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"timestamp":{"value":"230318223355W"},"equipment_id":{"value":"4530303630313030303035303738373232"},"energy_delivered_tariff1":{"value":3158.161,"unit":"kWh"},"energy_delivered_tariff2":{"value":3788.432,"unit":"kWh"},"energy_returned_tariff1":{"value":1000,"unit":"kWh"},"energy_returned_tariff2":{"value":200,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0.396,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"(0)(0-0:96.7.19)"},"voltage_l1":{"value":232.9,"unit":"V"},"voltage_l2":{"value":233.8,"unit":"V"},"voltage_l3":{"value":232.5,"unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":0,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.003,"unit":"kW"},"power_delivered_l2":{"value":0.062,"unit":"kW"},"power_delivered_l3":{"value":0.33,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303339303031373532383339333137"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":6295.621,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":6295.621,"unit":"m3"},"gas_delivered_timestamp":{"value":"230318222504W"}}');
+
+//BE quarter peak
+// json = JSON.parse('{"identification":{"value":"FLU5=253972606_G"},"p1_version":{"value":"50221"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":1.647,"unit":"kW"},"highest_peak_pwr":{"value":4.672,"unit":"kW"},"highest_peak_pwr_13mnd":{"value":"(4)(1-0:1.6.0)(1-0:1.6.0)(240501000000S)(240401000000S)(00.000*kW)(250401000000S)(250330181500S)(02.997*kW)(250501000000S)(250414174500S)(03.863*kW)(250601000000S)(250518190000S)(03.041*kW)"},"timestamp":{"value":"250625212302S"},"equipment_id":{"value":"3153414731323030323430353338"},"energy_delivered_tariff1":{"value":9819.352,"unit":"kWh"},"energy_delivered_tariff2":{"value":10859.549,"unit":"kWh"},"energy_returned_tariff1":{"value":2179.758,"unit":"kWh"},"energy_returned_tariff2":{"value":4692.532,"unit":"kWh"},"energy_delivered_total":{"value":"-"},"energy_returned_total":{"value":"-"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.377,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"voltage_l1":{"value":231.8,"unit":"V"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":5.94,"unit":"A"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":1.377,"unit":"kW"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"3753414733363530313238323230"},"mbus1_valve_position":{"value":1},"mbus1_delivered":{"value":255.526,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":7},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"3853455430303330303739383032"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":35.396,"unit":"GJ"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":255.526,"unit":"m3"},"gas_delivered_timestamp":{"value":"250625212036S"},"water":{"value":35.396,"unit":"m3"},"water_delivered_ts":{"value":"250625212200S"}}');
+
  		//-------CHECKS
 
 		SetOnSettings(json);
@@ -917,6 +895,18 @@ function UpdateDash()
 			document.getElementById("l7").style.display = "block";
 			document.getElementById("l2").style.display = "none";
 		}
+		if ( json.peak_pwr_last_q.value != "-" ) document.getElementById("dash_peak").style.display = "block";
+
+		
+		//-------Kwartierpiek
+		document.getElementById("peak_month").innerHTML = formatValue(json.highest_peak_pwr.value);
+		document.getElementById("dash_peak_delta").innerText = formatValue(json.highest_peak_pwr.value - json.peak_pwr_last_q.value);
+		trend_peak.data.datasets[0].data=[json.peak_pwr_last_q.value, json.highest_peak_pwr.value-json.peak_pwr_last_q.value];	
+		trend_peak.update();
+		if (json.peak_pwr_last_q.value > 0.75 * json.highest_peak_pwr.value ) trend_peak.data.datasets[0].backgroundColor = ["#dd0000", "rgba(0,0,0,0.1)"];
+		else trend_peak.data.datasets[0].backgroundColor = ["#009900", "rgba(0,0,0,0.1)"];
+
+
 		
 		//-------SPANNING METER		
 		let v1 = 0, v2 = 0, v3 = 0;
@@ -1165,6 +1155,7 @@ function createDashboardGauges()
 	gaugeV 		= new Chart(document.getElementById("gauge-v"),     cfgGaugeVOLTAGE);
 	trend_solar	= new Chart(document.getElementById("container-solar"), cfgGaugeSolar);	
 	trend_accu	= new Chart(document.getElementById("container-accu"), cfgGaugeAccu);	
+	trend_peak	= new Chart(document.getElementById("container-peak"), cfgGaugePeak);	
 }
 
 //callback function for the DAL
