@@ -46,12 +46,6 @@ Default checks
 - ethernet
 - 4h test on 151
 
---4.14.3
-√  download IndexEdge html file belonging to the manor/minor version of the firmware
-√ add serialnumber mx3xx
-√ piekvermogen tegel op dash (J. Verrept)
-√ fix: water/gas in mqtt #77
-
 next
 - improvement: modbus in own process = non-blocking 
 - check and repair rng files on startup
