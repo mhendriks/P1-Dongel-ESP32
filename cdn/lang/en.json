@@ -319,6 +319,6 @@
 "dict_water_delivered_ts": "Timestamp Water Meter Reading",
 "dict_mqtt_tls": "MQTT over TLS",
 "dict_dev-pairing": "Peer2Peer communication",
-"dict_eid-enabled": "EnergyID on/off (1h setup timeout)",
+"dict_eid-enabled": "EnergyID (1h setup timeout)",
 "dict_utilization": "CPU usage"
 }

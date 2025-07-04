@@ -260,7 +260,7 @@
 "dict_water_delivered_ts": "Tijdcode Watermeterstand",
 "dict_mqtt_tls": "MQTT over tls",
 "dict_dev-pairing": "Peer2Peer communicatie",
-"dict_eid-enabled": "EnergyID aan/uit (1h setup timeout)",
+"dict_eid-enabled": "EnergyID (1h setup timeout)",
 "dict_utilization": "CPU gebruik",
 "dsh-actual": "Actueel",
 "dsh-dash": "Dashboard",

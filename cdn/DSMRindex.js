@@ -16,6 +16,7 @@ const APIGW = APIHOST+'/api/';
 const URL_SM_ACTUAL    	 	= APIGW + "v2/sm/actual";
 const URL_DAYS    	 		= APIGW + "v2/hist/days";
 const URL_DEVICE_INFO   	= APIGW + "v2/dev/info";
+const URL_DEVICE_TIME   	= APIGW + "v2/dev/time";
 const URL_DEVICE_SETTINGS   = APIGW + "v2/dev/settings";
 const MAX_SM_ACTUAL     	= 15*6; //store the last 15 minutes (each interval is 10sec)
 const MAX_FILECOUNT     	= 30;   //maximum filecount on the device is 30
