@@ -79,6 +79,8 @@ void AutoDiscoverHA(){
     SendAutoDiscoverHA("current_l3", "current", "Current l3", "A", "{{ value | round(3) }}","measurement","");
   
     SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(3) }}","total_increasing","");
+    SendAutoDiscoverHA("peak_pwr_last_q", "power", "Peak last Quarter", "W", "{{ value | round(3) * 1000 }}","measurement","");
+    SendAutoDiscoverHA("highest_peak_pwr", "power", "Highest Peak this month", "W", "{{ value | round(3) * 1000 }}","measurement","");
     
     SendAutoDiscoverHA("water", "water", "Waterverbruik", "m³", "{{ value | round(3) }}","total_increasing","\"icon\": \"mdi:water\",");
 //#else 

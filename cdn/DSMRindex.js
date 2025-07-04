@@ -1,9 +1,9 @@
 /*
 ***************************************************************************  
 **  Program  : DSMRindex.js, part of DSMRfirmwareAPI
-**  Version  : v4.8.0
+**  Version  : v4.14.0
 **
-**  Copyright (c) 2023 Smartstuff
+**  Copyright (c) 2025 Smartstuff
 **  Authors  : Martijn Hendriks / Mar10us
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
@@ -13,21 +13,21 @@
 const APIHOST = window.location.protocol+'//'+window.location.host;
 const APIGW = APIHOST+'/api/';
 
-const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
-const URL_DEVICE_INFO   = APIGW + "v2/dev/info";
-const URL_DEVICE_TIME   = APIGW + "v2/dev/time";
-const MAX_SM_ACTUAL     = 15*6; //store the last 15 minutes (each interval is 10sec)
-const MAX_FILECOUNT     = 30;   //maximum filecount on the device is 30
+const URL_SM_ACTUAL    	 	= APIGW + "v2/sm/actual";
+const URL_DAYS    	 		= APIGW + "v2/hist/days";
+const URL_DEVICE_INFO   	= APIGW + "v2/dev/info";
+const URL_DEVICE_SETTINGS   = APIGW + "v2/dev/settings";
+const MAX_SM_ACTUAL     	= 15*6; //store the last 15 minutes (each interval is 10sec)
+const MAX_FILECOUNT     	= 30;   //maximum filecount on the device is 30
 
 const URL_I18N			   = "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/cdn/lang";
 // const URL_I18N			   = "http://localhost/~martijn/dsmr-api/v5/lang"; //local testing
 const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
 const URL_GITHUB_VERSION   = "https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat";
 
-const jsversie			   = 221201;
+const jsversie			   = 250702;
 
 const SQUARE_M_CUBED 	   = "\u33A5";
-// const MONTHS_IN_YEAR_NL    = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
   
 "use strict";
 
@@ -37,7 +37,7 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   let presentationType      = "TAB";
   let tabTimer              = 0;
   let actualTimer           = 0;
-  let timeTimer             = 0;
+//   let timeTimer             = 0;
   var GitHubVersion         = 0;
   var GitHubVersion_dspl    = "-";
   var devVersion			= 0;
@@ -72,10 +72,17 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   class dsmr_dal_main{
     constructor() {
       this.devinfo=[];
-	  this.version_manifest = [];
+	  this.dev_settings=[];
+	  this.version_manifest=[];
       this.actual=[];
+	  this.solar=[];
+	  this.battery=[];
+	  this.days=[];
       this.actual_history = [];
-      this.timerREFRESH_ACTUAL = 0;      
+      this.timerREFRESH_ACTUAL = 0;  
+      this.timerREFRESH_DAYS = 0;  
+	  this.timerREFRESH_TIME = 0;  
+	  this.timerREFRESH_MANIFEST = 0;  	    
       this.callback=null;
       }
   
@@ -99,24 +106,75 @@ const SQUARE_M_CUBED 	   = "\u33A5";
     init(){
       this.refreshDeviceInformation();
       this.refreshActual();
-    } 	
+      this.refreshTime();
+    } 
+	
+	refreshTime()
+	{
+		console.log("refreshTime");
+		clearInterval(this.timerREFRESH_TIME);
+		this.fetchDataJSON( URL_DEVICE_TIME, this.parseTime.bind(this));
+    	this.timerREFRESH_TIME = setInterval(this.refreshTime.bind(this), 10 * 1000);
+	}
+
+	parseTime(json)
+	{
+		document.getElementById('theTime').classList.remove("afterglow");
+		document.getElementById('theTime').innerHTML = json.time;
+		console.log("time parsed .., data is ["+ JSON.stringify(json)+"]");
+	  //after reboot checks of the server is up and running and redirects to home
+	  if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
+	  document.getElementById('theTime').offsetWidth;
+	  document.getElementById('theTime').classList.add("afterglow");
+	}
 
     //single call; no timer
     refreshDeviceInformation(){
       console.log("DAL::refreshDeviceInformation");
-	  this.fetchDataJSON( URL_VERSION_MANIFEST, this.parseVersionManifest.bind(this));
       this.fetchDataJSON( URL_DEVICE_INFO, this.parseDeviceInfo.bind(this));
+      this.fetchDataJSON( URL_DEVICE_SETTINGS, this.parseDeviceSettings.bind(this));
     }
+
+    refreshManifest(){
+
+	  clearInterval(this.timerREFRESH_MANIFEST);
+	  this.fetchDataJSON( "http://" + ota_url + "version-manifest.json?dummy=" + Date.now() , this.parseVersionManifest.bind(this));
+	  this.timerREFRESH_MANIFEST = setInterval(this.refreshManifest.bind(this), 3600 * 12 * 1000); //every 12h
+    }
+
+    //store result and call callback if set
+    parseDeviceSettings(json){
+      this.dev_settings = json;
+      
+      //because the manifest check uses the ota_url.value from the device settings
+      "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
+	  this.refreshManifest();      
+      if(this.callback) this.callback('dev_settings', json);
+    }
+        
     //store result and call callback if set
     parseDeviceInfo(json){
       this.devinfo = json;
       if(this.callback) this.callback('devinfo', json);
     }
+    
     //store result and call callback if set
-		parseVersionManifest(json){
-			this.version_manifest = json;
+	parseVersionManifest(json){
+	  console.log("DAL::parseVersionManifest");
+	  this.version_manifest = json;
       if(this.callback) this.callback('versionmanifest', json);
-		}
+	}
+
+    refreshDays(){
+      console.log("DAL::refreshDays");
+//       clearInterval(this.timerREFRESH_DAYS);      
+      this.fetchDataJSON( URL_DAYS, this.parseDays.bind(this));
+//       this.timerREFRESH_DAYS = setInterval(this.refreshDays.bind(this), 10 * 1000);
+    }
+    
+     parseDays(json){
+      this.days = json;
+    }
 
     // refresh and parse actual data, store and add to history
     //refresh every 10 sec
@@ -126,10 +184,12 @@ const SQUARE_M_CUBED 	   = "\u33A5";
       this.fetchDataJSON( URL_SM_ACTUAL, this.parseActual.bind(this));
       this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), 10 * 1000);
     }
+    
     parseActual(json){
       this.actual = json;
       this.#addActualHistory( json );
     }
+    
     #addActualHistory(json){
       if( this.actual_history.length >= MAX_SM_ACTUAL) this.actual_history.shift();
       this.actual_history.push(json);
@@ -144,6 +204,10 @@ const SQUARE_M_CUBED 	   = "\u33A5";
 	getVersionManifest(){
 		return this.version_manifest;
 	}
+    getDays(){
+      return this.days;
+    }    
+    
     getActual(){
       return this.actual;
     }    
@@ -152,6 +216,23 @@ const SQUARE_M_CUBED 	   = "\u33A5";
       return this.actual_history;
     }
   }
+
+//callback function for the DAL
+function updateFromDAL(source, json)
+{
+  console.log("updateFromDAL(); source="+source);
+  console.log(json);
+  
+  switch(source)
+  {
+    case "devinfo": parseDeviceInfo(json); break;
+    case "dev_settings": ; break;
+//     case "versionmanifest": parseVersionManifest(json); break;
+    default:
+      console.log("missing handler; source="+source);
+      break;
+  }
+}
                     
 //   var monthNames 			= ["indxNul"].concat(MONTHS_IN_YEAR_NL).concat(["\0"]);
   const spinner 			= document.getElementById("loader");
@@ -178,13 +259,14 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   let translations 			= {}; //json storage translations
 
 //---- Version globals
-  var LastVersion = "", 
-  LastVersionMajor = 0, 
-  LastVersionMinor = 0, 
-  LastVersionFix = 0, 
-  LastVersionBuid = 0,
-  LastVersionNotes = "", 
-  LastVersionOTA = "";
+//   var LastVersion = "", 
+//   LastVersionMajor = 0, 
+//   LastVersionMinor = 0, 
+//   LastVersionFix = 0;
+ 
+//   LastVersionBuid = 0,
+//   LastVersionNotes = "", 
+  // LastVersionOTA = "";
   
 // ---- DASH
 var TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wmax;
@@ -306,14 +388,16 @@ cfgGaugePeak.options.title.text = "kW";
 cfgGaugePeak.options.plugins.labels.render = renderLabelPeak;
 cfgGaugePeak.data.datasets[0].backgroundColor = ["#009900", "rgba(0,0,0,0.1)"];
 
-function renderLabelAccu(args){return args.value + "%";}
+// function renderLabelAccu(args){return args.value + "%";}
+function renderLabelAccu(args){return "";}
 let cfgGaugeAccu = structuredClone(cfgGaugeSolar);
 cfgGaugeAccu.options.title.text = "%";
 cfgGaugeAccu.options.plugins.labels.render = renderLabelAccu;
 cfgGaugeAccu.data.datasets[0].backgroundColor = ["#007700", "rgba(0,0,0,0.1)"];
 
 cfgGaugeSolar.options.plugins.labels.render = renderLabelSolar;
-function renderLabelSolar(args){return args.value + "W";}
+// function renderLabelSolar(args){return args.value + "W";}
+function renderLabelSolar(args){return "";}
 
 let cfgGaugeELEKTRA2 = structuredClone(cfgDefaultTREND);
 cfgGaugeELEKTRA2.options.title.text = "kWh";
@@ -525,10 +609,11 @@ Iconify.addCollection({
        },        
 	   "mdi-solar-power-variant": {
            body: '<path d="M3.33 16H11V13H4L3.33 16M13 16H20.67L20 13H13V16M21.11 18H13V22H22L21.11 18M2 22H11V18H2.89L2 22M11 8H13V11H11V8M15.76 7.21L17.18 5.79L19.3 7.91L17.89 9.33L15.76 7.21M4.71 7.91L6.83 5.79L8.24 7.21L6.12 9.33L4.71 7.91M3 2H6V4H3V2M18 2H21V4H18V2M12 7C14.76 7 17 4.76 17 2H7C7 4.76 9.24 7 12 7Z" fill="currentColor"/>',
+       },
+	   "mdi-battery-low": {
+           body: '<path d="M16 20H8V6H16M16.67 4H15V2H9V4H7.33C6.6 4 6 4.6 6 5.33V20.67C6 21.4 6.6 22 7.33 22H16.67C17.41 22 18 21.41 18 20.67V5.33C18 4.6 17.4 4 16.67 4M15 16H9V19H15V16" />',
        }, 
-	   "mdi-battery-outline": {
-           body: '<path d="M16,20H8V6H16M16.67,4H15V2H9V4H7.33A1.33,1.33 0 0,0 6,5.33V20.67C6,21.4 6.6,22 7.33,22H16.67A1.33,1.33 0 0,0 18,20.67V5.33C18,4.6 17.4,4 16.67,4Z" />',
-       }, 
+
 	   "mdi-format-vertical-align-top": {
            body: '<path d="M8,11H11V21H13V11H16L12,7L8,11M4,3V5H20V3H4Z" />',
        },        
@@ -550,14 +635,14 @@ function visibilityListener() {
 //       console.log("visibilityState: hidden");
     clearInterval(tabTimer);  
     clearInterval(actualTimer);
-	clearInterval(timeTimer);
+// 	clearInterval(timeTimer);
       PauseAPI=true;
       break;
     case "visible":
 //       console.log("visibilityState: visable");
 	  PauseAPI=false;
-	  timeTimer = setInterval(refreshDevTime, 10 * 1000); // repeat every 10s
-	  refreshDevTime();
+// 	  timeTimer = setInterval(refreshDevTime, 10 * 1000); // repeat every 10s
+// 	  refreshDevTime();
 	  openTab();
 	  if ( activeTab == "bEID") getclaim();
       break;
@@ -673,10 +758,12 @@ function UpdateAccu(){
 				console.log("json.currentPower: "+ json.currentPower);
 				console.log("json.chargeLevel: "+ json.chargeLevel);				
 				trend_accu.data.datasets[0].data=[json.chargeLevel,100-json.chargeLevel];	
+				trend_accu.options.title.text = Number(json.chargeLevel).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" %";
 				trend_accu.update();
 				document.getElementById('dash_accu_p').innerHTML = formatValue(json.currentPower);
 				document.getElementById('dash_accu').style.display = 'block';
 				document.getElementById('accu-status').innerHTML = json.status;
+
 
 // 				if ( json.total.daily ) document.getElementById('seue').innerHTML = Number( (json.total.daily-(1000*Pi_today)) / (json.total.daily-(1000*Pi_today)+(Pd_today*1000))*100 ).toFixed(0);
 // 				else document.getElementById('seue').innerHTML = "-";
@@ -702,6 +789,7 @@ function UpdateSolar(){
 				trend_solar.update();
 				document.getElementById('dash_solar_p').innerHTML = formatValue(json.total.daily/1000.0);
 				document.getElementById('dash_solar').style.display = 'block';
+				trend_solar.options.title.text = Number(json.total.actual).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" W";
 
 				//SCR
 // console.log("Pi_today: " + Pi_today*1000);
@@ -791,31 +879,34 @@ function getclaim(){
 
 function parseVersionManifest(json)
 {
-  console.log("parseVersionManifest() - ", json);
-  LastVersion = json.version;
-  LastVersionMajor = json.major;
-  LastVersionMinor = json.minor;
-  LastVersionFix = json.fix;
-  LastVersionBuid = json.build;
-  LastVersionNotes = json.notes;
-  LastVersionOTA = json.ota_url;
+//   console.log("parseVersionManifest()");
+//   LastVersion = json.version;
+//   LastVersionMajor = json.major;
+//   LastVersionMinor = json.minor;
+//   LastVersionFix = json.fix;
+//   console.log("Manifest Verion: " + objDAL.version_manifest.version);
+//   console.log("Manifest Major : " + objDAL.version_manifest.major);
+//   LastVersionBuid = json.build;
+//   LastVersionNotes = json.notes;
+  // LastVersionOTA = json.ota_url;
 }
+
 //============================================================================  
   
-function ReadVersionManifest() {
-  console.log("ReadVersionManifest");
-  Spinner(true);
-  fetch("http://" + ota_url + "version-manifest.json?dummy=" + Date.now(), { "setTimeout": 5000 })
-//   fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
-    .then(function (response) {
-      return response.json();})
-    .then(function (json) {
-      console.log("version manifest: " + JSON.stringify(json));
-      parseVersionManifest(json);
-      Spinner(false);
-    }
-  );	// function(json)  
-}
+// function ReadVersionManifest() {
+//   console.log("ReadVersionManifest");
+//   Spinner(true);
+//   fetch("http://" + ota_url + "version-manifest.json?dummy=" + Date.now(), { "setTimeout": 5000 })
+// //   fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
+//     .then(function (response) {
+//       return response.json();})
+//     .then(function (json) {
+//       console.log("version manifest: " + JSON.stringify(json));
+//       parseVersionManifest(json);
+//       Spinner(false);
+//     }
+//   );	// function(json)  
+// }
 
 //============================================================================   
 function UpdateDash()
@@ -905,8 +996,6 @@ function UpdateDash()
 		trend_peak.update();
 		if (json.peak_pwr_last_q.value > 0.75 * json.highest_peak_pwr.value ) trend_peak.data.datasets[0].backgroundColor = ["#dd0000", "rgba(0,0,0,0.1)"];
 		else trend_peak.data.datasets[0].backgroundColor = ["#009900", "rgba(0,0,0,0.1)"];
-
-
 		
 		//-------SPANNING METER		
 		let v1 = 0, v2 = 0, v3 = 0;
@@ -1158,22 +1247,6 @@ function createDashboardGauges()
 	trend_peak	= new Chart(document.getElementById("container-peak"), cfgGaugePeak);	
 }
 
-//callback function for the DAL
-function updateFromDAL(source, json)
-{
-  console.log("updateFromDAL(); source="+source);
-  console.log(json);
-  /*
-  switch(source)
-  {
-    case "devinfo": parseDeviceInfo(json); break;
-    case "versionmanifest": parseVersionManifest(json); break;
-    default:
-      console.log("missing handler; source="+source);
-      break;
-  }*/
-}
-
 //main entry point from DSMRindex.html or window.onload
 function bootsTrapMain() 
 {
@@ -1193,13 +1266,12 @@ function bootsTrapMain()
 	objDAL = new dsmr_dal_main();
 	objDAL.setCallback(updateFromDAL);
 	objDAL.init();
-  
-            
+        
 	handle_menu_click();
 	FrontendConfig();
-    refreshDevTime();
-    clearInterval(timeTimer);  
-    timeTimer = setInterval(refreshDevTime, 10 * 1000); // repeat every 10s
+//     refreshDevTime();
+//     clearInterval(timeTimer);  
+//     timeTimer = setInterval(refreshDevTime, 10 * 1000); // repeat every 10s
 
     setMonthTableType();
     refreshDevInfo();
@@ -1232,6 +1304,7 @@ function bootsTrapMain()
     document.getElementById('dongle_io').addEventListener('input', NTSWupdateVisibility);
  	
  	BurnupBootstrap();
+ 	
   } // bootsTrapMain()
   
   
@@ -1413,11 +1486,8 @@ function SendNetSwitchJson() {
 	switch (activeTab) {
 		case "bActualTab" : 
 			refreshSmActual();
-// 		    if (tlgrmInterval < 10)
-            	actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
-//       		else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
+			actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
       		break;
-
 		case "bInsightsTab":
 			InsightData();
 			break;
@@ -1475,7 +1545,7 @@ function SendNetSwitchJson() {
 			break;
 		case "bSettings":
 		case "bEditSettings":
-			refreshDevTime();
+			// refreshDevTime();
 			//refreshDevInfo();
 			data = {};
 			document.getElementById('tabEditSettings').style.display = 'block';
@@ -1601,15 +1671,15 @@ function SendNetSwitchJson() {
 
 		}
 		//add latest software version
-		ReadVersionManifest();
-		if (LastVersion != "") {
+// 		ReadVersionManifest();
+		if (objDAL.version_manifest.version != "") {
 			var newRow=tableRef.insertRow(-1);
 			var VerCel1 = newRow.insertCell(0);
 			var VerCel2 = newRow.insertCell(1);
 			var VerCel3 = newRow.insertCell(2);
 			VerCel1.innerHTML = td("latest_fwversion");
-			VerCel2.innerHTML = LastVersion;
-			console.log("last version: " + (Number(LastVersionMajor)*10000 + Number(LastVersionMinor)*100) );
+			VerCel2.innerHTML = objDAL.version_manifest.version;
+			console.log("last version: " + (Number(objDAL.version_manifest.major)*10000 + Number(objDAL.version_manifest.minor)*100) );
 		}
 		//fill table
         for( let k in obj ) {
@@ -1656,8 +1726,8 @@ function SendNetSwitchJson() {
 //       if (firmwareVersion > 20102) document.getElementById("update").removeAttribute('hidden');
 		
 	  //check if update is needed
-	  if (LastVersion != "") {
-		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>" + t('lbl-click-update') + "</a>";
+	  if (objDAL.version_manifest.version != "") {
+		  if ( firmwareVersion < (objDAL.version_manifest.major*10000 + 100 * objDAL.version_manifest.minor + objDAL.version_manifest.fix) ) VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>" + t('lbl-click-update') + "</a>";
 		  else VerCel3.innerHTML = td("latest_version");//"laatste versie";
 	  }
 //TEST
@@ -1692,7 +1762,7 @@ function UpdateStart( msg ){
 }
         
 function RemoteUpdate() {        
-	document.location.href = "/remote-update?version=" + LastVersion;
+	document.location.href = "/remote-update?version=" + objDAL.version_manifest.version;
 }
 
 function updateProgress() {
@@ -1791,40 +1861,39 @@ function checkESPOnline() {
   }
 
   //============================================================================  
-  function refreshDevTime()
-  {
-	alert_message("");
-  document.getElementById('theTime').classList.remove("afterglow");
-    console.log("Refresh api/v2/dev/time ..");
-    
-	let controller = new AbortController();
-	setTimeout(() => controller.abort(), 5000);    
-    fetch(APIGW+"v2/dev/time", { signal: controller.signal})
-      .then(response => response.json())
-      .then(json => {
-              document.getElementById('theTime').innerHTML = json.time;
-              console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
-
-	  //after reboot checks of the server is up and running and redirects to home
-      if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
-      document.getElementById('theTime').classList.add("afterglow");
-      
-    })
-      .catch(function(error) {    
-		if (error.name === "AbortError") {console.error("time abort error")}
-//         var p = document.createElement('p');
-//         p.appendChild( document.createTextNode('Error: ' + error.message) );
-//         alert_message("Datum/tijd kan niet opgehaald worden");
-      });     
-      
-    document.getElementById('message').innerHTML = newVersionMsg;
-
-  } // refreshDevTime()
+//   function refreshDevTime()
+//   {
+// 	alert_message("");
+//   document.getElementById('theTime').classList.remove("afterglow");
+//     console.log("Refresh api/v2/dev/time ..");
+//     
+// 	let controller = new AbortController();
+// 	setTimeout(() => controller.abort(), 5000);    
+//     fetch(APIGW+"v2/dev/time", { signal: controller.signal})
+//       .then(response => response.json())
+//       .then(json => {
+//               document.getElementById('theTime').innerHTML = json.time;
+//               console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
+// 
+// 	  //after reboot checks of the server is up and running and redirects to home
+//       if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
+//       document.getElementById('theTime').classList.add("afterglow");
+//       
+//     })
+//       .catch(function(error) {    
+// 		if (error.name === "AbortError") {console.error("time abort error")}
+// //         var p = document.createElement('p');
+// //         p.appendChild( document.createTextNode('Error: ' + error.message) );
+// //         alert_message("Datum/tijd kan niet opgehaald worden");
+//       });     
+//       
+//     document.getElementById('message').innerHTML = newVersionMsg;
+// 
+//   } // refreshDevTime()
     
   //============================================================================  
   function refreshSmActual() {
     document.getElementById("actualTable").classList.remove("afterglow");
-    Spinner(true);
     var data = objDAL.getActual();
 //     console.log("objDAL: " + JSON.stringify(data));
     //copyActualToChart(data);
@@ -1835,7 +1904,6 @@ function checkESPOnline() {
       copyActualHistoryToChart(hist);
       showActualGraph();
     }
-    Spinner(false);
   }
   
 // format a identifier

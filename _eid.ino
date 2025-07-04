@@ -9,28 +9,41 @@
 String  eid_webhook;
 String  eid_header_auth;
 String  eid_header_twinid;
-String  eid_interval;
+// String  eid_interval;
 uint32_t eid_interval_sec = 300;
+uint8_t claimTimeout = 0;
+
+#define CLAIM_RETRY 60*1
 
 //String eid_claim_code = "",eid_claim_url = "";
 //time_t eid_claim_exp;
 
 DECLARE_TIMER_SEC(T_EID, 10);
-DECLARE_TIMER_SEC(T_EID_CLAIM, 60*1);
+DECLARE_TIMER_SEC(T_EID_CLAIM, CLAIM_RETRY);
 DECLARE_TIMER_MIN(T_EID_REFRESH, 24*60);
 
 void handleEnergyID(){  
 
+  if ( bEID_enabled && claimTimeout >= (3600/CLAIM_RETRY) ) { //3600 = 1h timeout
+    bEID_enabled = false; //takes to long = disable eid function
+    claimTimeout = 0;
+    writeSettings(); //save state to settingsfile
+  }
   if ( !bEID_enabled ) return;
   
   if ( P1Status.eid_state == EID_ENROLLED ) {
+    claimTimeout = 0;
     if ( !eid_webhook.length() ) EIDPostHello(); //get the webhook url
     else if ( DUE(T_EID) )  { //is enrolled and got webhook url
       PostEnergyID();
       CHANGE_INTERVAL_SEC(T_EID, eid_interval_sec);
     }
   }
-  if ( P1Status.eid_state == EID_CLAIMING && DUE(T_EID_CLAIM) ) EIDPostHello(); //refresh every 5m
+
+  if ( P1Status.eid_state == EID_CLAIMING && DUE(T_EID_CLAIM) ) {
+    EIDPostHello(); //refresh every 1m
+    claimTimeout++;
+  }
   
   if ( DUE(T_EID_REFRESH) ) EIDPostHello(); //refresh every 24h
 
@@ -63,6 +76,8 @@ response
 
 }
 */
+
+// {"webhookUrl":"https://sbns-energyid-prod.servicebus.windows.net/sbq-smartstuff-p1/messages","headers":{"authorization":"SharedAccessSignature sr=https%3a%2f%2fsbns-energyid-prod.servicebus.windows.net%2fsbq-smartstuff-p1&sig=8sQBWawHWnHnY%2fCLRNIa%2bTQ%2bYZ8lt2tQLMGFM1twA%2fU%3d&se=1751747327&skn=DeviceAccessKey","x-twin-id":"f3b7f4a8-4824-4cb1-b2d1-4f874a4234ec"},"recordNumber":"EA-14195189","recordName":"Mijn woning","webhookPolicy":{"allowedInterval":"PT5M","uploadInterval":300}}
 
 void EIDPostHello(){
 /*  
@@ -129,16 +144,18 @@ States
       eid_webhook = (const char*)doc["webhookUrl"];
       eid_header_auth = (const char*)doc["headers"]["authorization"];
       eid_header_twinid = (const char*)doc["headers"]["x-twin-id"];
-      eid_interval = (const char*)doc["webhookPolicy"]["allowedInterval"];
+      // eid_interval = (const char*)doc["webhookPolicy"]["allowedInterval"];
+      eid_interval_sec = doc["webhookPolicy"]["uploadInterval"];
       
-      Debug(F("webhookUrl: "));Debugln(eid_webhook); 
-      Debug(F("authorization: "));Debugln(eid_header_auth); 
-      Debug(F("x-twin-id: "));Debugln(eid_header_twinid); 
-      Debug(F("allowedInterval: "));Debugln(eid_interval); 
+      Debug(F("webhookUrl      : "));Debugln(eid_webhook); 
+      Debug(F("authorization   : "));Debugln(eid_header_auth); 
+      Debug(F("x-twin-id.      : "));Debugln(eid_header_twinid); 
+      // Debug(F("allowedInterval : "));Debugln(eid_interval); 
+      Debug(F("eid_interval_sec: "));Debugln(eid_interval_sec); 
 
       //store configered
 //      EIDWriteConfig(payload);
-      EIDDetermineInterval(eid_interval);
+      // EIDDetermineInterval(eid_interval);
       P1Status.eid_state = EID_ENROLLED;
     }
     httpServer.send(200, "application/json", payload );
@@ -160,15 +177,15 @@ void EIDGetClaim(){
   EIDPostHello(); 
 }
 
-void EIDDetermineInterval(String interval){
-  if ( interval == "PT1M" )       eid_interval_sec =  1*60;
-  else if ( interval == "PT5M" )  eid_interval_sec =  5*60; 
-  else if ( interval == "PT15M" ) eid_interval_sec = 15*60; 
-  else if ( interval == "PT1H" )  eid_interval_sec = 60*60;
-  else if ( interval == "P1D" )   eid_interval_sec = 60*60*24;
-  else if ( interval == "P1M" )   eid_interval_sec = 60*60*24*30;
-  DebugT(F("eid_interval_sec: "));Debugln(eid_interval_sec);
-}
+// void EIDDetermineInterval(String interval){
+//   if ( interval == "PT1M" )       eid_interval_sec =  1*60;
+//   else if ( interval == "PT5M" )  eid_interval_sec =  5*60; 
+//   else if ( interval == "PT15M" ) eid_interval_sec = 15*60; 
+//   else if ( interval == "PT1H" )  eid_interval_sec = 60*60;
+//   else if ( interval == "P1D" )   eid_interval_sec = 60*60*24;
+//   else if ( interval == "P1M" )   eid_interval_sec = 60*60*24*30;
+//   DebugT(F("eid_interval_sec: "));Debugln(eid_interval_sec);
+// }
 
 String IsoTS () {
   // convert to this format -> 2023-06-16T08:01+0200
@@ -186,7 +203,9 @@ String IsoTS () {
   return DateTime;
 }
 
+/*
 String JsonEnergyID ( const char* id, const char* metric, double sm_value, const char* unit, const char* type ){
+*/
 /*  
   {
     "remoteId": "p1-dongle-pro",
@@ -199,7 +218,7 @@ String JsonEnergyID ( const char* id, const char* metric, double sm_value, const
     ]
 }
 */  
-  
+/*
   String Json;
   Json  = "{\"remoteId\": \"p1-dongle-pro-" + String(id) + "\"";
   Json += ",\"remoteName\": \"P1 " + String(id) + "\"";
@@ -218,6 +237,7 @@ String JsonEnergyID ( const char* id, const char* metric, double sm_value, const
   return Json;
 
 }
+*/
 
 String JsonBuildMBus(String key, time_t epoch, long value ){
 /*  

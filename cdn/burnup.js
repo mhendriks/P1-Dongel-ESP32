@@ -7,6 +7,7 @@ const URL_HISTORY_HOURS = APIGW + "../RNGhours.json";
 const URL_HISTORY_DAYS = APIGW + "../RNGdays.json";
 const URL_HISTORY_MONTHS = APIGW + "../RNGmonths.json";
 const URL_HISTORY_ACTUAL = APIGW + "v2/sm/actual";
+const URL_DEVICE_TIME   = APIGW + "v2/dev/time";
 const MAX_ACTUAL_HISTORY = 15*6;	//store last 15 minutes (with a call per 10 sec)
 const listMONTHS_SHORT = ["JAN", "FEB", "MRT", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
@@ -16,7 +17,6 @@ const listMONTHS_SHORT = ["JAN", "FEB", "MRT", "APR", "MEI", "JUN", "JUL", "AUG"
 //  https://www.vattenfall.nl/nieuws/verbruiksplafond/
 const listValuesCeilingE = [339, 280, 267, 207, 181, 159, 161, 176, 199, 266, 306, 356];	//totaal 2900 kWh	
 const listValuesCeilingG = [221, 188, 159,  86,  35,  19,  17,  17,  24,  81, 146, 207];	//totaal 1200 m3
-
 
 let timerRefresh = 0;
 let sCurrentChart = "YEAR"; //YEAR
@@ -37,6 +37,7 @@ class dsmr_dal_burnup{
 		this.actual=[];
 		this.actual_history = [];
 		this.timerREFRESH_ACTUAL = 0;
+		this.timerREFRESH_TIME = 0;
 		this.init();
     }
 
@@ -54,6 +55,7 @@ class dsmr_dal_burnup{
 
 	init()
 	{
+		console.log("init dsmr_dal_burnup");
 		this.refresh();
 		//this.refreshActual();
 	}
@@ -100,6 +102,7 @@ class dsmr_dal_burnup{
 		this.fetchDataJSON( URL_HISTORY_ACTUAL, this.parseActual.bind(this));
     	this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), 10 * 1000);
 	}
+
 	parseActual(json)
 	{
 		this.actual = json;
@@ -328,7 +331,7 @@ function BurnupBootstrap()
 
 	//create storage
 	objStorage = new dsmr_dal_burnup();
-
+	
 	//set a flag that we are ready
 	fLoadedBurnup = true;
 
