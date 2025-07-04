@@ -77,7 +77,7 @@ response
 }
 */
 
-// {"webhookUrl":"https://sbns-energyid-prod.servicebus.windows.net/sbq-smartstuff-p1/messages","headers":{"authorization":"SharedAccessSignature sr=https%3a%2f%2fsbns-energyid-prod.servicebus.windows.net%2fsbq-smartstuff-p1&sig=8sQBWawHWnHnY%2fCLRNIa%2bTQ%2bYZ8lt2tQLMGFM1twA%2fU%3d&se=1751747327&skn=DeviceAccessKey","x-twin-id":"f3b7f4a8-4824-4cb1-b2d1-4f874a4234ec"},"recordNumber":"EA-14195189","recordName":"Mijn woning","webhookPolicy":{"allowedInterval":"PT5M","uploadInterval":300}}
+// {"webhookUrl":"https://sbns-energyid-prod.servicebus.windows.net/sbq-smartstuff-p1/messages","headers":{"authorization":"<gone>","x-twin-id":"<>"},"recordNumber":"EA-14195189","recordName":"Mijn woning","webhookPolicy":{"allowedInterval":"PT5M","uploadInterval":300}}
 
 void EIDPostHello(){
 /*  
