@@ -320,6 +320,6 @@
 "dict_water_delivered_ts": "Tidsstämpel Vattenmätaravläsning",
 "dict_mqtt_tls": "MQTT över TLS",
 "dict_dev-pairing": "Peer2Peer-kommunikation",
-"dict_eid-enabled": "EnergyID på/av",
+"dict_eid-enabled": "EnergyID på/av (1h setup timeout)",
 "dict_utilization": "CPU-användning"
 }
