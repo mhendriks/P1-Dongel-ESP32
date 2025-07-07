@@ -241,7 +241,8 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
         switch (type) {
             case ModbusDataType::FLOAT: 
             case ModbusDataType::UINT32: {
-                response.add(val.u);
+                if (SelMap==6) response.add(val.u, SWAP_BYTES|SWAP_REGISTERS);
+                else response.add(val.u);
                 currentAddr += 2;
                 break;
             }
