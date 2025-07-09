@@ -7,7 +7,6 @@ const URL_HISTORY_HOURS = APIGW + "../RNGhours.json";
 const URL_HISTORY_DAYS = APIGW + "../RNGdays.json";
 const URL_HISTORY_MONTHS = APIGW + "../RNGmonths.json";
 const URL_HISTORY_ACTUAL = APIGW + "v2/sm/actual";
-const URL_DEVICE_TIME   = APIGW + "v2/dev/time";
 const MAX_ACTUAL_HISTORY = 15*6;	//store last 15 minutes (with a call per 10 sec)
 const listMONTHS_SHORT = ["JAN", "FEB", "MRT", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
