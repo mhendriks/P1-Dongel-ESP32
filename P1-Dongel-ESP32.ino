@@ -46,6 +46,8 @@ Default checks
 - ethernet
 - 4h test on 151
 
+4.15.1
+- 
 
 next
 - improvement: modbus in own process = non-blocking 
@@ -150,21 +152,22 @@ void setup()
 //================ Check necessary files ============================
   if (!DSMRfileExist(settingIndexPage, false) ) {
     DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
-    GetFile(settingIndexPage); //download file from cdn
+    GetFile(settingIndexPage, PATH_DATA_FILES); //download file from cdn
+    if (!DSMRfileExist(settingIndexPage, false) ) {
+      DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
+      GetFile(settingIndexPage, URL_INDEX_FALLBACK);
+    }
     if (!DSMRfileExist(settingIndexPage, false) ) { //check again
       DebugTln(F("Index file still not pressent!\r"));
       FSNotPopulated = true;
       }
   }
-  if (!FSNotPopulated) {
-    DebugTln(F("FS correct populated -> normal operation!\r"));
-    httpServer.serveStatic("/", LittleFS, settingIndexPage);
-  }
  
   if (!DSMRfileExist("/Frontend.json", false) ) {
     DebugTln(F("Frontend.json not pressent, try to download it!"));
-    GetFile("/Frontend.json");
+    GetFile("/Frontend.json", PATH_DATA_FILES);
   }
+  
   setupFSexplorer();
  
   esp_register_shutdown_handler(ShutDownHandler);

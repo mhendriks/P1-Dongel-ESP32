@@ -148,6 +148,8 @@ input[type=number]{
 section#APIdocTab div, #rawTelegram {
     background: rgba(0,0,0,0.3);
 }
+#TelData { margin: 10px;}
+#rawTelegram svg {float: right; margin: 5px;color: #fff;}
 
 #ApiDocTable td:nth-child(2) {
 	max-width: 360px;

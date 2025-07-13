@@ -37,6 +37,7 @@ void serveStaticWithAuth(const char* uri, const char* fileName) {
     if (auth()) {
       File file = LittleFS.open(fileName, "r");
       if (file) {
+        httpServer.sendHeader("Access-Control-Allow-Origin", "*");
         httpServer.streamFile(file, "application/json");
         file.close();
       } else {
@@ -46,27 +47,14 @@ void serveStaticWithAuth(const char* uri, const char* fileName) {
   });
 }
 
-// #include <AsyncTCP.h>
-// #include <ESPAsyncWebServer.h>
-
-// AsyncWebServer server(81);
-// AsyncWebSocket ws("/ws");
-
-// void serveStaticWithAuth2( const char* uri, const char* filename) {
-//   server.serveStatic(uri, LittleFS, filename)
-//     .setAuthentication("admin", "password"); // Pas dit aan aan jouw auth-systeem
-// }
-
 //=====================================================================================
-void setupFSexplorer()
-{ 
+void setupFSexplorer() { 
 
-//test AsyncWebServer
-// serveStaticWithAuth2( "/api/v2/hist/hours", RingFiles[RINGHOURS].filename);
-// serveStaticWithAuth2( "/api/v2/hist/days", RingFiles[RINGDAYS].filename);
-// serveStaticWithAuth2( "/api/v2/hist/months", RingFiles[RINGMONTHS].filename);
+  if (FSNotPopulated) return;
+  DebugTln(F("FS correct populated -> normal operation!\r"));
 
-
+  httpServer.serveStatic("/", LittleFS, settingIndexPage);
+  
  // Serve static files with authentication
   serveStaticWithAuth("/api/v2/hist/hours", RingFiles[RINGHOURS].filename);
   serveStaticWithAuth("/api/v2/hist/days", RingFiles[RINGDAYS].filename);
@@ -175,7 +163,7 @@ void APIlistFiles()             // Senden aller Daten an den Client
 bool handleFile(String&& path) 
 {
 //  Debugln("handleFile");
-  if ( !LittleFS.exists(settingIndexPage) ) GetFile(settingIndexPage); 
+  if ( !LittleFS.exists(settingIndexPage) ) GetFile(settingIndexPage, PATH_DATA_FILES); 
   if (httpServer.hasArg("delete")) 
   {
     DebugTf("Delete -> [%s]\n\r",  httpServer.arg("delete").c_str());

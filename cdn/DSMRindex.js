@@ -1,7 +1,6 @@
 /*
 ***************************************************************************  
-**  Program  : DSMRindex.js, part of DSMRfirmwareAPI
-**  Version  : v4.14.0
+**  Version  : v4.14
 **
 **  Copyright (c) 2025 Smartstuff
 **  Authors  : Martijn Hendriks / Mar10us
@@ -9,42 +8,31 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-// const APIGW='http://localhost/dsmr-api/v5/local/api/'; //test only
-const APIHOST = window.location.protocol+'//'+window.location.host;
-const APIGW = APIHOST+'/api/';
 
-const URL_SM_ACTUAL    	 	= APIGW + "v2/sm/actual";
-const URL_DAYS    	 		= APIGW + "v2/hist/days";
-const URL_DEVICE_INFO   	= APIGW + "v2/dev/info";
-const URL_DEVICE_TIME   	= APIGW + "v2/dev/time";
-const URL_DEVICE_SETTINGS   = APIGW + "v2/dev/settings";
-const MAX_SM_ACTUAL     	= 15*6; //store the last 15 minutes (each interval is 10sec)
-const MAX_FILECOUNT     	= 30;   //maximum filecount on the device is 30
+// if ( DEBUG ) {
+//   import('http://localhost/~martijn/dsmr-api/v5/debug.js')
+//     .then((module) => {
+//       module.initDebugTools(); // bijv. een functie die logging aanzet, knoppen toont, etc.
+//     })
+//     .catch((err) => {
+//       console.error('Failed to load debug tools:', err);
+//     });
+// }
 
-const URL_I18N			   = "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/cdn/lang";
-// const URL_I18N			   = "http://localhost/~martijn/dsmr-api/v5/lang"; //local testing
-const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
-const URL_GITHUB_VERSION   = "https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat";
-
-const jsversie			   = 250702;
-
+const URL_I18N = DEBUG ? "http://localhost/~martijn/dsmr-api/v5/lang" : "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/cdn/lang";
 const SQUARE_M_CUBED 	   = "\u33A5";
   
 "use strict";
 
-  var ota_url 				= "";
+//   var ota_url 				= "";
   let activeTab             = "bDashTab";
   let PauseAPI				= false; //pause api call when browser is inactive
   let presentationType      = "TAB";
   let tabTimer              = 0;
-  let actualTimer           = 0;
-//   let timeTimer             = 0;
-  var GitHubVersion         = 0;
-  var GitHubVersion_dspl    = "-";
+//   let actualTimer           = 0;
   var devVersion			= 0;
   var firmwareVersion       = 0;
   var firmwareVersion_dspl  = "-";
-  var newVersionMsg         = "";
   let NRGStatusTimer		= 0;
   
   var ed_tariff1            = 0;
@@ -55,187 +43,46 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   var electr_netw_costs     = 0;
   var gas_netw_costs        = 0;
   var hostName            	= "-";  
-  var data       			= [];
+  var data		 			= [];
   var DayEpoch				= 0;
   let monthType        		= "ED";
   let settingFontColor 		= 'white';
-  var objDAL = null;
   var SolarActive 			= false;
   var AccuActive			= false;
   var Pi_today				= 0;
   var Pd_today				= 0;
   var conf_netswitch 		= false;
-    
-  //The Data Access Layer for the DSMR
-  // - acts as an cache between frontend and server
-  // - schedules refresh to keep data fresh
-  // - stores data for the history functions
-  class dsmr_dal_main{
-    constructor() {
-      this.devinfo=[];
-	  this.dev_settings=[];
-	  this.version_manifest=[];
-      this.actual=[];
-	  this.solar=[];
-	  this.battery=[];
-	  this.days=[];
-      this.actual_history = [];
-      this.timerREFRESH_ACTUAL = 0;  
-      this.timerREFRESH_DAYS = 0;  
-	  this.timerREFRESH_TIME = 0;  
-	  this.timerREFRESH_MANIFEST = 0;  	    
-      this.callback=null;
-      }
-  
-    fetchDataJSON(url, fnHandleData) {
-      console.log("DAL::fetchDataJSON( "+url+" )");
-      fetch(url)
-      .then(response => response.json())
-      .then(json => { fnHandleData(json); })
-      .catch(function (error) {
-        console.error("dal::fetchDataJSON() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild( document.createTextNode('Error: ' + error.message) );
-      });
-    }
-
-    //use a callback when you want to know if the data is updated
-    setCallback(fnCB){
-      this.callback = fnCB;
-    }
-  
-    init(){
-      this.refreshDeviceInformation();
-      this.refreshActual();
-      this.refreshTime();
-    } 
-	
-	refreshTime()
-	{
-		console.log("refreshTime");
-		clearInterval(this.timerREFRESH_TIME);
-		this.fetchDataJSON( URL_DEVICE_TIME, this.parseTime.bind(this));
-    	this.timerREFRESH_TIME = setInterval(this.refreshTime.bind(this), 10 * 1000);
-	}
-
-	parseTime(json)
-	{
-		document.getElementById('theTime').classList.remove("afterglow");
-		document.getElementById('theTime').innerHTML = json.time;
-		console.log("time parsed .., data is ["+ JSON.stringify(json)+"]");
-	  //after reboot checks of the server is up and running and redirects to home
-	  if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
-	  document.getElementById('theTime').offsetWidth;
-	  document.getElementById('theTime').classList.add("afterglow");
-	}
-
-    //single call; no timer
-    refreshDeviceInformation(){
-      console.log("DAL::refreshDeviceInformation");
-      this.fetchDataJSON( URL_DEVICE_INFO, this.parseDeviceInfo.bind(this));
-      this.fetchDataJSON( URL_DEVICE_SETTINGS, this.parseDeviceSettings.bind(this));
-    }
-
-    refreshManifest(){
-
-	  clearInterval(this.timerREFRESH_MANIFEST);
-	  this.fetchDataJSON( "http://" + ota_url + "version-manifest.json?dummy=" + Date.now() , this.parseVersionManifest.bind(this));
-	  this.timerREFRESH_MANIFEST = setInterval(this.refreshManifest.bind(this), 3600 * 12 * 1000); //every 12h
-    }
-
-    //store result and call callback if set
-    parseDeviceSettings(json){
-      this.dev_settings = json;
-      
-      //because the manifest check uses the ota_url.value from the device settings
-      "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
-	  this.refreshManifest();      
-      if(this.callback) this.callback('dev_settings', json);
-    }
-        
-    //store result and call callback if set
-    parseDeviceInfo(json){
-      this.devinfo = json;
-      if(this.callback) this.callback('devinfo', json);
-    }
-    
-    //store result and call callback if set
-	parseVersionManifest(json){
-	  console.log("DAL::parseVersionManifest");
-	  this.version_manifest = json;
-      if(this.callback) this.callback('versionmanifest', json);
-	}
-
-    refreshDays(){
-      console.log("DAL::refreshDays");
-//       clearInterval(this.timerREFRESH_DAYS);      
-      this.fetchDataJSON( URL_DAYS, this.parseDays.bind(this));
-//       this.timerREFRESH_DAYS = setInterval(this.refreshDays.bind(this), 10 * 1000);
-    }
-    
-     parseDays(json){
-      this.days = json;
-    }
-
-    // refresh and parse actual data, store and add to history
-    //refresh every 10 sec
-    refreshActual(){
-      console.log("DAL::refreshActual");
-      clearInterval(this.timerREFRESH_ACTUAL);      
-      this.fetchDataJSON( URL_SM_ACTUAL, this.parseActual.bind(this));
-      this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), 10 * 1000);
-    }
-    
-    parseActual(json){
-      this.actual = json;
-      this.#addActualHistory( json );
-    }
-    
-    #addActualHistory(json){
-      if( this.actual_history.length >= MAX_SM_ACTUAL) this.actual_history.shift();
-      this.actual_history.push(json);
-    }
-  
-    //
-    // getters
-    //
-    getDeviceInfo(){
-      return this.devinfo;
-    }
-	getVersionManifest(){
-		return this.version_manifest;
-	}
-    getDays(){
-      return this.days;
-    }    
-    
-    getActual(){
-      return this.actual;
-    }    
-    //the last (MAX_ACTUAL_HISTORY) actuals
-    getActualHistory(){
-      return this.actual_history;
-    }
-  }
+  var update_reconnected	= false;
 
 //callback function for the DAL
 function updateFromDAL(source, json)
 {
   console.log("updateFromDAL(); source="+source);
-  console.log(json);
+//   console.log(json);
   
   switch(source)
   {
+    case "time": refreshTime(json); update_reconnected=true; break;
     case "devinfo": parseDeviceInfo(json); break;
-    case "dev_settings": ; break;
-//     case "versionmanifest": parseVersionManifest(json); break;
+    case "dev_settings": refreshSettings();getDevSettings(); break;
+    case "versionmanifest": parseVersionManifest(json); break;
+    case "days": expandData(json);refreshDays();break;
+	case "hours": expandData(json);refreshHours();break;
+	case "months": expandData(json);refreshMonths();break;
+	case "actual": ProcesActual(json);break;
+	case "solar": UpdateSolar();break;
+	case "accu": UpdateAccu();break;
+	case "insights": InsightData(json);break;
+	case "fields":  if (activeTab=="bDashTab") refreshDashboard(json);else parseSmFields(json); break;
+	case "telegram": document.getElementById("TelData").textContent = json; break;
+	case "eid_claim":ProcessEIDClaim(json); break;
+	case "netswitch": refreshNetSwitch(json);break;
     default:
       console.log("missing handler; source="+source);
       break;
   }
 }
                     
-//   var monthNames 			= ["indxNul"].concat(MONTHS_IN_YEAR_NL).concat(["\0"]);
   const spinner 			= document.getElementById("loader");
 
 //---- frontend settings
@@ -259,16 +106,6 @@ function updateFromDAL(source, json)
   let locale 				= 'nl';  // standaard
   let translations 			= {}; //json storage translations
 
-//---- Version globals
-//   var LastVersion = "", 
-//   LastVersionMajor = 0, 
-//   LastVersionMinor = 0, 
-//   LastVersionFix = 0;
- 
-//   LastVersionBuid = 0,
-//   LastVersionNotes = "", 
-  // LastVersionOTA = "";
-  
 // ---- DASH
 var TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wmax;
 var hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
@@ -463,13 +300,10 @@ function loadTranslations(lang) {
       translations = json;
       applyTranslations();
     })
-    .catch(err => console.error("Fout bij laden vertalingen:", err));
+    .catch(err => console.error("Error fetching lang file:", err));
 }
   
-function InsightData(){
-	fetch(APIHOST+"/api/v2/stats", {"setTimeout": 5000})
-        .then(response => response.json())
-        .then(data => {
+function InsightData(data){			
             const eenheden = {
                 "U1piek": "V",
                 "U2piek": "V",
@@ -486,12 +320,12 @@ function InsightData(){
                 "TU3over": "sec",
                 "start_time": "uu:mm"
             };
-
+			
             const tbody = document.getElementById("InsightsTableBody");
-            tbody.innerHTML = ""; // maak eerst leeg
-
+			tbody.innerHTML = '';
+			
             for (const key in data) {
-//                 if (!(key in namen)) continue; // alleen bekende sleutels tonen
+//                 if (!(key in namen)) continue; 
 
                 const row = document.createElement("tr");
                 const naamCell = document.createElement("td");
@@ -527,12 +361,6 @@ function InsightData(){
                 row.appendChild(eenheidCell);
                 tbody.appendChild(row);
             }
-        })
-        .catch(err => {
-            console.error("Fout bij ophalen van stats:", err);
-            const tbody = document.getElementById("InsightsTableBody");
-            tbody.innerHTML = `<tr><td colspan="3">Geen data beschikbaar.<br>Functie beschikbaar vanaf versie 4.13.0</td></tr>`;
-        });
 }
 
 function SolarSendData() {
@@ -635,7 +463,7 @@ function visibilityListener() {
     case "hidden":
 //       console.log("visibilityState: hidden");
     clearInterval(tabTimer);  
-    clearInterval(actualTimer);
+//     clearInterval(actualTimer);
 // 	clearInterval(timeTimer);
       PauseAPI=true;
       break;
@@ -670,140 +498,112 @@ window.addEventListener('hashchange', () => {
 
 //============================================================================  
   
-function SetOnSettings(json){
-	/* 
-	eenmalig bepalen
-	- water aanwezig
-	- gas aanwezig
-	- aantal fases
-	- teruglevering
-	*/
-	//check of gasmeter beschikbaar is	(indien HeeftGas = true uit Frontend,json of eerdere meeting dan niet meer checken uit meterdata, bij false wel checken in meterdata)
-	if (!HeeftGas && !IgnoreGas) HeeftGas = "gas_delivered" in json ? !isNaN(json.gas_delivered.value) : false ;
-	if (!HeeftWater) HeeftWater =  "water" in json ? !isNaN(json.water.value) : false ;
-	//check of teruglevering actief is 
-	if (!Injection) Injection = isNaN(json.energy_returned_tariff1.value)?false:json.energy_returned_tariff1.value;
-	if (!Injection) Injection = isNaN(json.energy_returned_tariff2.value)?false:json.energy_returned_tariff2.value;
+function SetOnSettings(json) {
+	// Initiele detectie: water, gas, teruglevering
+	if (!HeeftGas && !IgnoreGas)
+		HeeftGas = "gas_delivered" in json ? !isNaN(json.gas_delivered.value) : false;
+	if (!HeeftWater)
+		HeeftWater = "water" in json ? !isNaN(json.water.value) : false;
+
+	if (!Injection) {
+		Injection = !isNaN(json.energy_returned_tariff1?.value) ? json.energy_returned_tariff1.value : false;
+		if (!Injection) Injection = !isNaN(json.energy_returned_tariff2?.value) ? json.energy_returned_tariff2.value : false;
+	}
 	Injection = Injection && !IgnoreInjection;
-	
-	if (Dongle_Config != "p1-q" ) {
-		//bereken het aantal fases aan de hand van de slimme meter data
-// 		if ( isNaN(json.voltage_l1.value) ) alert_message("Spanningsvelden slimme meter niet gevuld : Pas 'Phases' aan in Frontend.json bij 3 fases");
+
+	// Fasebepaling voor slimme meter
+	if (Dongle_Config !== "p1-q") {
 		Phases = 1;
-		if (!isNaN(json.current_l2.value)) Phases++;
-		if (!isNaN(json.current_l3.value)) Phases++;
+		if (!isNaN(json.current_l2?.value)) Phases++;
+		if (!isNaN(json.current_l3?.value)) Phases++;
 	}
-		
-	if(!EnableHist){
-		//hide menu elements + dashboard item
-		document.getElementById("bHoursTab").style.display = "none";
-		document.getElementById("bDaysTab").style.display = "none";
-		document.getElementById("bMonthsTab").style.display = "none";
-		document.getElementById("l3").style.display = "none";
+
+	// Verberg historische weergave indien uitgeschakeld
+	if (!EnableHist) {
+		["bHoursTab", "bDaysTab", "bMonthsTab", "l3"].forEach(id => {
+			document.getElementById(id).style.display = "none";
+		});
 	}
-	
-	show_hide_column('lastHoursTable',  4,HeeftWater);
-	show_hide_column('lastDaysTable',   4,HeeftWater);
-	show_hide_column('lastMonthsTable',13,HeeftWater);
-	show_hide_column('lastMonthsTable',14,HeeftWater);
-	show_hide_column('lastMonthsTable',15,HeeftWater);
-	show_hide_column('lastMonthsTable',16,HeeftWater);
 
-	if ( Dongle_Config != "p1-q" ) {
-		show_hide_column('lastHoursTable',  3,HeeftGas);
-		show_hide_column('lastDaysTable',   3,HeeftGas);
-		show_hide_column('lastMonthsTable', 9,HeeftGas);
-		show_hide_column('lastMonthsTable',10,HeeftGas);
-		show_hide_column('lastMonthsTable',11,HeeftGas);
-		show_hide_column('lastMonthsTable',12,HeeftGas);
-	
-		show_hide_column('lastMonthsTableCosts',  3,HeeftGas);
-		show_hide_column('lastMonthsTableCosts',  8,HeeftGas);
+	// Kolommen tonen/verbergen op basis van beschikbaarheid
+	const showCols = (table, cols, condition) => cols.forEach(col => show_hide_column(table, col, condition));
+
+	showCols('lastHoursTable',  [4], HeeftWater);
+	showCols('lastDaysTable',   [4], HeeftWater);
+	showCols('lastMonthsTable', [13, 14, 15, 16], HeeftWater);
+
+	if (Dongle_Config !== "p1-q") {
+		showCols('lastHoursTable',  [3], HeeftGas);
+		showCols('lastDaysTable',   [3], HeeftGas);
+		showCols('lastMonthsTable', [9, 10, 11, 12], HeeftGas);
+		showCols('lastMonthsTableCosts', [3, 8], HeeftGas);
 	}
-	show_hide_column('lastHoursTable',  2,Injection);
-	show_hide_column('lastDaysTable',  	2,Injection);
 
-	show_hide_column('lastMonthsTable', 5,Injection);
-	show_hide_column('lastMonthsTable', 6,Injection);
-	show_hide_column('lastMonthsTable', 7,Injection);
-	show_hide_column('lastMonthsTable', 8,Injection);
-	
-	if ( Dongle_Config == "p1-q" ) {
-		show_hide_column('lastHoursTable',  1,false); //hide Power obtained 
-		show_hide_column('lastDaysTable',  	1,false);
+	showCols('lastHoursTable',  [2], Injection);
+	showCols('lastDaysTable',   [2], Injection);
+	showCols('lastMonthsTable', [5, 6, 7, 8], Injection);
 
-		document.getElementById("l1").style.display = "none";
-		document.getElementById("l3").style.display = "none";
+	// Specifieke aanpassing voor p1-q dongle
+	if (Dongle_Config === "p1-q") {
+		showCols('lastHoursTable', [1], false);
+		showCols('lastDaysTable',  [1], false);
+
+		["l1", "l3"].forEach(id => document.getElementById(id).style.display = "none");
 		document.getElementById("l8").style.display = "block";
-// 		trend_g.options.title.text = "kJ";	
-// 		trend_g.options.labels = "{render: function (args) {return args.value + ' kJ';}";
-		const mbusn = document.querySelectorAll('.mbus-name');
-		mbusn.forEach(tmp => { tmp.innerHTML = "Warmte<br>(GJ)"});
-		const mbusu = document.querySelectorAll('.mbus-unit');
-		mbusu.forEach(tmp => { tmp.innerHTML = "(GJ)"});
-// 		document.getElementById("gasChart").style.height = "250px";
+
+		document.querySelectorAll('.mbus-name').forEach(e => e.innerHTML = "Warmte<br>(GJ)");
+		document.querySelectorAll('.mbus-unit').forEach(e => e.innerHTML = "(GJ)");
 	}
 }
 
 function UpdateAccu(){
-	console.log("Update Accu");
-	fetch(APIHOST+"/api/v2/accu", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-			"active" in json ? AccuActive=json.active : AccuActive = false;
-			console.log("AccuActive: "+ AccuActive);
-			if ( AccuActive ) {		
-				console.log("parsed response: "+ JSON.stringify(json));
-				console.log("json.status: "+ json.status);
-				console.log("json.unit: "+ json.unit);
-				console.log("json.currentPower: "+ json.currentPower);
-				console.log("json.chargeLevel: "+ json.chargeLevel);				
-				trend_accu.data.datasets[0].data=[json.chargeLevel,100-json.chargeLevel];	
-				trend_accu.options.title.text = Number(json.chargeLevel).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" %";
-				trend_accu.update();
-				document.getElementById('dash_accu_p').innerHTML = formatValue(json.currentPower);
-				document.getElementById('dash_accu').style.display = 'block';
-				document.getElementById('accu-status').innerHTML = json.status;
+	var json = objDAL.getAccu();
+	"active" in json ? AccuActive=json.active : AccuActive = false;
+	console.log("AccuActive: "+ AccuActive);
+	if ( AccuActive ) {		
+		console.log("parsed response: "+ JSON.stringify(json));
+		console.log("json.status: "+ json.status);
+		console.log("json.unit: "+ json.unit);
+		console.log("json.currentPower: "+ json.currentPower);
+		console.log("json.chargeLevel: "+ json.chargeLevel);				
+		trend_accu.data.datasets[0].data=[json.chargeLevel,100-json.chargeLevel];	
+		trend_accu.options.title.text = Number(json.chargeLevel).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" %";
+		trend_accu.update();
+		document.getElementById('dash_accu_p').innerHTML = formatValue(json.currentPower);
+		document.getElementById('dash_accu').style.display = 'block';
+		document.getElementById('accu-status').innerHTML = json.status;
 
-
-// 				if ( json.total.daily ) document.getElementById('seue').innerHTML = Number( (json.total.daily-(1000*Pi_today)) / (json.total.daily-(1000*Pi_today)+(Pd_today*1000))*100 ).toFixed(0);
-// 				else document.getElementById('seue').innerHTML = "-";
-
-			}
-      })
+	}
  }
 
 //============================================================================  
 function UpdateSolar(){
-	console.log("Update Solar");
-	fetch(APIHOST+"/api/v2/gen", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-			"active" in json ? SolarActive=json.active : SolarActive = false;
-			console.log("SolarActive: "+ SolarActive);
-			if ( SolarActive ) {		
-				console.log("parsed response: "+ JSON.stringify(json));
-				console.log("json.total.daily: "+ json.total.daily);
-				console.log("json.total.actual: "+ json.total.actual);
-				console.log("json.Wp: "+ json.Wp);
-				trend_solar.data.datasets[0].data=[json.total.actual,json.Wp-json.total.actual];	
-				trend_solar.update();
-				document.getElementById('dash_solar_p').innerHTML = formatValue(json.total.daily/1000.0);
-				document.getElementById('dash_solar').style.display = 'block';
-				trend_solar.options.title.text = Number(json.total.actual).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" W";
 
-				//SCR
-// console.log("Pi_today: " + Pi_today*1000);
-// console.log("json.total.daily: " + json.total.daily);
-				if ( json.total.daily ) document.getElementById('scr').innerHTML = Number(((json.total.daily-(1000*Pi_today))/json.total.daily)*100).toFixed(0);
-				else document.getElementById('seue').innerHTML = "-";
-// 				Number(maxV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
-				//SEUE				( Productie - Teruglevering ) / ( Afname + Productie - Teruglevering )
-				if ( json.total.daily ) document.getElementById('seue').innerHTML = Number( (json.total.daily-(1000*Pi_today)) / (json.total.daily-(1000*Pi_today)+(Pd_today*1000))*100 ).toFixed(0);
-				else document.getElementById('seue').innerHTML = "-";
-// 				if ( json.Wp ) document.getElementById('wpwh').innerHTML = Number( json.total.daily / json.Wp * 100 ).toFixed(0);				
-			}
-      })
+	var json = objDAL.getSolar();
+	"active" in json ? SolarActive=json.active : SolarActive = false;
+	console.log("SolarActive: "+ SolarActive);
+	if ( SolarActive ) {		
+		console.log("parsed response: "+ JSON.stringify(json));
+		console.log("json.total.daily: "+ json.total.daily);
+		console.log("json.total.actual: "+ json.total.actual);
+		console.log("json.Wp: "+ json.Wp);
+		trend_solar.data.datasets[0].data=[json.total.actual,json.Wp-json.total.actual];	
+		trend_solar.update();
+		document.getElementById('dash_solar_p').innerHTML = formatValue(json.total.daily/1000.0);
+		document.getElementById('dash_solar').style.display = 'block';
+		trend_solar.options.title.text = Number(json.total.actual).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" W";
+
+		//SCR
+		if ( !Pi_today ) return;
+		// console.log("Pi_today: " + Pi_today*1000);
+		// console.log("json.total.daily: " + json.total.daily);
+		if ( json.total.daily ) document.getElementById('scr').innerHTML = Number(((json.total.daily-(1000*Pi_today))/json.total.daily)*100).toFixed(0);
+		else document.getElementById('seue').innerHTML = "-";
+		// Number(maxV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
+		//SEUE				( Productie - Teruglevering ) / ( Afname + Productie - Teruglevering )
+		if ( json.total.daily ) document.getElementById('seue').innerHTML = Number( (json.total.daily-(1000*Pi_today)) / (json.total.daily-(1000*Pi_today)+(Pd_today*1000))*100 ).toFixed(0);
+		else document.getElementById('seue').innerHTML = "-";
+	}
  }
 
 //============================================================================  
@@ -853,124 +653,50 @@ function nrgm_getstatus(){
       });
 }
 
-function getclaim(){
-	document.getElementById('status').innerHTML = "Status ophalen...";  
-	
-	fetch(APIHOST+"/eid/getclaim", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-          console.log("parsed response: ["+ JSON.stringify(json)+"]");
+function ProcessEIDClaim(json){
+	if ( "webhookUrl" in json ) {
+		document.getElementById('status').innerHTML = "<FONT COLOR='#70ac4d'>GEKOPPELD";
+		document.getElementById('claim').style.display = 'none';
+	}	
+	if ( "claimUrl" in json ) {
+		document.getElementById('status').innerHTML = "<FONT COLOR='RED'>Waiting for Activation";
+		document.getElementById('claimurl').innerHTML = "<a href='" + json.claimUrl +"'target='_blank'>Activeer koppeling<i class='iconify' data-icon='mdi-external-link'></i></a>";
+		document.getElementById('claim').style.display = 'block';
+	}
 
-        if ( "webhookUrl" in json ) {
-        	document.getElementById('status').innerHTML = "<FONT COLOR='#70ac4d'>GEKOPPELD";
-        	document.getElementById('claim').style.display = 'none';
-        }	
-        if ( "claimUrl" in json ) {
-        	document.getElementById('status').innerHTML = "<FONT COLOR='RED'>Waiting for Activation";
-        	document.getElementById('claimurl').innerHTML = "<a href='" + json.claimUrl +"'target='_blank'>Activeer koppeling<i class='iconify' data-icon='mdi-external-link'></i></a>";
-        	document.getElementById('claim').style.display = 'block';
-        }
-      })
-      .catch(function(error) {
-      	document.getElementById('status').innerHTML = "Fout - Probeer opnieuw!";
-      });
+}
+
+function getclaim(){
+	document.getElementById('status').innerHTML = "Status ophalen...";  	
+	objDAL.refreshEIDClaim();
 }
 
 //============================================================================  
 
 function parseVersionManifest(json)
-{
-//   console.log("parseVersionManifest()");
-//   LastVersion = json.version;
-//   LastVersionMajor = json.major;
-//   LastVersionMinor = json.minor;
-//   LastVersionFix = json.fix;
-//   console.log("Manifest Verion: " + objDAL.version_manifest.version);
-//   console.log("Manifest Major : " + objDAL.version_manifest.major);
-//   LastVersionBuid = json.build;
-//   LastVersionNotes = json.notes;
-  // LastVersionOTA = json.ota_url;
+{	
+	console.log("json.version:" + json.version + " firmwareVersion: "+ firmwareVersion);
+	if ( json.version != "" && firmwareVersion != "") {
+	  if ( firmwareVersion < (json.major*10000 + 100 * json.minor + json.fix) ) 
+		document.getElementById('message').innerHTML = "Software versie " + json.version + " beschikbaar";
+	  else document.getElementById('message').innerHTML = "";
+	}
 }
 
-//============================================================================  
-  
-// function ReadVersionManifest() {
-//   console.log("ReadVersionManifest");
-//   Spinner(true);
-//   fetch("http://" + ota_url + "version-manifest.json?dummy=" + Date.now(), { "setTimeout": 5000 })
-// //   fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
-//     .then(function (response) {
-//       return response.json();})
-//     .then(function (json) {
-//       console.log("version manifest: " + JSON.stringify(json));
-//       parseVersionManifest(json);
-//       Spinner(false);
-//     }
-//   );	// function(json)  
-// }
-
-//============================================================================   
-function UpdateDash()
-{	
-	// if (PauseAPI) return;
-/*** 
-	Het dashboard toont verschillende kolommen, namelijk
-	- actueel	: actueel verbruik/teruglevering (altijd)
-	- totaal 	: afname - injectie(teruglevering) (altijd)
-	- afname*3 	: onttrokken van stroomnet
-	- injectie*3: teruglevering aan stroomnet
-	- gas*2 	: indien er een gasmeter aanwezig is
-	- water     : indien watermeter aanwezig 
-	- spanning* : spanningsniveau + aantal fases
-	
-
-	*3 = alleen getoond indien energy_returned_tariff1 > 0
-	* = alleen indien geen teruglevering
-*/
+function refreshDashboard(json){
 	var Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
-	console.log("Update dash");
-	if ( SolarActive ) UpdateSolar();
-	if ( AccuActive ) UpdateAccu();
-	
-	setPresentationType('TAB'); //zet grafische mode uit
-	
 	//check new day = refresh
 	var DayEpochTemp = Math.floor(new Date().getTime() / 86400000.0);
 	if (DayEpoch != DayEpochTemp || hist_arrP.length < 4 ) {
 		if ( EnableHist ) refreshDays(); //load data first visit
 		DayEpoch = DayEpochTemp;
 	}
-	Spinner(true);
-	fetch(APIGW+"v2/sm/fields", {"setTimeout": 5000})
-	  .then(response => response.json())
-	  .then(json => {
-	  
-//warmtelink
-// 		  	json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"timestamp":{"value":"230104081758W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.667,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.667,"unit":"m3"},"gas_delivered_timestamp":{"value":"230104081758W"}}');
-// 	   	  json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"221231161038W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.613,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.613,"unit":"m3"},"gas_delivered_timestamp":{"value":"221231161038W"}}');
-// json = JSON.parse('{"identification":{"value":"ISk5=2MT382-1000"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"highest_peak_pwr_13mnd":{"value":"-"},"timestamp":{"value":"230329093336S"},"equipment_id":{"value":"-"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":12},"mbus1_equipment_id_tc":{"value":"303030304B414D32"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":35.819,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":6329.819,"unit":"m3"},"gas_delivered_timestamp":{"value":"230329073338S"},"water":{"value":517.916,"unit":"m3"}}');
 
-//others
-//    	  json = JSON.parse('{"timestamp":{"value":"220606085610S"},"energy_delivered_tariff1":{"value":55.026,"unit":"kWh"},"energy_delivered_tariff2":{"value":53.923,"unit":"kWh"},"energy_returned_tariff1":{"value":1,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.107,"unit":"kW"},"power_returned":{"value":1200,"unit":"kW"},"voltage_l1":{"value":232.5,"unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":0,"unit":"A"},"power_delivered_l1":{"value":0.114,"unit":"kW"},"power_delivered_l2":{"value":0.284,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":5471.227,"unit":"m3"},"gas_delivered_timestamp":{"value":"220606085510S"},"water":{"value":379.782,"unit":"m3"}}');	   	  
-//  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.102,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
-//  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.123,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
-//no voltage
-//  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.123,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":"-","unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
-// 4.2 meter met teruglevering
-// json = JSON.parse('{"identification":{"value":"KFM5KAIFA-METER"},"p1_version":{"value":"42"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220706121611S"},"equipment_id":{"value":"4530303236303030303134363435373135"},"energy_delivered_tariff1":{"value":16120.922,"unit":"kWh"},"energy_delivered_tariff2":{"value":15221.887,"unit":"kWh"},"energy_returned_tariff1":{"value":32.012,"unit":"kWh"},"energy_returned_tariff2":{"value":106.573,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.252,"unit":"kW"},"message_short":{"value":""},"message_long":{"value":""},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":2,"unit":"A"},"current_l2":{"value":1,"unit":"A"},"current_l3":{"value":1,"unit":"A"},"power_delivered_l1":{"value":0,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0.54,"unit":"kW"},"power_returned_l2":{"value":0.461,"unit":"kW"},"power_returned_l3":{"value":0.251,"unit":"kW"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303332353631323431353834373135"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":8979.463,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":8979.463,"unit":"m3"},"gas_delivered_timestamp":{"value":"220706120000S"}}');
-// 2.2 meter met teruglevering
-// json = JSON.parse('{"identification":{"value":"XMX5XMXABCE000060959"},"p1_version":{"value":"-"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220706121611S"},"equipment_id":{"value":"4530303236303030303134363435373135"},"energy_delivered_tariff1":{"value":16120.922,"unit":"kWh"},"energy_delivered_tariff2":{"value":15221.887,"unit":"kWh"},"energy_returned_tariff1":{"value":32.012,"unit":"kWh"},"energy_returned_tariff2":{"value":106.573,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.252,"unit":"kW"},"message_short":{"value":""},"message_long":{"value":""},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-","unit":"A"},"current_l2":{"value":"-","unit":"A"},"current_l3":{"value":"-","unit":"A"},"power_delivered_l1":{"value":"-","unit":"kW"},"power_delivered_l2":{"value":"-","unit":"kW"},"power_delivered_l3":{"value":"-","unit":"kW"},"power_returned_l1":{"value":"-","unit":"kW"},"power_returned_l2":{"value":"-","unit":"kW"},"power_returned_l3":{"value":"-","unit":"kW"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303332353631323431353834373135"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":8979.463,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":8979.463,"unit":"m3"},"gas_delivered_timestamp":{"value":"220706120000S"}}');
-//  json = JSON.parse('{"identification":{"value":"XMX5LGF0000453562119"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"highest_peak_pwr_13mnd":{"value":"-"},"timestamp":{"value":"230310104544W"},"equipment_id":{"value":"4530303531303035333536323131393139"},"energy_delivered_tariff1":{"value":8293.565,"unit":"kWh"},"energy_delivered_tariff2":{"value":9179.965,"unit":"kWh"},"energy_returned_tariff1":{"value":140.447,"unit":"kWh"},"energy_returned_tariff2":{"value":474.874,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0.176,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"(3)(0-0:96.7.19)(190515144214S)(0000000596*s)(210311024815W)(0000001506*s)(221021124654S)(0000000958*s)"},"voltage_l1":{"value":238.5,"unit":"V"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":3,"unit":"A"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":0.176,"unit":"kW"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303339303031393238303734373139"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":5876.51,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":5876.51,"unit":"m3"},"gas_delivered_timestamp":{"value":"230310104504W"}}');
-
-//BE quarter peak
-// json = JSON.parse('{"identification":{"value":"FLU5=253972606_G"},"p1_version":{"value":"50221"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":1.647,"unit":"kW"},"highest_peak_pwr":{"value":4.672,"unit":"kW"},"highest_peak_pwr_13mnd":{"value":"(4)(1-0:1.6.0)(1-0:1.6.0)(240501000000S)(240401000000S)(00.000*kW)(250401000000S)(250330181500S)(02.997*kW)(250501000000S)(250414174500S)(03.863*kW)(250601000000S)(250518190000S)(03.041*kW)"},"timestamp":{"value":"250625212302S"},"equipment_id":{"value":"3153414731323030323430353338"},"energy_delivered_tariff1":{"value":9819.352,"unit":"kWh"},"energy_delivered_tariff2":{"value":10859.549,"unit":"kWh"},"energy_returned_tariff1":{"value":2179.758,"unit":"kWh"},"energy_returned_tariff2":{"value":4692.532,"unit":"kWh"},"energy_delivered_total":{"value":"-"},"energy_returned_total":{"value":"-"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.377,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"voltage_l1":{"value":231.8,"unit":"V"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":5.94,"unit":"A"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":1.377,"unit":"kW"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"3753414733363530313238323230"},"mbus1_valve_position":{"value":1},"mbus1_delivered":{"value":255.526,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":7},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"3853455430303330303739383032"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":35.396,"unit":"GJ"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":255.526,"unit":"m3"},"gas_delivered_timestamp":{"value":"250625212036S"},"water":{"value":35.396,"unit":"m3"},"water_delivered_ts":{"value":"250625212200S"}}');
-
- 		//-------CHECKS
+		//-------CHECKS
 
 		SetOnSettings(json);
-		//check of p1 gegevens via api binnen komen
 		if (json.timestamp.value == "-") {
-			console.log("timestamp missing : p1 gegevens correct?");
+			console.log("timestamp missing : p1 data incorrect!");
 			return;
 		}
 		
@@ -998,7 +724,7 @@ function UpdateDash()
 		if (json.peak_pwr_last_q.value > 0.75 * json.highest_peak_pwr.value ) trend_peak.data.datasets[0].backgroundColor = ["#dd0000", "rgba(0,0,0,0.1)"];
 		else trend_peak.data.datasets[0].backgroundColor = ["#009900", "rgba(0,0,0,0.1)"];
 		
-		//-------SPANNING METER		
+		//-------VOLTAGE
 		let v1 = 0, v2 = 0, v3 = 0;
 		if (!isNaN(json.voltage_l1.value)) v1 = json.voltage_l1.value; 
 		if (!isNaN(json.voltage_l2.value)) v2 = json.voltage_l2.value;
@@ -1028,7 +754,7 @@ function UpdateDash()
 			if (v3) gaugeV.data.datasets[2].data=[v3-207,253-json.voltage_l3.value];
 			gaugeV.update();
 		}
-		//-------ACTUEEL METER		
+		//-------ACTUAL
 		//afname of teruglevering bepalen en signaleren
 		var TotalKW	= json.power_delivered.value - json.power_returned.value;
 
@@ -1079,24 +805,17 @@ function UpdateDash()
 		//update actuele vermogen			
 		if (Act_Watt) {
 			document.getElementById("power_delivered").innerHTML = Number(TotalKW  * 1000).toFixed(0);
+			document.getElementById("dsh-power").textContent = 'Watt';
 		} else {
 			document.getElementById("power_delivered").innerHTML = Number(TotalKW).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} ) ;
+			document.getElementById("dsh-power").textContent = 'kW';
 		}
 
 		//vermogen min - max bepalen
 		let nvKW= TotalKW; 
 		if (minKW == 0.0 || nvKW < minKW) { minKW = nvKW;}
 		if (nvKW> maxKW){ maxKW = nvKW; }
-		
-// 		if (Act_Watt){		
-// 			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW * 1000).toFixed(0);                    
-// 			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW * 1000).toFixed(0);           
-// 			document.getElementsByName('power').forEach(function(ele, idx) { ele.innerHTML = 'Watt'; }) //for all elements
-// 		} else {
-// 			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} );                    
-// 			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} );                        
-// 		}
-		
+				
     // stop here if there is no history enabled
 		if (!EnableHist) {Spinner(false);return;}
 		
@@ -1130,7 +849,7 @@ function UpdateDash()
       }
 		} //!= p1-q
 		
-    //-------GAS METER	
+    //-------GAS	
 		if ( HeeftGas && (Dongle_Config != "p1-q") ) 
 		{
       Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1);
@@ -1138,7 +857,7 @@ function UpdateDash()
 			document.getElementById("G").innerHTML = formatValue(Garr[0]);
 		}
 		
-		//-------WATER METER	
+		//-------WATER	
 		if (HeeftWater) 
 		{
       Warr = calculateDifferences(json.water.value, hist_arrW, 1000);
@@ -1146,17 +865,24 @@ function UpdateDash()
 			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString();
 		}
 				
-		//-------Warmte METER	
+		//-------HEAT
 		if (Dongle_Config == "p1-q") 
 		{
       Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1000);
       updateGaugeTrend(trend_q, Garr);
 			document.getElementById("Q").innerHTML = Number(Garr[0]).toLocaleString("nl", {minimumFractionDigits: 0, maximumFractionDigits: 0} );
 		}
-										
-		Spinner(false);
-	}); //end fetch fields
+	
+	if ( SolarActive ) UpdateSolar();
+	if ( AccuActive ) UpdateAccu();
 
+}
+
+//============================================================================   
+function UpdateDash()
+{	
+	console.log("Update dash");
+	objDAL.refreshFields();
 }
 
 //bereken verschillen gas, afname, teruglevering en totaal
@@ -1259,8 +985,7 @@ function bootsTrapMain()
 	console.log("!-- localstorage: "+ locale);
 	loadTranslations(locale); 
 	document.getElementById("languageSelector").value = locale;
-	getDevSettings();
-	
+
 	createDashboardGauges();
 	
 	//init DAL
@@ -1270,12 +995,8 @@ function bootsTrapMain()
         
 	handle_menu_click();
 	FrontendConfig();
-//     refreshDevTime();
-//     clearInterval(timeTimer);  
-//     timeTimer = setInterval(refreshDevTime, 10 * 1000); // repeat every 10s
 
     setMonthTableType();
-    refreshDevInfo();
     openTab();
     initActualGraph();
     setPresentationType('TAB');
@@ -1286,22 +1007,33 @@ function bootsTrapMain()
 // 	console.log("location-hash-split: " + location.hash.split('#')[1].split('?')[0]);
 	
   //goto tab after reload FSExplorer
-  	console.log( "location.hash: " + location.hash);
-    console.log( "location.hash split 0: " + location.hash.split('#')[1] );
-	console.log( "location.hash split ?: " + location.hash.split('#')[1].split('?')[0] );
-	console.log( "location.hash split ?2: " + location.hash.split('#')[1].split('?')[1] );
-	if (location.hash == "#FileExplorer") { document.getElementById('bFSExplorer').click(); }
-	if ( location.hash.startsWith("#UpdateStart") ) {
-		var cmd = location.hash.split('#')[1].split('?');
-// 		console.log( "command: "  + cmd );
-		UpdateStart( cmd[1] && cmd[0] ? cmd[1] : "" );
-	}
-  //handle the redirect after REBOOT / RESET / UPDATE
-	if (location.hash.split('#')[1].split('?')[0] == "Redirect") { handleRedirect(); }
-	if (location.hash.split('#')[1].split('?')[0] == "Updating") { console.log("updating redirect"); }
+  	if ( location.hash ) {
+		const hashPart = location.hash.substring(1); // strip '#'
+		const [cmd, paramString] = hashPart.split("?");
+		const params = new URLSearchParams(paramString || "");
 	
-	//reselect Dash when Home icon has been clicked
- 	document.getElementById("Home").addEventListener("click", function() { document.getElementById('bDashTab').click(); });
+		console.log("hash command:", cmd);
+		console.log("hash params:", paramString);
+	
+		switch (cmd) {
+			case "UpdateStart":
+				UpdateStart(paramString);				
+				break;
+				
+			case "Redirect":
+				handleRedirect();
+				break;
+	
+			case "Updating":
+				console.log("Updaten bezig...");
+				break;
+	
+			default:
+				//redirect to cmd
+				const btn = document.getElementById("b"+cmd);
+				if (btn) btn.click(); else console.log("Button b"+cmd+" not found");
+		}
+	}
     document.getElementById('dongle_io').addEventListener('input', NTSWupdateVisibility);
  	
  	BurnupBootstrap();
@@ -1409,24 +1141,29 @@ function NetSwitchUpdateBar() {
 	}
 }
 
+function refreshNetSwitch(data){
+	document.getElementById("value").value = data.value;
+	document.getElementById("switch_on").value = data.switch_on ? "true" : "false";
+	document.getElementById("time_true").value = data.time_true || 60;
+	document.getElementById("time_false").value = data.time_false || 120;
+	document.getElementById("dongle_io").value = data.device.dongle_io;
+	document.getElementById("device").value = data.device.name;
+	document.getElementById("relay").value = data.device.relay;
+	document.getElementById("default").value = data.device.default;
+	NetSwitchUpdateBar();
+	NTSWupdateVisibility();
+}
+
   //============================================================================    
 function fetchNetSwitchConfig() {
-    fetch("/netswitch.json")  // Vraag JSON-bestand op van de ESP32-server
-        .then(response => response.json())  // Converteer het antwoord naar JSON
-        .then(data => {
-            // HTML-elementen ophalen
-        document.getElementById("value").value = data.value;
-        document.getElementById("switch_on").value = data.switch_on ? "true" : "false";
-        document.getElementById("time_true").value = data.time_true || 60;
-        document.getElementById("time_false").value = data.time_false || 120;
-        document.getElementById("dongle_io").value = data.device.dongle_io;
-        document.getElementById("device").value = data.device.name;
-        document.getElementById("relay").value = data.device.relay;
-        document.getElementById("default").value = data.device.default;
-        NetSwitchUpdateBar();
-        NTSWupdateVisibility();
-        })
-        .catch(error => console.error("Fout bij ophalen van JSON:", error));
+	objDAL.refreshNetSwitch();
+
+//     fetch( RL_NETSWITCH )  // Vraag JSON-bestand op van de ESP32-server
+//         .then(response => response.json())  // Converteer het antwoord naar JSON
+//         .then(data => {
+//             // HTML-elementen ophalen
+//         })
+//         .catch(error => console.error("Fout bij ophalen van JSON:", error));
 }
 
   //============================================================================   
@@ -1472,68 +1209,37 @@ function SendNetSwitchJson() {
     console.log("openTab : " + activeTab );
     document.getElementById("myTopnav").className = "main-navigation"; //close dropdown menu 
     clearInterval(tabTimer);  
-    clearInterval(actualTimer);
     clearInterval(NRGStatusTimer);
 	
     hideAllCharts();
 
-	if (!EnableHist) {
-	}
-    
-    if (activeTab != "bActualTab") {
-      actualTimer = setInterval(refreshSmActual, 60 * 1000);                  // repeat every 60s
-    }
-
 	switch (activeTab) {
 		case "bActualTab" : 
 			refreshSmActual();
-			actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
+			tabTimer = setInterval(refreshSmActual, UPDATE_ACTUAL );            // repeat every 10s
       		break;
-		case "bInsightsTab":
-			InsightData();
-			break;
-		case "bPlafondTab":
-			refreshData();
-			break;
-		case "bHoursTab":
-			refreshHours();
-      		clearInterval(tabTimer);
-     		tabTimer = setInterval(refreshHours, 58 * 1000); // repeat every 58s
-     		break;
-     	case "bDaysTab":
-     		refreshDays();
-      		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshDays, 58 * 1000); // repeat every 58s
-      		break;
-      	case "bMonthsTab":
-      		refreshMonths();
-      		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshMonths, 118 * 1000); // repeat every 118s
-      		break;
-      	case "bSysInfoTab":
-	      	refreshDevInfo();
-      		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshDevInfo, 58 * 1000); // repeat every 58s
-      		break;
+		case "bInsightsTab"	: objDAL.refreshInsights(); break;
+		case "bPlafondTab"	: refreshData(); break;
+		case "bHoursTab"	: refreshHours(); break;
+     	case "bDaysTab"		: refreshDays(); break;
+      	case "bMonthsTab"	: refreshMonths(); break;
+      	case "bSysInfoTab"	: refreshDevInfo(); break;
       	case "bFieldsTab":
-      		refreshSmFields();
+      		refreshSmFields();      		
       		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshSmFields, 58 * 1000); // repeat every 58s
+      		tabTimer = setInterval(refreshSmFields, 10 * 1000);
       		break;
       	case "bTelegramTab":
       		refreshSmTelegram();
-      		clearInterval(tabTimer); // do not repeat!
+      		clearInterval(tabTimer); // dont repeat!
+      		tabTimer = setInterval(refreshSmTelegram, 5 * 1000);
       		break;
       	case "bInfo_APIdoc": // no action
       		break;
       	case "bDashTab":
-      		readGitHubVersion();
 			UpdateDash();
-			UpdateSolar();
-			UpdateAccu();
 			clearInterval(tabTimer);
-			clearInterval(actualTimer);  
-			tabTimer = setInterval(UpdateDash, 10 * 1000); // repeat every 10s
+			tabTimer = setInterval(UpdateDash, UPDATE_ACTUAL); // repeat every 10s
 			break;
 		case "bFSExplorer":
 		    FSExplorer();
@@ -1541,26 +1247,15 @@ function SendNetSwitchJson() {
 		case "bEditMonths":
 			document.getElementById('tabEditMonths').style.display = "block";
 			document.getElementById('tabEditSettings').style.display = "none";
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
 			EditMonths();
 			break;
 		case "bSettings":
 		case "bEditSettings":
-			// refreshDevTime();
-			//refreshDevInfo();
 			data = {};
 			document.getElementById('tabEditSettings').style.display = 'block';
 			document.getElementById('tabEditMonths').style.display = "none";
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-			refreshSettings();
-			getDevSettings();
+			objDAL.refreshDeviceInformation();
 			activeTab = "bEditSettings";
-			break;
-		case "bSysInfoTab":
-			data = {};
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-			refreshDevInfo();
-			tabTimer = setInterval(refreshDevInfo, 10 * 1000); // repeat every 10s
 			break;
 		case "bEID":
 			getclaim();
@@ -1570,22 +1265,18 @@ function SendNetSwitchJson() {
 			break;			
 		case "bInfo_frontend":
 			data = {};
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
 			FrontendConfig();
 			break;
     }
-    
   } // openTab()
   
 
 //============================================================================  
   function FSExplorer() {
-	 let span = document.querySelector('span');
 	 let main = document.querySelector('main');
 	 let fileSize = document.querySelector('fileSize');
 
 	 Spinner(true);
-   //get filelist
 	 fetch('api/listfiles', {"setTimeout": 5000}).then(function (response) {
 		 return response.json();
 	 }).then(function (json) {
@@ -1596,7 +1287,7 @@ function SendNetSwitchJson() {
 	   list.removeChild(list.firstChild);
 	 }
     
-	   nFilecount = json.length - 1; //last object is general information
+	 nFilecount = json.length - 1; //last object is general information
      let dir = '<table id="FSTable" width=90%>';
 	   for (var i = 0; i < json.length - 1; i++) {
 		 dir += "<tr>";
@@ -1604,13 +1295,12 @@ function SendNetSwitchJson() {
 		 dir += `<td width=100px nowrap><small>${json[i].size}</small></td>`;
 		 dir += `<td width=100px nowrap><a href ="${json[i].name}"download="${json[i].name}"> Download </a></td>`;
 		 dir += `<td width=100px nowrap><a href ="${json[i].name}?delete=/${json[i].name}"> Delete </a></td>`;
-// 	     if (json[i].name == '!format') document.getElementById('FormatSPIFFS').disabled = false;
 		 dir += "</tr>";
 	   }	// for ..
 	   main.insertAdjacentHTML('beforeend', dir);
 	   document.querySelectorAll('[href*=delete]').forEach((node) => {
 			 node.addEventListener('click', () => {
-					 if (!confirm('Weet je zeker dat je dit bestand wilt verwijderen?!')) event.preventDefault();  
+					 if (!confirm('Delete, sure ?!')) event.preventDefault();  
 			 });
 	   });
 	   main.insertAdjacentHTML('beforeend', '</table>');
@@ -1637,7 +1327,7 @@ function SendNetSwitchJson() {
       var fUpload = true;
       //check freespace
 			if (nBytes > free) {
-			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> niet genoeg ruimte! </strong><p>`;
+			  fileSize.innerHTML = `<p><small> File size: ${output}</small><strong style="color: red;"> not enough space! </strong><p>`;
         fUpload = false;
 			}
       //check filecount
@@ -1645,11 +1335,11 @@ function SendNetSwitchJson() {
       //  Although uploading a new file is blocked, REPLACING a file when the count is 30 must still be possible.
       //  check if filename is already on the list, if so, allow this upload.
 			if ( nFilecount >= MAX_FILECOUNT) {
-			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> Maximaal aantal bestanden (${MAX_FILECOUNT}) bereikt! </strong><p>`;
+			  fileSize.innerHTML = `<p><small> file size: ${output}</small><strong style="color: red;"> Max number of files (${MAX_FILECOUNT}) reached! </strong><p>`;
         fUpload = false;
 			}
       if( fUpload ){
-        fileSize.innerHTML = `<b>Bestand grootte:</b> ${output}<p>`;
+        fileSize.innerHTML = `<b>File size:</b> ${output}<p>`;
 			  document.getElementById('Iupload').removeAttribute('disabled');
       }
 			else {			  
@@ -1658,83 +1348,63 @@ function SendNetSwitchJson() {
 	 });	
   }
 
-  //parse all json devinfo 
-  function parseDeviceInfo(obj)
-  {
-    var tableRef = document.getElementById('tb_info');
-        //clear table
-		while (tableRef.hasChildNodes()) { tableRef.removeChild(tableRef.lastChild);}
-		console.log("dev info compileoptions: " + obj.compileoptions );
-		if ( obj.compileoptions.includes("[NETSW]") ) {
-			console.log("INCLUDES [NETSW]");
-			conf_netswitch = true;
-			if ( conf_netswitch ) document.getElementById("bNETSW").style.display = "block"; else document.getElementById("bNETSW").style.display = "none";
+function parseDeviceInfo(obj) {
+  const tableRef = document.getElementById('tb_info');
+  tableRef.innerHTML = ""; // clear table
+  console.log("dev info compileoptions:", obj.compileoptions);
 
-		}
-		//add latest software version
-// 		ReadVersionManifest();
-		if (objDAL.version_manifest.version != "") {
-			var newRow=tableRef.insertRow(-1);
-			var VerCel1 = newRow.insertCell(0);
-			var VerCel2 = newRow.insertCell(1);
-			var VerCel3 = newRow.insertCell(2);
-			VerCel1.innerHTML = td("latest_fwversion");
-			VerCel2.innerHTML = objDAL.version_manifest.version;
-			console.log("last version: " + (Number(objDAL.version_manifest.major)*10000 + Number(objDAL.version_manifest.minor)*100) );
-		}
-		//fill table
-        for( let k in obj ) {
-			var newRow=tableRef.insertRow(-1);
-			var MyCell1 = newRow.insertCell(0);
-			var MyCell2 = newRow.insertCell(1);
-			var MyCell3 = newRow.insertCell(2);
-			MyCell1.innerHTML=td(k);
-            if(obj[k] instanceof Object) {
-				MyCell2.innerHTML=obj[k].value;
-				MyCell3.innerHTML=obj[k].unit;
-				MyCell2.style.textAlign = "right";
-             
-            } else { 
-            	MyCell2.innerHTML=obj[k]; 
-            };
-           if (k == "fwversion"){
-			   console.log("fwversion: " + obj[k] );
-			   devVersion = obj[k];
-           }
-        } //for loop      
- 
-	  //new fwversion detection
-  	  document.getElementById('devVersion').innerHTML = obj.fwversion;
-	  var tmpFW = devVersion;
-	  firmwareVersion_dspl = tmpFW;
-	  tmpFW = tmpFW.replace("+", " ");
-	  tmpFW = tmpFW.replace("v", "");
-	  console.log("tmpFW: " + tmpFW);
-	  tmpX = tmpFW.substring(0, tmpFW.indexOf(' '));
-// 	  console.log("tmpX: " + tmpX);
-	  tmpN = tmpX.split(".");
-// 	  	  console.log("tmpN: " + tmpN);
-	  firmwareVersion = tmpN[0]*10000+tmpN[1]*100+tmpN[2]*1;
-	  console.log("firmwareVersion["+firmwareVersion+"] >= GitHubVersion["+GitHubVersion+"]");
-	  if (GitHubVersion == 0 || firmwareVersion >= GitHubVersion)
-			newVersionMsg = "";
-	  else newVersionMsg = " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
-	  document.getElementById('message').innerHTML = newVersionMsg;
-	  console.log(newVersionMsg);
+  // NETSW config
+  const showNetSw = obj.compileoptions.includes("[NETSW]");
+  document.getElementById("bNETSW").style.display = showNetSw ? "block" : "none";
 
-// 	  tlgrmInterval = obj.telegraminterval;
-      if (firmwareVersion > 20000) document.getElementById("resetWifi").removeAttribute('hidden');
-//       if (firmwareVersion > 20102) document.getElementById("update").removeAttribute('hidden');
-		
-	  //check if update is needed
-	  if (objDAL.version_manifest.version != "") {
-		  if ( firmwareVersion < (objDAL.version_manifest.major*10000 + 100 * objDAL.version_manifest.minor + objDAL.version_manifest.fix) ) VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>" + t('lbl-click-update') + "</a>";
-		  else VerCel3.innerHTML = td("latest_version");//"laatste versie";
-	  }
-//TEST
-// 	  VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>Klik voor update</a>";
-	
+  // add version info 
+  const manifest = objDAL.version_manifest;
+  if (manifest.version) {
+    const row = tableRef.insertRow(-1);
+    row.insertCell(0).innerHTML = td("latest_fwversion");
+    row.insertCell(1).innerHTML = manifest.version;
+    row.insertCell(2); // update later
+    console.log("last version:", manifest.major * 10000 + manifest.minor * 100);
   }
+
+  // add dev info
+  for (let k in obj) {
+    const row = tableRef.insertRow(-1);
+    row.insertCell(0).innerHTML = td(k);
+
+    if (typeof obj[k] === "object") {
+      row.insertCell(1).innerHTML = obj[k].value;
+      row.insertCell(2).innerHTML = obj[k].unit;
+      row.cells[1].style.textAlign = "right";
+    } else {
+      row.insertCell(1).innerHTML = obj[k];
+      row.insertCell(2);
+    }
+
+    if (k === "fwversion") {
+      devVersion = obj[k];
+      console.log("fwversion:", devVersion);
+    }
+  }
+
+  // firmware parsing
+  document.getElementById('devVersion').innerHTML = devVersion;
+  firmwareVersion_dspl = devVersion;
+  let tmpFW = devVersion.replace("+", " ").replace("v", "");
+  const tmpX = tmpFW.split(" ")[0];
+  const [maj, min, fix] = tmpX.split(".").map(Number);
+  const firmwareVersion = maj * 10000 + min * 100 + fix;
+  console.log("tmpFW:", tmpFW);
+
+  // check for update
+  if (manifest.version) {
+    const latest = manifest.major * 10000 + manifest.minor * 100 + manifest.fix;
+    const updateCell = tableRef.rows[0].cells[2];
+    updateCell.innerHTML = (firmwareVersion < latest)
+      ? `<a style='color:red' onclick='RemoteUpdate()' href='#'>${t('lbl-click-update')}</a>`
+      : td("latest_version");
+  }
+}
     
 function closeUpdate() {
 	document.getElementById("updatePopup").style.visibility = "hidden";
@@ -1779,38 +1449,22 @@ function updateProgress() {
 }
 
 function checkESPOnline() {
-	statusText.innerText = "Wachten op herstart...";
-
+	statusText.innerText = "Wait on reboot...";
+	update_reconnected = false;
 	checkInterval = setInterval(() => {
-		fetch("/api/v2/dev/info")
-			.then(response => {
-				if (response.status === 200) {
-					clearInterval(checkInterval);
-					progressBar.style.width = "100%";
-					statusText.innerText = "Update voltooid!";
-				}
-			})
-			.catch(() => {
-				console.log("ESP nog niet online...");
-			});
+		objDAL.refreshTime();
+		if ( update_reconnected ){
+			clearInterval(checkInterval);
+			progressBar.style.width = "100%";
+			statusText.innerText = "Update Done!";
+		}
 	}, 2000); // Check elke 2 seconden
 }
   
   //get new devinfo==============================================================  
   function refreshDevInfo()
-  { Spinner(true);
-    fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-        console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
-        parseDeviceInfo(json);
-		    Spinner(false);
-      })
-      .catch(function(error) {
-        console.error("main::refreshDevInfo() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(   document.createTextNode('Error: ' + error.message)  );
-      });
+  { 
+	objDAL.refreshDeviceInformation();
   } // refreshDevInfo()
 
 //============================================================================  
@@ -1821,7 +1475,6 @@ function checkESPOnline() {
       .then(response => response.json())
       .then(json => {
 		  data = json;
-          //console.log("parsed frontend config: ["+ JSON.stringify(json)+"]");
           AMPS=json.Fuse;
           ShowVoltage=json.ShowVoltage;
           UseCDN=json.cdn;
@@ -1862,49 +1515,31 @@ function checkESPOnline() {
   }
 
   //============================================================================  
-//   function refreshDevTime()
-//   {
-// 	alert_message("");
-//   document.getElementById('theTime').classList.remove("afterglow");
-//     console.log("Refresh api/v2/dev/time ..");
-//     
-// 	let controller = new AbortController();
-// 	setTimeout(() => controller.abort(), 5000);    
-//     fetch(APIGW+"v2/dev/time", { signal: controller.signal})
-//       .then(response => response.json())
-//       .then(json => {
-//               document.getElementById('theTime').innerHTML = json.time;
-//               console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
-// 
-// 	  //after reboot checks of the server is up and running and redirects to home
-//       if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
-//       document.getElementById('theTime').classList.add("afterglow");
-//       
-//     })
-//       .catch(function(error) {    
-// 		if (error.name === "AbortError") {console.error("time abort error")}
-// //         var p = document.createElement('p');
-// //         p.appendChild( document.createTextNode('Error: ' + error.message) );
-// //         alert_message("Datum/tijd kan niet opgehaald worden");
-//       });     
-//       
-//     document.getElementById('message').innerHTML = newVersionMsg;
-// 
-//   } // refreshDevTime()
+  function refreshTime( json ) {
+  
+	document.getElementById('theTime').classList.remove("afterglow");
+	document.getElementById('theTime').innerHTML = json.time;//formatTimestamp(json.timestamp.value );
+// 	console.log("time parsed .., data is ["+ JSON.stringify(json)+"]");
+	//after reboot checks of the server is up and running and redirects to home
+	if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
+	document.getElementById('theTime').offsetWidth;
+	document.getElementById('theTime').classList.add("afterglow"); 
+
+  } // refreshDevTime()
     
   //============================================================================  
   function refreshSmActual() {
-    document.getElementById("actualTable").classList.remove("afterglow");
-    var data = objDAL.getActual();
-//     console.log("objDAL: " + JSON.stringify(data));
-    //copyActualToChart(data);
+	objDAL.refreshActual();
+  }
+  
+  function ProcesActual(json){
     if (presentationType == "TAB")
-      showActualTable(data);
+      showActualTable(json);
     else{
-      var hist = objDAL.getActualHistory();  
-      copyActualHistoryToChart(hist);
+//       var hist = objDAL.getActualHistory();  
+      copyActualHistoryToChart(json);
       showActualGraph();
-    }
+    }  
   }
   
 // format a identifier
@@ -1923,15 +1558,16 @@ function formatIdentifier(value) {
 // input "230125125424W" 
 // output "2023-01-25 12:54:24 (dst=off)"
 function formatTimestamp(value) {
-  var date = value.substring(0, 6);
-  var time = value.substring(6, 12);
-  var dst = value[12] == "S" ? "on" : "off";
-  //console.log(date, time, dst);
-  var sDate = "20" + date.slice(0, 2) + "-" + date.slice(2, 4) + "-" + date.slice(4, 6);
-  var sTime = time.substring(0, 2) + ":" + time.substring(2, 4) + ":" + time.substring(4, 6);
-
-  var sTST = sDate + " " + sTime + " (dst=" + dst + ")";
-  return sTST;
+  	const dst = value[12] == "S" ? "on" : "off";
+	const year = "20" + value.slice(0, 2);  // "25" → 2025
+	const month = value.slice(2, 4);        // "07"
+	const day = value.slice(4, 6);          // "05"
+	const hour = value.slice(6, 8);         // "14"
+	const minute = value.slice(8, 10);      // "10"
+	const second = value.slice(10, 12);     // "09"
+	
+	// Format and return
+	return `${year}-${month}-${day} ${hour}:${minute}:${second}`; //   +(dst=" + dst + ")";
 };
 
 //parse the value from electricity_failure_log into json with timestamp and duration
@@ -2065,23 +1701,10 @@ function formatFailureLog(svalue) {
   }
   
   //============================================================================  
-  //refresh the fields of the SM
-  function refreshSmFields()
+  function refreshSmFields(json)
   { 
-    Spinner(true);
-    fetch(APIGW+"v2/sm/fields", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-        parseSmFields(json);        
-        Spinner(false);
-      })
-      .catch(function(error) {
-        console.error("main::refreshSmFields() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-      }); 
+	objDAL.refreshFields();  
+
   };  // refreshSmFields()
   
   //============================================================================  
@@ -2105,6 +1728,11 @@ function formatFailureLog(svalue) {
         	}
         	else  if ( data.data[slotbefore].values[0] == 0 ) data.data[slotbefore].values = data.data[i].values;
         }
+        
+		data.data[i].EEYY = {};
+		data.data[i].MM   = {};
+		data.data[i].EEYY = parseInt("20"+data.data[i].date.substring(0,2));
+		data.data[i].MM   = parseInt(data.data[i].date.substring(2,4));
         
         //simple differences
         data.data[i].p_edt1= (data.data[i].values[0] - data.data[slotbefore].values[0]);
@@ -2176,148 +1804,93 @@ function formatFailureLog(svalue) {
 	document.getElementById('messages').innerHTML = msg;
 	} 
   }
-  //============================================================================  
-  function refreshHours()
-  { Spinner(true);
-    console.log("fetch("+APIGW+"../RNGhours.json)");
-
-    fetch(APIGW+"../RNGhours.json", {"setTimeout": 5000})
-      .then(function (response) {
-		if (response.status !== 200) {
-			throw new Error(response.status);
-		} else {
-			return response.json();
-		}
-	})
-	.then(function (json) {
-        //console.log(json);
-        data = json;
-        expandData(data);
-        if (presentationType == "TAB")
-              showHistTable(data, "Hours");
-        else  showHistGraph(data, "Hours");
-	 Spinner(false);
-
-      })
-      .catch(function(error) {
-        console.error("main::refreshHours() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild( document.createTextNode('Error: ' + error.message) );
-    	alert_message("Fout bij ophalen van de historische uurgegevens");
-      }); 
+//============================================================================  
+function refreshHours() { 
+	console.log("refreshHours");
+	data = objDAL.getHours();
+	if (data == "" ) {
+		console.log("refreshHours : NO DATA");
+		return;
+	}
+	// expandData(data);
+	if ( activeTab == "bHoursTab" ) presentationType == "TAB" ? showHistTable(data, "Hours") : showHistGraph(data, "Hours");
+        
   } // resfreshHours()
   
+
+// function UpdateChartTable(){
+// 
+// 	switch( activeTab ){
+// 		case "bDaysTab": presentationType == "TAB" ? showHistTable(data, "Days") : showHistGraph(data, "Days"); break;
+// 		case "bHoursTab": presentationType == "TAB" ? showHistTable(data, "Hours") : showHistGraph(data, "Hours"); break;
+// 		case "bMonthsTab": presentationType == "TAB" ? showMonthsHist(data) : showMonthsGraph(data,"Days"); break;
+// 	}
+// 
+// }
   
   //============================================================================  
   function refreshDays()
   {
-	// if (PauseAPI) return;
-	Spinner(true);
-    console.log("fetch("+APIGW+"../RNGdays.json)");
-    fetch(APIGW+"../RNGdays.json", {"setTimeout": 5000})
-    .then(function (response) {
-		if (response.status !== 200) {
-			throw new Error(response.status);
-		} else {
-			return response.json();
-		}
-	})
-	.then(function (json) {
-		data = json;
-        expandData(data);
-        if (presentationType == "TAB")
-              showHistTable(data, "Days");
-        else  showHistGraph(data, "Days");
-		//voor dashboard
-        var act_slot = data.actSlot;
+	console.log("refreshDays");
+	data = objDAL.getDays();
+	if ( data == "" ) {
+		console.log("refreshDays : NO DATA");
+		return;
+	}
+//         expandData(data);
+// 	UpdateChartTable();
+	if ( activeTab == "bDaysTab" ) presentationType == "TAB" ? showHistTable(data, "Days") : showHistGraph(data, "Days");
+	//voor dashboard
+	var act_slot = data.actSlot;
 //         console.log("Refreshdays - actSlot: " + act_slot);
-		for (let i=0;i<4;i++)
-		{	let tempslot = math.mod(act_slot-i,15);
-			hist_arrG[i] = data.data[tempslot].values[4];
-			hist_arrW[i] = data.data[tempslot].values[5];
-			hist_arrPa[i] = data.data[tempslot].values[0] + data.data[tempslot].values[1];
-			hist_arrPi[i] = data.data[tempslot].values[2] + data.data[tempslot].values[3];
-		};
-	    Spinner(false);
-      })
-      .catch(function(error) {
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-    	console.error("main::refreshDays() - " + error);
-    	alert_message("Fout bij ophalen van de historische daggegevens");
-      });
+	for (let i=0;i<4;i++)
+	{	let tempslot = math.mod(act_slot-i,15);
+		hist_arrG[i] = data.data[tempslot].values[4];
+		hist_arrW[i] = data.data[tempslot].values[5];
+		hist_arrPa[i] = data.data[tempslot].values[0] + data.data[tempslot].values[1];
+		hist_arrPi[i] = data.data[tempslot].values[2] + data.data[tempslot].values[3];
+	};
   } // resfreshDays()
   
   
   //============================================================================  
-  function refreshMonths()
-  {
-  	Spinner(true);
-    console.log("fetch("+APIGW+"../RNGmonths.json)");
-    fetch(APIGW+"../RNGmonths.json", {"setTimeout": 5000})
-      .then(function (response) {
-		if (response.status !== 200) {
-			throw new Error(response.status);
-		} else {
-			return response.json();
-		}
-	})
-	.then(function (json) {
-        //console.log(response);
-        data = json;
-        expandData(data);
-        if (presentationType == "TAB")
-        {
-          if (document.getElementById('mCOST').checked)
-                showMonthsCosts(data);
-          else  showMonthsHist(data);
-        }
-        else  showMonthsGraph(data,"Days");
-        Spinner(false);
-      })
-      .catch(function(error) {
-        console.error("main::refreshMonths() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-    	alert_message("Fout bij ophalen van de historische maandgegevens [" + error.message +"]");
-
-      });
+  function refreshMonths() {
+	console.log("refreshMonths");
+	data = objDAL.getMonths();
+	if (data == "" ) {
+		console.log("refreshMonths : NO DATA");
+		return;
+	}
+	// expandData(data);
+	if ( activeTab == "bMonthsTab" ) presentationType == "TAB" ? showMonthsHist(data) : showMonthsGraph(data,"Days");
   } // resfreshMonths()
 
     
+function CopyTelegram(){
+  const element = document.getElementById("TelData");
+  if (!element) return;
+
+  const range = document.createRange();
+  range.selectNodeContents(element);
+
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  try {
+    const success = document.execCommand("copy");
+    if (success) {
+      alert("Copied the text: \n" + element.textContent.trim());
+    } 
+  } catch (err) {console.error("Copy error:", err);}
+
+  selection.removeAllRanges();
+}
+
   //============================================================================  
-  function refreshSmTelegram()
-  { Spinner(true);
-    fetch(APIGW+"v2/sm/telegram")
-      .then(response => response.text())
-      .then(response => {
-        //console.log("parsed .., data is ["+ response+"]");
-    	//console.log('-------------------');
-        var divT = document.getElementById('rawTelegram');
-        if ( document.getElementById("TelData") == null )
-        {
-            console.log("CreateElement(pre)..");
-            var preT = document.createElement('pre');
-            preT.setAttribute("id", "TelData", 0);
-            preT.setAttribute('class', 'telegram');
-            preT.textContent = response;
-            divT.appendChild(preT);
-        }
-        preT = document.getElementById("TelData");
-        preT.textContent = response;
-        Spinner(false);
-      })
-      .catch(function(error) {
-        console.error("main::refreshSmTelegram() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-      });     
+  function refreshSmTelegram(json)
+  { 
+  	objDAL.refreshTelegram();
   } // refreshSmTelegram()
 
   //format a value based on the locale of the client
@@ -2462,6 +2035,11 @@ function formatFailureLog(svalue) {
   function showMonthsHist(data)
   { 
     //console.log("now in showMonthsHist() ..");
+    if (document.getElementById('mCOST').checked) {
+	    showMonthsCosts(data);
+    	return;
+    }
+    
     var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
     var stop = start - 12;
     var i;
@@ -2674,10 +2252,9 @@ function formatFailureLog(svalue) {
   
   //============================================================================  
   function getDevSettings()
-  { Spinner(true);
-    fetch(APIGW+"v2/dev/settings")
-      .then(response => response.json())
-      .then(json => {
+  { 
+		var json = objDAL.getDeviceSettings();
+		if ( json == "" ) return;
         console.log("getDevSettings: parsed .., data is ["+ JSON.stringify(json)+"]");
         "ed_tariff1" in json ? ed_tariff1 = json.ed_tariff1.value : ed_tariff1 = 0;
         "ed_tariff2" in json ? ed_tariff2 = json.ed_tariff2.value : ed_tariff2 = 0;
@@ -2690,25 +2267,13 @@ function formatFailureLog(svalue) {
         "dev-pairing" in json ? pairing_enabled = json["dev-pairing"]: pairing_enabled = false;
         "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
 
-//         console.log("eid_enabled: " + eid_enabled);
-// 		console.log("dev-pairing: " + pairing_enabled);
-		
         if ( eid_enabled ) document.getElementById("bEid").style.display = "block"; else document.getElementById("bEid").style.display = "none";
         if ( pairing_enabled ) document.getElementById("bNRGM").style.display = "block"; else document.getElementById("bNRGM").style.display = "none";
                 
         gas_netw_costs = json.gas_netw_costs.value;
         hostName = json.hostname.value;
         EnableHist =  "hist" in json ? json.hist : true;
-        Spinner(false);
-        SettingsRead = true;
-      })
-      .catch(function(error) {
-        console.error("main::getDevSettings() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-      });   
+
   } // getDevSettings()
   
     
@@ -2787,120 +2352,100 @@ function formatFailureLog(svalue) {
   function refreshSettings()
   {
     console.log("refreshSettings() ..");
-    Spinner(true);
-    data = {};
-    fetch(APIGW+"v2/dev/settings")
-      .then(response => response.json())
-      .then(json => {
-        console.log("then(json => ..)");
-        data = json;
-        for( let i in data )
-        {
-          if ( i == "conf") continue;
-          console.log("["+i+"]=>["+data[i].value+"]");
-          var settings = document.getElementById('settings_table');
-          if( ( document.getElementById("settingR_"+i)) == null )
-          {
-           
-            var rowDiv = document.createElement("div");
-            rowDiv.setAttribute("class", "settingDiv");
-            rowDiv.setAttribute("id", "settingR_"+i);
-            //--- field Name ---
-              var fldDiv = document.createElement("div");
-              	  if ( (i == "gd_tariff") && (Dongle_Config == "p1-q") ) fldDiv.textContent = "Warmte tarief (GJ)";
-              	  else if ( i == "gas_netw_costs") fldDiv.textContent = "Netwerkkosten Gas/maand";
-                  else fldDiv.textContent = td(i);
-                  rowDiv.appendChild(fldDiv);
-            //--- input ---
-              var inputDiv = document.createElement("div");
-                  inputDiv.setAttribute("class", "settings-right");
 
-                    var sInput = document.createElement("INPUT");
-                    sInput.setAttribute("id", "setFld_"+i);
-					if ( data[i].type === undefined ) {
-						sInput.setAttribute("type", "checkbox");
-						sInput.checked = data[i];
-						sInput.style.width = "auto";
-					}
-					else {
-					switch(data[i].type){
-					case "s":
-						sInput.setAttribute("type", "text");
-						sInput.setAttribute("maxlength", data[i].max);
-						sInput.setAttribute("placeholder", "<max " + data[i].max +">");
-						break;
-					case "f":
-						sInput.setAttribute("type", "number");
-						sInput.max = data[i].max;
-						sInput.min = data[i].min;
-						sInput.step = (data[i].min + data[i].max) / 1000;
-						break;
-					case "i":
-						sInput.setAttribute("type", "number");
-						sInput.max = data[i].max;
-						sInput.min = data[i].min;
-						sInput.step = (data[i].min + data[i].max) / 1000;
-						sInput.step = 1;
-						break;
-					}
-                    sInput.setAttribute("value", data[i].value);
-                    }
-                    sInput.addEventListener('change',
-                                function() { setBackGround("setFld_"+i, "lightgray"); },
-                                            false
-                                );
-                  inputDiv.appendChild(sInput);
-                  
-          if( EnableHist || !( ["ed_tariff1","ed_tariff2", "er_tariff1","er_tariff2" ,"gd_tariff","electr_netw_costs","gas_netw_costs"].includes(i) ) ) {
-				rowDiv.appendChild(inputDiv);
-				settings.appendChild(rowDiv);
-			};
-          }
-          else
-          {
-            document.getElementById("setFld_"+i).style.background = "white";
-            document.getElementById("setFld_"+i).value = data[i].value;
-          }
-        }
-        //console.log("-->done..");
-         Spinner(false);
+	data = objDAL.getDeviceSettings();
+	for( let i in data )
+	{
+	  if ( i == "conf") continue;
+	  console.log("["+i+"]=>["+data[i].value+"]");
+	  var settings = document.getElementById('settings_table');
+	  if( ( document.getElementById("settingR_"+i)) == null )
+	  {
+	   
+		var rowDiv = document.createElement("div");
+		rowDiv.setAttribute("class", "settingDiv");
+		rowDiv.setAttribute("id", "settingR_"+i);
+		//--- field Name ---
+		  var fldDiv = document.createElement("div");
+			  if ( (i == "gd_tariff") && (Dongle_Config == "p1-q") ) fldDiv.textContent = "Warmte tarief (GJ)";
+			  else if ( i == "gas_netw_costs") fldDiv.textContent = "Netwerkkosten Gas/maand";
+			  else fldDiv.textContent = td(i);
+			  rowDiv.appendChild(fldDiv);
+		//--- input ---
+		  var inputDiv = document.createElement("div");
+			  inputDiv.setAttribute("class", "settings-right");
 
-      })
-      .catch(function(error) {
-        console.error("main::refreshSettings() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-      });     
+				var sInput = document.createElement("INPUT");
+				sInput.setAttribute("id", "setFld_"+i);
+				if ( data[i].type === undefined ) {
+					sInput.setAttribute("type", "checkbox");
+					sInput.checked = data[i];
+					sInput.style.width = "auto";
+					if ( i == "dev-pairing") sInput.disabled = true;
+				}
+				else {
+				switch(data[i].type){
+				case "s":
+					sInput.setAttribute("type", "text");
+					sInput.setAttribute("maxlength", data[i].max);
+					sInput.setAttribute("placeholder", "<max " + data[i].max +">");
+					break;
+				case "f":
+					sInput.setAttribute("type", "number");
+					sInput.max = data[i].max;
+					sInput.min = data[i].min;
+					sInput.step = (data[i].min + data[i].max) / 1000;
+					break;
+				case "i":
+					sInput.setAttribute("type", "number");
+					sInput.max = data[i].max;
+					sInput.min = data[i].min;
+					sInput.step = (data[i].min + data[i].max) / 1000;
+					sInput.step = 1;
+					break;
+				}
+				sInput.setAttribute("value", data[i].value);
+				}
+				sInput.addEventListener('change',
+							function() { setBackGround("setFld_"+i, "lightgray"); },
+										false
+							);
+			  inputDiv.appendChild(sInput);
+			  
+	  if( EnableHist || !( ["ed_tariff1","ed_tariff2", "er_tariff1","er_tariff2" ,"gd_tariff","electr_netw_costs","gas_netw_costs"].includes(i) ) ) {
+			rowDiv.appendChild(inputDiv);
+			settings.appendChild(rowDiv);
+		};
+	  }
+	  else
+	  {
+		document.getElementById("setFld_"+i).style.background = "white";
+		document.getElementById("setFld_"+i).value = data[i].value;
+	  }
+	}
 
-      document.getElementById('message').innerHTML = newVersionMsg;
+//       document.getElementById('message').innerHTML = newVersionMsg;
       
   } // refreshSettings()
   
   
   //============================================================================  
-  function EditMonths()
-  {	Spinner(true);
-    console.log("fetch("+APIGW+"v2/hist/months)");
-    fetch(APIGW+"v2/hist/months", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-        //console.log(response);
-        data = json;
-        expandDataSettings(data);
-        showMonthsV2(data, monthType);
-        Spinner(false);
-      })
-      .catch(function(error) {
-        console.error("main::EditMonths() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-      });
+  function EditMonths() {	
+  console.log("EditMonths()");
+  
+  const data = objDAL.getMonths();
 
-      document.getElementById('message').innerHTML = newVersionMsg;
+  if (!data || !Array.isArray(data.data) || data.data.length === 0) {
+    console.warn("EditMonths(): Data error");
+    return;
+  }
+
+  if (typeof monthType === "undefined") {
+    console.warn("EditMonths(): monthType undefined");
+    return;
+  }
+
+  showMonthsV2(data, monthType);
   } // EditMonths()
 
   
@@ -2908,11 +2453,20 @@ function formatFailureLog(svalue) {
   function showMonthsV2(data, type)
   { 
     console.log("showMonthsV2("+type+")");
-    //--- first remove all Children ----
-    var allChildren = document.getElementById('editMonths');
-    while (allChildren.firstChild) {
-      allChildren.removeChild(allChildren.firstChild);
-    }
+
+	const em = document.getElementById("editMonths");
+	
+	if (!em) {
+		console.error("element not found");
+		return;
+	}
+	if (!data || !Array.isArray(data.data)) {
+		console.error("showMonthsV2(): data error");
+		return;
+	}
+
+	em.innerHTML = "";
+	
     var dlength = data.data.length;
     console.log("Now fill the DOM!");    
     console.log("data.data.length: " + dlength);
@@ -2920,12 +2474,11 @@ function formatFailureLog(svalue) {
     for (let index=data.actSlot + dlength; index>data.actSlot; index--)
     {  let i = index % dlength;
 
-      //console.log("["+i+"] >>>["+data.data[i].EEYY+"-"+data.data[i].MM+"]");
+      console.log("["+i+"] >>>["+data.data[i].EEYY+"-"+data.data[i].MM+"]");
       
-      var em = document.getElementById('editMonths');
-
       if( ( document.getElementById("em_R"+i)) == null )
       {
+		console.log("==null");
         var div1 = document.createElement("div");
             div1.setAttribute("class", "settingDiv");
             div1.setAttribute("id", "em_R"+i);
@@ -3065,22 +2618,6 @@ function formatFailureLog(svalue) {
 
   } // showMonthsV2()
 
-  
-  //============================================================================  
-  function expandDataSettings(data)
-  { 
-    for (let i=0; i<data.data.length; i++)
-    {
-      data.data[i].EEYY = {};
-      data.data[i].MM   = {};
-      data.data[i].EEYY = parseInt("20"+data.data[i].date.substring(0,2));
-      data.data[i].MM   = parseInt(data.data[i].date.substring(2,4));
-    }
-      console.log("expandDataSettings(): "+JSON.stringify(data));
-
-
-  } // expandDataSettings()
-  
       
   //============================================================================  
   function undoReload()
@@ -3090,8 +2627,10 @@ function formatFailureLog(svalue) {
       EditMonths();
     } else if (activeTab == "bEditSettings") {
       console.log("undoReload(): reload Settings..");
-      data = {};
-      refreshSettings();
+//       data = {};
+//       refreshSettings();
+		document.getElementById('settings_table').innerHTML = '';
+		objDAL.refreshDeviceInformation();
 
     } else {
       console.log("undoReload(): I don't knwo what to do ..");
@@ -3119,30 +2658,32 @@ function formatFailureLog(svalue) {
   //============================================================================  
   function saveSettings() 
   {
-    for(var i in data)
+    for( var i in objDAL.dev_settings )
     {
 	  if ( i == "conf" || document.getElementById("setFld_"+i ) == undefined ) continue;
 	  
 	  var fldId  = i;
       var newVal = document.getElementById("setFld_"+fldId).value;
-	  if ( data[i].value === undefined ) {
+	  if ( objDAL.dev_settings[i].value === undefined ) {
 	     newVal = document.getElementById("setFld_"+fldId).checked;
-	     if (data[i] != newVal) {
-	     console.log("save data ["+i+"] => from["+data[i]+"] to["+newVal+"]");
+	     if (objDAL.dev_settings[i] != newVal) {
+	     console.log("save data ["+i+"] => from["+objDAL.dev_settings[i]+"] to["+newVal+"]");
 	     sendPostSetting(fldId, newVal);
 	    }
 	  }
-	  else if (data[i].value != newVal)
+	  else if (objDAL.dev_settings[i].value != newVal)
       {
-        console.log("save data ["+i+"] => from["+data[i].value+"] to["+newVal+"]");
+        console.log("save data ["+i+"] => from["+objDAL.dev_settings[i].value+"] to["+newVal+"]");
         sendPostSetting(fldId, newVal);
       }
     }    
-    // delay refresh as all fetch functions are asynchroon!!
+    // delay refresh as all fetch functions are async!!
     setTimeout(function() {
-      refreshSettings();
+//       refreshSettings();
+		document.getElementById('settings_table').innerHTML = '';
+		objDAL.refreshDeviceInformation();
     }, 1000);
-    getDevSettings();
+//     getDevSettings();
   } // saveSettings()
   
   
@@ -3158,7 +2699,8 @@ function formatFailureLog(svalue) {
       return;
     }
     **/
-    
+    var data = objDAL.getMonths();
+//     console.log(data.data);
     //--- has anything changed?
     for (i in data.data)
     {
@@ -3211,7 +2753,7 @@ function formatFailureLog(svalue) {
         mode : "no-cors"
     };
 	Spinner(true);
-    fetch(APIGW+"v2/dev/settings", other_params)
+    fetch( URL_DEVICE_SETTINGS, other_params )
       .then(function(response) {
             //console.log(response.status );    //=> number 100–599
             //console.log(response.statusText); //=> String
@@ -3368,56 +2910,7 @@ function formatFailureLog(svalue) {
         method : "POST",
         mode : "cors"
     };
-    Spinner(true);
-    fetch(APIGW+"v2/hist/months", other_params)
-      .then(function(response) {
-      Spinner(false);
-      }, function(error) {
-        console.log("Error["+error.message+"]"); //=> String
-      });
-      
   } // sendPostReading()
-
-  function parseGitHubVersion(text){
-    var tmpGHF = text.replace(/(\r\n|\n|\r)/gm, "");
-    GitHubVersion_dspl = tmpGHF;
-    //console.log("parsed: GitHubVersion is ["+GitHubVersion_dspl+"]");
-    tmpX = tmpGHF.substring(1, tmpGHF.indexOf(' '));
-    tmpN = tmpX.split(".");
-    GitHubVersion = tmpN[0]*10000 + tmpN[1]*100 + tmpN[2]*1;    
-    //console.log("firmwareVersion["+firmwareVersion+"] >= GitHubVersion["+GitHubVersion+"]");
-    if (firmwareVersion == 0 || firmwareVersion >= GitHubVersion)
-          newVersionMsg = "";
-    else  newVersionMsg = firmwareVersion_dspl + " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
-    //set
-    document.getElementById('message').innerHTML = newVersionMsg;
-    //console.log(newVersionMsg);
-  }
-
-  //============================================================================  
-  function readGitHubVersion()
-  {
-    if (GitHubVersion != 0) return;
-
-    fetch(URL_GITHUB_VERSION)
-      .then(response => {
-        if (response.ok) {
-          return response.text();
-        } else {
-          console.log('Something went wrong');
-          return "";
-        }
-      })
-      .then(text => {
-        parseGitHubVersion(text);
-      })
-      .catch(function(error) {
-        console.error("main::readGitHubVersion() - " + error.message);
-        GitHubVersion_dspl   = "";
-        GitHubVersion        = 0;
-      });
-  } // readGitHubVersion()
-
   /*
   ****************************** UTILS *******************************************
   */
@@ -3509,21 +3002,6 @@ function formatFailureLog(svalue) {
     document.getElementById(field).value = newVal * 1;
     
   } // validateNumber()
-
-  
-  //============================================================================  
-//   function translateToHuman(longName) {
-//     //for(var index = 0; index < (translateFields.length -1); index++) 
-//     for(var index = 0; index < translateFields.length; index++) 
-//     {
-//         if (translateFields[index][0] == longName)
-//         {
-//           return translateFields[index][1];
-//         }
-//     };
-//     return longName;
-//     
-//   } // translateToHuman()
 
   
   //============================================================================  
