@@ -8,18 +8,13 @@
 
 const DEBUG = false;
 
-const UPDATE_HIST 			= 1000 * 10;
-const UPDATE_ACTUAL 		= 1000 * 5;
-const UPDATE_SOLAR			= 1000 * 30;
-const UPDATE_ACCU			= 1000 * 30;  
+const UPDATE_HIST 		= DEBUG ? 1000 * 10 : 1000 * 1800;
+const UPDATE_ACTUAL 	= DEBUG ? 1000 * 5 	: 1000 * 5;
+const UPDATE_SOLAR		= DEBUG ? 1000 * 30 : 1000 * 60;
+const UPDATE_ACCU		= DEBUG ? 1000 * 30 : 1000 * 60;
 	
-if (!DEBUG) {
-	//production
+if (!DEBUG) {	//production
   	console.log = function () {};
-	const UPDATE_HIST 			= 1000 * 3600;
-	const UPDATE_ACTUAL 		= 1000 * 5;
-	const UPDATE_SOLAR			= 1000 * 60;
-	const UPDATE_ACCU			= 1000 * 60;
 }
 
 const APIHOST = window.location.protocol+'//'+window.location.host;
