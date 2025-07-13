@@ -1536,8 +1536,8 @@ function checkESPOnline() {
     if (presentationType == "TAB")
       showActualTable(json);
     else{
-//       var hist = objDAL.getActualHistory();  
-      copyActualHistoryToChart(json);
+      var hist = objDAL.getActualHistory();  
+      copyActualHistoryToChart(hist);
       showActualGraph();
     }  
   }
