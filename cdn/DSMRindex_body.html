@@ -245,9 +245,9 @@
 	Het is een hulpmiddel om een beeld te krijgen van het gebruik ten opzichte van het prijsplafond.</p>
     <div>
       <b data-i18n-key="tle-graph-per">Grafiek per:</b>
-      <input type="radio" id="btnYear" name=burnup onchange="setViewYEAR()"/>
+      <input type="radio" id="btnYear" name=burnup onchange="setViewYEAR()" checked/>
       <label data-i18n-key="lbl-year" for="btnYear">Jaar</label>
-      <input type="radio" id="btnMonth" name=burnup onchange="setViewMONTH()" checked/>
+      <input type="radio" id="btnMonth" name=burnup onchange="setViewMONTH()" />
       <label data-i18n-key="lbl-month" for="btnMonth">Maand</label>
     </div>
     
@@ -287,6 +287,9 @@
   <section id="TelegramTab" class="tabName subTab">
     <h2 data-i18n-key="tle-telegram">Ruwe Telegram data</h2>
     <div id="rawTelegram">
+    	<button onclick="CopyTelegram()" class="iconify" data-icon="mdi-content-copy" ></button>
+		<pre id="TelData">
+		</pre>
     </div>
     
   </section> <!-- END TelegramTab -->
@@ -460,7 +463,6 @@
 		  <input id="Ifile" type="file" name="upload">
           <input id="Iupload" type="submit" value="Upload" disabled />
       </form>
-
       <span></span>
       <fileSize></fileSize>
   </section>
@@ -481,7 +483,7 @@
 		<p data-i18n-key="txt-reset-wifi">Na het indrukken van de RESET WIFI knop zal de module herstarten en vragen om het wifi-netwerk opnieuw in te stellen. Zie initiële setup van de module.</p>
         <span>
         <form action='/ResetWifi' >
-          <input id="resetWifi" type='submit' class='button' name='SUBMIT' value='Reset Wifi' hidden/>
+          <input id="resetWifi" type='submit' class='button' name='SUBMIT' value='Reset Wifi'/>
         </form>
       </div> 
   </section> <!-- end Settings Page -->
@@ -640,6 +642,7 @@
         </tr>
       </thead>
 		<tbody id="InsightsTableBody">
+		<tr><td colspan="3">Geen data beschikbaar.<br>Functie beschikbaar vanaf versie 4.13.0</td></tr>
 		</tbody>
       <tfoot>
         <tr>
@@ -703,7 +706,7 @@
 				<div id=f3 class="lblVerbuik eergisteren" style="display:none">3<span class="tooltiptext">fase 3</span></div>
 			</div>
             <hr/>
-            <div style="text-align:center" data-i18n-key="lbl-actual-kwh">Actueel [<span name="power">kW</span>]</div>
+            <div style="text-align:center" ><span data-i18n-key="lbl-actual">Actueel</span> [<span id="dsh-power">kW</span>]</div>
             <h2 id="power_delivered">0.0</h2>
 <!-- 
             <h3>max: <span id="power_delivered_1max">0.0</span> <span name="power">kW</span></h3>
