@@ -187,6 +187,7 @@ void handleKeyInput()
                     break;                      
                     
       case 'R':     DebugFlush();
+                    LogFile("reboot: telnet R",true);
                     P1Reboot();
                     break;
                     

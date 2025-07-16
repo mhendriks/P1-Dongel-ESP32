@@ -290,6 +290,7 @@ void doRedirect(String msg, int wait, const char* URL, bool reboot, bool resetWi
        WiFiManager manageWiFi;
        manageWiFi.resetSettings();
    }
+    LogFile("reboot: doRedirect", false);
     P1Reboot();
   }
   

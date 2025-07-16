@@ -8,7 +8,7 @@
 
 const DEBUG = false;
 
-const UPDATE_HIST 		= DEBUG ? 1000 * 10 : 1000 * 1800;
+const UPDATE_HIST 		= DEBUG ? 1000 * 10 : 1000 * 300;
 const UPDATE_ACTUAL 	= DEBUG ? 1000 * 5 	: 1000 * 5;
 const UPDATE_SOLAR		= DEBUG ? 1000 * 30 : 1000 * 60;
 const UPDATE_ACCU		= DEBUG ? 1000 * 30 : 1000 * 60;
@@ -81,7 +81,7 @@ var objDAL 					= null;
       .then(response => response.json())
       .then(json => { fnHandleData(json); })
       .catch(function (error) {
-        console.error("dal::fetchDataJSON() - " + error.message);
+        console.error("dal::fetchDataJSON(" + url + ") - " + error.message);
         var p = document.createElement('p');
         p.appendChild( document.createTextNode('Error: ' + error.message) );
       });
@@ -109,11 +109,13 @@ var objDAL 					= null;
   
     init(){
       this.refreshDeviceInformation();
-      this.refreshActual();
-      this.refreshTime();
+	  this.refreshTime();
       this.refreshHist();
       this.refreshSolar();
 	  this.refreshAccu();
+	  this.refreshActual();
+// 	  this.refreshFields(); //always called in initial call (dashboard)
+
     } 
 	
 	refreshHist()
@@ -362,9 +364,9 @@ var objDAL 					= null;
       return this.accu;
     }
     
-//     getFields(){
-//       return this.fields;
-//     }    
+    getFields(){
+      return this.fields;
+    }    
     
     getActual(){
       return this.actual;

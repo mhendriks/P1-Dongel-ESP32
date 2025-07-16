@@ -12,8 +12,6 @@ BACKLOG
 - temperatuur ook opnemen in grafieken (A van Dijken)
 - SSE of websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
-- Roberto: P1 H2O watersensor gegevens apart versturen (MQTT) van P1 
-- optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
 - #18 water en gas ook in de enkele json string (mqtt)
 - grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
@@ -44,10 +42,14 @@ Default checks
 - EID
 - dev_pairing
 - ethernet
-- 4h test on 151
+- 4h test
 
-4.15.1
-- 
+4.15.5
+- change mqtt publishing / HA auto discovery conform 4.8.19 (thanks Jeroen)
+- fix: dtsu666 mapping error
+- change phoenix modbus emulator to LE Swapped
+- fix: several modifications frontend (charts / menu selection / ... )
+- add: write reboot reason to log when triggered
 
 next
 - improvement: modbus in own process = non-blocking 
@@ -79,11 +81,11 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define INSIGHTS
 // #define XTRA_LOG
 
-//PROFILES -> NO PROFILE = WiFi Dongle 
+//PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
 // #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
-// #define NRG_DONGLE   
+// #define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
 //SPECIAL

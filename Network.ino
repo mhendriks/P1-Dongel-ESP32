@@ -173,37 +173,6 @@ void configModeCallback (WiFiManager *myWiFiManager)
 } // configModeCallback()
 
 //===========================================================================================
-// void WifiWatchDog(){
-// #if not defined ETHERNET || defined ULTRA
-//   //try to reconnect or reboot when wifi is down
-//   if ( bEthUsage ) return; //leave when ethernet is prefered network
-//   if ( WiFi.status() != WL_CONNECTED ){
-//     if ( !bNoNetworkConn ) {
-//       LogFile("Wifi connection lost",true); //log only once 
-//       tWifiLost = millis();
-//       bNoNetworkConn = true;
-//     }
-    
-//     if ( (millis() - tWifiLost) >= 20000 ) {
-//       DebugTln("WifiLost > 20.000, disconnect");
-//       WiFi.disconnect();
-//       delay(100); //give it some time
-//       WiFi.reconnect();
-// //      Wifi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // better to disconnect and begin?
-//       tWifiLost = millis();
-//       WifiReconnect++;
-//       DebugT("WifiReconnect: ");Debug(WifiReconnect);
-//       return;
-//    }
-//     if (WifiReconnect >= 3) {
-//       LogFile("Wifi -> Reboot because of timeout",true); //log only once 
-//       P1Reboot(); //after 3 x 20.000 millis
-//     }
-//   }
-// #endif  
-// }
-
-//===========================================================================================
 #include <esp_wifi.h>
 
 void startWiFi(const char* hostname, int timeOut) 
@@ -225,16 +194,6 @@ void startWiFi(const char* hostname, int timeOut)
   
   //lower calibration power
   esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
-  
-  // WiFi.mode(WIFI_STA);
-  // wifi_config_t sta_config;
-  // esp_err_t ret = esp_wifi_get_config(WIFI_IF_STA, &sta_config);
-
-  // if (ret == ESP_OK) {
-  // Debug("getWiFiPass: ");Debugln( (char*)sta_config.sta.password );
-  // Debug("getWiFiSSID: ");Debugln( (char*)sta_config.sta.ssid );
-
-  // }
 
   WiFi.setHostname(hostname);
   // WiFi.enableIPv6();
@@ -276,7 +235,7 @@ void startWiFi(const char* hostname, int timeOut)
   }
   Debugln();
   if ( netw_state == NW_NONE && !bEthUsage ) {
-    LogFile("WIFI: failed to connect and hit timeout",true);
+    LogFile("reboot: Wifi failed to connect and hit timeout",true);
     P1Reboot(); //timeout 
   }
   manageWiFi.stopWebPortal();

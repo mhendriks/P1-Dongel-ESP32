@@ -196,6 +196,7 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
     writeSettings();
   }
   if ( StrTopic.indexOf("reboot") >= 0) {
+    LogFile("reboot: mqtt command", false);
     P1Reboot();
   }
   if ( StrTopic.indexOf("reconfig") >= 0) {
@@ -257,7 +258,6 @@ struct buildJsonMQTT {
     if ( isInFieldsArray(Name) && i.present() ) {
           // add value to '/all' topic
           if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
-          // Send normal MQTT message when not sending '/all' topic, except when HA auto discovery is on
           if ( !bActJsonMQTT || EnableHAdiscovery) {
             sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
             MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
@@ -410,11 +410,10 @@ void sendMQTTData() {
       jsonDoc["gas_ts"] = gasDeliveredTimestamp;
     serializeJson(jsonDoc,buffer);
     MQTTSend("all", buffer, false);
-  } else {
-	  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
-	  MQTTsendGas();
-	  MQTTsendWater();
-  }  
+  }
+  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
+  MQTTsendGas();
+  MQTTsendWater();  
 
 #ifdef VICTRON_GRID
   MQTTSendVictronData();

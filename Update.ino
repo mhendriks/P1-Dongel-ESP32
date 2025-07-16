@@ -128,6 +128,7 @@ void RemoteUpdate(const char* versie, bool sketch){
 
       case HTTP_UPDATE_OK:
         LittleFS.remove("/DSMRindexEDGE.html");
+        LogFile("reboot: after update OK",false);
         P1Reboot();
         break;
     }

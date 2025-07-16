@@ -64,21 +64,21 @@ function updateFromDAL(source, json)
   {
     case "time": refreshTime(json); update_reconnected=true; break;
     case "devinfo": parseDeviceInfo(json); break;
-    case "dev_settings": refreshSettings();getDevSettings(); break;
+    case "dev_settings": ParseDevSettings(); refreshSettings();break;
     case "versionmanifest": parseVersionManifest(json); break;
-    case "days": expandData(json);refreshDays();break;
-	case "hours": expandData(json);refreshHours();break;
-	case "months": expandData(json);refreshMonths();break;
+    case "days": expandData(json);refreshHistData("Days");break;
+	case "hours": expandData(json);refreshHistData("Hours");break;
+	case "months": expandData(json);refreshHistData("Months");break;
 	case "actual": ProcesActual(json);break;
 	case "solar": UpdateSolar();break;
 	case "accu": UpdateAccu();break;
 	case "insights": InsightData(json);break;
-	case "fields":  if (activeTab=="bDashTab") refreshDashboard(json);else parseSmFields(json); break;
+	case "fields": SetOnSettings(json); if (activeTab=="bDashTab") refreshDashboard(json);else parseSmFields(json); break;
 	case "telegram": document.getElementById("TelData").textContent = json; break;
 	case "eid_claim":ProcessEIDClaim(json); break;
 	case "netswitch": refreshNetSwitch(json);break;
     default:
-      console.log("missing handler; source="+source);
+      console.error("missing handler; source="+source);
       break;
   }
 }
@@ -684,11 +684,13 @@ function parseVersionManifest(json)
 }
 
 function refreshDashboard(json){
+	setPresentationType('TAB'); //zet grafische mode uit
+	
 	var Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
 	//check new day = refresh
 	var DayEpochTemp = Math.floor(new Date().getTime() / 86400000.0);
 	if (DayEpoch != DayEpochTemp || hist_arrP.length < 4 ) {
-		if ( EnableHist ) refreshDays(); //load data first visit
+		if ( EnableHist ) refreshHistData("Days"); //load data first visit
 		DayEpoch = DayEpochTemp;
 	}
 
@@ -911,19 +913,19 @@ function updateGaugeTrend(objGauge, arr)
 }
 	
 //============================================================================      
-function menu() {
-  var x = document.getElementById("myTopnav");
-  if (x.className === "main-navigation") {
-    x.className += " responsive";
-    
-  } else {
-    x.className = "main-navigation";
-  }
-//change menu icon
-    var menu = document.getElementById("menuid");
-	menu.classList.toggle("mdi-close");
-	menu.classList.toggle("mdi-menu");
-}
+// function menu() {
+//   var x = document.getElementById("myTopnav");
+//   if (x.className === "main-navigation") {
+//     x.className += " responsive";
+//     
+//   } else {
+//     x.className = "main-navigation";
+//   }
+// //change menu icon
+//     var menu = document.getElementById("menuid");
+// 	menu.classList.toggle("mdi-close");
+// 	menu.classList.toggle("mdi-menu");
+// }
    
 // attach an onclick handler for all menuitems
 function handle_menu_click()
@@ -974,6 +976,11 @@ function createDashboardGauges()
 	trend_peak	= new Chart(document.getElementById("container-peak"), cfgGaugePeak);	
 }
 
+function RedirectBtn(){
+
+setTimeout(mijnFunctie, 2000);
+}
+
 //main entry point from DSMRindex.html or window.onload
 function bootsTrapMain() 
 {
@@ -987,19 +994,22 @@ function bootsTrapMain()
 	document.getElementById("languageSelector").value = locale;
 
 	createDashboardGauges();
+
+	handle_menu_click();
+	FrontendConfig();
 	
 	//init DAL
 	objDAL = new dsmr_dal_main();
 	objDAL.setCallback(updateFromDAL);
 	objDAL.init();
-        
-	handle_menu_click();
-	FrontendConfig();
 
     setMonthTableType();
     openTab();
     initActualGraph();
     setPresentationType('TAB');
+
+// 	objDAL.refreshFields();
+
 	//after loading ... flow the #target url just for FSExplorer
 // 	console.log("location-hash: " + location.hash );
 // 	console.log("location-pathname: " + location.pathname );
@@ -1210,7 +1220,6 @@ function SendNetSwitchJson() {
     document.getElementById("myTopnav").className = "main-navigation"; //close dropdown menu 
     clearInterval(tabTimer);  
     clearInterval(NRGStatusTimer);
-	
     hideAllCharts();
 
 	switch (activeTab) {
@@ -1220,9 +1229,9 @@ function SendNetSwitchJson() {
       		break;
 		case "bInsightsTab"	: objDAL.refreshInsights(); break;
 		case "bPlafondTab"	: refreshData(); break;
-		case "bHoursTab"	: refreshHours(); break;
-     	case "bDaysTab"		: refreshDays(); break;
-      	case "bMonthsTab"	: refreshMonths(); break;
+		case "bHoursTab"	: refreshHistData("Hours"); break;
+     	case "bDaysTab"		: refreshHistData("Days"); break;
+      	case "bMonthsTab"	: refreshHistData("Months"); break;
       	case "bSysInfoTab"	: refreshDevInfo(); break;
       	case "bFieldsTab":
       		refreshSmFields();      		
@@ -1805,65 +1814,45 @@ function formatFailureLog(svalue) {
 	} 
   }
 //============================================================================  
-function refreshHours() { 
-	console.log("refreshHours");
-	data = objDAL.getHours();
-	if (data == "" ) {
-		console.log("refreshHours : NO DATA");
+function refreshHistData(type) {
+	console.log(`refresh${type}`);
+	let data = objDAL[`get${type}`]();
+	if (data === "") {
+		console.log(`refresh${type} : NO DATA`);
 		return;
 	}
-	// expandData(data);
-	if ( activeTab == "bHoursTab" ) presentationType == "TAB" ? showHistTable(data, "Hours") : showHistGraph(data, "Hours");
-        
-  } // resfreshHours()
-  
 
-// function UpdateChartTable(){
-// 
-// 	switch( activeTab ){
-// 		case "bDaysTab": presentationType == "TAB" ? showHistTable(data, "Days") : showHistGraph(data, "Days"); break;
-// 		case "bHoursTab": presentationType == "TAB" ? showHistTable(data, "Hours") : showHistGraph(data, "Hours"); break;
-// 		case "bMonthsTab": presentationType == "TAB" ? showMonthsHist(data) : showMonthsGraph(data,"Days"); break;
-// 	}
-// 
-// }
-  
-  //============================================================================  
-  function refreshDays()
-  {
-	console.log("refreshDays");
-	data = objDAL.getDays();
-	if ( data == "" ) {
-		console.log("refreshDays : NO DATA");
-		return;
+	switch (type) {
+		case "Hours":
+			if (activeTab === "bHoursTab") {
+				presentationType === "TAB" ? showHistTable(data, "Hours") : showHistGraph(data, "Hours");
+			}
+			break;
+
+		case "Days":
+			if (activeTab === "bDaysTab") {
+				presentationType === "TAB" ? showHistTable(data, "Days") : showHistGraph(data, "Days");
+			}
+			// Extra logica voor dashboard
+			let act_slot = data.actSlot;
+			for (let i = 0; i < 4; i++) {
+				let tempslot = math.mod(act_slot - i, 15);
+				let values = data.data[tempslot].values;
+				hist_arrG[i] = values[4];
+				hist_arrW[i] = values[5];
+				hist_arrPa[i] = values[0] + values[1];
+				hist_arrPi[i] = values[2] + values[3];
+			}
+			break;
+
+		case "Months":
+			if (activeTab === "bMonthsTab") {
+				presentationType === "TAB" ? showMonthsHist(data) : showMonthsGraph(data, "Months");
+			}
+			break;
 	}
-//         expandData(data);
-// 	UpdateChartTable();
-	if ( activeTab == "bDaysTab" ) presentationType == "TAB" ? showHistTable(data, "Days") : showHistGraph(data, "Days");
-	//voor dashboard
-	var act_slot = data.actSlot;
-//         console.log("Refreshdays - actSlot: " + act_slot);
-	for (let i=0;i<4;i++)
-	{	let tempslot = math.mod(act_slot-i,15);
-		hist_arrG[i] = data.data[tempslot].values[4];
-		hist_arrW[i] = data.data[tempslot].values[5];
-		hist_arrPa[i] = data.data[tempslot].values[0] + data.data[tempslot].values[1];
-		hist_arrPi[i] = data.data[tempslot].values[2] + data.data[tempslot].values[3];
-	};
-  } // resfreshDays()
-  
-  
-  //============================================================================  
-  function refreshMonths() {
-	console.log("refreshMonths");
-	data = objDAL.getMonths();
-	if (data == "" ) {
-		console.log("refreshMonths : NO DATA");
-		return;
-	}
-	// expandData(data);
-	if ( activeTab == "bMonthsTab" ) presentationType == "TAB" ? showMonthsHist(data) : showMonthsGraph(data,"Days");
-  } // resfreshMonths()
+}
+
 
     
 function CopyTelegram(){
@@ -2251,11 +2240,11 @@ function CopyTelegram(){
 
   
   //============================================================================  
-  function getDevSettings()
+  function ParseDevSettings()
   { 
 		var json = objDAL.getDeviceSettings();
 		if ( json == "" ) return;
-        console.log("getDevSettings: parsed .., data is ["+ JSON.stringify(json)+"]");
+        console.log("ParseDevSettings: parsed .., data is ["+ JSON.stringify(json)+"]");
         "ed_tariff1" in json ? ed_tariff1 = json.ed_tariff1.value : ed_tariff1 = 0;
         "ed_tariff2" in json ? ed_tariff2 = json.ed_tariff2.value : ed_tariff2 = 0;
         "er_tariff1" in json ? er_tariff1 = json.er_tariff1.value : er_tariff1 = 0;
@@ -2274,7 +2263,7 @@ function CopyTelegram(){
         hostName = json.hostname.value;
         EnableHist =  "hist" in json ? json.hist : true;
 
-  } // getDevSettings()
+  } // ParseDevSettings()
   
     
   //============================================================================  
@@ -2316,9 +2305,9 @@ function CopyTelegram(){
 //    document.getElementById("APIdocTab").style.display = "none";
 
     if (activeTab == "bActualTab")  refreshSmActual();
-    if (activeTab == "bHoursTab")   refreshHours();
-    if (activeTab == "bDaysTab")    refreshDays();
-    if (activeTab == "bMonthsTab")  refreshMonths();
+    if (activeTab == "bHoursTab")   refreshHistData("Hours");
+    if (activeTab == "bDaysTab")    refreshHistData("Days");
+    if (activeTab == "bMonthsTab")  refreshHistData("Months");
 
   } // setPresenationType()
   
@@ -2336,7 +2325,7 @@ function CopyTelegram(){
     {
       document.getElementById("lastMonthsTableCosts").style.display = "block";
       document.getElementById("lastMonthsTable").style.display      = "none";
-      refreshMonths();
+      refreshHistData("Months");
 
     }
     else
@@ -2683,7 +2672,7 @@ function CopyTelegram(){
 		document.getElementById('settings_table').innerHTML = '';
 		objDAL.refreshDeviceInformation();
     }, 1000);
-//     getDevSettings();
+//     ParseDevSettings();
   } // saveSettings()
   
   

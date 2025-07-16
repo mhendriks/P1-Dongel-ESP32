@@ -167,7 +167,7 @@ std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[7] = { 46, 206, 24, 0xC574+2, 100, 0x5B1A+2, 33030+2 };
+uint16_t MaxReg[7] = { 46, 204+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2 };
 
 
 // Change active mapping
@@ -241,8 +241,17 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
         switch (type) {
             case ModbusDataType::FLOAT: 
             case ModbusDataType::UINT32: {
-                if (SelMap==6) response.add(val.u, SWAP_BYTES|SWAP_REGISTERS);
-                else response.add(val.u);
+                if ( SelMap == 6 ) {
+                  uMbusData temp;
+                  temp.u = val.u;
+                  val.b[0]= temp.b[2];
+                  val.b[1]= temp.b[3];
+                  val.b[2]= temp.b[0];
+                  val.b[3]= temp.b[1];
+                  Debugf("--MODBUS HEX    : %08X\n", val.u);
+                  Debugf("--MODBUS HEX org: %08X\n", temp.u);
+                }
+                response.add(val.u);
                 currentAddr += 2;
                 break;
             }
