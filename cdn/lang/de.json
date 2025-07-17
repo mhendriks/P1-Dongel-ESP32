@@ -318,7 +318,7 @@
   "tle-web-settings": "Webseiten Einstellungen",
   "txt-reboot": "Nachdem Sie die Reboot-Taste gedrückt haben, wird der Dongle neu gestartet.",
   "txt-reset-wifi": "Nach dem Drücken des RESET WIFI-Knopfes wird das Modul neu starten und um die Zurücksetzung des WLAN-Netzwerks bitten. Siehe die anfängliche Installation des Moduls.",
-  "dsh-peak": "[VERTALING NODIG] KwartierPiek",
-  "lbl-peak-delta": "[VERTALING NODIG] Piekruimte [kW]",
-  "lbl-peak-month": "[VERTALING NODIG] Piek deze maand: "
+  "dsh-peak": "Viertelstundenspitze",
+  "lbl-peak-delta": "Spitzenraum [kW]",
+  "lbl-peak-month": "Spitzenleistung diesen Monat: "
 }

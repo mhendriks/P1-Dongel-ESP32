@@ -44,12 +44,9 @@ Default checks
 - ethernet
 - 4h test
 
-4.15.5
-- change mqtt publishing / HA auto discovery conform 4.8.19 (thanks Jeroen)
-- fix: dtsu666 mapping error
-- change phoenix modbus emulator to LE Swapped
-- fix: several modifications frontend (charts / menu selection / ... )
-- add: write reboot reason to log when triggered
+4.15.6
+- FE: mobile menu fix
+- 
 
 next
 - improvement: modbus in own process = non-blocking 
