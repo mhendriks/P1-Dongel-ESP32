@@ -40,7 +40,7 @@ const MAX_SM_ACTUAL     	= 15*60/5; //store the last 15 minutes (each interval i
 const MAX_FILECOUNT     	= 30;   //maximum filecount on the device is 30
 
 var ota_url 				= "";  
-var objDAL 					= null;
+let objDAL 					= null;
     
    //The Data Access Layer for the DSMR
   // - acts as an cache between frontend and server
@@ -376,3 +376,38 @@ var objDAL 					= null;
       return this.actual_history;
     }
   }
+  
+//callback function for the DAL
+function updateFromDAL(source, json)
+{
+  console.log("updateFromDAL(); source="+source);
+//   console.log(json);
+  
+  switch(source)
+  {
+    case "time": refreshTime(json); update_reconnected=true; break;
+    case "devinfo": parseDeviceInfo(json); break;
+    case "dev_settings": ParseDevSettings(); refreshSettings();break;
+    case "versionmanifest": parseVersionManifest(json); break;
+    case "days": expandData(json);refreshHistData("Days");break;
+	case "hours": expandData(json);refreshHistData("Hours");break;
+	case "months": expandData(json);refreshHistData("Months");break;
+	case "actual": ProcesActual(json);break;
+	case "solar": UpdateSolar();break;
+	case "accu": UpdateAccu();break;
+	case "insights": InsightData(json);break;
+	case "fields": SetOnSettings(json); if (activeTab=="bDashTab") refreshDashboard(json);else parseSmFields(json); break;
+	case "telegram": document.getElementById("TelData").textContent = json; break;
+	case "eid_claim":ProcessEIDClaim(json); break;
+	case "netswitch": refreshNetSwitch(json);break;
+    default:
+      console.error("missing handler; source="+source);
+      break;
+  }
+}
+
+function initDAL(callbackFn) {
+  objDAL = new dsmr_dal_main();
+  objDAL.setCallback(callbackFn);
+  objDAL.init();
+}

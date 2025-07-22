@@ -20,7 +20,7 @@
 *******************************************************************
 */
 #include <uri/UriBraces.h>
-const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCache-Control: no-cache\r\n";
+const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FSExplorer\r\nCache-Control: no-cache\r\n";
 
 // Function to check authentication
 bool auth() {

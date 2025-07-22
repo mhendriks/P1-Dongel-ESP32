@@ -182,6 +182,10 @@ void SMCheckOnce(){
   if ( ! DSMRdata.energy_delivered_tariff1_present && !DSMRdata.energy_delivered_total_present ) bWarmteLink = true;
   mbusWater = MbusTypeAvailable(7);  
   if (mbusWater) WtrMtr = true;
+  else if ( WtrMtr ) {
+      waterDeliveredTimestamp = DSMRdata.timestamp;
+      waterDelivered = P1Status.wtr_m3 + (P1Status.wtr_l / 1000.0);
+  }
   mbusGas = MbusTypeAvailable(3);  
   DebugTf("mbusWater: %d\r\n",mbusWater);
   DebugTf("mbusGas: %d\r\n",mbusGas);
@@ -343,16 +347,22 @@ void modifySmFaseInfo()
 } //  modifySmFaseInfo()
 
 void ResetStats(){
-  P1Stats.I1piek = 0;
-  P1Stats.I2piek = 0;
-  P1Stats.I3piek = 0;
-  P1Stats.U1piek = 0;
-  P1Stats.U2piek = 0;
-  P1Stats.U3piek = 0;
-  P1Stats.P1max = 0;
-  P1Stats.P2max = 0;
-  P1Stats.P3max = 0;
-  P1Stats.Psluip = 0xFFFFFFFF;
+  P1Stats.I1piek  = 0;
+  P1Stats.I2piek  = 0;
+  P1Stats.I3piek  = 0;
+  P1Stats.U1piek  = 0;
+  P1Stats.U2piek  = 0;
+  P1Stats.U3piek  = 0;
+  P1Stats.U1min   = 0xFFFFFFFF;
+  P1Stats.U2min   = 0xFFFFFFFF;
+  P1Stats.U3min   = 0xFFFFFFFF;
+  P1Stats.P1max   = 0;
+  P1Stats.P2max   = 0;
+  P1Stats.P3max   = 0;
+  P1Stats.P1min   = 0xFFFFFFFF;
+  P1Stats.P2min   = 0xFFFFFFFF;
+  P1Stats.P3min   = 0xFFFFFFFF;  
+  P1Stats.Psluip  = 0xFFFFFFFF;
   P1Stats.TU1over = 0;
   P1Stats.TU2over = 0;
   P1Stats.TU3over = 0;
@@ -391,20 +401,34 @@ void ProcessStats(){
   if ( DSMRdata.current_l2_present && DSMRdata.current_l2.int_val() > P1Stats.I2piek ) P1Stats.I2piek = DSMRdata.current_l2.int_val();
   if ( DSMRdata.current_l3_present && DSMRdata.current_l3.int_val() > P1Stats.I3piek ) P1Stats.I3piek = DSMRdata.current_l3.int_val();
   
-  if ( DSMRdata.power_delivered_l1_present && DSMRdata.power_delivered_l1.int_val() > P1Stats.P1max ) P1Stats.P1max = DSMRdata.power_delivered_l1.int_val();
-  if ( DSMRdata.power_delivered_l2_present && DSMRdata.power_delivered_l2.int_val() > P1Stats.P2max ) P1Stats.P2max = DSMRdata.power_delivered_l2.int_val();
-  if ( DSMRdata.power_delivered_l3_present && DSMRdata.power_delivered_l3.int_val() > P1Stats.P3max ) P1Stats.P3max = DSMRdata.power_delivered_l3.int_val();
+  if ( DSMRdata.power_delivered_l1_present) {
+    if ( DSMRdata.power_delivered_l1.int_val() > P1Stats.P1max ) P1Stats.P1max = DSMRdata.power_delivered_l1.int_val();
+    else if ( DSMRdata.power_delivered_l1.int_val() < P1Stats.P1min ) P1Stats.P1min = DSMRdata.power_delivered_l1.int_val();
+  } 
+
+  if ( DSMRdata.power_delivered_l2_present ) {
+      if ( DSMRdata.power_delivered_l2.int_val() > P1Stats.P2max ) P1Stats.P2max = DSMRdata.power_delivered_l2.int_val();
+      else if ( DSMRdata.power_delivered_l2.int_val() < P1Stats.P2min ) P1Stats.P2min = DSMRdata.power_delivered_l2.int_val();
+  }
+  
+  if ( DSMRdata.power_delivered_l3_present ){
+    if ( DSMRdata.power_delivered_l3.int_val() > P1Stats.P3max ) P1Stats.P3max = DSMRdata.power_delivered_l3.int_val();
+    else if ( DSMRdata.power_delivered_l3.int_val() < P1Stats.P3min ) P1Stats.P3min = DSMRdata.power_delivered_l3.int_val();
+  } 
 
   if ( DSMRdata.voltage_l1_present ) {
-    if ( DSMRdata.voltage_l1.int_val() > P1Stats.U1piek ) P1Stats.U1piek = DSMRdata.voltage_l1.int_val(); 
+    if ( DSMRdata.voltage_l1.int_val() > P1Stats.U1piek ) P1Stats.U1piek = DSMRdata.voltage_l1.int_val();
+    else if ( DSMRdata.voltage_l1.int_val() < P1Stats.U1min ) P1Stats.U1min = DSMRdata.voltage_l1.int_val(); 
     controleerOverspanning(DSMRdata.voltage_l1, P1Stats.TU1over, startTijdL1, overspanningActiefL1);
   }
   if ( DSMRdata.voltage_l2_present ) {
     if ( DSMRdata.voltage_l2.int_val() > P1Stats.U2piek ) P1Stats.U2piek = DSMRdata.voltage_l2.int_val(); 
+    else if ( DSMRdata.voltage_l2.int_val() < P1Stats.U2min ) P1Stats.U2min = DSMRdata.voltage_l2.int_val(); 
     controleerOverspanning(DSMRdata.voltage_l2, P1Stats.TU2over, startTijdL2, overspanningActiefL2);
   }
   if ( DSMRdata.voltage_l3_present ) {
     if ( DSMRdata.voltage_l3.int_val() > P1Stats.U3piek ) P1Stats.U3piek = DSMRdata.voltage_l3.int_val();
+    else if ( DSMRdata.voltage_l3.int_val() < P1Stats.U3min ) P1Stats.U3min = DSMRdata.voltage_l3.int_val(); 
     controleerOverspanning(DSMRdata.voltage_l3, P1Stats.TU3over, startTijdL3, overspanningActiefL3);
   }  
   if ( (hour() < 5) && (DSMRdata.power_delivered.int_val() < P1Stats.Psluip) && DSMRdata.power_delivered.int_val() ) P1Stats.Psluip = DSMRdata.power_delivered.int_val();

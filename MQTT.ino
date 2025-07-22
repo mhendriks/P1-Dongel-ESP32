@@ -211,6 +211,7 @@ void MQTTConnect() {
 #else
   if ( DUE( reconnectMQTTtimer) ) {    
 #endif    
+    LogFile("MQTT: DISCONNECTED to broker ... try to reconnect", true);
     char MqttID[30+13];
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
     snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
@@ -218,7 +219,7 @@ void MQTTConnect() {
     
     // if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
     if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd ) ) {
-      LogFile("MQTT: Connection to broker: CONNECTED", true);
+      LogFile("MQTT: CONNECTED to broker", true);
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
@@ -258,7 +259,7 @@ struct buildJsonMQTT {
     if ( isInFieldsArray(Name) && i.present() ) {
           // add value to '/all' topic
           if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
-          if ( !bActJsonMQTT || EnableHAdiscovery) {
+          if ( MQTTclient.connected() && (!bActJsonMQTT || EnableHAdiscovery) ) {
             sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
             MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
           }
@@ -323,6 +324,7 @@ void MQTTSentStaticInfo(){
   MQTTSend( "equipment_id",DSMRdata.equipment_id, true );
   MQTTSend( "firmware",_VERSION_ONLY, true );
   MQTTSend( "ip_address",IP_Address(), true);
+  MQTTSend( "uptime",String(uptime()), true);
   MQTTSend( "wifi_rssi",String( WiFi.RSSI() ), true );
 
   if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc, true); }  
@@ -402,12 +404,23 @@ void sendMQTTData() {
 
   DSMRdata.applyEach(buildJsonMQTT());
   
+
+if ( mbusWater ){
+    MQTTSend( "water", waterDelivered );
+    MQTTSend( "water_ts", waterDeliveredTimestamp, true );    
+  } else {
+    sprintf(cMsg,"%d.%3.3d",P1Status.wtr_m3,P1Status.wtr_l);
+    MQTTSend("water",cMsg, true);    
+  }
+
+
+
   if ( bActJsonMQTT ) {
     String buffer;
-      jsonDoc["water"] = waterDelivered;
+      jsonDoc["water"]    = waterDelivered;
       jsonDoc["water_ts"] = waterDeliveredTimestamp;
-      jsonDoc["gas"] = gasDelivered;
-      jsonDoc["gas_ts"] = gasDeliveredTimestamp;
+      jsonDoc["gas"]      = gasDelivered;
+      jsonDoc["gas_ts"]   = gasDeliveredTimestamp;
     serializeJson(jsonDoc,buffer);
     MQTTSend("all", buffer, false);
   }

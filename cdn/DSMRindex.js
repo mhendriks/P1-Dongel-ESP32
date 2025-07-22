@@ -1,115 +1,72 @@
 /*
 ***************************************************************************  
-**  Version  : v4.14
-**
-**  Copyright (c) 2025 Smartstuff
+**  Copyright 2025 Smartstuff
 **  Authors  : Martijn Hendriks / Mar10us
-**
-**  TERMS OF USE: MIT License. See bottom of file.                                                            
+**  TERMS OF USE: MIT License.                                      
 ***************************************************************************      
 */
 
-// if ( DEBUG ) {
-//   import('http://localhost/~martijn/dsmr-api/v5/debug.js')
-//     .then((module) => {
-//       module.initDebugTools(); // bijv. een functie die logging aanzet, knoppen toont, etc.
-//     })
-//     .catch((err) => {
-//       console.error('Failed to load debug tools:', err);
-//     });
-// }
-
-const URL_I18N = DEBUG ? "http://localhost/~martijn/dsmr-api/v5/lang" : "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/cdn/lang";
 const SQUARE_M_CUBED 	   = "\u33A5";
-  
+
 "use strict";
 
-//   var ota_url 				= "";
+//   let ota_url 				= "";
   let activeTab             = "bDashTab";
   let PauseAPI				= false; //pause api call when browser is inactive
   let presentationType      = "TAB";
   let tabTimer              = 0;
 //   let actualTimer           = 0;
-  var devVersion			= 0;
-  var firmwareVersion       = 0;
-  var firmwareVersion_dspl  = "-";
+  let devVersion			= 0;
+  let firmwareVersion       = 0;
+  let firmwareVersion_dspl  = "-";
   let NRGStatusTimer		= 0;
   
-  var ed_tariff1            = 0;
-  var ed_tariff2            = 0;
-  var er_tariff1            = 0;
-  var er_tariff2            = 0;
-  var gd_tariff             = 0;
-  var electr_netw_costs     = 0;
-  var gas_netw_costs        = 0;
-  var hostName            	= "-";  
-  var data		 			= [];
-  var DayEpoch				= 0;
+  let ed_tariff1            = 0;
+  let ed_tariff2            = 0;
+  let er_tariff1            = 0;
+  let er_tariff2            = 0;
+  let gd_tariff             = 0;
+  let electr_netw_costs     = 0;
+  let gas_netw_costs        = 0;
+  let hostName            	= "-";  
+  let data		 			= [];
+  let DayEpoch				= 0;
   let monthType        		= "ED";
   let settingFontColor 		= 'white';
-  var SolarActive 			= false;
-  var AccuActive			= false;
-  var Pi_today				= 0;
-  var Pd_today				= 0;
-  var conf_netswitch 		= false;
-  var update_reconnected	= false;
-
-//callback function for the DAL
-function updateFromDAL(source, json)
-{
-  console.log("updateFromDAL(); source="+source);
-//   console.log(json);
-  
-  switch(source)
-  {
-    case "time": refreshTime(json); update_reconnected=true; break;
-    case "devinfo": parseDeviceInfo(json); break;
-    case "dev_settings": ParseDevSettings(); refreshSettings();break;
-    case "versionmanifest": parseVersionManifest(json); break;
-    case "days": expandData(json);refreshHistData("Days");break;
-	case "hours": expandData(json);refreshHistData("Hours");break;
-	case "months": expandData(json);refreshHistData("Months");break;
-	case "actual": ProcesActual(json);break;
-	case "solar": UpdateSolar();break;
-	case "accu": UpdateAccu();break;
-	case "insights": InsightData(json);break;
-	case "fields": SetOnSettings(json); if (activeTab=="bDashTab") refreshDashboard(json);else parseSmFields(json); break;
-	case "telegram": document.getElementById("TelData").textContent = json; break;
-	case "eid_claim":ProcessEIDClaim(json); break;
-	case "netswitch": refreshNetSwitch(json);break;
-    default:
-      console.error("missing handler; source="+source);
-      break;
-  }
-}
-                    
+  let SolarActive 			= false;
+  let AccuActive			= false;
+  let Pi_today				= 0;
+  let Pd_today				= 0;
+  let conf_netswitch 		= false;
+  let update_reconnected	= false;
+                   
   const spinner 			= document.getElementById("loader");
 
 //---- frontend settings
-  var AMPS					= 35 	//waarde zekering (meestal 35 of 25 ampere)
-  var ShowVoltage			= true 	//toon spannningsverloop op dashboard
-  var UseCDN				= true	//ophalen van hulpbestanden lokaal of via cdn //nog niet geimplementeerd
-  var Injection				= false	//teruglevering energie false = bepaalt door de data uit slimme meter, true = altijd aan
-  var Phases				= 1		//aantal fases (1,2,3) voor de berekening van de totale maximale stroom Imax = fases * AMPS
-  var HeeftGas				= false	//gasmeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
-  var HeeftWater			= false	//watermeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
-  var EnableHist			= true  //weergave historische gegevens
-  var Act_Watt				= false  //display actual in Watt instead of kW
-  var SettingsRead 			= false 
-  var AvoidSpikes			= false 
-  var IgnoreInjection		= false 
-  var IgnoreGas				= false 
-  var Dongle_Config			= ""
-  var eid_enabled			= false
-  var pairing_enabled    	= false
+  let AMPS					= 35 	//waarde zekering (meestal 35 of 25 ampere)
+  let ShowVoltage			= true 	//toon spannningsverloop op dashboard
+  let UseCDN				= true	//ophalen van hulpbestanden lokaal of via cdn //nog niet geimplementeerd
+  let Injection				= false	//teruglevering energie false = bepaalt door de data uit slimme meter, true = altijd aan
+  let Phases				= 1		//aantal fases (1,2,3) voor de berekening van de totale maximale stroom Imax = fases * AMPS
+  let HeeftGas				= false	//gasmeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
+  let HeeftWater			= false	//watermeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
+  let EnableHist			= true  //weergave historische gegevens
+  let Act_Watt				= false  //display actual in Watt instead of kW
+  let SettingsRead 			= false 
+  let AvoidSpikes			= false 
+  let IgnoreInjection		= false 
+  let IgnoreGas				= false 
+  let Dongle_Config			= ""
+  let eid_enabled			= false
+  let pairing_enabled    	= false
   
   let locale 				= 'nl';  // standaard
-  let translations 			= {}; //json storage translations
+//   let translations 			= {}; //json storage translations
 
 // ---- DASH
-var TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wmax;
-var hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
-var day = 0;
+let TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wmax;
+let hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
+let day = 0;
 
 //default struct for the gauge element
 // ! structuredClone can NOT copy a struct with functions
@@ -270,44 +227,15 @@ function ShowHidePV(){
 		document.getElementById('gw_url').value = "";
 	}
 }
-
-function applyTranslations() {
-  document.querySelectorAll('[data-i18n-key]').forEach(el => {
-    const key = el.getAttribute('data-i18n-key');
-    if (translations[key]) el.innerHTML = translations[key];
-  });
-}
-
-function t(key) {
-  return translations[key] || key;
-}
-
-function td(key) {
-  return t("dict_" + key);
-}
-
-function changeLanguage(lang) {
-  locale = lang;
-  localStorage.setItem('locale', lang);
-  loadTranslations(lang);
-  document.location.href="/";
-}
-
-function loadTranslations(lang) {
-  fetch( URL_I18N + `/${lang}.json` )
-    .then(response => response.json())
-    .then(json => {
-      translations = json;
-      applyTranslations();
-    })
-    .catch(err => console.error("Error fetching lang file:", err));
-}
   
 function InsightData(data){			
             const eenheden = {
                 "U1piek": "V",
                 "U2piek": "V",
                 "U3piek": "V",
+                "U1min": "V",
+                "U2min": "V",
+                "U3min": "V",
                 "I1piek": "A",
                 "I2piek": "A",
                 "I3piek": "A",
@@ -315,6 +243,9 @@ function InsightData(data){
                 "P1max": "W",
                 "P2max": "W",
                 "P3max": "W",
+                "P1min": "W",
+                "P2min": "W",
+                "P3min": "W",
                 "TU1over": "sec",
                 "TU2over": "sec",
                 "TU3over": "sec",
@@ -374,8 +305,8 @@ function SolarSendData() {
 		siteid            : parseInt(document.getElementById('siteid').value)
 	};
 
-	if ( document.getElementById('pv_enphase').checked ) var filename = "enphase.json";
-	else var filename = "solaredge.json";
+	var filename = "solaredge.json";
+	if ( document.getElementById('pv_enphase').checked ) filename = "enphase.json"
 
 	let jsonBlob = new Blob([JSON.stringify(jsonData, null, 2)], { type: "application/json" });
     let formData = new FormData();
@@ -391,67 +322,67 @@ function SolarSendData() {
 
 }
 
-function loadIcons(){
-Iconify.addCollection({
-   icons: {
-       "mdi-external-link": {
-           body: '<path d="M12 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6m-7 1l9-9m-5 0h5v5M10 6v2H5v11h11v-5h2v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6Zm11-3v8h-2V6.413l-7.793 7.794l-1.414-1.414L17.585 5H13V3h8Z" fill="currentColor"/>',
-       },
-       "mdi-folder-outline": {
-           body: '<path d="M20 18H4V8h16m0-2h-8l-2-2H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z" fill="currentColor"/>',
-       },
-       "mdi-information-outline": {
-           body: '<path d="M11 9h2V7h-2m1 13c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8m0-18A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m-1 15h2v-6h-2v6Z" fill="currentColor"/>',
-       },
-       "mdi-cog": {
-           body: '<path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" fill="currentColor"/>',
-              },
-       "mdi-gauge": {
-           body: '<path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 2a8 8 0 0 1 8 8c0 2.4-1 4.5-2.7 6c-1.4-1.3-3.3-2-5.3-2s-3.8.7-5.3 2C5 16.5 4 14.4 4 12a8 8 0 0 1 8-8m2 1.89c-.38.01-.74.26-.9.65l-1.29 3.23l-.1.23c-.71.13-1.3.6-1.57 1.26c-.41 1.03.09 2.19 1.12 2.6c1.03.41 2.19-.09 2.6-1.12c.26-.66.14-1.42-.29-1.98l.1-.26l1.29-3.21l.01-.03c.2-.51-.05-1.09-.56-1.3c-.13-.05-.26-.07-.41-.07M10 6a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1M7 9a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1m10 0a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1Z" fill="currentColor"/>',
-       },
-       "mdi-lightning-bolt": {
-           body: '<path d="M11 15H6l7-14v8h5l-7 14v-8Z" fill="currentColor"/>',
-       },       
-       "mdi-home-import-outline": {
-           body: '<path d="m15 13l-4 4v-3H2v-2h9V9l4 4M5 20v-4h2v2h10v-7.81l-5-4.5L7.21 10H4.22L12 3l10 9h-3v8H5Z" fill="currentColor"/>',
-       },       
-       "mdi-home-export-outline": {
-           body: '<path d="m24 13l-4 4v-3h-9v-2h9V9l4 4M4 20v-8H1l10-9l7 6.3v.7h-2.21L11 5.69l-5 4.5V18h10v-2h2v4H4Z" fill="currentColor"/>',
-       },  
-       "mdi-fire": {
-           body: '<path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82c-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32c-2.59 2.08-3.61 5.75-2.39 8.9c.04.1.08.2.08.33c0 .22-.15.42-.35.5c-.23.1-.47.04-.66-.12a.58.58 0 0 1-.14-.17c-1.13-1.43-1.31-3.48-.55-5.12C5.78 10 4.87 12.3 5 14.47c.06.5.12 1 .29 1.5c.14.6.41 1.2.71 1.73c1.08 1.73 2.95 2.97 4.96 3.22c2.14.27 4.43-.12 6.07-1.6c1.83-1.66 2.47-4.32 1.53-6.6l-.13-.26c-.21-.46-.77-1.26-.77-1.26m-3.16 6.3c-.28.24-.74.5-1.1.6c-1.12.4-2.24-.16-2.9-.82c1.19-.28 1.9-1.16 2.11-2.05c.17-.8-.15-1.46-.28-2.23c-.12-.74-.1-1.37.17-2.06c.19.38.39.76.63 1.06c.77 1 1.98 1.44 2.24 2.8c.04.14.06.28.06.43c.03.82-.33 1.72-.93 2.27Z" fill="currentColor"/>',
-       },         
-       "mdi-water": {
-           body: '<path d="M12 20a6 6 0 0 1-6-6c0-4 6-10.75 6-10.75S18 10 18 14a6 6 0 0 1-6 6Z" fill="currentColor"/>',
-       },         
-       "mdi-sine-wave": {
-           body: '<path d="M16.5 21c-3 0-4.19-4.24-5.45-8.72C10.14 9.04 9 5 7.5 5C4.11 5 4 11.93 4 12H2c0-.37.06-9 5.5-9c3 0 4.21 4.25 5.47 8.74C13.83 14.8 15 19 16.5 19c3.44 0 3.53-6.93 3.53-7h2c0 .37-.06 9-5.53 9Z" fill="currentColor"/>',
-       },        
-       "mdi-heat-wave": {
-           body: '<path d="m8.5 4.5l-3.1 5l3.1 5.2l-3.3 5.8l-1.8-.9l2.7-4.9L3 9.5l3.7-5.9l1.8.9m6.2-.1l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9m6.3 0l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9" fill="currentColor"/>',
-       }, 
-       "mdi-chart-box-outline": {
-           body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
-       },
-       "mdi-pulse": {
-           body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
-       },        
-	   "mdi-solar-power-variant": {
-           body: '<path d="M3.33 16H11V13H4L3.33 16M13 16H20.67L20 13H13V16M21.11 18H13V22H22L21.11 18M2 22H11V18H2.89L2 22M11 8H13V11H11V8M15.76 7.21L17.18 5.79L19.3 7.91L17.89 9.33L15.76 7.21M4.71 7.91L6.83 5.79L8.24 7.21L6.12 9.33L4.71 7.91M3 2H6V4H3V2M18 2H21V4H18V2M12 7C14.76 7 17 4.76 17 2H7C7 4.76 9.24 7 12 7Z" fill="currentColor"/>',
-       },
-	   "mdi-battery-low": {
-           body: '<path d="M16 20H8V6H16M16.67 4H15V2H9V4H7.33C6.6 4 6 4.6 6 5.33V20.67C6 21.4 6.6 22 7.33 22H16.67C17.41 22 18 21.41 18 20.67V5.33C18 4.6 17.4 4 16.67 4M15 16H9V19H15V16" />',
-       }, 
-
-	   "mdi-format-vertical-align-top": {
-           body: '<path d="M8,11H11V21H13V11H16L12,7L8,11M4,3V5H20V3H4Z" />',
-       },        
-       
-    },
-   width: 24,
-   height: 24,
-});
-}
+// function loadIcons(){
+// Iconify.addCollection({
+//    icons: {
+//        "mdi-external-link": {
+//            body: '<path d="M12 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6m-7 1l9-9m-5 0h5v5M10 6v2H5v11h11v-5h2v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6Zm11-3v8h-2V6.413l-7.793 7.794l-1.414-1.414L17.585 5H13V3h8Z" fill="currentColor"/>',
+//        },
+//        "mdi-folder-outline": {
+//            body: '<path d="M20 18H4V8h16m0-2h-8l-2-2H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z" fill="currentColor"/>',
+//        },
+//        "mdi-information-outline": {
+//            body: '<path d="M11 9h2V7h-2m1 13c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8m0-18A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m-1 15h2v-6h-2v6Z" fill="currentColor"/>',
+//        },
+//        "mdi-cog": {
+//            body: '<path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" fill="currentColor"/>',
+//               },
+//        "mdi-gauge": {
+//            body: '<path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 2a8 8 0 0 1 8 8c0 2.4-1 4.5-2.7 6c-1.4-1.3-3.3-2-5.3-2s-3.8.7-5.3 2C5 16.5 4 14.4 4 12a8 8 0 0 1 8-8m2 1.89c-.38.01-.74.26-.9.65l-1.29 3.23l-.1.23c-.71.13-1.3.6-1.57 1.26c-.41 1.03.09 2.19 1.12 2.6c1.03.41 2.19-.09 2.6-1.12c.26-.66.14-1.42-.29-1.98l.1-.26l1.29-3.21l.01-.03c.2-.51-.05-1.09-.56-1.3c-.13-.05-.26-.07-.41-.07M10 6a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1M7 9a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1m10 0a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1Z" fill="currentColor"/>',
+//        },
+//        "mdi-lightning-bolt": {
+//            body: '<path d="M11 15H6l7-14v8h5l-7 14v-8Z" fill="currentColor"/>',
+//        },       
+//        "mdi-home-import-outline": {
+//            body: '<path d="m15 13l-4 4v-3H2v-2h9V9l4 4M5 20v-4h2v2h10v-7.81l-5-4.5L7.21 10H4.22L12 3l10 9h-3v8H5Z" fill="currentColor"/>',
+//        },       
+//        "mdi-home-export-outline": {
+//            body: '<path d="m24 13l-4 4v-3h-9v-2h9V9l4 4M4 20v-8H1l10-9l7 6.3v.7h-2.21L11 5.69l-5 4.5V18h10v-2h2v4H4Z" fill="currentColor"/>',
+//        },  
+//        "mdi-fire": {
+//            body: '<path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82c-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32c-2.59 2.08-3.61 5.75-2.39 8.9c.04.1.08.2.08.33c0 .22-.15.42-.35.5c-.23.1-.47.04-.66-.12a.58.58 0 0 1-.14-.17c-1.13-1.43-1.31-3.48-.55-5.12C5.78 10 4.87 12.3 5 14.47c.06.5.12 1 .29 1.5c.14.6.41 1.2.71 1.73c1.08 1.73 2.95 2.97 4.96 3.22c2.14.27 4.43-.12 6.07-1.6c1.83-1.66 2.47-4.32 1.53-6.6l-.13-.26c-.21-.46-.77-1.26-.77-1.26m-3.16 6.3c-.28.24-.74.5-1.1.6c-1.12.4-2.24-.16-2.9-.82c1.19-.28 1.9-1.16 2.11-2.05c.17-.8-.15-1.46-.28-2.23c-.12-.74-.1-1.37.17-2.06c.19.38.39.76.63 1.06c.77 1 1.98 1.44 2.24 2.8c.04.14.06.28.06.43c.03.82-.33 1.72-.93 2.27Z" fill="currentColor"/>',
+//        },         
+//        "mdi-water": {
+//            body: '<path d="M12 20a6 6 0 0 1-6-6c0-4 6-10.75 6-10.75S18 10 18 14a6 6 0 0 1-6 6Z" fill="currentColor"/>',
+//        },         
+//        "mdi-sine-wave": {
+//            body: '<path d="M16.5 21c-3 0-4.19-4.24-5.45-8.72C10.14 9.04 9 5 7.5 5C4.11 5 4 11.93 4 12H2c0-.37.06-9 5.5-9c3 0 4.21 4.25 5.47 8.74C13.83 14.8 15 19 16.5 19c3.44 0 3.53-6.93 3.53-7h2c0 .37-.06 9-5.53 9Z" fill="currentColor"/>',
+//        },        
+//        "mdi-heat-wave": {
+//            body: '<path d="m8.5 4.5l-3.1 5l3.1 5.2l-3.3 5.8l-1.8-.9l2.7-4.9L3 9.5l3.7-5.9l1.8.9m6.2-.1l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9m6.3 0l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9" fill="currentColor"/>',
+//        }, 
+//        "mdi-chart-box-outline": {
+//            body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
+//        },
+//        "mdi-pulse": {
+//            body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
+//        },        
+// 	   "mdi-solar-power-letiant": {
+//            body: '<path d="M3.33 16H11V13H4L3.33 16M13 16H20.67L20 13H13V16M21.11 18H13V22H22L21.11 18M2 22H11V18H2.89L2 22M11 8H13V11H11V8M15.76 7.21L17.18 5.79L19.3 7.91L17.89 9.33L15.76 7.21M4.71 7.91L6.83 5.79L8.24 7.21L6.12 9.33L4.71 7.91M3 2H6V4H3V2M18 2H21V4H18V2M12 7C14.76 7 17 4.76 17 2H7C7 4.76 9.24 7 12 7Z" fill="currentColor"/>',
+//        },
+// 	   "mdi-battery-low": {
+//            body: '<path d="M16 20H8V6H16M16.67 4H15V2H9V4H7.33C6.6 4 6 4.6 6 5.33V20.67C6 21.4 6.6 22 7.33 22H16.67C17.41 22 18 21.41 18 20.67V5.33C18 4.6 17.4 4 16.67 4M15 16H9V19H15V16" />',
+//        }, 
+// 
+// 	   "mdi-format-vertical-align-top": {
+//            body: '<path d="M8,11H11V21H13V11H16L12,7L8,11M4,3V5H20V3H4Z" />',
+//        },        
+//        
+//     },
+//    width: 24,
+//    height: 24,
+// });
+// }
 
 //entry point 
 window.onload=bootsTrapMain;
@@ -496,6 +427,14 @@ window.addEventListener('hashchange', () => {
   // Handle the hash change here
 });
 
+
+//============================================================================  
+function applyShowCols(condition, tablesAndCols) {
+  tablesAndCols.forEach(([table, cols]) => {
+    cols.forEach(col => show_hide_column(table, col, condition));
+  });
+}
+
 //============================================================================  
   
 function SetOnSettings(json) {
@@ -528,26 +467,50 @@ function SetOnSettings(json) {
 	// Kolommen tonen/verbergen op basis van beschikbaarheid
 	const showCols = (table, cols, condition) => cols.forEach(col => show_hide_column(table, col, condition));
 
-	showCols('lastHoursTable',  [4], HeeftWater);
-	showCols('lastDaysTable',   [4], HeeftWater);
-	showCols('lastMonthsTable', [13, 14, 15, 16], HeeftWater);
+	applyShowCols(HeeftWater, [
+	  ['lastHoursTable', [2]],
+	  ['lastDaysTable', [4]],
+	  ['lastMonthsTable', [13, 14, 15, 16]]
+	]);
+
+// 	showCols('lastHoursTable',  [4], HeeftWater);
+// 	showCols('lastDaysTable',   [4], HeeftWater);
+// 	showCols('lastMonthsTable', [13, 14, 15, 16], HeeftWater);
 
 	if (Dongle_Config !== "p1-q") {
-		showCols('lastHoursTable',  [3], HeeftGas);
-		showCols('lastDaysTable',   [3], HeeftGas);
-		showCols('lastMonthsTable', [9, 10, 11, 12], HeeftGas);
-		showCols('lastMonthsTableCosts', [3, 8], HeeftGas);
+		applyShowCols(HeeftGas, [
+		  ['lastHoursTable', [3]],
+		  ['lastDaysTable', [3]],
+		  ['lastMonthsTable', [9,10,11,12]],
+		  ['lastMonthsTableCosts', [3,8]]
+		]);
+// 
+// 		showCols('lastHoursTable',  [3], HeeftGas);
+// 		showCols('lastDaysTable',   [3], HeeftGas);
+// 		showCols('lastMonthsTable', [9, 10, 11, 12], HeeftGas);
+// 		showCols('lastMonthsTableCosts', [3, 8], HeeftGas);
 	}
 
-	showCols('lastHoursTable',  [2], Injection);
-	showCols('lastDaysTable',   [2], Injection);
-	showCols('lastMonthsTable', [5, 6, 7, 8], Injection);
+	applyShowCols(Injection, [
+	  ['lastHoursTable', [2]],
+	  ['lastDaysTable', [2]],
+	  ['lastMonthsTable', [5, 6, 7, 8]]
+	]);
+
+// 	showCols('lastHoursTable',  [2], Injection);
+// 	showCols('lastDaysTable',   [2], Injection);
+// 	showCols('lastMonthsTable', [5, 6, 7, 8], Injection);
 
 	// Specifieke aanpassing voor p1-q dongle
 	if (Dongle_Config === "p1-q") {
-		showCols('lastHoursTable', [1], false);
-		showCols('lastDaysTable',  [1], false);
-
+// 		showCols('lastHoursTable', [1], false);
+// 		showCols('lastDaysTable',  [1], false);
+		
+		applyShowCols(false, [
+		  ['lastHoursTable', [1]],
+		  ['lastDaysTable', [1]],
+		]);
+		
 		["l1", "l3"].forEach(id => document.getElementById(id).style.display = "none");
 		document.getElementById("l8").style.display = "block";
 
@@ -557,7 +520,7 @@ function SetOnSettings(json) {
 }
 
 function UpdateAccu(){
-	var json = objDAL.getAccu();
+	let json = objDAL.getAccu();
 	"active" in json ? AccuActive=json.active : AccuActive = false;
 	console.log("AccuActive: "+ AccuActive);
 	if ( AccuActive ) {		
@@ -579,7 +542,7 @@ function UpdateAccu(){
 //============================================================================  
 function UpdateSolar(){
 
-	var json = objDAL.getSolar();
+	let json = objDAL.getSolar();
 	"active" in json ? SolarActive=json.active : SolarActive = false;
 	console.log("SolarActive: "+ SolarActive);
 	if ( SolarActive ) {		
@@ -623,7 +586,7 @@ function nrgm_getstatus(){
       .then(response => response.json())
       .then(json => {
         console.log("parsed response: "+ JSON.stringify(json));
-		var nrgstatus;
+		let nrgstatus;
         if ( "status" in json ) {
         	switch(json.status) {
 			  case 0: //_INACTIVE
@@ -686,9 +649,9 @@ function parseVersionManifest(json)
 function refreshDashboard(json){
 	setPresentationType('TAB'); //zet grafische mode uit
 	
-	var Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
+	let Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
 	//check new day = refresh
-	var DayEpochTemp = Math.floor(new Date().getTime() / 86400000.0);
+	let DayEpochTemp = Math.floor(new Date().getTime() / 86400000.0);
 	if (DayEpoch != DayEpochTemp || hist_arrP.length < 4 ) {
 		if ( EnableHist ) refreshHistData("Days"); //load data first visit
 		DayEpoch = DayEpochTemp;
@@ -758,7 +721,7 @@ function refreshDashboard(json){
 		}
 		//-------ACTUAL
 		//afname of teruglevering bepalen en signaleren
-		var TotalKW	= json.power_delivered.value - json.power_returned.value;
+		let TotalKW	= json.power_delivered.value - json.power_returned.value;
 
 		if ( TotalKW <= 0 ) { 
 // 			TotalKW = -1.0 * json.power_returned.value;
@@ -890,7 +853,7 @@ function UpdateDash()
 //bereken verschillen gas, afname, teruglevering en totaal
 function calculateDifferences(curval, hist_arr, factor)
 {
-  var out = []  
+  let out = []  
   for(let i=0; i<3; i++)
   {
     if (i==0) 
@@ -905,60 +868,14 @@ function calculateDifferences(curval, hist_arr, factor)
 //update dataset and update gauge 
 function updateGaugeTrend(objGauge, arr)
 {
-  var nMax = math.max(arr);
+  let nMax = math.max(arr);
   for(let i=0; i<3; i++){
     objGauge.data.datasets[i].data = [ Number(arr[i]).toFixed(1), Number(nMax-arr[i]).toFixed(1) ];
   }
   objGauge.update();
 }
 	
-//============================================================================      
-// function menu() {
-//   var x = document.getElementById("myTopnav");
-//   if (x.className === "main-navigation") {
-//     x.className += " responsive";
-//     
-//   } else {
-//     x.className = "main-navigation";
-//   }
-// //change menu icon
-//     var menu = document.getElementById("menuid");
-// 	menu.classList.toggle("mdi-close");
-// 	menu.classList.toggle("mdi-menu");
-// }
-   
-// attach an onclick handler for all menuitems
-function handle_menu_click()
-{	
-	var btns = document.getElementsByClassName("nav-item");
-	for (let i = 0; i < btns.length; i++) {
-  		btns[i].addEventListener("click", function() {
-			//reset hamburger menu icon
-			var menu = document.getElementById("menuid");
-			menu.classList.remove("mdi-close");
-			menu.classList.add("mdi-menu");
-	
-			//remove active classes
-			let current = document.getElementById("myTopnav").getElementsByClassName("active");	
-			for (let j=current.length-1; j>=0; j--) {
-	// 					console.log("remove active ["+j+"] current:"+current[j]);
-				current[j].classList.remove("active");
-		}
-		//add new active classes
-			var closest = this.closest("ul");
-			if (closest && !closest.previousElementSibling.classList.contains("active","topcorner","mdi")) {
-				console.log("contains: subnav, closest:" +closest.className);
-				closest.previousElementSibling.classList.add("active");
-			}
-			if(!this.classList.contains("active","nav-img")) 
-			this.classList.add("active");
 
-			activeTab = this.id;
-			//console.log("ActiveID - " + activeTab );
-// 			openTab();  		
-  		});
-	}
-}
 
 //create all chart-based gauges
 function createDashboardGauges()
@@ -999,22 +916,12 @@ function bootsTrapMain()
 	FrontendConfig();
 	
 	//init DAL
-	objDAL = new dsmr_dal_main();
-	objDAL.setCallback(updateFromDAL);
-	objDAL.init();
+	initDAL(updateFromDAL);
 
     setMonthTableType();
     openTab();
     initActualGraph();
     setPresentationType('TAB');
-
-// 	objDAL.refreshFields();
-
-	//after loading ... flow the #target url just for FSExplorer
-// 	console.log("location-hash: " + location.hash );
-// 	console.log("location-pathname: " + location.pathname );
-// 	console.log("location-msg: " + location.hash.split('msg=')[1]);
-// 	console.log("location-hash-split: " + location.hash.split('#')[1].split('?')[0]);
 	
   //goto tab after reload FSExplorer
   	if ( location.hash ) {
@@ -1055,8 +962,8 @@ function bootsTrapMain()
   function handleRedirect(){
 	console.log("location-handle: " + location.hash.split('msg=')[1]);
 	//close all sections
-   	var elements = document.getElementsByClassName("tabName");
-    for (var i = 0; i < elements.length; i++){
+   	let elements = document.getElementsByClassName("tabName");
+    for (let i = 0; i < elements.length; i++){
         elements[i].style.display = "none";
     }
     //open only redirect section
@@ -1068,8 +975,8 @@ function bootsTrapMain()
    	else if (location.hash.split('msg=')[1] == "Update"){  document.getElementById("RedirectMessage").innerHTML = "Het systeem wordt vernieuwd en daarna opnieuw gestart";} 
 
 	setInterval(function() {
-		var div = document.querySelector('#counter');
-		var count = div.textContent * 1 - 1;
+		let div = document.querySelector('#counter');
+		let count = div.textContent * 1 - 1;
 		div.textContent = count;
 		if (count <= 0) {
 			window.location.replace("/");
@@ -1089,8 +996,8 @@ function bootsTrapMain()
   //============================================================================  
   // shows or hide table column v1
   function show_hide_column(table, col_no, do_show) {
-   var tbl = document.getElementById(table);
-   var col = tbl.getElementsByTagName('col')[col_no];
+   let tbl = document.getElementById(table);
+   let col = tbl.getElementsByTagName('col')[col_no];
    if (col) {
      col.style.visibility=do_show?"":"collapse";
    }
@@ -1100,11 +1007,11 @@ function bootsTrapMain()
 // show or hides table column v2
 function show_hide_column2(table, col_no, do_show) {
 
-    var tbl  = document.getElementById(table);
-    var rows = tbl.getElementsByTagName('tr');
+    let tbl  = document.getElementById(table);
+    let rows = tbl.getElementsByTagName('tr');
 // 	console.log("rows: " + rows.length);
-      var cels, header;
-    for (var row=0; row<rows.length;row++) {
+      let cels, header;
+    for (let row=0; row<rows.length;row++) {
       if ( document.getElementById('mCOST').checked ) { 
       	header = 0; 
       	if (row == rows.length-1) continue;
@@ -1291,7 +1198,7 @@ function SendNetSwitchJson() {
 	 }).then(function (json) {
 	
 	//clear previous content	 
-	 var list = document.getElementById("FSmain");
+	 let list = document.getElementById("FSmain");
 	 while (list.hasChildNodes()) {  
 	   list.removeChild(list.firstChild);
 	 }
@@ -1326,14 +1233,14 @@ function SendNetSwitchJson() {
       //format filesize
 		  let nBytes = document.getElementById('Ifile').files[0].size;
       let output = `${nBytes} Byte`;
-		  for (var aMultiples = [
+		  for (let aMultiples = [
 			 ' KB',
 			 ' MB'
 			], i = 0, nApprox = nBytes / 1024; nApprox > 1; nApprox /= 1024, i++) {
 			  output = nApprox.toFixed(2) + aMultiples[i];
 			}
 
-      var fUpload = true;
+      let fUpload = true;
       //check freespace
 			if (nBytes > free) {
 			  fileSize.innerHTML = `<p><small> File size: ${output}</small><strong style="color: red;"> not enough space! </strong><p>`;
@@ -1370,10 +1277,17 @@ function parseDeviceInfo(obj) {
   const manifest = objDAL.version_manifest;
   if (manifest.version) {
     const row = tableRef.insertRow(-1);
-    row.insertCell(0).innerHTML = td("latest_fwversion");
+    row.insertCell(0).innerHTML = t("lbl-latest-fwversion");
     row.insertCell(1).innerHTML = manifest.version;
-    row.insertCell(2); // update later
+    row.insertCell(2).innerHTML = `<a style='color:red' onclick='RemoteUpdate("public")' href='#'>${t('lbl-install')}</a>`;
     console.log("last version:", manifest.major * 10000 + manifest.minor * 100);
+  }
+  
+    if (manifest.beta) {
+    const row = tableRef.insertRow(-1);
+    row.insertCell(0).innerHTML = t("lbl-beta-fwversion");
+    row.insertCell(1).innerHTML = manifest.beta;
+    row.insertCell(2).innerHTML = `<a style='color:red' onclick='RemoteUpdate("beta")' href='#'>${t('lbl-install')}</a>`;
   }
 
   // add dev info
@@ -1408,10 +1322,10 @@ function parseDeviceInfo(obj) {
   // check for update
   if (manifest.version) {
     const latest = manifest.major * 10000 + manifest.minor * 100 + manifest.fix;
-    const updateCell = tableRef.rows[0].cells[2];
-    updateCell.innerHTML = (firmwareVersion < latest)
-      ? `<a style='color:red' onclick='RemoteUpdate()' href='#'>${t('lbl-click-update')}</a>`
-      : td("latest_version");
+//     const updateCell = tableRef.rows[0].cells[2];
+//     updateCell.innerHTML = (firmwareVersion < latest)
+//       ? `<a style='color:red' onclick='RemoteUpdate()' href='#'>${t('lbl-click-update')}</a>`
+//       : td("latest_version");
   }
 }
     
@@ -1441,8 +1355,9 @@ function UpdateStart( msg ){
 	}
 }
         
-function RemoteUpdate() {        
-	document.location.href = "/remote-update?version=" + objDAL.version_manifest.version;
+function RemoteUpdate(type) {        
+	if ( type == "beta") document.location.href = "/remote-update?version=" + objDAL.version_manifest.beta;
+	else document.location.href = "/remote-update?version=" + objDAL.version_manifest.version;
 }
 
 function updateProgress() {
@@ -1496,18 +1411,18 @@ function checkESPOnline() {
           "IgnoreGas" in json ? IgnoreGas = json.IgnoreGas : IgnoreGas = false;
 // 		  "i18n" in json ? setLocale(json.i18n) : setLocale("nl");
 
-          for (var item in data) 
+          for (let item in data) 
           {
 //           	console.log("config item: " +item);
 //           	console.log("config data[item].value: " +data[item].value);
-            var tableRef = document.getElementById('frontendTable').getElementsByTagName('tbody')[0];
+            let tableRef = document.getElementById('frontendTable').getElementsByTagName('tbody')[0];
             if( ( document.getElementById("frontendTable_"+item)) == null )
             {
-              var newRow   = tableRef.insertRow();
+              let newRow   = tableRef.insertRow();
               newRow.setAttribute("id", "frontendTable_"+item, 0);
               // Insert a cell in the row at index 0
-              var newCell  = newRow.insertCell(0);                  // name
-              var newText  = document.createTextNode('');
+              let newCell  = newRow.insertCell(0);                  // name
+              let newText  = document.createTextNode('');
               newCell.appendChild(newText);
               newCell  = newRow.insertCell(1);                      // humanName
               newCell.appendChild(newText);
@@ -1545,7 +1460,7 @@ function checkESPOnline() {
     if (presentationType == "TAB")
       showActualTable(json);
     else{
-      var hist = objDAL.getActualHistory();  
+      let hist = objDAL.getActualHistory();  
       copyActualHistoryToChart(hist);
       showActualGraph();
     }  
@@ -1555,8 +1470,8 @@ function checkESPOnline() {
 // input = "4530303433303036393938313736353137"
 // output = "E0043006998176517"
 function formatIdentifier(value) {
-  var sTotal = "";
-  for (var pos = 0; pos < value.length; pos += 2) {
+  let sTotal = "";
+  for (let pos = 0; pos < value.length; pos += 2) {
     nVal = parseInt(value.substring(pos, pos + 2), 16);
     sTotal += String.fromCharCode(nVal);
   }
@@ -1583,16 +1498,16 @@ function formatTimestamp(value) {
 //input= ""
 //output = ""
 function parseFailureLog(value) {
-  var failures = [];
+  let failures = [];
   //remove start '(' and end ')'
-  var v = value.slice(1, -1);
-  var items = v.split(")(");
-  var count = items[0];
-  var id = items[1]; //not used for now
-  for (var i = 0; i < count; i++) {
-    var timestamp = items[2 + (i * 2)];
-    var duration = items[3 + (i * 2)];
-    var failure = { 'timestamp': timestamp, 'duration': duration };
+  let v = value.slice(1, -1);
+  let items = v.split(")(");
+  let count = items[0];
+  let id = items[1]; //not used for now
+  for (let i = 0; i < count; i++) {
+    let timestamp = items[2 + (i * 2)];
+    let duration = items[3 + (i * 2)];
+    let failure = { 'timestamp': timestamp, 'duration': duration };
     failures.push(failure);
   }
   return failures;
@@ -1602,9 +1517,9 @@ function parseFailureLog(value) {
 //input: 3600
 //output: 1 hours
 function formatDuration(value) {
-  var t = "";
-  var sMIN = value / 60;
-  var sHRS = value / 3600;
+  let t = "";
+  let sMIN = value / 60;
+  let sHRS = value / 3600;
   if (Math.floor(sHRS) == 0) {
     if (Math.floor(sMIN) == 0) {
       t = value + " sec";
@@ -1627,7 +1542,7 @@ function formatDuration(value) {
   restored on 2022-12-24 03:36:26 (dst=off) after 4.46 hours downtime.
 */
 function formatFailureLog(svalue) {
-  var t = "";
+  let t = "";
   failures = parseFailureLog(svalue);
   for (pos in failures) {
     failure = failures[pos];
@@ -1643,22 +1558,22 @@ function formatFailureLog(svalue) {
   function parseSmFields(data)
   {
     //console.log("parsed .., fields is ["+ JSON.stringify(data)+"]");
-    for (var item in data) 
+    for (let item in data) 
     {
       console.log("fields item: " +item);
       console.log("fields data[item].value: " +data[item].value);
 
       data[item].humanName = td(item);
       //get tableref
-      var tableRef = document.getElementById('fieldsTable').getElementsByTagName('tbody')[0];
+      let tableRef = document.getElementById('fieldsTable').getElementsByTagName('tbody')[0];
       //create row if not exist
       if( ( document.getElementById("fieldsTable_"+item)) == null )
       {
-        var newRow   = tableRef.insertRow();
+        let newRow   = tableRef.insertRow();
         newRow.setAttribute("id", "fieldsTable_"+item, 0);
         // Insert a cell in the row at index 0
-        var newCell  = newRow.insertCell(0);                  // name
-        var newText  = document.createTextNode('');
+        let newCell  = newRow.insertCell(0);                  // name
+        let newText  = document.createTextNode('');
         newCell.appendChild(newText);
         newCell  = newRow.insertCell(1);                      // humanName
         newCell.appendChild(newText);
@@ -1720,14 +1635,14 @@ function formatFailureLog(svalue) {
   //calculate the diffs, sums and costs per entry
   function expandData(data)
   {
-    var i;
-    var slotbefore;
+    let i;
+    let slotbefore;
     for (let x=data.data.length + data.actSlot; x > data.actSlot; x--)
     {
       i = x % data.data.length;
       slotbefore = math.mod(i-1, data.data.length);
-      var costsED = 0;
-      var costsER = 0;
+      let costsED = 0;
+      let costsER = 0;
       if ( x != data.actSlot 	)
       {
         //avoid gaps and spikes
@@ -1797,7 +1712,7 @@ function formatFailureLog(svalue) {
   //limit every value in the array to n decimals
   //toFixed() will convert all into strings, so also add  convertion back to Number
   function applyArrayFixedDecimals(data, decimals){
-    for( var i=0; i<data.length; i++){
+    for( let i=0; i<data.length; i++){
       if( !isNaN(data[i]) ) data[i] = Number(data[i].toFixed(decimals));
     }
   }
@@ -1853,8 +1768,6 @@ function refreshHistData(type) {
 	}
 }
 
-
-    
 function CopyTelegram(){
   const element = document.getElementById("TelData");
   if (!element) return;
@@ -1885,7 +1798,7 @@ function CopyTelegram(){
   //format a value based on the locale of the client
   function formatValue(value)
   {
-    var t="";
+    let t="";
     if (!isNaN(value) ) 
       t = Number(value).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} );
     else 
@@ -1900,15 +1813,15 @@ function CopyTelegram(){
 
     console.log("showActual()");
 
-    for (var item in data) 
+    for (let item in data) 
     {
       //skip if dongle=Q
      	if ( (item == "gas_delivered_timestamp") && (Dongle_Config == "p1-q") ) continue;
     	
       //ensure tablerow exists
       data[item].humanName = td(item);
-      var tableRef = document.getElementById('actualTable').getElementsByTagName('tbody')[0];
-      var itemid = "actualTable_"+item;
+      let tableRef = document.getElementById('actualTable').getElementsByTagName('tbody')[0];
+      let itemid = "actualTable_"+item;
       if( ( document.getElementById(itemid)) == null )
       {
         createTableRowWithCells(tableRef, itemid, 3, '');
@@ -1956,28 +1869,28 @@ function CopyTelegram(){
   { 
     console.log("showHistTable("+type+")");
     // the last element has the metervalue, so skip it
-    var stop = data.actSlot + 1;
-    var start = data.data.length + data.actSlot ;
-    var index;
+    let stop = data.actSlot + 1;
+    let start = data.data.length + data.actSlot ;
+    let index;
     	//console.log("showHistTable start: "+start);
     	//console.log("showHistTable stop: "+stop);
-    var tableRef = document.getElementById('last'+type+'Table');
+    let tableRef = document.getElementById('last'+type+'Table');
 	tableRef.getElementsByTagName('tbody')[0].innerHTML = ''; //clear tbody content
 
     
     for (let i=start; i>stop; i--)
     {  
       index = i % data.data.length;
-      var tref = tableRef.getElementsByTagName('tbody')[0];
-      var itemid = type+"Table_"+type+"_R"+index;
-      var nCells = 5;
+      let tref = tableRef.getElementsByTagName('tbody')[0];
+      let itemid = type+"Table_"+type+"_R"+index;
+      let nCells = 5;
       if (type == "Days") nCells += 1;
       createTableRowWithCells( tref, itemid, nCells, '-');
 
         /*
         newRow.setAttribute("id", itemid, 0);
-        var newCell  = newRow.insertCell(0);
-        var newText  = document.createTextNode('-');
+        let newCell  = newRow.insertCell(0);
+        let newText  = document.createTextNode('-');
         newCell.appendChild(newText);
         newCell  = newRow.insertCell(1);
         newCell.appendChild(newText);
@@ -2029,20 +1942,20 @@ function CopyTelegram(){
     	return;
     }
     
-    var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
-    var stop = start - 12;
-    var i;
-    var slotyearbefore = 0;
+    let start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
+    let stop = start - 12;
+    let i;
+    let slotyearbefore = 0;
   
     for (let index=start; index>stop; index--)
     {  i = index % data.data.length;
       	slotyearbefore = math.mod(i-12,data.data.length);
-      var tableRef = document.getElementById('lastMonthsTable').getElementsByTagName('tbody')[0];
+      let tableRef = document.getElementById('lastMonthsTable').getElementsByTagName('tbody')[0];
       if( ( document.getElementById("lastMonthsTable_R"+i)) == null )
       {
         createTableRowWithCells(tableRef, "lastMonthsTable_R"+i, 17, '-' );
       }
-      var mmNr = parseInt(data.data[i].date.substring(2,4), 10);
+      let mmNr = parseInt(data.data[i].date.substring(2,4), 10);
 
       tableCells = document.getElementById("lastMonthsTable_R"+i).cells;
       //fill with default values
@@ -2095,8 +2008,8 @@ function CopyTelegram(){
 		show_hide_column2('lastMonthsTable', 15,false);
 		show_hide_column2('lastMonthsTable', 16,false);
 		
-		var tbl  = document.getElementById('lastMonthsTable');
-    	var rows = tbl.getElementsByTagName('tr');
+		let tbl  = document.getElementById('lastMonthsTable');
+    	let rows = tbl.getElementsByTagName('tr');
 		rows[0].style.display = "none";
 	}	
     document.getElementById("lastMonths").style.display = "block";
@@ -2105,12 +2018,12 @@ function CopyTelegram(){
 
   function createTableRowWithCells(tableRef, itemid, cellcount, content)
   {
-    var newText  = document.createTextNode(content);
-    var newRow   = tableRef.insertRow();
+    let newText  = document.createTextNode(content);
+    let newRow   = tableRef.insertRow();
     newRow.setAttribute("id", itemid, 0);
-    for( var i=0; i<cellcount; i++)
+    for( let i=0; i<cellcount; i++)
     {
-      var newCell  = newRow.insertCell(i);
+      let newCell  = newRow.insertCell(i);
       newCell.appendChild(newText);
     }
   }
@@ -2124,26 +2037,26 @@ function CopyTelegram(){
   function showMonthsCosts(data)
   { 
     console.log("now in showMonthsCosts() ..");
-    var totalCost   = 0;
-    var totalCost_1 = 0;
-    var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
-    var stop = start - 12;
-    var i;
-    var slotyearbefore = 0;
+    let totalCost   = 0;
+    let totalCost_1 = 0;
+    let start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
+    let stop = start - 12;
+    let i;
+    let slotyearbefore = 0;
   
     for (let index=start; index>stop; index--)
     {  i = index % data.data.length;
       	slotyearbefore = math.mod(i-12,data.data.length);
       //console.log("showMonthsHist(): data["+i+"] => data["+i+"].name["+data[i].recid+"]");
-      var tableRef = document.getElementById('lastMonthsTableCosts').getElementsByTagName('tbody')[0];
+      let tableRef = document.getElementById('lastMonthsTableCosts').getElementsByTagName('tbody')[0];
 
       //ensure tablerow exists
-      var itemid = "lastMonthsTableCosts_R"+i;
+      let itemid = "lastMonthsTableCosts_R"+i;
       if( ( document.getElementById(itemid)) == null )
       {
         createTableRowWithCells(tableRef, itemid, 11, '-');       
       }
-      var mmNr = parseInt(data.data[i].date.substring(2,4), 10);
+      let mmNr = parseInt(data.data[i].date.substring(2,4), 10);
 
       //get ref to cells
       tableCells = document.getElementById(itemid).cells;
@@ -2186,11 +2099,11 @@ function CopyTelegram(){
 
     if( ( document.getElementById("periodicCosts")) == null )
     {
-      var newRow   = tableRef.insertRow();                                // voorschot regel
+      let newRow   = tableRef.insertRow();                                // voorschot regel
       newRow.setAttribute("id", "periodicCosts", 0);
       // Insert a cell in the row at index 0
-      var newCell  = newRow.insertCell(0);                                // maand
-      var newText  = document.createTextNode('-');
+      let newCell  = newRow.insertCell(0);                                // maand
+      let newText  = document.createTextNode('-');
       newCell.appendChild(newText);
       newCell  = newRow.insertCell(1);              // description
       if ( Dongle_Config == "p1-q" ) newCell.setAttribute("colSpan", "3");
@@ -2242,7 +2155,7 @@ function CopyTelegram(){
   //============================================================================  
   function ParseDevSettings()
   { 
-		var json = objDAL.getDeviceSettings();
+		let json = objDAL.getDeviceSettings();
 		if ( json == "" ) return;
         console.log("ParseDevSettings: parsed .., data is ["+ JSON.stringify(json)+"]");
         "ed_tariff1" in json ? ed_tariff1 = json.ed_tariff1.value : ed_tariff1 = 0;
@@ -2347,24 +2260,24 @@ function CopyTelegram(){
 	{
 	  if ( i == "conf") continue;
 	  console.log("["+i+"]=>["+data[i].value+"]");
-	  var settings = document.getElementById('settings_table');
+	  let settings = document.getElementById('settings_table');
 	  if( ( document.getElementById("settingR_"+i)) == null )
 	  {
 	   
-		var rowDiv = document.createElement("div");
+		let rowDiv = document.createElement("div");
 		rowDiv.setAttribute("class", "settingDiv");
 		rowDiv.setAttribute("id", "settingR_"+i);
 		//--- field Name ---
-		  var fldDiv = document.createElement("div");
+		  let fldDiv = document.createElement("div");
 			  if ( (i == "gd_tariff") && (Dongle_Config == "p1-q") ) fldDiv.textContent = "Warmte tarief (GJ)";
 			  else if ( i == "gas_netw_costs") fldDiv.textContent = "Netwerkkosten Gas/maand";
 			  else fldDiv.textContent = td(i);
 			  rowDiv.appendChild(fldDiv);
 		//--- input ---
-		  var inputDiv = document.createElement("div");
+		  let inputDiv = document.createElement("div");
 			  inputDiv.setAttribute("class", "settings-right");
 
-				var sInput = document.createElement("INPUT");
+				let sInput = document.createElement("INPUT");
 				sInput.setAttribute("id", "setFld_"+i);
 				if ( data[i].type === undefined ) {
 					sInput.setAttribute("type", "checkbox");
@@ -2456,7 +2369,7 @@ function CopyTelegram(){
 
 	em.innerHTML = "";
 	
-    var dlength = data.data.length;
+    let dlength = data.data.length;
     console.log("Now fill the DOM!");    
     console.log("data.data.length: " + dlength);
   
@@ -2468,15 +2381,15 @@ function CopyTelegram(){
       if( ( document.getElementById("em_R"+i)) == null )
       {
 		console.log("==null");
-        var div1 = document.createElement("div");
+        let div1 = document.createElement("div");
             div1.setAttribute("class", "settingDiv");
             div1.setAttribute("id", "em_R"+i);
             if (i == (data.data.length -1))  // last row
             {
             }
-            var span2 = document.createElement("span");
+            let span2 = document.createElement("span");
               //--- create input for EEYY
-              var sInput = document.createElement("INPUT");
+              let sInput = document.createElement("INPUT");
               sInput.setAttribute("id", "em_YY_"+i);
               sInput.setAttribute("class", "tab_editMonth");
               sInput.setAttribute("type", "number");
@@ -2487,7 +2400,7 @@ function CopyTelegram(){
                       function() { setNewValue(i, "EEYY", "em_YY_"+i); }, false);
               span2.appendChild(sInput);
               //--- create input for months
-              var sInput = document.createElement("INPUT");
+              sInput = document.createElement("INPUT");
               sInput.setAttribute("id", "em_MM_"+i);
               sInput.setAttribute("class", "tab_editMonth");
               sInput.setAttribute("type", "number");
@@ -2525,7 +2438,7 @@ function CopyTelegram(){
               if (type == "ED")
               {
                 //console.log("add input for edt2..");
-                var sInput = document.createElement("INPUT");
+                let sInput = document.createElement("INPUT");
                 sInput.setAttribute("id", "em_in2_"+i);
                 sInput.setAttribute("class", "tab_editMonth");        
                 sInput.setAttribute("type", "number");
@@ -2537,7 +2450,7 @@ function CopyTelegram(){
               else if (type == "ER")
               {
                 //console.log("add input for ert2..");
-                var sInput = document.createElement("INPUT");
+                let sInput = document.createElement("INPUT");
                 sInput.setAttribute("id", "em_in2_"+i);
               sInput.setAttribute("class", "tab_editMonth");
                 sInput.setAttribute("type", "number");
@@ -2583,7 +2496,7 @@ function CopyTelegram(){
     //--- sequence EEYY and MM data
 // 	console.log("actslot: " + data.actSlot);
 
-    var changed = false;
+    let changed = false;
     for (let index=data.actSlot+dlength; index>data.actSlot; index--)
     {  let i = index % dlength;
        let next = math.mod(i-1,dlength);
@@ -2647,12 +2560,12 @@ function CopyTelegram(){
   //============================================================================  
   function saveSettings() 
   {
-    for( var i in objDAL.dev_settings )
+    for( let i in objDAL.dev_settings )
     {
 	  if ( i == "conf" || document.getElementById("setFld_"+i ) == undefined ) continue;
 	  
-	  var fldId  = i;
-      var newVal = document.getElementById("setFld_"+fldId).value;
+	  let fldId  = i;
+      let newVal = document.getElementById("setFld_"+fldId).value;
 	  if ( objDAL.dev_settings[i].value === undefined ) {
 	     newVal = document.getElementById("setFld_"+fldId).checked;
 	     if (objDAL.dev_settings[i] != newVal) {
@@ -2688,7 +2601,7 @@ function CopyTelegram(){
       return;
     }
     **/
-    var data = objDAL.getMonths();
+    let data = objDAL.getMonths();
 //     console.log(data.data);
     //--- has anything changed?
     for (i in data.data)
@@ -2968,13 +2881,13 @@ function CopyTelegram(){
   function validateNumber(field) {
     console.log("validateNumber(): ["+field+"]");
     if (field == "EDT1" || field == "EDT2" || field == "ERT1" || field == "ERT2" || field == "GAS") {
-      var pattern = /^\d{1,1}(\.\d{1,5})?$/;
-      var max = 1.99999;
+      let pattern = /^\d{1,1}(\.\d{1,5})?$/;
+      let max = 1.99999;
     } else {
-      var pattern = /^\d{1,2}(\.\d{1,2})?$/;
-      var max = 99.99;
+      let pattern = /^\d{1,2}(\.\d{1,2})?$/;
+      let max = 99.99;
     }
-    var newVal = document.getElementById(field).value;
+    let newVal = document.getElementById(field).value;
     newVal = newVal.replace( /[^0-9.]/g, '' );
     if (!pattern.test(newVal)) {
       document.getElementById(field).style.color = 'orange';
@@ -3015,10 +2928,10 @@ function CopyTelegram(){
   //============================================================================  
   function recidToEpoch(dateIn) 
   {
-    var YY = "20"+dateIn.substring(0,2);
+    let YY = "20"+dateIn.substring(0,2);
     console.log("["+YY+"]["+(dateIn.substring(2,4)-1)+"]["+dateIn.substring(4,6)+"]");
     //-------------------YY-------------------(MM-1)----------------------DD---------------------HH--MM--SS
-    var epoch = Date.UTC(YY, (dateIn.substring(2,4)-1), dateIn.substring(4,6), dateIn.substring(6,8), 1, 1);
+    let epoch = Date.UTC(YY, (dateIn.substring(2,4)-1), dateIn.substring(4,6), dateIn.substring(6,8), 1, 1);
     //console.log("epoch is ["+epoch+"]");
 
     return epoch;
@@ -3029,9 +2942,9 @@ function CopyTelegram(){
   //============================================================================  
   function recidToWeekday(dateIn)
   {
-    var YY = "20"+dateIn.substring(0,2);
+    let YY = "20"+dateIn.substring(0,2);
     //-------------------YY-------------------(MM-1)----------------------DD---------------------HH--MM--SS
-    var dt = new Date(Date.UTC(YY, (dateIn.substring(2,4)-1), dateIn.substring(4,6), 1, 1, 1));
+    let dt = new Date(Date.UTC(YY, (dateIn.substring(2,4)-1), dateIn.substring(4,6), 1, 1, 1));
 
     return dt.toLocaleDateString(locale, {weekday: 'long'});
     
@@ -3041,31 +2954,96 @@ function CopyTelegram(){
   //============================================================================  
   function round(value, precision) 
   {
-    var multiplier = Math.pow(10, precision || 0);
+    let multiplier = Math.pow(10, precision || 0);
     return Math.round(value * multiplier) / multiplier;
   }
-  
-/*
-***************************************************************************
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to permit
-* persons to whom the Software is furnished to do so, subject to the
-* following conditions:
-*
-* The above copyright notice and this permission notice shall be included
-* in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
-* THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-* 
-***************************************************************************
-*/
+
+//================ NAV.json
+
+function menu() {
+  let x = document.getElementById("myTopnav");
+  if (x.className === "main-navigation") {
+    x.className += " responsive";
+    
+  } else {
+    x.className = "main-navigation";
+  }
+//change menu icon
+    let menu = document.getElementById("menuid");
+	menu.classList.toggle("mdi-close");
+	menu.classList.toggle("mdi-menu");
+}
+   
+//============================================================================         
+// attach an onclick handler for all menuitems
+function handle_menu_click()
+{	
+	let btns = document.getElementsByClassName("nav-item");
+	for (let i = 0; i < btns.length; i++) {
+  		btns[i].addEventListener("click", function() {
+			//reset hamburger menu icon
+			let menu = document.getElementById("menuid");
+			menu.classList.remove("mdi-close");
+			menu.classList.add("mdi-menu");
+	
+			//remove active classes
+			let current = document.getElementById("myTopnav").getElementsByClassName("active");	
+			for (let j=current.length-1; j>=0; j--) {
+	// 					console.log("remove active ["+j+"] current:"+current[j]);
+				current[j].classList.remove("active");
+		}
+		//add new active classes
+			let closest = this.closest("ul");
+			if (closest && !closest.previousElementSibling.classList.contains("active","topcorner","mdi")) {
+				console.log("contains: subnav, closest:" +closest.className);
+				closest.previousElementSibling.classList.add("active");
+			}
+			if(!this.classList.contains("active","nav-img")) 
+			this.classList.add("active");
+
+			activeTab = this.id;
+			//console.log("ActiveID - " + activeTab );
+// 			openTab();  		
+  		});
+	}
+}
+
+//====== I18N.JS ====
+
+let translations = {};
+const URL_I18N = typeof DEBUG !== 'undefined' && DEBUG
+  ? "http://localhost/~martijn/dsmr-api/v5/lang"
+  : "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/cdn/lang";
+
+function t(key) {
+  return translations[key] || key;
+}
+
+function td(key) {
+  return t("dict_" + key);
+}
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n-key]').forEach(el => {
+    const key = el.getAttribute('data-i18n-key');
+    if (translations[key]) el.innerHTML = translations[key];
+  });
+}
+
+function changeLanguage(lang) {
+  locale = lang;
+  localStorage.setItem('locale', lang);
+  loadTranslations(lang);
+  document.location.href="/";
+}
+
+function loadTranslations(lang) {
+	console.log(URL_I18N + `/${lang}.json`);
+  fetch( URL_I18N + `/${lang}.json` )
+    .then(response => response.json())
+    .then(json => {
+      translations = json;
+      applyTranslations();
+    })
+    .catch(err => console.error("Error fetching lang file:", err));
+}

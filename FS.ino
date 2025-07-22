@@ -83,7 +83,7 @@ void eraseFile()
     (char)TelnetStream.read();
   }
 
-  Debug("Enter filename to erase: ");
+  TelnetStream.print("Enter filename to erase: ");
   TelnetStream.setTimeout(10000);
   TelnetStream.readBytesUntil('\n', eName, sizeof(eName)); 
   TelnetStream.setTimeout(1000);
@@ -100,12 +100,12 @@ void eraseFile()
 
   if (LittleFS.exists(eName))
   {
-    Debugf("\r\nErasing [%s] from FS\r\n\n", eName);
+    TelnetStream.printf("\r\nErasing [%s] from FS\r\n\n", eName);
     LittleFS.remove(eName);
   }
   else
   {
-    Debugf("\r\nfile [%s] not found..\r\n\n", eName);
+    TelnetStream.printf("\r\nfile [%s] not found..\r\n\n", eName);
   }
   //--- empty buffer ---
   while (TelnetStream.available() > 0) 

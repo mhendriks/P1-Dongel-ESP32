@@ -13,7 +13,6 @@ BACKLOG
 - SSE of websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
-- #18 water en gas ook in de enkele json string (mqtt)
 - grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
 - Consistentie tijd-assen, links oud, rechts nieuw
   - in Actueel staat de laatste meting rechts en de oudste meting links
@@ -31,8 +30,16 @@ BACKLOG
 - Daily Insights: Inzichten vanaf opstarten dongle / 00:00 reset
     - loadbalancing over de fases heen
     - detail P per fase afgelopen uur (sample eens per 10s)
-- uptime share with mqtt
 - kwartierpiek historie opnemen (wanneer nieuwe piek ontstaat)
+- dynamische prijzen inlezen
+
+V6
+- mqtt 1 data and 1 vital json (with uptime)
+- HA mqtt autodiscovery for the new format
+- async webserver 
+- RNGDays 31 days
+- autodetect v2 meters
+- connect via proxy to dongle
 
 Default checks
 - wifi
@@ -43,10 +50,6 @@ Default checks
 - dev_pairing
 - ethernet
 - 4h test
-
-4.15.6
-- FE: mobile menu fix
-- 
 
 next
 - improvement: modbus in own process = non-blocking 
@@ -212,6 +215,8 @@ void fP1Reader( void * pvParameters ){
     esp_task_wdt_reset();
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+  LogFile("P1 reader: unexpected task exit", true);
+  vTaskDelete(NULL);
 }
 
 void fMqtt( void * pvParameters ){
@@ -226,7 +231,9 @@ void fMqtt( void * pvParameters ){
     esp_task_wdt_reset();
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
-#endif      
+#endif
+  LogFile("Mqtt: unexpected task exit", true);
+  vTaskDelete(NULL);
 }
 
 void loop () { 

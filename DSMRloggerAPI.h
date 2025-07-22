@@ -130,7 +130,6 @@ uint8_t     Vcount = 0;
 
 const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, (14+1)*(DATA_RECLEN)+DATA_CLOSE+JSON_HEADER_LEN-1 },{"/RNGmonths.json",24+1,0,2474}}; //+1 voor de vergelijking, laatste record wordt niet getoond 
 
-#include "Debug.h"
 
   /**
   * Define the DSMRdata we're interested in, as well as the DSMRdatastructure to
@@ -300,6 +299,9 @@ struct stats{
   uint32_t U1piek = 0;
   uint32_t U2piek = 0;
   uint32_t U3piek = 0;
+  uint32_t U1min = 0xFFFFFFFF;
+  uint32_t U2min = 0xFFFFFFFF;
+  uint32_t U3min = 0xFFFFFFFF;  
   uint32_t TU1over = 0;
   uint32_t TU2over = 0;
   uint32_t TU3over = 0;
@@ -310,6 +312,9 @@ struct stats{
   uint32_t P1max  = 0;
   uint32_t P2max  = 0;
   uint32_t P3max  = 0;
+  uint32_t P1min  = 0xFFFFFFFF;
+  uint32_t P2min  = 0xFFFFFFFF;
+  uint32_t P3min  = 0xFFFFFFFF; 
 } P1Stats;
 
 MyData      DSMRdata;
@@ -407,6 +412,7 @@ int8_t mb_rx  = -1;
 int8_t mb_tx  = -1;
 int8_t mb_rts = -1;
 
+#include "Debug.h"
 #include <ESPmDNS.h>  
 #include <Update.h>
 #include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager

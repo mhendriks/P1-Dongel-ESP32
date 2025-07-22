@@ -50,9 +50,17 @@ void StatsApi(){
   doc["P2max"]   = P1Stats.P2max;
   doc["P3max"]   = P1Stats.P3max;
   
+  doc["P1min"]   = P1Stats.P1min;
+  doc["P2min"]   = P1Stats.P2min;
+  doc["P3min"]   = P1Stats.P3min;
+
   doc["U1piek"]  = P1Stats.U1piek;
   doc["U2piek"]  = P1Stats.U2piek;
   doc["U3piek"]  = P1Stats.U3piek;
+
+  doc["U1min"]  = P1Stats.U1min;
+  doc["U2min"]  = P1Stats.U2min;
+  doc["U3min"]  = P1Stats.U3min;
 
   doc["TU1over"] = P1Stats.TU1over;
   doc["TU2over"] = P1Stats.TU2over;

@@ -25,17 +25,16 @@ void IRAM_ATTR iWater() {
         P1Status.wtr_m3++;
         P1Status.wtr_l = 0;
         CHANGE_INTERVAL_MS(StatusTimer, 100); //schrijf status weg bij elke m3
-        waterDeliveredTimestamp = actTimestamp;
-        waterDelivered = P1Status.wtr_m3 + (P1Status.wtr_l / 1000.0);
       }
+      waterDeliveredTimestamp = actTimestamp;
+      waterDelivered = P1Status.wtr_m3 + (P1Status.wtr_l / 1000.0);
     } else debounces++;
 }
 
 void setupWater() {
   if ( IOWater == -1 ) {
     DebugTln(F("Water sensor : N/A"));
-//    USBSerial.println(F("Water sensor : N/A"));
-    return; // water sensor n/a
+    return;
   }
   attachInterrupt(IOWater, iWater, RISING);
   DebugTln(F("WaterSensor setup completed"));

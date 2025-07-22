@@ -25,10 +25,7 @@ byte     rgbled_io = RGBLED_PIN;
 
 #define _getChipId() (uint64_t)ESP.getEfuseMac()
 
-const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unknown","Software reset digital core", "Legacy watch dog reset digital core", 
-"Deep Sleep reset digital core", "Reset by SLC module, reset digital core","Timer Group0 Watch dog reset digital core","Timer Group1 Watch dog reset digital core",
-"RTC Watch dog Reset digital core","Instrusion tested to reset CPU","Time Group reset CPU","Software reset CPU","RTC Watch dog Reset CPU","for APP CPU, reseted by PRO CPU",
-"Reset when the vdd voltage is not stable","RTC Watch dog reset digital core and rtc module"};
+const PROGMEM char *resetReasons[]  { " - Reset reason can not be determined"," - Reset due to power-on event"," - Reset by external pin"," - Software reset via esp_restart"," - Software reset due to exception/panic"," - Reset (software or hardware) due to interrupt watchdog"," - Reset due to task watchdog"," - Reset due to other watchdogs"," - Reset after exiting deep sleep mode"," - Brownout reset (software or hardware)"," - Reset over SDIO","Reset by USB peripheral"," - Reset by JTAG/Button"," - Reset due to efuse error"," - Reset due to power glitch detected"," - Reset due to CPU lock up (double exception)"};
 
 // ------------------ HARDWARE DETECTIE ------------------ //
 //detect hardware type if burned in efuse
@@ -210,11 +207,13 @@ if ( UseRGB ) {
    }
 }
 
-
 //===========================================================================================
 
 const char* getResetReason(){
-    return resetReasons[rtc_get_reset_reason(0)];
+    return String(String(rtc_get_reset_reason(0)) + resetReasons[ rtc_get_reset_reason(0) > 15? 0 : rtc_get_reset_reason(0) ]).c_str();
+  // esp_reset_reason_t r = esp_reset_reason();
+  // DebugTf("Last Reset reason: %d = %s\n", r, RESET_REASON(r));
+  // return RESET_REASON(r);
 }
 
 //===========================================================================================

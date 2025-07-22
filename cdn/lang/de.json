@@ -1,4 +1,6 @@
 {
+  "lbl-beta-fwversion": "Beta Firmware",
+  "lbl-install": "Installieren",
   "lbl-accu-status": "Status: ",
   "dsh-accu": "Lagerung",
   "lbl-today-kw": "Leistung [kW]",
@@ -189,7 +191,7 @@
   "dict_mqttbroker_connected": "MQTT-Broker verbunden",
   "dict_telegramcount": "Telegramme verarbeitet",
   "dict_telegramerrors": "Telegramme mit Fehlern",
-  "dict_latest_fwversion": "Letzte Firmware-Version",
+  "lbl-latest-fwversion": "Letzte Firmware",
   "dict_latest_version": "Letzte Version",
   "dict_fwversion": "Installierte Firmware",
   "dict_compiled": "Kompilierte",
@@ -274,7 +276,6 @@
   "lbl-solar-self-use": "Selbstverbrauch: ",
   "dsh-solar-production": "Produktion",
   "lbl-2daysago": "Vor 2 Tagen",
-  "lbl-actual-kwh": "Aktuell [kW]",
   "lbl-costs": "Kosten",
   "lbl-gas-used": "Gasverbrauch",
   "lbl-graphical": "Grafik",
@@ -321,4 +322,10 @@
   "dsh-peak": "Viertelstundenspitze",
   "lbl-peak-delta": "Spitzenraum [kW]",
   "lbl-peak-month": "Spitzenleistung diesen Monat: "
+"lbl-P1min": "Mindestleistung L1",
+"lbl-P2min": "Mindestleistung L2",
+"lbl-P3min": "Mindestleistung L3",
+"lbl-U1min": "Mindestspannung L1",
+"lbl-U2min": "Mindestspannung L2",
+"lbl-U3min": "Mindestspannung L3"
 }

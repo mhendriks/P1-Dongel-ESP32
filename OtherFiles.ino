@@ -402,11 +402,12 @@ void LogFile(const char* payload, bool toDebug) {
   //log rotate
   if (LogFile.size() > 12000){ 
 //    DebugT(F("LogFile filesize: "));Debugln(RebootFile.size());
+    LittleFS.remove("/P1_old.log");     //remove .old if existing 
     LittleFS.remove("/P1_log.old");     //remove .old if existing 
     //rename file
     DebugTln(F("RebootLog: rename file"));
     LogFile.close(); 
-    LittleFS.rename("/P1.log", "/P1_log.old");
+    LittleFS.rename("/P1.log", "/P1_old.log");
     LogFile = LittleFS.open("/P1.log", "a"); // open for appending  
     }
     

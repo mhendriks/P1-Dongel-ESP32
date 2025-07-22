@@ -28,8 +28,8 @@ void P1Update(bool sketch){
   //clear buffer
   while (TelnetStream.available() > 0) { (char)TelnetStream.read(); yield(); }
   
-  Debugln(F("\n/!\\ UPDATE MODULE /!\\"));
-  Debugf("Enter firmware version (eg. 4.5.1): ");
+  TelnetStream.println(F("\n/!\\ UPDATE MODULE /!\\"));
+  TelnetStream.print("Enter firmware version (eg. 4.5.1): ");
   TelnetStream.setTimeout(10000);
   TelnetStream.readBytesUntil('\n', versie, sizeof(versie)); 
   TelnetStream.setTimeout(1000);
@@ -38,7 +38,7 @@ void P1Update(bool sketch){
   
   if (strcmp(versie,"latest") == 0) RemoteUpdate("4-sketch-latest",sketch);
   else if (strlen(versie)>4) RemoteUpdate(versie,sketch); 
-  else Debugln(F("Version number Error: format = x.x.x")); 
+  else TelnetStream.println(F("Version number Error: format = x.x.x")); 
   bHideP1Log = false; //unhide
 }
 //--------------------------------
@@ -170,7 +170,9 @@ void handleKeyInput()
                         while (TelnetStream.available() > 0) {(char)TelnetStream.read();} //verwijder extra input
                       } //while
                       break; }
-      case 'E':     eraseFile();
+      case 'E':     bHideP1Log = true;
+                    eraseFile();
+                    bHideP1Log = false;
                     break;
       case 'f':
       case 'F':     listFS();
