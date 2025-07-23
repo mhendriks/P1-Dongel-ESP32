@@ -403,17 +403,17 @@ void ProcessStats(){
   
   if ( DSMRdata.power_delivered_l1_present) {
     if ( DSMRdata.power_delivered_l1.int_val() > P1Stats.P1max ) P1Stats.P1max = DSMRdata.power_delivered_l1.int_val();
-    else if ( DSMRdata.power_delivered_l1.int_val() < P1Stats.P1min ) P1Stats.P1min = DSMRdata.power_delivered_l1.int_val();
+    else if ( (int32_t)(DSMRdata.power_delivered_l1.int_val() - DSMRdata.power_returned_l1.int_val()) < P1Stats.P1min ) P1Stats.P1min = (int32_t)(DSMRdata.power_delivered_l1.int_val() - DSMRdata.power_returned_l1.int_val());
   } 
 
   if ( DSMRdata.power_delivered_l2_present ) {
       if ( DSMRdata.power_delivered_l2.int_val() > P1Stats.P2max ) P1Stats.P2max = DSMRdata.power_delivered_l2.int_val();
-      else if ( DSMRdata.power_delivered_l2.int_val() < P1Stats.P2min ) P1Stats.P2min = DSMRdata.power_delivered_l2.int_val();
+      else if ( (int32_t)(DSMRdata.power_delivered_l2.int_val() - DSMRdata.power_returned_l2.int_val()) < P1Stats.P2min ) P1Stats.P2min = (int32_t)(DSMRdata.power_delivered_l2.int_val() - DSMRdata.power_returned_l2.int_val());
   }
   
   if ( DSMRdata.power_delivered_l3_present ){
     if ( DSMRdata.power_delivered_l3.int_val() > P1Stats.P3max ) P1Stats.P3max = DSMRdata.power_delivered_l3.int_val();
-    else if ( DSMRdata.power_delivered_l3.int_val() < P1Stats.P3min ) P1Stats.P3min = DSMRdata.power_delivered_l3.int_val();
+    else if ( (int32_t)(DSMRdata.power_delivered_l3.int_val() - DSMRdata.power_returned_l3.int_val()) < P1Stats.P3min ) P1Stats.P3min = (int32_t)(DSMRdata.power_delivered_l3.int_val() - DSMRdata.power_returned_l3.int_val());
   } 
 
   if ( DSMRdata.voltage_l1_present ) {

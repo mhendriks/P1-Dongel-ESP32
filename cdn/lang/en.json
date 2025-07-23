@@ -322,10 +322,16 @@
   "dict_dev-pairing": "Peer2Peer communication",
   "dict_eid-enabled": "EnergyID (1h setup timeout)",
   "dict_utilization": "CPU usage",
-"lbl-P1min": "Power Minimum L1",
-"lbl-P2min": "Power Minimum L2",
-"lbl-P3min": "Power Minimum L3",
-"lbl-U1min": "Voltage Minimum L1",
-"lbl-U2min": "Voltage Minimum L2",
-"lbl-U3min": "Voltage Minimum L3"
+  "lbl-P1min": "Power Minimum L1",
+  "lbl-P2min": "Power Minimum L2",
+  "lbl-P3min": "Power Minimum L3",
+  "lbl-U1min": "Voltage Minimum L1",
+  "lbl-U2min": "Voltage Minimum L2",
+  "lbl-U3min": "Voltage Minimum L3",
+  "tip-P1min": "lowest power phase 1 today (negative is return)",
+  "tip-P2min": "lowest power phase 2 today (negative is return)",
+  "tip-P3min": "lowest power phase 3 today (negative is return)",
+  "tip-U1min": "lowest voltage phase 1 today",
+  "tip-U2min": "lowest voltage phase 2 today",
+  "tip-U3min": "lowest voltage phase 3 today"
 }

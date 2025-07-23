@@ -321,11 +321,17 @@
   "txt-reset-wifi": "Nach dem Drücken des RESET WIFI-Knopfes wird das Modul neu starten und um die Zurücksetzung des WLAN-Netzwerks bitten. Siehe die anfängliche Installation des Moduls.",
   "dsh-peak": "Viertelstundenspitze",
   "lbl-peak-delta": "Spitzenraum [kW]",
-  "lbl-peak-month": "Spitzenleistung diesen Monat: "
-"lbl-P1min": "Mindestleistung L1",
-"lbl-P2min": "Mindestleistung L2",
-"lbl-P3min": "Mindestleistung L3",
-"lbl-U1min": "Mindestspannung L1",
-"lbl-U2min": "Mindestspannung L2",
-"lbl-U3min": "Mindestspannung L3"
+  "lbl-peak-month": "Spitzenleistung diesen Monat: ",
+  "lbl-P1min": "Mindestleistung L1",
+  "lbl-P2min": "Mindestleistung L2",
+  "lbl-P3min": "Mindestleistung L3",
+  "lbl-U1min": "Mindestspannung L1",
+  "lbl-U2min": "Mindestspannung L2",
+  "lbl-U3min": "Mindestspannung L3",
+  "tip-P1min": "niedrigste Leistung in Phase 1 heute (negativ ist Rückkehr)",
+  "tip-P2min": "niedrigste Leistung in Phase 2 heute (negativ ist Rückkehr)",
+  "tip-P3min": "niedrigste Leistung in Phase 3 heute (negativ ist Rückkehr)",
+  "tip-U1min": "niedrigste Spannung Phase 1 heute",
+  "tip-U2min": "niedrigste Spannung Phase 2 heute",
+  "tip-U3min": "niedrigste Spannung Phase 3 heute"
 }

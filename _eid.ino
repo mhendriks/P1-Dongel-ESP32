@@ -9,6 +9,10 @@
 String  eid_webhook;
 String  eid_header_auth;
 String  eid_header_twinid;
+String  recordNumber;
+String  apiAccessToken;
+bool bGotDirective = false;
+
 // String  eid_interval;
 uint32_t eid_interval_sec = 300;
 uint8_t claimTimeout = 0;
@@ -21,6 +25,10 @@ uint8_t claimTimeout = 0;
 DECLARE_TIMER_SEC(T_EID, 10);
 DECLARE_TIMER_SEC(T_EID_CLAIM, CLAIM_RETRY);
 DECLARE_TIMER_MIN(T_EID_REFRESH, 24*60);
+
+void EIDStart(){
+  if ( bEID_enabled ) EIDPostHello();
+}
 
 void handleEnergyID(){  
 
@@ -41,12 +49,14 @@ void handleEnergyID(){
   }
 
   if ( P1Status.eid_state == EID_CLAIMING && DUE(T_EID_CLAIM) ) {
+    DebugTln("EID_CLAIMING");
     EIDPostHello(); //refresh every 1m
     claimTimeout++;
   }
   
   if ( DUE(T_EID_REFRESH) ) EIDPostHello(); //refresh every 24h
 
+  // if ( recordNumber != "" && !bGotDirective ) EIDGetDirectives(); //4.16 feature
   //do nothing on EID_IDLE
 
 }
@@ -77,95 +87,153 @@ response
 }
 */
 
-// {"webhookUrl":"https://sbns-energyid-prod.servicebus.windows.net/sbq-smartstuff-p1/messages","headers":{"authorization":"<gone>","x-twin-id":"<>"},"recordNumber":"EA-14195189","recordName":"Mijn woning","webhookPolicy":{"allowedInterval":"PT5M","uploadInterval":300}}
-
-void EIDPostHello(){
-/*  
-States
-0) IDLE (enabled maar nog niet in claiming fase
-1) CLAIMING (/hello opgevraagd maar niet niet geclaimed)
-2) ENROLLED -> gekoppeld
- 
- */  
-  HTTPClient http;
-  String payload;
-  int httpResponseCode;
-  JsonDocument doc;
-
-  http.begin( EID_PROV_URL );
-  http.addHeader( "Content-Type"          , "application/json" );
-  http.addHeader( "X-Provisioning-Key"    , EID_PROF_KEY );
-  http.addHeader( "X-Provisioning-Secret" , EID_PROF_SECR );
-
-  String json_data;
+String buildProvisioningPayload(){
   String _hostname = String(settingHostname);
   _hostname.toLowerCase();
-  
-  json_data  = "{\"deviceId\": \"p1-dongle-pro-" + String(_getChipId()) + "\"";
-  json_data += ",\"deviceName\": \"" + String(settingHostname) + "\"";
-  json_data += ",\"firmwareVersion\": \"" _VERSION_ONLY  "\"";
-  json_data += ",\"ipAddress\": \"" + String(IP_Address()) + "\"";
-  json_data += ",\"macAddress\": \"" + String(macStr) + "\"";  
-  json_data += ",\"localDeviceUrl\": \"http://" + _hostname + ".local\"";  
-  json_data += "}";
-  
-  DebugT(F("Post URL:"));Debugln(EID_PROV_URL);
-  DebugT(F("Post data:"));Debugln(json_data);
 
-  httpResponseCode = http.POST(json_data);
-  Debug(F("httpResponseCode: "));Debugln(httpResponseCode);
+  String json_data = "{";
+  json_data += "\"deviceId\": \"p1-dongle-pro-" + String(_getChipId()) + "\",";
+  json_data += "\"deviceName\": \"" + String(settingHostname) + "\",";
+  json_data += "\"firmwareVersion\": \"" _VERSION_ONLY "\",";
+  json_data += "\"ipAddress\": \"" + String(IP_Address()) + "\",";
+  json_data += "\"macAddress\": \"" + String(macStr) + "\",";
+  json_data += "\"localDeviceUrl\": \"http://" + _hostname + ".local\"";
+  json_data += "}";
+
+  DebugT(F("Json data: ")); Debugln(json_data);
+  return json_data;
+}
+
+// {"webhookUrl":"https://sbns-energyid-prod.servicebus.windows.net/sbq-smartstuff-p1/messages","headers":{"authorization":"<gone>","x-twin-id":"<>"},"recordNumber":"EA-14195189","recordName":"Mijn woning","webhookPolicy":{"allowedInterval":"PT5M","uploadInterval":300}}
+
+void EIDPostHello() {
+  /*
+    States:
+    0 - IDLE: Enabled maar nog niet in claiming fase
+    1 - CLAIMING: /hello opgevraagd maar nog niet geclaimed
+    2 - ENROLLED: gekoppeld
+  */
+
+  HTTPClient http;
+  JsonDocument doc;
+  String payload;
+
+  DebugT(F("Post URL: ")); Debugln(EID_PROV_URL);
   
-  if ( httpResponseCode == 200 ) {
+  // HTTP setup
+  http.begin(EID_PROV_URL);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-Provisioning-Key", EID_PROF_KEY);
+  http.addHeader("X-Provisioning-Secret", EID_PROF_SECR);
+
+  int httpResponseCode = http.POST( buildProvisioningPayload() );
+  Debug(F("httpResponseCode: ")); Debugln(httpResponseCode);
+
+  if (httpResponseCode == 200) {
     payload = http.getString();
-    Debug(F("response body: "));Debugln(payload);     
-  
+    Debug(F("response body: ")); Debugln(payload);
+
     DeserializationError error = deserializeJson(doc, payload);
     if (error) {
-      DebugTln(F("error parsing the payload from claim response"));
+      DebugTln(F("JSON parsing failed in claim response"));
       httpServer.send(400);
     } else {
-      //well parsed
-    const char* claim = doc["claimCode"];
-    if ( claim ) {
-    
-//      eid_claim_code = (const char*)doc["claimCode"];
-//      eid_claim_url  = (const char*)doc["claimUrl"];
-//        eid_claim_exp  = (time_t) doc["exp"];
-//
-//      Debug(F("eid_claim_code: "));Debugln(eid_claim_code);     
-//      Debug(F("eid_claim_url: "));Debugln(eid_claim_url);     
-//      Debug(F("eid_claim_exp: "));Debugln(eid_claim_exp);
-      Debugln(F("ClaimCode obtained"));
-      P1Status.eid_state = EID_CLAIMING;
-          
-    } else {
-      //webhook info
-      Debugln(F("Webhook obtained"));
-      eid_webhook = (const char*)doc["webhookUrl"];
-      eid_header_auth = (const char*)doc["headers"]["authorization"];
-      eid_header_twinid = (const char*)doc["headers"]["x-twin-id"];
-      // eid_interval = (const char*)doc["webhookPolicy"]["allowedInterval"];
-      eid_interval_sec = doc["webhookPolicy"]["uploadInterval"];
-      
-      Debug(F("webhookUrl      : "));Debugln(eid_webhook); 
-      Debug(F("authorization   : "));Debugln(eid_header_auth); 
-      Debug(F("x-twin-id.      : "));Debugln(eid_header_twinid); 
-      // Debug(F("allowedInterval : "));Debugln(eid_interval); 
-      Debug(F("eid_interval_sec: "));Debugln(eid_interval_sec); 
+      const char* claimCode = doc["claimCode"];
 
-      //store configered
-//      EIDWriteConfig(payload);
-      // EIDDetermineInterval(eid_interval);
-      P1Status.eid_state = EID_ENROLLED;
+      if (claimCode) {
+        Debugln(F("ClaimCode obtained"));
+        P1Status.eid_state = EID_CLAIMING;
+        // Toekomstig: eid_claim_code = claimCode;
+        // eventueel claimUrl, exp ook loggen
+      } else {
+        Debugln(F("Webhook obtained"));
+
+        eid_webhook       = doc["webhookUrl"] | "";
+        eid_header_auth   = doc["headers"]["authorization"] | "";
+        eid_header_twinid = doc["headers"]["x-twin-id"] | "";
+        eid_interval_sec  = doc["webhookPolicy"]["uploadInterval"] | 0;
+
+        if (doc["recordNumber"].is<const char*>())
+          recordNumber = doc["recordNumber"].as<const char*>();
+        if (doc["apiAccessToken"].is<const char*>()) {
+          apiAccessToken = doc["apiAccessToken"].as<const char*>();
+          bGotDirective = false;
+        }
+
+        Debug(F("webhookUrl      : ")); Debugln(eid_webhook);
+        Debug(F("authorization   : ")); Debugln(eid_header_auth);
+        Debug(F("x-twin-id       : ")); Debugln(eid_header_twinid);
+        Debug(F("eid_interval_sec: ")); Debugln(eid_interval_sec);
+        Debug(F("recordNumber    : ")); Debugln(recordNumber);
+        Debug(F("apiAccessToken  : ")); Debugln(apiAccessToken);
+
+        // Opslaan config en state
+        // EIDWriteConfig(payload);
+        P1Status.eid_state = EID_ENROLLED;
+      }
+
+      httpServer.send(200, "application/json", payload);
     }
-    httpServer.send(200, "application/json", payload );
-    }
-    http.end();
-  } else{
-    // != 200 response
+  } else {
+    Debugln(F("HTTP request failed or invalid response"));
     P1Status.eid_state = EID_CLAIMING;
     httpServer.send(400);
-  } //httpResponseCode
+  }
+
+  http.end();
+}
+
+
+void EIDGetDirectives(){
+  
+  if ( recordNumber == "" || apiAccessToken == "" ) { DebugTln("No Webapi assets"); return; }
+
+  String ApiURL = "https://api.energyid.eu/api/v1/records/"+recordNumber+"/directives";
+  DebugT(F("ApiURL:"));Debugln(ApiURL);
+  
+  HTTPClient http;
+  http.begin( ApiURL );
+  http.addHeader("Authorization", "device " + apiAccessToken);
+
+  int httpResponseCode = http.GET();
+  Debug(F("httpResponseCode: "));Debugln(httpResponseCode);
+  String payload = http.getString();
+  Debug(F("response body: "));Debugln(payload); 
+  if ( httpResponseCode == 200 ) { 
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, payload);
+    if (error) DebugTln(F("JSON parsing failed in EIDGetDirectives"));
+    else {
+      DebugT("Directive ID: ");Debugln(doc[0]["id"].as<const char*>());
+      EIDGetDirectDetails(doc[0]["id"]);
+    }
+  }  
+  http.end();
+  bGotDirective = true;
+
+}
+
+void EIDGetDirectDetails(const char* id){
+  
+  if ( id == nullptr || id[0] == '\0') { DebugTln("No ID present"); return; }
+
+  String ApiURL = "https://api.energyid.eu/api/v1/records/"+recordNumber+"/directives/"+String(id);
+  DebugT(F("ApiURL:"));Debugln(ApiURL);
+  
+  HTTPClient http;
+  http.begin( ApiURL );
+  http.addHeader("Authorization", "device " + apiAccessToken);
+
+  int httpResponseCode = http.GET();
+  Debug(F("httpResponseCode: "));Debugln(httpResponseCode);
+  String payload = http.getString();
+  Debug(F("response body: "));Debugln(payload); 
+    if ( httpResponseCode == 200 ) { 
+    //   DebugTln(F("Response Error"));
+    //   P1Status.eid_state = EID_CLAIMING; //try /hello within 5min
+    }
+  
+  http.end();
 }
 
 void EIDGetClaim(){
@@ -176,16 +244,6 @@ void EIDGetClaim(){
   if ( httpServer.arg("action") == "reset" ) P1Status.eid_state = EID_IDLE;
   EIDPostHello(); 
 }
-
-// void EIDDetermineInterval(String interval){
-//   if ( interval == "PT1M" )       eid_interval_sec =  1*60;
-//   else if ( interval == "PT5M" )  eid_interval_sec =  5*60; 
-//   else if ( interval == "PT15M" ) eid_interval_sec = 15*60; 
-//   else if ( interval == "PT1H" )  eid_interval_sec = 60*60;
-//   else if ( interval == "P1D" )   eid_interval_sec = 60*60*24;
-//   else if ( interval == "P1M" )   eid_interval_sec = 60*60*24*30;
-//   DebugT(F("eid_interval_sec: "));Debugln(eid_interval_sec);
-// }
 
 String IsoTS () {
   // convert to this format -> 2023-06-16T08:01+0200
@@ -281,7 +339,6 @@ void PostEnergyID(){
         "high-pp": 123456.001
     }
 ]
-
 
 */
 

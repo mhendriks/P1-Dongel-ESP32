@@ -322,10 +322,16 @@
   "dict_eid-enabled": "EnergyID (1h setup timeout)",
   "dict_utilization": "CPU-användning",
   "dsh-water": "Vatten",
-"lbl-P1min": "Minsta effekt L1",
-"lbl-P2min": "Minsta effekt L2",
-"lbl-P3min": "Minsta effekt L3",
-"lbl-U1min": "Minsta spänning L1",
-"lbl-U2min": "Minsta spänning L2",
-"lbl-U3min": "Minsta spänning L3"
+  "lbl-P1min": "Minsta effekt L1",
+  "lbl-P2min": "Minsta effekt L2",
+  "lbl-P3min": "Minsta effekt L3",
+  "lbl-U1min": "Minsta spänning L1",
+  "lbl-U2min": "Minsta spänning L2",
+  "lbl-U3min": "Minsta spänning L3",
+  "tip-P1min": "lägsta effekt fas 1 idag (negativ är returledning)",
+  "tip-P2min": "lägsta effekt fas 2 idag (negativ är returledning)",
+  "tip-P3min": "lägsta effekt fas 3 idag (negativ är returledning)",
+  "tip-U1min": "lägsta spänning fas 1 idag",
+  "tip-U2min": "lägsta spänning fas 2 idag",
+  "tip-U3min": "lägsta spänning fas 3 idag"
 }

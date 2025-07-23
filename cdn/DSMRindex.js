@@ -61,7 +61,6 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   let pairing_enabled    	= false
   
   let locale 				= 'nl';  // standaard
-//   let translations 			= {}; //json storage translations
 
 // ---- DASH
 let TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wmax;
@@ -392,28 +391,20 @@ window.onload=bootsTrapMain;
 function visibilityListener() {
   switch(document.visibilityState) {
     case "hidden":
-//       console.log("visibilityState: hidden");
-    clearInterval(tabTimer);  
-//     clearInterval(actualTimer);
-// 	clearInterval(timeTimer);
-      PauseAPI=true;
-      break;
+		clearInterval(tabTimer);  
+		PauseAPI=true;
+		break;
     case "visible":
-//       console.log("visibilityState: visable");
-	  PauseAPI=false;
-// 	  timeTimer = setInterval(refreshDevTime, 10 * 1000); // repeat every 10s
-// 	  refreshDevTime();
-	  openTab();
-	  if ( activeTab == "bEID") getclaim();
-      break;
-      
+		PauseAPI=false;
+		openTab();
+// 		if ( activeTab == "bEID") getclaim();
+		break;      
     default:
-      console.log("visibilityListener() - unknown visibiltyState");
+		console.log("visibilityListener() - unknown visibiltyState");
   }
-	//alert_message("Connectie met Dongle stond op pauze...nieuwe data ophalen");
 }
 
-document.addEventListener("visibilitychange", visibilityListener);
+document.addEventListener( "visibilitychange", visibilityListener );
 
 //============================================================================  
 // if the user uses the backbutton in the browser

@@ -51,6 +51,11 @@ Default checks
 - ethernet
 - 4h test
 
+4.16.0
+- add: stroomplanner update interval
+- add: stroomplanner to dashboard
+- add: stroomplanner to p2p communication
+
 next
 - improvement: modbus in own process = non-blocking 
 - check and repair rng files on startup
@@ -194,7 +199,12 @@ void setup()
   //p1 task runs always on core 0. On the dual core models Arduino runs on core 1. It isn't possible that the process runs on both cores.
   if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 2, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
   if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*6, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
-  DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
+  
+  EIDStart();
+
+  // setupWS();
+
+  DebugTf("Startup complete! actTimestamp: [%s]\r\n", actTimestamp);  
 
 } // setup()
 
@@ -237,13 +247,13 @@ void fMqtt( void * pvParameters ){
 }
 
 void loop () { 
+  // handleWS();
   httpServer.handleClient();      
   if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
     P1StatusWrite();
     MQTTSentStaticInfo();
     CHANGE_INTERVAL_MIN(StatusTimer, 30);
   }
-  // WifiWatchDog();
   handleKeyInput();
   handleRemoteUpdate();
   PushButton.handler();

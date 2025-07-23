@@ -42,29 +42,29 @@ void JsonWater(){
 void StatsApi(){
   JsonDocument doc; // Pas de grootte aan indien nodig
  
-  doc["I1piek"]  = P1Stats.I1piek;
-  doc["I2piek"]  = P1Stats.I2piek;
-  doc["I3piek"]  = P1Stats.I3piek;
+  if ( DSMRdata.current_l1_present ) doc["I1piek"]  = P1Stats.I1piek;
+  if ( DSMRdata.current_l2_present ) doc["I2piek"]  = P1Stats.I2piek;
+  if ( DSMRdata.current_l3_present ) doc["I3piek"]  = P1Stats.I3piek;
   
-  doc["P1max"]   = P1Stats.P1max;
-  doc["P2max"]   = P1Stats.P2max;
-  doc["P3max"]   = P1Stats.P3max;
+  if ( DSMRdata.power_delivered_l1_present ) doc["P1max"]   = P1Stats.P1max;
+  if ( DSMRdata.power_delivered_l2_present ) doc["P2max"]   = P1Stats.P2max;
+  if ( DSMRdata.power_delivered_l3_present ) doc["P3max"]   = P1Stats.P3max;
   
-  doc["P1min"]   = P1Stats.P1min;
-  doc["P2min"]   = P1Stats.P2min;
-  doc["P3min"]   = P1Stats.P3min;
+  if ( DSMRdata.power_delivered_l1_present ) doc["P1min"]   = P1Stats.P1min;
+  if ( DSMRdata.power_delivered_l2_present ) doc["P2min"]   = P1Stats.P2min;
+  if ( DSMRdata.power_delivered_l3_present ) doc["P3min"]   = P1Stats.P3min;
 
-  doc["U1piek"]  = P1Stats.U1piek;
-  doc["U2piek"]  = P1Stats.U2piek;
-  doc["U3piek"]  = P1Stats.U3piek;
+  if ( DSMRdata.voltage_l1_present ) doc["U1piek"]  = P1Stats.U1piek;
+  if ( DSMRdata.voltage_l2_present ) doc["U2piek"]  = P1Stats.U2piek;
+  if ( DSMRdata.voltage_l3_present ) doc["U3piek"]  = P1Stats.U3piek;
 
-  doc["U1min"]  = P1Stats.U1min;
-  doc["U2min"]  = P1Stats.U2min;
-  doc["U3min"]  = P1Stats.U3min;
+  if ( DSMRdata.voltage_l1_present )doc["U1min"]  = P1Stats.U1min;
+  if ( DSMRdata.voltage_l2_present )doc["U2min"]  = P1Stats.U2min;
+  if ( DSMRdata.voltage_l3_present )doc["U3min"]  = P1Stats.U3min;
 
-  doc["TU1over"] = P1Stats.TU1over;
-  doc["TU2over"] = P1Stats.TU2over;
-  doc["TU3over"] = P1Stats.TU3over;
+  if ( DSMRdata.voltage_l1_present )doc["TU1over"] = P1Stats.TU1over;
+  if ( DSMRdata.voltage_l2_present )doc["TU2over"] = P1Stats.TU2over;
+  if ( DSMRdata.voltage_l3_present )doc["TU3over"] = P1Stats.TU3over;
   
   doc["Psluip"]  = P1Stats.Psluip;
   doc["start_time"] = P1Stats.StartTime;
