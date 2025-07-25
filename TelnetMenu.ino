@@ -35,11 +35,11 @@ void P1Update(bool sketch){
   TelnetStream.setTimeout(1000);
   
   versie[strlen(versie)-1] = '\0'; //remove enter
-  
+  bHideP1Log = false; //unhide
   if (strcmp(versie,"latest") == 0) RemoteUpdate("4-sketch-latest",sketch);
   else if (strlen(versie)>4) RemoteUpdate(versie,sketch); 
   else TelnetStream.println(F("Version number Error: format = x.x.x")); 
-  bHideP1Log = false; //unhide
+  
 }
 //--------------------------------
 

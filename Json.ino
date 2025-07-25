@@ -27,6 +27,28 @@ void JsonGas(){
   jsonDoc["gas_delivered_timestamp"]["value"] = gasDeliveredTimestamp;
 }
 
+int signalToEnum(const char* signal) {
+  if (strcmp(signal, "--") == 0) return 0;
+  if (strcmp(signal, "-") == 0)  return 1;
+  if (strcmp(signal, "0") == 0)  return 2;
+  if (strcmp(signal, "+") == 0)  return 3;
+  if (strcmp(signal, "++") == 0) return 4;
+  return -1; // ongeldige waarde
+}
+
+void JsonEIDplanner(){
+  String data = "{";
+  for (int i = hour(); i < hour()+8; i++ ){
+    if ( i > hour() ) data += ",";
+    data += "\"" + String(i%24) + "\"";
+    data += ":";
+    data += String(signalToEnum(StroomPlanData["data"][i]["signal"]));
+  }
+  data += "}";
+  DebugTf( "EIDPlanner json: %s\n", data.c_str() );
+  // sendJsonBuffer(  data.c_str() );
+}
+
 void JsonWater(){
 
   if ( !WtrMtr && !mbusWater ) return;  

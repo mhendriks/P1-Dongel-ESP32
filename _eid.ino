@@ -11,6 +11,8 @@ String  eid_header_auth;
 String  eid_header_twinid;
 String  recordNumber;
 String  apiAccessToken;
+String  EIDDirectiveID;
+
 bool bGotDirective = false;
 
 // String  eid_interval;
@@ -56,7 +58,8 @@ void handleEnergyID(){
   
   if ( DUE(T_EID_REFRESH) ) EIDPostHello(); //refresh every 24h
 
-  // if ( recordNumber != "" && !bGotDirective ) EIDGetDirectives(); //4.16 feature
+  if ( recordNumber != "" && !bGotDirective ) EIDGetDirectives(); //4.16 feature
+  if ( EIDDirectiveID != "" ) EIDGetDirectDetails();
   //do nothing on EID_IDLE
 
 }
@@ -183,7 +186,6 @@ void EIDPostHello() {
   http.end();
 }
 
-
 void EIDGetDirectives(){
   
   if ( recordNumber == "" || apiAccessToken == "" ) { DebugTln("No Webapi assets"); return; }
@@ -204,8 +206,8 @@ void EIDGetDirectives(){
     DeserializationError error = deserializeJson(doc, payload);
     if (error) DebugTln(F("JSON parsing failed in EIDGetDirectives"));
     else {
-      DebugT("Directive ID: ");Debugln(doc[0]["id"].as<const char*>());
-      EIDGetDirectDetails(doc[0]["id"]);
+      EIDDirectiveID = doc[0]["id"].as<const char*>();
+      DebugTf("Directive ID: %s", EIDDirectiveID);
     }
   }  
   http.end();
@@ -213,11 +215,11 @@ void EIDGetDirectives(){
 
 }
 
-void EIDGetDirectDetails(const char* id){
+void EIDGetDirectDetails(){
   
-  if ( id == nullptr || id[0] == '\0') { DebugTln("No ID present"); return; }
+  // if ( EIDDirectiveID == nullptr || EIDDirectiveID == "") { DebugTln("No ID present"); return; }
 
-  String ApiURL = "https://api.energyid.eu/api/v1/records/"+recordNumber+"/directives/"+String(id);
+  String ApiURL = "https://api.energyid.eu/api/v1/records/"+recordNumber+"/directives/"+EIDDirectiveID+"?limit=10&offset=0";
   DebugT(F("ApiURL:"));Debugln(ApiURL);
   
   HTTPClient http;
@@ -228,12 +230,24 @@ void EIDGetDirectDetails(const char* id){
   Debug(F("httpResponseCode: "));Debugln(httpResponseCode);
   String payload = http.getString();
   Debug(F("response body: "));Debugln(payload); 
-    if ( httpResponseCode == 200 ) { 
-    //   DebugTln(F("Response Error"));
-    //   P1Status.eid_state = EID_CLAIMING; //try /hello within 5min
+  if ( httpResponseCode == 200 ) { 
+    EIDDirectiveID = "";
+    JsonDocument filter;
+    filter["data"][0]["signal"] = true;
+    StroomPlanData.clear();
+    DeserializationError error = deserializeJson(StroomPlanData, payload, DeserializationOption::Filter(filter));
+    if (error) DebugTln(F("JSON parsing failed in EIDGetDirectDetails"));
+    else {
+      // serializeJsonPretty(doc, USBSerial);
+      // JsonArray data = StroomPlanData["data"];
+      for (int i = 0; i < 33; i++) {
+        // const char* ts = 
+        Debugf("signal [%i] : ",i);Debugln(StroomPlanData["data"][i]["signal"].as<const char*>());
+      }
     }
-  
+  }
   http.end();
+  JsonEIDplanner();
 }
 
 void EIDGetClaim(){

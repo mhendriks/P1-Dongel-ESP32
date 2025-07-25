@@ -412,6 +412,8 @@ int8_t mb_rx  = -1;
 int8_t mb_tx  = -1;
 int8_t mb_rts = -1;
 
+JsonDocument StroomPlanData;
+
 #include "Debug.h"
 #include <ESPmDNS.h>  
 #include <Update.h>
