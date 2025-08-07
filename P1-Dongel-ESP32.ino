@@ -51,6 +51,9 @@ Default checks
 - ethernet
 - 4h test
 
+4.15.8
+- fix changing modbus TCP ID via config
+
 4.16.0
 - add: stroomplanner update interval
 - add: stroomplanner to dashboard

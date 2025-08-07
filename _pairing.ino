@@ -116,10 +116,11 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
 }
 
 // callback when data is sent
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+// void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) { //3.2.x
+void OnDataSent(const esp_now_send_info_t *info, esp_now_send_status_t status) { //3.3.x
   Debug("Last Packet Send Status: ");
   Debug(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success to " : "Delivery Fail to ");
-  printMAC(mac_addr);
+  printMAC(info->src_addr);
   Debugln();
 }
 

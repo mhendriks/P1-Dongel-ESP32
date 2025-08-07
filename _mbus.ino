@@ -1,7 +1,6 @@
 #ifdef MBUS
 
 #define MBUS_DEV_ID       1
-// #define MBUS_PORT       502
 #define MBUS_CLIENTS      4
 #define MBUS_TIMEOUT  10000
 #define MBUS_VAL_UNAVAILABLE 0xFFFFFFFF
@@ -12,7 +11,6 @@ float calculateLineVoltage(float V1, float V2) {
 
 // Set up a Modbus server
 ModbusServerWiFi MBserver;
-const uint8_t MY_SERVER(MBUS_DEV_ID);
 
 // Modbus data types
 enum class ModbusDataType { UINT32, INT16, FLOAT };
@@ -268,9 +266,9 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
 }
 
 void mbusSetup(){
-
-  MBserver.registerWorker(MY_SERVER, READ_HOLD_REGISTER, &MBusHandleRequest);//FC03
-  MBserver.registerWorker(MY_SERVER, READ_INPUT_REGISTER, &MBusHandleRequest);//FC04
+  // const uint8_t MY_SERVER(mb_config.id);
+  MBserver.registerWorker(mb_config.id, READ_HOLD_REGISTER, &MBusHandleRequest);//FC03
+  MBserver.registerWorker(mb_config.id, READ_INPUT_REGISTER, &MBusHandleRequest);//FC04
   MBserver.start(mb_config.port, MBUS_CLIENTS, MBUS_TIMEOUT);
 }
 
@@ -278,8 +276,6 @@ void mbusSetup(){
 
 #ifdef MB_RTU
 
-// #define MBUS_RTU_BAUD         9600
-// #define MBUS_RTU_SERIAL       SERIAL_8E1
 #define MBUS_RTU_TIMEOUT      2000
 
 #include "ModbusServerRTU.h"
