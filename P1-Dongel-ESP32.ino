@@ -53,15 +53,16 @@ Default checks
 - 4h test
 
 4.16.0
-v default modbusmapping registeren 46 met default P1DO = 0x5031444F in register toegevoegd
-v default modbus mapping reg 10 and 12 is filled with  T1 + T2 when not available from the P1 meter
-v add: stroomplanner update interval
-v add: stroomplanner to dashboard
-- add: stroomplanner to p2p communication
-v check interval ophalen stroomplanner gegevens (om het uur toch 2 intervallen extra)
-- fix: virtual ip write otherwise it is lost by eache save
-- sdk 3.x.x fix for wifi outtage 
+- add default modbus mapping reg 46 with default P1DO = 0x5031444F in register value
+- changed default modbus mapping reg 10 and 12 is filled with  T1 + T2 when not available from the P1 meter
+- add: stroomplanner update interval
+- add: stroomplanner to dashboard
+- check interval ophalen stroomplanner gegevens (om het uur toch 2 intervallen extra)
+- fix: virtual ip write otherwise it is lost by each save
+- sdk 3.x.x fix for wifi outage 
 - first test remote Proxy and Websockets
+
+- add: stroomplanner to p2p communication
 
 next
 - improvement: modbus in own process = non-blocking 
