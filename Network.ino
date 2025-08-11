@@ -81,7 +81,7 @@ bool bEthUsage = false;
 
 // Network event -> Ethernet is dominant
 // https://github.com/espressif/arduino-esp32/blob/master/libraries/Network/src/NetworkEvents.h
-static void onNetworkEvent (WiFiEvent_t event) {
+static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
   switch (event) {
 #ifdef ETHERNET  
   //ETH    
@@ -156,7 +156,8 @@ static void onNetworkEvent (WiFiEvent_t event) {
         bNoNetworkConn = true;
         break;
     default:
-        sprintf(cMsg,"Network-event : %d | rssi: %d | channel : %i",event, WiFi.RSSI(), WiFi.channel());
+    // Log("WIFI reason=%d rssi=%d\n", info.wifi_sta_disconnected.reason, WiFi.RSSI());
+        sprintf(cMsg,"Network-event : %d | reason: %d| rssi: %d | channel : %i",event, info.wifi_sta_disconnected.reason, WiFi.RSSI(), WiFi.channel());
         LogFile(cMsg, true);
         break;
     }
@@ -192,8 +193,12 @@ void startWiFi(const char* hostname, int timeOut)
   
   if ( netw_state != NW_NONE ) return;
   
-  //lower calibration power
-  esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+  
+  esp_wifi_set_ps(WIFI_PS_MAX_MODEM); //lower calibration power
+
+  WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false); 
+  esp_wifi_set_ps(WIFI_PS_NONE); // IDF: forceer geen modem-sleep
 
   WiFi.setHostname(hostname);
   // WiFi.enableIPv6();

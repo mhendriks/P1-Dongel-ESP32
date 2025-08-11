@@ -29,15 +29,15 @@ struct ModbusMapping {
     std::function<uint32_t()> valueGetter;
 };
 
-// Modbus mapping default = 0
+// 0 = Modbus mapping default 
 std::map<uint16_t, ModbusMapping> mapping_default = {
     { 0,  { ModbusDataType::UINT32, []() { return (uint32_t)(actT - (actTimestamp[12] == 'S' ? 7200 : 3600)); } }},
     { 2,  { ModbusDataType::UINT32, []() { return (DSMRdata.energy_delivered_tariff1_present && !bUseEtotals) ? (uint32_t)DSMRdata.energy_delivered_tariff1.int_val() : MBUS_VAL_UNAVAILABLE; } }},
     { 4,  { ModbusDataType::UINT32, []() { return (DSMRdata.energy_delivered_tariff2_present && !bUseEtotals) ? (uint32_t)DSMRdata.energy_delivered_tariff2.int_val() : MBUS_VAL_UNAVAILABLE; } }},
     { 6,  { ModbusDataType::UINT32, []() { return (DSMRdata.energy_returned_tariff1_present && !bUseEtotals) ? (uint32_t)DSMRdata.energy_returned_tariff1.int_val() : MBUS_VAL_UNAVAILABLE; } }},
     { 8,  { ModbusDataType::UINT32, []() { return (DSMRdata.energy_returned_tariff2_present && !bUseEtotals) ? (uint32_t)DSMRdata.energy_returned_tariff2.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 10, { ModbusDataType::UINT32, []() { return (DSMRdata.energy_delivered_total_present) ? (uint32_t)DSMRdata.energy_delivered_total.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 12, { ModbusDataType::UINT32, []() { return (DSMRdata.energy_returned_total_present) ? (uint32_t)DSMRdata.energy_returned_total.int_val() : MBUS_VAL_UNAVAILABLE; } }},
+    { 10, { ModbusDataType::UINT32, []() { return (DSMRdata.energy_delivered_total_present) ? (uint32_t)DSMRdata.energy_delivered_total.int_val() : DSMRdata.energy_delivered_tariff1.int_val()+DSMRdata.energy_delivered_tariff2.int_val(); } }},
+    { 12, { ModbusDataType::UINT32, []() { return (DSMRdata.energy_returned_total_present) ? (uint32_t)DSMRdata.energy_returned_total.int_val() : DSMRdata.energy_returned_tariff1.int_val()+DSMRdata.energy_returned_tariff2.int_val(); } }},
     { 14, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_present) ? (uint32_t)DSMRdata.power_delivered.int_val() : MBUS_VAL_UNAVAILABLE; } }},
     { 16, { ModbusDataType::UINT32, []() { return (DSMRdata.power_returned_present) ? (uint32_t)DSMRdata.power_returned.int_val() : MBUS_VAL_UNAVAILABLE; } }},
     { 18, { ModbusDataType::UINT32, []() { return (DSMRdata.voltage_l1_present) ? (uint32_t)DSMRdata.voltage_l1.int_val() : MBUS_VAL_UNAVAILABLE; } }},
@@ -54,6 +54,8 @@ std::map<uint16_t, ModbusMapping> mapping_default = {
     { 40, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l2_present) ? (int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val() : MBUS_VAL_UNAVAILABLE; } }},
     { 42, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l3_present) ? (int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val() : MBUS_VAL_UNAVAILABLE; } }},
     { 44, { ModbusDataType::UINT32, []() { return WtrMtr ? (uint32_t)(P1Status.wtr_m3 * 1000 + P1Status.wtr_l) : MBUS_VAL_UNAVAILABLE; } }},
+    { 46, { ModbusDataType::UINT32, []() { /* P1DO as fixed identifier */ return 0x5031444F; } }},
+              
 };
 
 //6: https://www.phoenixcontact.com/nl-nl/producten/energiemetingsmoduul-eem-ma371-2908307#:~:text=EMpro_register_table_1.6.0
@@ -167,7 +169,7 @@ std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[7] = { 46, 204+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2 };
+uint16_t MaxReg[7] = { 48, 204+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2 };
 
 
 // Change active mapping

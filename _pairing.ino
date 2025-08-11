@@ -105,6 +105,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         Debug("host: ");Debugln(recvdata.host);
         strncpy(PeerHostname,recvdata.host,sizeof(PeerHostname));
         memcpy(Pref.mac, info->src_addr,6);
+        // memcpy(Pref.mac, mac_addr,6); //sdk 2.x
         addPeer(Pref.mac);
         esp_err_t result = esp_now_send(Pref.mac, (uint8_t *) &pairingData, sizeof(pairingData));
       }  else Debugln("Incorrect pw");
@@ -116,10 +117,12 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
 }
 
 // callback when data is sent
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+// void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) { //3.2.x
+  void OnDataSent(const esp_now_send_info_t *info, esp_now_send_status_t status) { //3.3.x
   Debug("Last Packet Send Status: ");
   Debug(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success to " : "Delivery Fail to ");
-  printMAC(mac_addr);
+  // printMAC(mac_addr); //SDK 2.x
+  printMAC(info->src_addr);
   Debugln();
 }
 

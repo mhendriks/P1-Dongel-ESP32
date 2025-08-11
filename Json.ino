@@ -37,16 +37,25 @@ int signalToEnum(const char* signal) {
 }
 
 void JsonEIDplanner(){
-  String data = "{";
-  for (int i = hour(); i < hour()+8; i++ ){
-    if ( i > hour() ) data += ",";
-    data += "\"" + String(i%24) + "\"";
-    data += ":";
+  
+  if ( StroomPlanData.size() == 0 ) { sendApiNoContent(); return;}
+
+  const char* timestamp = StroomPlanData["data"][0]["timestamp"];
+  if (timestamp && strlen(timestamp) < 13) {
+    DebugTln(F("Ongeldige of ontbrekende timestamp"));
+    sendApiNoContent();
+    return;
+  }
+
+  String data = "{\"h_start\":";
+  data += String((timestamp[11] - '0') * 10 + (timestamp[12] - '0')) + ",\"data\":[";
+  for (int i = 0; i < 14; i++ ){
+    if ( i > 0 ) data += ",";
     data += String(signalToEnum(StroomPlanData["data"][i]["signal"]));
   }
-  data += "}";
+  data += "]}";
   DebugTf( "EIDPlanner json: %s\n", data.c_str() );
-  // sendJsonBuffer(  data.c_str() );
+  sendJsonBuffer( data.c_str() );
 }
 
 void JsonWater(){
@@ -381,6 +390,8 @@ void sendDeviceSettings() {
   doc["led"] = LEDenabled;
   doc["raw-port"] = bRawPort;
   doc["eid-enabled"] = bEID_enabled;
+  doc["eid-planner"] = StroomPlanData.size() > 0 ? true : false;
+
 #ifdef DEV_PAIRING
   doc["dev-pairing"] = true;
 #endif
@@ -407,6 +418,11 @@ void sendApiNotFound() {
 
 } // sendApiNotFound()
 
+void sendApiNoContent() {
+  
+  httpServer.send(204, "application/json");  
+
+} // sendApiNoContent()
 
 //====================================================
 void handleSmApiField(){

@@ -32,6 +32,7 @@ BACKLOG
     - detail P per fase afgelopen uur (sample eens per 10s)
 - kwartierpiek historie opnemen (wanneer nieuwe piek ontstaat)
 - dynamische prijzen inlezen
+- todo: EID Daylight saving hours issue met planner data
 
 V6
 - mqtt 1 data and 1 vital json (with uptime)
@@ -52,9 +53,15 @@ Default checks
 - 4h test
 
 4.16.0
-- add: stroomplanner update interval
-- add: stroomplanner to dashboard
+v default modbusmapping registeren 46 met default P1DO = 0x5031444F in register toegevoegd
+v default modbus mapping reg 10 and 12 is filled with  T1 + T2 when not available from the P1 meter
+v add: stroomplanner update interval
+v add: stroomplanner to dashboard
 - add: stroomplanner to p2p communication
+v check interval ophalen stroomplanner gegevens (om het uur toch 2 intervallen extra)
+- fix: virtual ip write otherwise it is lost by eache save
+- sdk 3.x.x fix for wifi outtage 
+- first test remote Proxy and Websockets
 
 next
 - improvement: modbus in own process = non-blocking 
@@ -87,9 +94,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
-// #define ULTRA         //ultra (mini) dongle
+#define ULTRA         //ultra (mini) dongle
 #define ETHERNET      //ethernet dongle
-#define ETH_P1EP          //ethernet pro+ dongle
+// #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
@@ -201,7 +208,7 @@ void setup()
   if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*6, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
   
   EIDStart();
-
+  startProxyWS();
   // setupWS();
 
   DebugTf("Startup complete! actTimestamp: [%s]\r\n", actTimestamp);  
@@ -248,7 +255,9 @@ void fMqtt( void * pvParameters ){
 
 void loop () { 
   // handleWS();
-  httpServer.handleClient();      
+  httpServer.handleClient();     
+  handleProxyWSLoop();
+
   if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
     P1StatusWrite();
     MQTTSentStaticInfo();

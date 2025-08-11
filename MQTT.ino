@@ -109,6 +109,7 @@ void MQTTDisconnect(){
 }
 
 void MQTTsetServer(){
+  // MQTTclient.setKeepAlive(60); // stuurt elke 60s een PINGREQ
 #ifndef MQTT_DISABLE 
   if ((settingMQTTbrokerPort == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   MQTTDisconnect();
@@ -117,6 +118,7 @@ void MQTTsetServer(){
     MQTTclient.setClient(wifiClientTLS);
   }
   else {
+    
     MQTTclient.setClient(wifiClient);
   }
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);

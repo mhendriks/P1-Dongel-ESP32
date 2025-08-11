@@ -10,7 +10,7 @@
 #ifndef _DSMRAPI_H
 #define _DSMRAPI_H
 
-//SDK 3.x.x
+// SDK 3.x.x
 #if ARDUINO_USB_CDC_ON_BOOT
   #define USBSerial HWCDCSerial
 #else
