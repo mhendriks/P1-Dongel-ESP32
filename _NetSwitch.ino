@@ -16,6 +16,7 @@ void fNetSwitchProc( void * pvParameters ){
   while(true) {
     handleNetSwitch();
     vTaskDelay(10 / portTICK_PERIOD_MS);
+    // esp_task_wdt_reset();
   }
   DebugTln(F("!!! DISABLE NetSwitch processing"));
   vTaskDelete(NULL);

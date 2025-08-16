@@ -27,6 +27,7 @@ void update_started() {
     int cnt = 0;
     while (cnt++ < 10) {
       httpServer.handleClient();
+      esp_task_wdt_reset();
       delay(100);
     }
   }
