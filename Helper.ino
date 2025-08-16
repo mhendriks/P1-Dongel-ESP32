@@ -25,7 +25,45 @@ byte     rgbled_io = RGBLED_PIN;
 
 #define _getChipId() (uint64_t)ESP.getEfuseMac()
 
-const PROGMEM char *resetReasons[]  { " - Reset reason can not be determined"," - Reset due to power-on event"," - Reset by external pin"," - Software reset via esp_restart"," - Software reset due to exception/panic"," - Reset (software or hardware) due to interrupt watchdog"," - Reset due to task watchdog"," - Reset due to other watchdogs"," - Reset after exiting deep sleep mode"," - Brownout reset (software or hardware)"," - Reset over SDIO","Reset by USB peripheral"," - Reset by JTAG/Button"," - Reset due to efuse error"," - Reset due to power glitch detected"," - Reset due to CPU lock up (double exception)"};
+const char *resetReasonsIDF[] PROGMEM = {
+    [0]  = "0 - ESP_RST_UNKNOWN - Cannot be determined",
+    [1]  = "1 - ESP_RST_POWERON - Power-on reset",
+    [2]  = "2 - ESP_RST_EXT - External pin reset",
+    [3]  = "3 - ESP_RST_SW - Software reset (esp_restart)",
+    [4]  = "4 - ESP_RST_PANIC - Exception/Panic",
+    [5]  = "5 - ESP_RST_INT_WDT - Interrupt watchdog",
+    [6]  = "6 - ESP_RST_TASK_WDT - Task watchdog",
+    [7]  = "7 - ESP_RST_WDT - Other watchdog",
+    [8]  = "8 - ESP_RST_DEEPSLEEP - Wake from deep sleep",
+    [9]  = "9 - ESP_RST_BROWNOUT - Brownout",
+    [10] = "10 - ESP_RST_SDIO - SDIO reset",
+    [11] = "11 - ESP_RST_USB - USB peripheral reset",
+    [12] = "12 - ESP_RST_JTAG - JTAG reset",
+    [13] = "13 - ESP_RST_EFUSE - eFuse error",
+    [14] = "14 - ESP_RST_PWR_GLITCH - Power glitch detected",
+    [15] = "15 - ESP_RST_CPU_LOCKUP - CPU lock-up"
+};
+
+/* WD timers 
+- idle = off
+- 10 sec on tasks
+*/
+void SetupWDT(){
+  esp_task_wdt_deinit();
+  esp_task_wdt_config_t cfg = {
+    .timeout_ms = 10000, //in 10sec default 
+    // .idle_core_mask = (1<<0) | (1<<1), //S3 watch idle core 0 & 1
+    // .idle_core_mask = (1<<0), //C3 watch idle core 0 
+    .idle_core_mask = 0, //idle core watch dog OFF
+#ifdef DEBUG
+    .trigger_panic = true
+#else
+    .trigger_panic = false
+#endif
+  };
+  esp_task_wdt_init(&cfg);
+  esp_task_wdt_add(NULL);
+}
 
 // ------------------ HARDWARE DETECTIE ------------------ //
 //detect hardware type if burned in efuse
@@ -209,11 +247,21 @@ if ( UseRGB ) {
 
 //===========================================================================================
 
-const char* getResetReason(){
-    return String(String(rtc_get_reset_reason(0)) + resetReasons[ rtc_get_reset_reason(0) > 15? 0 : rtc_get_reset_reason(0) ]).c_str();
-  // esp_reset_reason_t r = esp_reset_reason();
-  // DebugTf("Last Reset reason: %d = %s\n", r, RESET_REASON(r));
-  // return RESET_REASON(r);
+// const char* getResetReason(){
+//     return String(String(rtc_get_reset_reason(0)) + resetReasons[ rtc_get_reset_reason(0) > 15? 0 : rtc_get_reset_reason(0) ]).c_str();
+//   // esp_reset_reason_t r = esp_reset_reason();
+//   // DebugTf("Last Reset reason: %d = %s\n", r, RESET_REASON(r));
+//   // return RESET_REASON(r);
+// }
+
+const char* getResetReason() {
+    static char buf[64];
+    esp_reset_reason_t r = esp_reset_reason();
+    if (r < 0 || r > 15 || resetReasonsIDF[r] == nullptr) {
+        snprintf(buf, sizeof(buf), "Unknown reset reason (%d)", (int)r);
+        return buf;
+    }
+    return resetReasonsIDF[r];
 }
 
 //===========================================================================================
