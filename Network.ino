@@ -81,7 +81,7 @@ bool bEthUsage = false;
 
 // Network event -> Ethernet is dominant
 // https://github.com/espressif/arduino-esp32/blob/master/libraries/Network/src/NetworkEvents.h
-static void onNetworkEvent (WiFiEvent_t event) {
+static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
   switch (event) {
 #ifdef ETHERNET  
   //ETH    
@@ -156,7 +156,7 @@ static void onNetworkEvent (WiFiEvent_t event) {
         bNoNetworkConn = true;
         break;
     default:
-        sprintf(cMsg,"Network-event : %d | rssi: %d | channel : %i",event, WiFi.RSSI(), WiFi.channel());
+        sprintf(cMsg,"Network-event : %d | reason: %d| rssi: %d | channel : %i",event, info.wifi_sta_disconnected.reason, WiFi.RSSI(), WiFi.channel());
         LogFile(cMsg, true);
         break;
     }
@@ -185,6 +185,7 @@ void startWiFi(const char* hostname, int timeOut)
   while ( (netw_state == NW_NONE) && (timeout++ < 35) ) {
     delay(100); 
     Debug(".");
+    esp_task_wdt_reset();
   } 
   Debugln();
   // w5500_powerDown();
@@ -192,8 +193,11 @@ void startWiFi(const char* hostname, int timeOut)
   
   if ( netw_state != NW_NONE ) return;
   
-  //lower calibration power
-  esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+  esp_wifi_set_ps(WIFI_PS_MAX_MODEM); //lower calibration power
+
+  WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false);  
+  esp_wifi_set_ps(WIFI_PS_NONE); // IDF: forced NO modem-sleep
 
   WiFi.setHostname(hostname);
   // WiFi.enableIPv6();
@@ -231,6 +235,7 @@ void startWiFi(const char* hostname, int timeOut)
     Debug("*");
     delay(100);
     manageWiFi.process();
+    esp_task_wdt_reset();
     SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE); //fast blinking
   }
   Debugln();
@@ -255,6 +260,7 @@ void WaitOnNetwork()
   while ( netw_state == NW_NONE ) { //endless wait for network connection
     Debug(".");
     delay(200);
+    esp_task_wdt_reset();
   }
   Debugln("\nNetwork connected");
 }
