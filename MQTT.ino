@@ -14,6 +14,29 @@
 
 String MQTTclientId;
 
+
+void fMqtt( void * pvParameters ){
+#ifndef MQTT_DISABLE    
+  DebugTln(F("Start MQTT Thread"));
+  MQTTSetBaseInfo();
+  MQTTsetServer();
+  esp_task_wdt_add(nullptr);
+  while(true) {
+    PrintHWMark(1);
+    handleMQTT();
+    esp_task_wdt_reset();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+#endif
+  LogFile("Mqtt: unexpected task exit", true);
+  vTaskDelete(NULL);
+}
+
+void StartMqttTask(){
+  if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*6, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) \
+    DebugTln(F("Task MQTT succesfully created"));
+}
+
 void handleMQTT(){
   MQTTclient.loop();
   if ( bSendMQTT ) sendMQTTData();
@@ -119,6 +142,7 @@ void MQTTsetServer(){
     MQTTclient.setClient(wifiClient);
   }
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
+  MQTTclient.setKeepAlive(60);
   DebugTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
   MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
 

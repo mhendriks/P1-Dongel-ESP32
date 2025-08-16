@@ -53,11 +53,12 @@ Default checks
 
 4.15.8
 - fix changing modbus TCP ID via config
-
-4.16.0
-- add: stroomplanner update interval
-- add: stroomplanner to dashboard
-- add: stroomplanner to p2p communication
+- sdk 3.3.0 build
+- sdk 3.3.0 changes (espnow)
+- change default WD timer to 10sec
+- add task WD main loop and some WD resets in loops
+- change the reset reasons to IDF reasons ... identical for C3 and S3
+- FIX loop/hang parsing MCS301 with 4 decimals issue (DSMR2Lib)
 
 next
 - improvement: modbus in own process = non-blocking 
@@ -86,13 +87,12 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 /******************** compiler options  ********************************************/
 
 // #define DEBUG
-// #define INSIGHTS
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
 // #define ULTRA         //ultra (mini) dongle
-// #define ETHERNET      //ethernet dongle
-// #define ETH_P1EP          //ethernet pro+ dongle
+#define ETHERNET      //ethernet dongle
+#define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
@@ -111,16 +111,15 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define MB_RTU
 
 #include "DSMRloggerAPI.h"
-#include <esp_task_wdt.h>
 
 void setup() 
 {
-  // make_version();
   uint16_t Freq = getCpuFrequencyMhz();
   setCpuFrequencyMhz(80); //lower power mode
   DebugBegin(115200);
   USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, Firmware.Version ); 
   Debugf("Original cpu speed: %d\n",Freq);
+  SetupWDT();
   PushButton.begin(IO_BUTTON);
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
@@ -151,10 +150,7 @@ void setup()
   
   startNetwork();
   PostMacIP(); //post mac en ip
-  delay(100);
-#ifdef INSIGHTS  
-  if ( Insights.begin(INSIGHTS_KEY) ) Debugf("ESP Insights enabled Node ID %s\n", Insights.nodeID());
-#endif  
+  delay(100); 
   startTelnet();
   startMDNS(settingHostname);
   startNTP();
@@ -198,11 +194,8 @@ void setup()
   delay(500);
   setCpuFrequencyMhz(Freq); //restore original clockspeed
 
-  //create a task that will be executed in the fP1Reader() function, with priority 1
-  //p1 task runs always on core 0. On the dual core models Arduino runs on core 1. It isn't possible that the process runs on both cores.
-  if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 2, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
-  if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*6, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
-  
+  StartP1Task();
+  StartMqttTask();
   EIDStart();
 
   // setupWS();
@@ -210,44 +203,6 @@ void setup()
   DebugTf("Startup complete! actTimestamp: [%s]\r\n", actTimestamp);  
 
 } // setup()
-
-//P1 reader task
-void fP1Reader( void * pvParameters ){
-  DebugTln(F("Enable slimme meter..."));
-  esp_task_wdt_add(nullptr);
-  SetupP1In();
-  SetupP1Out();
-  slimmeMeter.enable(false);
-#ifdef ULTRA
-  digitalWrite(DTR_IO, LOW); //default on
-#endif   
-  while(true) {
-    PrintHWMark(0);
-    handleSlimmemeter();
-    P1OutBridge();
-    esp_task_wdt_reset();
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-  LogFile("P1 reader: unexpected task exit", true);
-  vTaskDelete(NULL);
-}
-
-void fMqtt( void * pvParameters ){
-#ifndef MQTT_DISABLE    
-  DebugTln(F("Start MQTT Thread"));
-  MQTTSetBaseInfo();
-  MQTTsetServer();
-  esp_task_wdt_add(nullptr);
-  while(true) {
-    PrintHWMark(1);
-    handleMQTT();
-    esp_task_wdt_reset();
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-#endif
-  LogFile("Mqtt: unexpected task exit", true);
-  vTaskDelete(NULL);
-}
 
 void loop () { 
   // handleWS();
@@ -267,6 +222,7 @@ void loop () {
   GetAccuDataN();
   handleVirtualP1();
   PrintHWMark(2);
+  esp_task_wdt_reset();
 
 } // loop()
 

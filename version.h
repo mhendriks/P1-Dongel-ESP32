@@ -3,6 +3,7 @@
 #define _VERSION_MAJOR 4
 #define _VERSION_MINOR 15
 #define _VERSION_PATCH 8
+#define _VERSION_ONLY STR(_VERSION_MAJOR) "." STR(_VERSION_MINOR) "." STR(_VERSION_PATCH)
 
 #define __MON__ ((__DATE__[0] + __DATE__[1] + __DATE__[2]) == 281   ? "01" \
                  : (__DATE__[0] + __DATE__[1] + __DATE__[2]) == 269 ? "02" \
@@ -24,7 +25,7 @@
 #define MONTH_STR __MON__[0], __MON__[1]
 #define YEAR_STR __DATE__[7], __DATE__[8], __DATE__[9], __DATE__[10]
 
-#define _VERSION_ONLY STR(_VERSION_MAJOR) "." STR(_VERSION_MINOR) "." STR(_VERSION_PATCH)
+
 
 const char compile_date[] = { DAY_STR, '/', MONTH_STR, '/', YEAR_STR, '\0' };
 
@@ -33,7 +34,7 @@ public:
   FW() {
     sprintf(Version, "%s (%s)", _VERSION_ONLY, compile_date);
   }
-  char Version[20];
+  char Version[25];
 
 private:
 } Firmware;

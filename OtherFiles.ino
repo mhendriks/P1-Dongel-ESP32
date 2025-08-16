@@ -411,14 +411,22 @@ void LogFile(const char* payload, bool toDebug) {
     LogFile = LittleFS.open("/P1.log", "a"); // open for appending  
     }
     
-    if (strlen(payload)==0) {
-      //reboot
-      //make one record : {"time":"2020-09-23 17:03:25","reason":"Software/System restart","reboots":42}
-      LogFile.println("{\"time\":\"" + buildDateTimeString(actTimestamp, sizeof(actTimestamp)) + "\",\"reboot\":\"" + lastReset + "\",\"reboots\":" +  (int)P1Status.reboots + "}");
-    } else { 
-      //make one record : {"time":"2020-09-23 17:03:25","log":"Software/System restart"}
-      LogFile.println("{\"time\":\"" + buildDateTimeString(actTimestamp, sizeof(actTimestamp)) + "\",\"log\":\"" + payload + "\"}");
-    }
+    String log_payload = "{\"up\":";
+    log_payload += String(uptime());
+    log_payload += ",\"time\":\"";
+    log_payload += buildDateTimeString(actTimestamp, sizeof(actTimestamp));
+    log_payload += "\",\"";
+    
+    if ( strlen(payload)==0 ) {
+       log_payload += PROFILE " REBOOT reason: ";
+       log_payload += String(lastReset);
+       log_payload += " | reboots: ";
+       log_payload += String(P1Status.reboots);
+    } else log_payload += payload;
+
+    log_payload += "\"}";
+
+    LogFile.println(log_payload.c_str());
     //closing the file
     LogFile.close(); 
 }

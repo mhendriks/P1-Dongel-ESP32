@@ -13,6 +13,32 @@ volatile bool dtr1         = false;
 bool          Out1Avail    = false;
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
+//P1 reader task
+void fP1Reader( void * pvParameters ){
+  DebugTln(F("Enable slimme meter..."));
+  esp_task_wdt_add(nullptr);
+  SetupP1In();
+  SetupP1Out();
+  slimmeMeter.enable(false);
+#ifdef ULTRA
+  digitalWrite(DTR_IO, LOW); //default on
+#endif   
+  while(true) {
+    PrintHWMark(0);
+    handleSlimmemeter();
+    P1OutBridge();
+    esp_task_wdt_reset();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+  LogFile("P1 reader: unexpected task exit", true);
+  vTaskDelete(NULL);
+}
+
+void StartP1Task(){
+  if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 2, &tP1Reader, /*core*/ 0 ) == pdPASS ) 
+    DebugTln(F("Task tP1Reader succesfully created"));
+}
+
 void SetupP1In(){
   Serial1.end();
   delay(100); //give it some time
@@ -161,13 +187,13 @@ void handleSlimmemeter()
 //==================================================================================
 void SMCheckOnce(){
   DebugTln(F("first time check"));
+  DebugFlush();
   if (DSMRdata.identification_present) {
     //--- this is a hack! The identification can have a backslash in it
     //--- that will ruin javascript processing :-(
     for(int i=0; i<DSMRdata.identification.length(); i++)
     {
       if (DSMRdata.identification[i] == '\\') DSMRdata.identification[i] = '=';
-      yield();
     }
     smID = DSMRdata.identification;
   } // check id 

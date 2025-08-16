@@ -181,6 +181,8 @@ struct buildJson {
 
 }; // buildjson{} 
  
+
+
 template <typename TSource>
 void sendJson(const TSource &doc) 
 {  
@@ -222,15 +224,7 @@ void sendDeviceInfo()
 {
   JsonDocument doc;
   doc["fwversion"] = Firmware.Version;
-//  snprintf(cMsg, sizeof(cMsg), "%s %s", __DATE__, __TIME__);
-  doc["compiled"] = __DATE__ " " __TIME__;
-
-//#ifndef HEATLINK
-  // if ( ! bWarmteLink ) { // IF NOT HEATLINK
-  //   doc["smr_version"] = DSMR_NL?"NL":"BE";
-  // }
-//#endif
-  
+  doc["compiled"] = __DATE__ " " __TIME__;  
   doc["hostname"] = settingHostname;
   doc["ipaddress"] = IP_Address();
   doc["indexfile"] = settingIndexPage;
@@ -250,9 +244,6 @@ void sendDeviceInfo()
   doc["sketchsize"] ["value"] = (uint32_t)(ESP.getSketchSize() / 1024.0);
   doc["sketchsize"]["unit"] = "kB";
   
-  // doc["utilization"] ["value"] = 100 - percent; // doesnt workt. 
-  // doc["utilization"]["unit"] = "%";
-  
   doc["freesketchspace"] ["value"] = (uint32_t)(ESP.getFreeSketchSpace() / 1024.0);
   doc["freesketchspace"]["unit"] = "kB";
   doc["flashchipsize"] ["value"] = (uint32_t)(ESP.getFlashChipSize() / 1024 / 1024 );
@@ -263,7 +254,6 @@ void sendDeviceInfo()
 
 #ifndef ETHERNET
   doc["ssid"] = WiFi.SSID();
-  // doc["pskkey"] = WiFi.psk();
   doc["wifirssi"] = WiFi.RSSI();
 #endif
   doc["uptime"] = upTime();
@@ -271,9 +261,6 @@ void sendDeviceInfo()
   if ( !bWarmteLink ) { // IF NO HEATLINK
       doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
   }
-  
-  // if ( DSMRdata.p1_version == "50" /*|| !DSMR_NL */) doc["telegraminterval"] = 1; 
-  // else doc["telegraminterval"] = 10; 
 
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
