@@ -223,8 +223,8 @@ void sendDeviceTime()
 void sendDeviceInfo() 
 {
   JsonDocument doc;
-  doc["fwversion"] = Firmware.Version;
-  doc["compiled"] = __DATE__ " " __TIME__;  
+  doc["fwversion"] = _VERSION_ONLY " ( " __DATE__ " " __TIME__ " )";
+  // doc["compiled"] = __DATE__ " " __TIME__;  
   doc["hostname"] = settingHostname;
   doc["ipaddress"] = IP_Address();
   doc["indexfile"] = settingIndexPage;

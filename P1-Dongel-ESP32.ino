@@ -31,7 +31,11 @@ BACKLOG
     - loadbalancing over de fases heen
     - detail P per fase afgelopen uur (sample eens per 10s)
 - kwartierpiek historie opnemen (wanneer nieuwe piek ontstaat)
-- dynamische prijzen inlezen
+- dynamische prijzen inl
+- improvement: modbus in own process = non-blocking 
+- check and repair rng files on startup
+- hostname aanpassen met laatste 3 segmenten mac-adres
+ezen
 
 V6
 - mqtt 1 data and 1 vital json (with uptime)
@@ -50,20 +54,6 @@ Default checks
 - dev_pairing
 - ethernet
 - 4h test
-
-4.15.8
-- fix changing modbus TCP ID via config
-- sdk 3.3.0 build
-- sdk 3.3.0 changes (espnow)
-- change default WD timer to 10sec
-- add task WD main loop and some WD resets in loops
-- change the reset reasons to IDF reasons ... identical for C3 and S3
-- FIX loop/hang parsing MCS301 with 4 decimals issue (DSMR2Lib)
-
-next
-- improvement: modbus in own process = non-blocking 
-- check and repair rng files on startup
-- hostname aanpassen met laatste 3 segmenten mac-adres
 
 - winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
 --> oplossing : 
@@ -91,8 +81,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
 // #define ULTRA         //ultra (mini) dongle
-#define ETHERNET      //ethernet dongle
-#define ETH_P1EP          //ethernet pro+ dongle
+// #define ETHERNET      //ethernet dongle
+// #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
@@ -117,7 +107,7 @@ void setup()
   uint16_t Freq = getCpuFrequencyMhz();
   setCpuFrequencyMhz(80); //lower power mode
   DebugBegin(115200);
-  USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, Firmware.Version ); 
+  USBPrintf( "\n\n------> BOOTING %s %s ( %s %s ) <------\n\n", _DEFAULT_HOSTNAME, _VERSION_ONLY, __DATE__, __TIME__ ); 
   Debugf("Original cpu speed: %d\n",Freq);
   SetupWDT();
   PushButton.begin(IO_BUTTON);

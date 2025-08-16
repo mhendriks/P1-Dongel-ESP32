@@ -60,8 +60,7 @@ void displayBoardInfo()
   snprintf(cMsg, sizeof(cMsg), "model %x rev: %x cores: %x", chip_info.model, chip_info.revision, chip_info.cores);
 
   Debugln(F("\r\n==================================================================\r"));
-  Debug(F("]\r\n      Firmware Version ["));  Debug( Firmware.Version );
-  Debug(F("]\r\n              Compiled ["));  Debug( __DATE__ "  "  __TIME__ );
+  Debug(F("]\r\n      Firmware Version ["));  Debug( _VERSION_ONLY " - " __TIMESTAMP__ );
   Debug(F("]\r\n              #defines "));   Debug(F(ALL_OPTIONS));
   Debug(F(" \r\n   Telegrams Processed ["));  Debug( telegramCount );
   Debug(F("]\r\n           With Errors ["));  Debug( telegramErrors );
@@ -75,21 +74,8 @@ void displayBoardInfo()
   Debug(F("]\r\nFree Sketch Space (kB) ["));  Debug( ESP.getFreeSketchSpace() / 1024.0 );
   Debug(F("]\r\n  Flash Chip Size (kB) ["));  Debug( ESP.getFlashChipSize() / 1024 );
   Debug(F("]\r\n          FS Size (kB) ["));  Debug( LittleFS.totalBytes() / 1024 );
-//  Debug(F("]\r\n      Flash Chip Speed ["));  Debug( ESP.getFlashChipSpeed() / 1000 / 1000 );
-  
-  FlashMode_t ideMode = ESP.getFlashChipMode();
-//  Debug(F("]\r\n       Flash Chip Mode ["));  Debug( flashMode[ideMode] );
-//  Debugln(F("]\r"));
   Debugln(F("==================================================================\r"));
-  Debug(F(" \r\n            Board type ["));
-#ifdef ESP32_DEV
-    Debug(F("ESP32_DEV"));
-#endif
-#ifdef ESP32S2_DEV
-    Debug(F("ESP32S2_DEV"));
-#endif
   Debug(F("]\r\n                  SSID ["));  Debug( WiFi.SSID() );
-  // Debug(F("]\r\n               PSK key ["));  Debug( WiFi.psk() );
   Debug(F("]\r\n               PSK key [**********"));
   Debug(F("]\r\n            IP Address ["));  Debug( IP_Address() );
   Debug(F("]\r\n              Hostname ["));  Debug( settingHostname );
@@ -100,7 +86,6 @@ void displayBoardInfo()
   Debugln(F("==================================================================\r"));
   Debug(F(" \r\n           MQTT broker ["));  Debug( settingMQTTbroker );
   Debug(F("]\r\n             MQTT User ["));  Debug( settingMQTTuser );
-    // Debug(F("]\r\n         MQTT PassWord ["));  Debug( settingMQTTpasswd );
   Debug(F("]\r\n         MQTT PassWord [**********"));
   Debug(F("]\r\n             Top Topic ["));  Debug(settingMQTTtopTopic );
   Debug(F("]\r\n       Update Interval ["));  Debug(settingMQTTinterval);
@@ -224,7 +209,7 @@ void handleKeyInput()
       case 'Z':     P1StatusClear();
                     break;
                     
-      default:      Debugf("Dongle version %s | mac address %s\n\r",Firmware.Version, macStr );
+      default:      Debugf("Dongle version %s ( %s ) | mac address %s\n\r",_VERSION_ONLY, __TIMESTAMP__, macStr );
                     Debugln(F("\r\nCommands are:"));
                     Debugln(F("   A  - P1 Status info a=available|r=read|w=write|p=print|z=erase\r"));
                     Debugln(F("  *E  - erase file from FS\r"));
