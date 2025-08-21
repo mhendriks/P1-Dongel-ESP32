@@ -35,6 +35,7 @@ void update_started() {
 
 void update_progress(int cur, int total) {
   Debugf( "HTTP update process at %d of %d bytes = %d%%\r", cur, total, (cur * 100) / total );
+  esp_task_wdt_reset();
 }
 
 void update_error(int err) {
