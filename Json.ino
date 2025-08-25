@@ -20,6 +20,37 @@ const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff"
 
 JsonDocument jsonDoc;  // generic doc to return, clear() before use!
 
+int signalToEnum(const char* signal) {
+  if (strcmp(signal, "--") == 0) return 0;
+  if (strcmp(signal, "-") == 0)  return 1;
+  if (strcmp(signal, "0") == 0)  return 2;
+  if (strcmp(signal, "+") == 0)  return 3;
+  if (strcmp(signal, "++") == 0) return 4;
+  return -1; // ongeldige waarde
+}
+
+void JsonEIDplanner(){
+  
+  if ( StroomPlanData.size() == 0 ) { sendApiNoContent(); return;}
+
+  const char* timestamp = StroomPlanData["data"][0]["timestamp"];
+  if (timestamp && strlen(timestamp) < 13) {
+    DebugTln(F("Ongeldige of ontbrekende timestamp"));
+    sendApiNoContent();
+    return;
+  }
+
+  String data = "{\"h_start\":";
+  data += String((timestamp[11] - '0') * 10 + (timestamp[12] - '0')) + ",\"data\":[";
+  for (int i = 0; i < 14; i++ ){
+    if ( i > 0 ) data += ",";
+    data += String(signalToEnum(StroomPlanData["data"][i]["signal"]));
+  }
+  data += "]}";
+  DebugTf( "EIDPlanner json: %s\n", data.c_str() );
+  sendJsonBuffer( data.c_str() );
+}
+
 void JsonGas(){
   if (!gasDelivered) return;
   jsonDoc["gas_delivered"]["value"] =  (int)(gasDelivered*1000)/1000.0;
@@ -213,16 +244,7 @@ void sendDeviceTime()
 void sendDeviceInfo() 
 {
   JsonDocument doc;
-  doc["fwversion"] = Firmware.Version;
-//  snprintf(cMsg, sizeof(cMsg), "%s %s", __DATE__, __TIME__);
-  doc["compiled"] = __DATE__ " " __TIME__;
-
-//#ifndef HEATLINK
-  // if ( ! bWarmteLink ) { // IF NOT HEATLINK
-  //   doc["smr_version"] = DSMR_NL?"NL":"BE";
-  // }
-//#endif
-  
+  doc["fwversion"] = _VERSION_ONLY " ( " __DATE__ " " __TIME__ " )";
   doc["hostname"] = settingHostname;
   doc["ipaddress"] = IP_Address();
   doc["indexfile"] = settingIndexPage;
@@ -241,10 +263,6 @@ void sendDeviceInfo()
   doc["cpufreq"]["unit"] = "MHz";
   doc["sketchsize"] ["value"] = (uint32_t)(ESP.getSketchSize() / 1024.0);
   doc["sketchsize"]["unit"] = "kB";
-  
-  // doc["utilization"] ["value"] = 100 - percent; // doesnt workt. 
-  // doc["utilization"]["unit"] = "%";
-  
   doc["freesketchspace"] ["value"] = (uint32_t)(ESP.getFreeSketchSpace() / 1024.0);
   doc["freesketchspace"]["unit"] = "kB";
   doc["flashchipsize"] ["value"] = (uint32_t)(ESP.getFlashChipSize() / 1024 / 1024 );
@@ -255,7 +273,6 @@ void sendDeviceInfo()
 
 #ifndef ETHERNET
   doc["ssid"] = WiFi.SSID();
-  // doc["pskkey"] = WiFi.psk();
   doc["wifirssi"] = WiFi.RSSI();
 #endif
   doc["uptime"] = upTime();
@@ -351,6 +368,7 @@ void sendDeviceSettings() {
   doc["led"] = LEDenabled;
   doc["raw-port"] = bRawPort;
   doc["eid-enabled"] = bEID_enabled;
+  doc["eid-planner"] = StroomPlanData.size() > 0 ? true : false;
 #ifdef DEV_PAIRING
   doc["dev-pairing"] = true;
 #endif
@@ -377,6 +395,11 @@ void sendApiNotFound() {
 
 } // sendApiNotFound()
 
+void sendApiNoContent() {
+  
+  httpServer.send(204, "application/json");  
+
+} // sendApiNoContent()
 
 //====================================================
 void handleSmApiField(){

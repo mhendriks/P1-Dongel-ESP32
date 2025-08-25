@@ -30,6 +30,27 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 "RTC Watch dog Reset digital core","Instrusion tested to reset CPU","Time Group reset CPU","Software reset CPU","RTC Watch dog Reset CPU","for APP CPU, reseted by PRO CPU",
 "Reset when the vdd voltage is not stable","RTC Watch dog reset digital core and rtc module"};
 
+/* WD timers 
+- idle = off
+- 10 sec on tasks
+*/
+void SetupWDT(){
+  esp_task_wdt_deinit();
+  esp_task_wdt_config_t cfg = {
+    .timeout_ms = 10000, //in 10sec default 
+    // .idle_core_mask = (1<<0) | (1<<1), //S3 watch idle core 0 & 1
+    // .idle_core_mask = (1<<0), //C3 watch idle core 0 
+    .idle_core_mask = 0, //idle core watch dog OFF
+#ifdef DEBUG
+    .trigger_panic = true
+#else
+    .trigger_panic = false
+#endif
+  };
+  esp_task_wdt_init(&cfg);
+  esp_task_wdt_add(NULL);
+}
+
 // ------------------ HARDWARE DETECTIE ------------------ //
 //detect hardware type if burned in efuse
 void DetectHW() {

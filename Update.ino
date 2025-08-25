@@ -28,12 +28,14 @@ void update_started() {
     while (cnt++ < 10) {
       httpServer.handleClient();
       delay(100);
+      esp_task_wdt_reset();
     }
   }
 }
 
 void update_progress(int cur, int total) {
   Debugf( "HTTP update process at %d of %d bytes = %d%%\r", cur, total, (cur * 100) / total );
+  esp_task_wdt_reset();
 }
 
 void update_error(int err) {

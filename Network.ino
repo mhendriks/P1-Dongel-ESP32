@@ -208,6 +208,7 @@ void startWiFi(const char* hostname, int timeOut)
   while ( (netw_state == NW_NONE) && (timeout++ < 35) ) {
     delay(100); 
     Debug(".");
+    esp_task_wdt_reset();
   } 
   Debugln();
   // w5500_powerDown();
@@ -216,7 +217,15 @@ void startWiFi(const char* hostname, int timeOut)
   if ( netw_state != NW_NONE ) return;
   
   //lower calibration power
-  esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+  // esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+
+  
+  esp_wifi_set_ps(WIFI_PS_MAX_MODEM); //lower calibration power
+
+  WiFi.setAutoReconnect(true);
+  WiFi.setSleep(false); 
+  esp_wifi_set_ps(WIFI_PS_NONE); // IDF: forceer geen modem-sleep
+
   
   // WiFi.mode(WIFI_STA);
   // wifi_config_t sta_config;
@@ -265,6 +274,7 @@ void startWiFi(const char* hostname, int timeOut)
     delay(100);
     manageWiFi.process();
     SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE); //fast blinking
+    esp_task_wdt_reset();
   }
   Debugln();
   if ( netw_state == NW_NONE && !bEthUsage ) {
@@ -288,6 +298,7 @@ void WaitOnNetwork()
   while ( netw_state == NW_NONE ) { //endless wait for network connection
     Debug(".");
     delay(200);
+    esp_task_wdt_reset();
   }
   Debugln("\nNetwork connected");
 }

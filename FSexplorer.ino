@@ -85,12 +85,15 @@ void setupFSexplorer()
   httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){ auth(); handleSmApiField(); });
 
   httpServer.on("/eid/getclaim",[](){ auth(); EIDGetClaim(); });
+  httpServer.on("/eid/planner",[](){ auth(); JsonEIDplanner(); });
 #ifdef DEV_PAIRING
   httpServer.on("/pair",[](){ HandlePairing(); });
 #endif
 
   httpServer.on("/api/listfiles", HTTP_GET, [](){ auth(); APIlistFiles(); });
   httpServer.on("/api/v2/gen", HTTP_GET, [](){ auth(); SendSolarJson(); });
+  httpServer.on("/api/v2/accu", HTTP_GET, [](){ auth(); httpServer.send(200, "application/json", "{\"active\":false}"); });
+
   httpServer.on("/FSformat", [](){ auth();formatFS; });
   httpServer.on("/upload", HTTP_POST, []() { auth(); }, handleFileUpload );
   httpServer.on("/ReBoot", [](){ auth();reBootESP(); });

@@ -63,6 +63,19 @@ x hostname aanpassen met laatste 3 segmenten mac-adres (bij write lege settingsf
 5.1.x
 - wifi off en espnow
 
+5.2
+- new EID checks and stroomplanner
+- new update endpoint
+
+Planner display checks
+- niet aanwezig
+- updaten 5.2 en de 3.0.0
+- eid stond aan maar is uitgezet
+√ uur overgang
+- 
+
+
+
 task wtd
 - https://forum.arduino.cc/t/watchdog-reset-esp32-if-stuck-more-than-120-seconds/1266565/2
 - https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/wdts.html
@@ -114,6 +127,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define MQTTKB
 // #define MB_RTU
 #define ESPNOW
+// #define POST_POWERCH
 
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>
@@ -124,9 +138,9 @@ void setup()
   uint16_t Freq = getCpuFrequencyMhz();
   setCpuFrequencyMhz(80); //lower power mode
   DebugBegin(115200);
-  USBPrintf( "\n\n------> BOOTING %s [%s] <------\n\n", _DEFAULT_HOSTNAME, Firmware.Version ); 
+  USBPrintf( "\n\n------> BOOTING %s %s ( %s %s ) <------\n\n", _DEFAULT_HOSTNAME, _VERSION_ONLY, __DATE__, __TIME__ ); 
   Debugf("Original cpu speed: %d\n",Freq);
-  
+  SetupWDT();
   SetupButton();
   GetMacAddress();
 
@@ -212,6 +226,7 @@ void setup()
   if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*6, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
   StartESPNOW();
+  StartPowerCH();
 } // setup()
 
 //P1 reader task
@@ -241,6 +256,7 @@ void fMqtt( void * pvParameters ){
   esp_task_wdt_add(nullptr);
   while(true) {
     PrintHWMark(1);
+    PostPowerCh();
     handleMQTT();
     esp_task_wdt_reset();
     vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -249,13 +265,13 @@ void fMqtt( void * pvParameters ){
 }
 
 void loop () { 
+  esp_task_wdt_reset();
   httpServer.handleClient();      
   if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
     P1StatusWrite();
     MQTTSentStaticInfo();
     CHANGE_INTERVAL_MIN(StatusTimer, 30);
   }
-  // WifiWatchDog();
   handleKeyInput();
   handleRemoteUpdate();
   handleWater();
@@ -265,7 +281,6 @@ void loop () {
   handleVirtualP1();
   PrintHWMark(2);
   handleP2P();
-
 } // loop()
 
 

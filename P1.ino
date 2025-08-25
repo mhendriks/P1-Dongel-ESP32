@@ -176,6 +176,8 @@ void SMCheckOnce(){
     smID = DSMRdata.identification;
   } // check id 
 
+  if ( DSMRdata.p1_version == "50" /*|| !DSMR_NL */ || DSMRdata.p1_version_be_present) bV5meter = true;
+
   if ( DSMRdata.energy_delivered_total_present && !DSMRdata.energy_delivered_tariff1_present ) bUseEtotals = true;
   if (DSMRdata.p1_version_be_present) {
     DSMRdata.p1_version = DSMRdata.p1_version_be;
@@ -337,12 +339,14 @@ void processTelegram(){
   ProcessStats();
   ProcessMaxVoltage();
   NetSwitchStateMngr();
-  // PostHomey();
 
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
   actT = newT;
   
+  // PostHomey();
+  if ( (bV5meter && telegramCount % 3 == 0 ) || !bV5meter ) bNewTelegramPostPower = true;
+
 } // processTelegram()
 
 //==================================================================================

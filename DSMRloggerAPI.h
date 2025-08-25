@@ -17,6 +17,7 @@
   HWCDC USBSerial;
 #endif
 
+#include "version.h"
 #include "Config.h"
 
 // water sensor
@@ -34,12 +35,14 @@ bool                 WtrMtr         = false;
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
-#include "version.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <dsmr2.h>               // https://github.com/mhendriks/dsmr2Lib
 #include "esp_chip_info.h"
 #include <esp_now.h>             //https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
+#include <esp_task_wdt.h>
+
+JsonDocument StroomPlanData;
 
 #ifdef MBUS
   #include "ModbusServerWiFi.h"
@@ -345,6 +348,8 @@ bool        bActJsonMQTT = false;
 bool        bRawPort = false;
 bool        bLED_PRT = true;
 bool        P1Out = false;
+bool        bNewTelegramPostPower = false;
+bool        bV5meter = false;
 byte        RxP1 = RXP1;
 byte        TxO1 = TXO1;
 //bool        bWriteFiles = false;

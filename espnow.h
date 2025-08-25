@@ -11,8 +11,8 @@
 
 // const int ESP_NOW_CHUNK_SIZE = 1450; //from SDK 3.3.0
 
-enum MessageType  { COMMAND, CONFIRMED, NRGACTUALS, NRGTARIFS, NRGSTATIC, UPD_DATA, UPD_VER_RSP, UPD_VER_REQ, UPD_ACK, UPD_GO_UPDATE, } messageType;
-enum sAction      { CONN_REQUEST, CONN_RESPONSE, CONN_CLEAR, PAIRING, ASK_TARIF, ASK_STATIC }; 
+enum MessageType  { COMMAND, CONFIRMED, NRGACTUALS, NRGTARIFS, NRGSTATIC, UPD_DATA, UPD_VER_RSP, UPD_VER_REQ, UPD_ACK, UPD_GO_UPDATE, STROOMPLANNER,} messageType;
+enum sAction      { CONN_REQUEST, CONN_RESPONSE, CONN_CLEAR, PAIRING, ASK_TARIF, ASK_STATIC, ASK_PLANNER }; 
 
 typedef struct {
     uint8_t msgType = COMMAND;
@@ -50,6 +50,16 @@ typedef struct {
     uint32_t  W;        //per m3 in centen
     uint32_t  Efine;    //terugleverboete per Kwh in centen
 } tariff_t;
+
+typedef struct { 
+    uint8_t   hour;
+    uint8_t   type;
+} planner_rec_t;
+
+typedef struct { 
+    uint8_t   msgType = STROOMPLANNER;
+    planner_rec_t rec[10];   
+} planner_t;
 
 struct OTA_VER {
   uint8_t type;           // == MSG_TYPE_VER_REQ

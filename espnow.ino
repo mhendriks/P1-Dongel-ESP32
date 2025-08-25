@@ -122,7 +122,11 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         case ASK_STATIC:
           Debugln("ASK_STATIC");
           sendStatic();
-          break;          
+          break; 
+        case ASK_PLANNER:
+          Debugln("ASK_PLANNER");
+          P2PType = STROOMPLANNER;
+          break;                    
         case PAIRING:
           Debugln("PAIRING");
           memcpy(&Command, incomingData, sizeof(Command));
@@ -164,7 +168,8 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
   } //switch 
 }
 
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+// void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {//3.2.x
+void OnDataSent(const esp_now_send_info_t *info, esp_now_send_status_t status) { //3.3.x
 #ifdef DEBUG  
   Debug("Last Packet Send Status: ");
   Debugln(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
@@ -198,6 +203,33 @@ void StartESPNOW(){
   if ( Pref.peers ) AddPeer(Pref.mac);
 
   bESPNowInit = true;
+}
+
+void sendStroomPlanner(){
+  // check of available data and if EID is enabled
+  if ( StroomPlanData.size() == 0 ) return;
+  
+  planner_t PlannerData;
+
+  if ( !bEID_enabled) {
+    PlannerData.rec[0].hour = 99; //sent disabled state to display
+  } else {
+    const char* timestamp = StroomPlanData["data"][0]["timestamp"];
+    if (timestamp && strlen(timestamp) < 13) {
+      DebugTln(F("Ongeldige of ontbrekende timestamp"));
+      return;
+    }
+    
+    for (int i = 0; i < 10; i++ ){
+      const char* ts = StroomPlanData["data"][i]["timestamp"];
+      PlannerData.rec[i].hour = (ts[11] - '0') * 10 + (ts[12] - '0');
+      PlannerData.rec[i].type = signalToEnum(StroomPlanData["data"][i]["signal"]);
+      Debugf("! PLANNER - hour: %i - type : %i\n", PlannerData.rec[i].hour, PlannerData.rec[i].type);
+    }
+  }
+  esp_now_send(NULL, (uint8_t *) &PlannerData, sizeof(PlannerData));
+  Debugln("Stroomplanner data sent");
+
 }
 
 void sendStatic() {
@@ -306,6 +338,7 @@ bool sendUpdateViaESPNOWFromHTTP(const char* url) {
 
   // Loop zolang er data te lezen is of de totale grootte nog niet is bereikt
   while ( (totalSize == -1 && http.connected()) || (currentOffset < totalSize) ) {
+    esp_task_wdt_reset();
     if ( !http.connected() ) {
       Debugln("HTTP stream disconnected unexpectedly.");
       dataPacket.totalSize = 0;
@@ -351,7 +384,7 @@ bool sendUpdateViaESPNOWFromHTTP(const char* url) {
 
     while (retries < MAX_RETRIES) {
       ackReceived = false; 
-      
+      esp_task_wdt_reset();
       esp_err_t result = esp_now_send(NULL, (uint8_t *) &dataPacket, sizeof(dataPacket));
 
       if (result != ESP_OK) {
@@ -365,6 +398,7 @@ bool sendUpdateViaESPNOWFromHTTP(const char* url) {
       unsigned long startTime = millis();
       while (!ackReceived && (millis() - startTime < ACK_TIMEOUT_MS)) {
         delay(5);
+        esp_task_wdt_reset();
       }
 
       if (ackReceived) {
@@ -424,6 +458,9 @@ void handleP2P(){
       sprintf(updateURL, "http://%s%s",client_ota_data.update_url,updateFile);
       Debugln(updateURL);
       if ( !sendUpdateViaESPNOWFromHTTP(updateURL) ) Debugln("Error in p2p update proces");
+      break;
+    case STROOMPLANNER:
+      sendStroomPlanner();
       break;
   }
   P2PType = 0;

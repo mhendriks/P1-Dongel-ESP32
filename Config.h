@@ -93,8 +93,8 @@ mod_conf *active_mod_conf = &module_config[0];
   #define OPT1
 #endif
 
-#define OPT2 "[EU]"
-#define OPT3  "[EID]" 
+#define OPT2 ""
+#define OPT3 "" 
 
 #ifdef MBUS
   #define OPT4  "[MODBUS]"
