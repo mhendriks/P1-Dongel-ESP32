@@ -232,6 +232,8 @@ void processSlimmemeter() {
         
     if (slimmeMeter.parse(&DSMRdataNew, &DSMRerror))   // Parse succesful
     {
+      bP1offline = false;
+      P1error_cnt_sequence = 0;
       DSMRdata = DSMRdataNew;
       if ( (telegramCount - telegramErrors) == 1) SMCheckOnce(); //only the first succesfull telegram
       else {
@@ -289,6 +291,7 @@ void processSlimmemeter() {
     else // Parser error, print error
     {
       telegramErrors++;
+      if ( P1error_cnt_sequence++ > 3 ) bP1offline = true;
       DebugTf("Parse error\r\n%s\r\n\r\n", DSMRerror.c_str());
       DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
       slimmeMeter.clear(); //on errors clear buffer

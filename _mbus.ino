@@ -27,6 +27,9 @@ struct ModbusMapping {
     std::function<uint32_t()> valueGetter;
 };
 
+static inline uint32_t packF(float f) { union { float f; uint32_t u; } x{f}; return x.u; }
+
+
 // Modbus mapping default = 0
 std::map<uint16_t, ModbusMapping> mapping_default = {
     { 0,  { ModbusDataType::UINT32, []() { return (uint32_t)(actT - (actTimestamp[12] == 'S' ? 7200 : 3600)); } }},
@@ -53,6 +56,36 @@ std::map<uint16_t, ModbusMapping> mapping_default = {
     { 42, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l3_present) ? (int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val() : MBUS_VAL_UNAVAILABLE; } }},
     { 44, { ModbusDataType::UINT32, []() { return WtrMtr ? (uint32_t)(P1Status.wtr_m3 * 1000 + P1Status.wtr_l) : MBUS_VAL_UNAVAILABLE; } }},
     { 46, { ModbusDataType::UINT32, []() { /* P1DO as fixed identifier */ return 0x5031444F; } }},
+};
+
+// Modbus mapping default (FLOAT32 varianten) = nieuw
+std::map<uint16_t, ModbusMapping> mapping_default_2 = {
+    { 0,  { ModbusDataType::UINT32, []() { return (uint32_t)(actT - (actTimestamp[12] == 'S' ? 7200 : 3600)); } }},
+    { 2,  { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_delivered_tariff1_present && !bUseEtotals) ? DSMRdata.energy_delivered_tariff1.int_val() : NAN); }}},
+    { 4,  { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_delivered_tariff2_present && !bUseEtotals) ? DSMRdata.energy_delivered_tariff2.int_val() : NAN); }}},
+    { 6,  { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_returned_tariff1_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff1.int_val() : NAN); }}},
+    { 8,  { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_returned_tariff2_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff2.int_val() : NAN); }}},
+    { 10, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_delivered_total_present) ? DSMRdata.energy_delivered_total.int_val() : NAN); }}},
+    { 12, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_returned_total_present) ? DSMRdata.energy_returned_total.int_val() : NAN); }}},
+    { 14, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_delivered_present) ? DSMRdata.power_delivered.int_val() : NAN); }}},
+    { 16, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_returned_present) ? DSMRdata.power_returned.int_val() : NAN); }}},
+    { 18, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.voltage_l1_present) ? (float)DSMRdata.voltage_l1.val() : NAN); }}},
+    { 20, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.voltage_l2_present) ? (float)DSMRdata.voltage_l2.val() : NAN); }}},
+    { 22, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.voltage_l3_present) ? (float)DSMRdata.voltage_l3.val() : NAN); }}},
+    { 24, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.current_l1_present) ? (float)DSMRdata.current_l1.val() : NAN); }}},
+    { 26, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.current_l2_present) ? (float)DSMRdata.current_l2.val() : NAN); }}},
+    { 28, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.current_l3_present) ? (float)DSMRdata.current_l3.val() : NAN); }}},
+    { 30, { ModbusDataType::UINT32, []() { return (mbusGas) ? (float)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600)) : MBUS_VAL_UNAVAILABLE; }}},
+    { 32, { ModbusDataType::FLOAT, []() { return packF((mbusGas) ? (float)gasDelivered : NAN); }}},
+    { 34, { ModbusDataType::UINT32, []() { return (DSMRdata.electricity_tariff_present) ? (uint32_t)atoi(DSMRdata.electricity_tariff.c_str()) : MBUS_VAL_UNAVAILABLE; } }},
+    { 36, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.peak_pwr_last_q_present) ? (float)DSMRdata.peak_pwr_last_q.val() : NAN); }}},
+    { 38, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_delivered_l1_present) ? (float)(DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val())*1000 : NAN); }}},
+    { 40, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_delivered_l2_present) ? (float)(DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val())*1000 : NAN); }}},
+    { 42, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_delivered_l3_present) ? (float)(DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val())*1000 : NAN); }}},
+    { 44, { ModbusDataType::FLOAT, []() { return packF(WtrMtr ? (float)(P1Status.wtr_m3 + (P1Status.wtr_l / 1000.0f)) : NAN); }}},
+    { 46, { ModbusDataType::UINT32, []() { /* P1DO as fixed identifier */ return (uint32_t)0x5031444F; }}},
+    { 48, { ModbusDataType::UINT32, []() { return packed_version_u32(); }}},
+    { 50, { ModbusDataType::UINT32, []() { return bP1offline?0:1; }}},
 };
 
 //6: https://www.phoenixcontact.com/nl-nl/producten/energiemetingsmoduul-eem-ma371-2908307#:~:text=EMpro_register_table_1.6.0
@@ -166,8 +199,7 @@ std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[7] = { 48, 204+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2 };
-
+uint16_t MaxReg[8] = { 48, 204+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2, 52 };
 
 // Change active mapping
 void setModbusMapping(int mappingChoice) {
@@ -180,6 +212,7 @@ void setModbusMapping(int mappingChoice) {
         // case 4: selectedMapping = &mapping_em330; break;
         case 5: selectedMapping = &mapping_abb_b21; break;
         case 6: selectedMapping = &mapping_mx3xx; break;
+        case 7: selectedMapping = &mapping_default_2; break;
         default: selectedMapping = &mapping_default; break; // Fallback naar default
     }
 }
@@ -220,7 +253,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
             if ( type == ModbusDataType::UINT32 ){
               val.u = (*selectedMapping)[currentAddr].valueGetter();
             } else if ( type == ModbusDataType::FLOAT ){
-              val.u = (float)(*selectedMapping)[currentAddr].valueGetter();
+              val.u = (*selectedMapping)[currentAddr].valueGetter();
             }   else if ( type == ModbusDataType::INT16 ){
               val.w = (*selectedMapping)[currentAddr].valueGetter();
             }   
