@@ -1,7 +1,8 @@
 #define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
 #define MACSTR2 "%02x%02x%02x%02x%02x%02x"
 #define PEER_NAME_CONTAINS "NRGM35"
-#define ESP_NOW_CHUNK_SIZE 232
+// #define ESP_NOW_CHUNK_SIZE 232
+const int ESP_NOW_CHUNK_SIZE = 1450; //from SDK 3.3.0
 #define MAX_CHANNEL 13  // 13 in Europe
 #ifdef DEBUG
   #define PAIR_TIMEOUT 15000 //10sec timeout
@@ -9,7 +10,7 @@
   #define PAIR_TIMEOUT 120000 //120sec timeout
 #endif
 
-// const int ESP_NOW_CHUNK_SIZE = 1450; //from SDK 3.3.0
+
 
 enum MessageType  { COMMAND, CONFIRMED, NRGACTUALS, NRGTARIFS, NRGSTATIC, UPD_DATA, UPD_VER_RSP, UPD_VER_REQ, UPD_ACK, UPD_GO_UPDATE, STROOMPLANNER,} messageType;
 enum sAction      { CONN_REQUEST, CONN_RESPONSE, CONN_CLEAR, PAIRING, ASK_TARIF, ASK_STATIC, ASK_PLANNER }; 

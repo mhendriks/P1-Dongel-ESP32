@@ -66,6 +66,7 @@ x hostname aanpassen met laatste 3 segmenten mac-adres (bij write lege settingsf
 5.2
 - new EID checks and stroomplanner
 - new update endpoint
+- todo; check  WDT bij opstart .. waarom lange opstart
 
 Planner display checks
 - niet aanwezig
@@ -102,7 +103,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 
