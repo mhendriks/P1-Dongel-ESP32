@@ -8,10 +8,11 @@
 ***************************************************************************      
 */
 
-void GetFile(String filename){
+void GetFile(String filename, String path ){
   HTTPClient http;
   if(wifiClient.connect(HOST_DATA_FILES, 443)) {
-      http.begin(PATH_DATA_FILES + filename);
+    Debugln(path + filename);
+      http.begin(path + filename);
       int httpResponseCode = http.GET();
 //      Serial.print(F("HTTP Response code: "));Serial.println(httpResponseCode);
       if (httpResponseCode == 200 ){

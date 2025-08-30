@@ -20,7 +20,7 @@
 *******************************************************************
 */
 #include <uri/UriBraces.h>
-const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FileExplorer\r\nCache-Control: no-cache\r\n";
+const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FSExplorer\r\nCache-Control: no-cache\r\n";
 
 // Function to check authentication
 bool auth() {
@@ -60,13 +60,11 @@ void serveStaticWithAuth(const char* uri, const char* fileName) {
 //=====================================================================================
 void setupFSexplorer()
 { 
+  if (FSNotPopulated) return;
+  DebugTln(F("FS correct populated -> normal operation!\r"));
 
-//test AsyncWebServer
-// serveStaticWithAuth2( "/api/v2/hist/hours", RingFiles[RINGHOURS].filename);
-// serveStaticWithAuth2( "/api/v2/hist/days", RingFiles[RINGDAYS].filename);
-// serveStaticWithAuth2( "/api/v2/hist/months", RingFiles[RINGMONTHS].filename);
-
-
+  httpServer.serveStatic("/", LittleFS, settingIndexPage);
+  
  // Serve static files with authentication
   serveStaticWithAuth("/api/v2/hist/hours", RingFiles[RINGHOURS].filename);
   serveStaticWithAuth("/api/v2/hist/days", RingFiles[RINGDAYS].filename);
@@ -107,7 +105,15 @@ void setupFSexplorer()
     DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
     String filename = httpServer.uri();
     DebugT("Filename: ");Debugln(filename);
-    if ( !handleFile(filename.c_str()) ) httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
+    
+    bool handle = handleFile(filename.c_str());
+    if ( filename == "/" && !handle ) {
+      // httpServer.sendContent(Header);
+      httpServer.sendHeader("Location", "/#DashTab", true);
+      httpServer.send ( 303, "text/plain", "");
+    }
+    if ( !handle ) httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
+    // if ( !handleFile(filename.c_str()) ) httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
     
   });
   httpServer.begin();
@@ -177,7 +183,7 @@ void APIlistFiles()             // Senden aller Daten an den Client
 bool handleFile(String&& path) 
 {
 //  Debugln("handleFile");
-  if ( !LittleFS.exists(settingIndexPage) ) GetFile(settingIndexPage); 
+  if ( !LittleFS.exists(settingIndexPage) ) GetFile(settingIndexPage, PATH_DATA_FILES); 
   if (httpServer.hasArg("delete")) 
   {
     DebugTf("Delete -> [%s]\n\r",  httpServer.arg("delete").c_str());

@@ -49,9 +49,10 @@ Default checks
     - detail P per fase afgelopen uur (sample eens per 10s)
 
 5.2.1
+√ index file 5.x 
+√ proper website reload after index file removal
+- 4.16 files naar 5.2. (stroomplanner)
 - todo; check  WDT bij opstart .. waarom lange opstart
-- eigen index
-- 4.16 files naar 5.2.
 
 Planner display checks
 √ niet aanwezig
@@ -86,7 +87,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 
@@ -168,23 +169,42 @@ void setup()
   startNTP();
 
 //================ Check necessary files ============================
-  if (!DSMRfileExist(settingIndexPage, false) ) {
+  // if (!DSMRfileExist(settingIndexPage, false) ) {
+  //   DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
+  //   GetFile(settingIndexPage); //download file from cdn
+  //   if (!DSMRfileExist(settingIndexPage, false) ) { //check again
+  //     DebugTln(F("Index file still not pressent!\r"));
+  //     FSNotPopulated = true;
+  //     }
+  // }
+  // if (!FSNotPopulated) {
+  //   DebugTln(F("FS correct populated -> normal operation!\r"));
+  //   httpServer.serveStatic("/", LittleFS, settingIndexPage);
+  // }
+ 
+  // if (!DSMRfileExist("/Frontend.json", false) ) {
+  //   DebugTln(F("Frontend.json not pressent, try to download it!"));
+  //   GetFile("/Frontend.json");
+  // }
+
+ if (!DSMRfileExist(settingIndexPage, false) ) {
     DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
-    GetFile(settingIndexPage); //download file from cdn
+    GetFile(settingIndexPage, PATH_DATA_FILES); //download file from cdn
+    if (!DSMRfileExist(settingIndexPage, false) ) {
+      DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
+      GetFile(settingIndexPage, URL_INDEX_FALLBACK);
+    }
     if (!DSMRfileExist(settingIndexPage, false) ) { //check again
       DebugTln(F("Index file still not pressent!\r"));
       FSNotPopulated = true;
       }
   }
-  if (!FSNotPopulated) {
-    DebugTln(F("FS correct populated -> normal operation!\r"));
-    httpServer.serveStatic("/", LittleFS, settingIndexPage);
-  }
  
   if (!DSMRfileExist("/Frontend.json", false) ) {
     DebugTln(F("Frontend.json not pressent, try to download it!"));
-    GetFile("/Frontend.json");
+    GetFile("/Frontend.json", PATH_DATA_FILES);
   }
+
   setupFSexplorer();
  
   esp_register_shutdown_handler(ShutDownHandler);
