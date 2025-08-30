@@ -48,34 +48,17 @@ Default checks
     - loadbalancing over de fases heen
     - detail P per fase afgelopen uur (sample eens per 10s)
 
-5.1.0
-√ pairing via de webinterface verwijderd
-√ short press = pairing mode
-√ sluipverbruik tussen 24 - 05u
-√ fix: ethernet disconnect dan stopt het p2p proces ...niet meer
-√ Ethernet/Ultra dongle gebruikt altijd eth mac-adres
-√ fix: button handling
-√ eid aan bij installeren (alleen bij Ultra)
-x hostname aanpassen met laatste 3 segmenten mac-adres (bij write lege settingsfile, macadres berekenen op basis van efuse mac)
-√ check of het ook blijft werken met Wifi verbinding
-- meten van piek spanning -> voeding nodig indien ethernet en NRG Monitor. Met Alleen wifi hoogstwaarschijnlijk niet.
-
-5.1.x
-- wifi off en espnow
-
-5.2
-- new EID checks and stroomplanner
-- new update endpoint
+5.2.1
 - todo; check  WDT bij opstart .. waarom lange opstart
+- eigen index
+- 4.16 files naar 5.2.
 
 Planner display checks
-- niet aanwezig
-- updaten 5.2 en de 3.0.0
+√ niet aanwezig
+√ updaten 5.2 en de 3.0.0
 - eid stond aan maar is uitgezet
 √ uur overgang
-- 
-
-
+ 
 
 task wtd
 - https://forum.arduino.cc/t/watchdog-reset-esp32-if-stuck-more-than-120-seconds/1266565/2
@@ -103,7 +86,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 

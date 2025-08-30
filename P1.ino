@@ -144,11 +144,6 @@ void handleSlimmemeter()
       CapTelegram = slimmeMeter.CompleteRaw();
       Out1Avail = true;
       if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
-  
-  #ifdef ESPNOW  
-    // if ( telegramCount % 3 == 1 ) SendActualData();
-    P2PSendActualData();
-  #endif
 
 #ifdef VIRTUAL_P1
   virtSetLastData();
@@ -314,13 +309,13 @@ void processTelegram(){
   // has the hour changed write ringfiles
 #ifdef DEBUG
   DebugTf("actMin[%02d] -- newMin[%02d]\r\n", minute(actT), minute(newT));  
-  if ( ( minute(actT) != minute(newT) ) || P1Status.FirstUse ) {
+  if ( ( minute(actT) != minute(newT) ) || P1Status.FirstUse || !dataYesterday.lastUpdDay ) {
     writeRingFiles(); //bWriteFiles = true; //handled in main flow
     UpdateYesterday();
   }
 #else
   DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
-  if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse ) {
+  if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse || !dataYesterday.lastUpdDay) {
     writeRingFiles(); //bWriteFiles = true; //handled in main flow
     UpdateYesterday();
     //check dag overgang
@@ -335,7 +330,12 @@ void processTelegram(){
 #ifndef MQTT_DISABLE
   if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1) bSendMQTT = true; //handled in main flow
 #endif  
-  
+
+#ifdef ESPNOW  
+    // if ( telegramCount % 3 == 1 ) SendActualData();
+    P2PSendActualData();
+#endif
+
   ProcessStats();
   ProcessMaxVoltage();
   NetSwitchStateMngr();

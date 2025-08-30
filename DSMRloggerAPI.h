@@ -80,7 +80,7 @@ struct {
 } Pref;
 
  struct { 
-  uint32_t lastUpdDay;
+  uint32_t lastUpdDay = 0;
   uint32_t t1;
   uint32_t t2;
   uint32_t t1r;
