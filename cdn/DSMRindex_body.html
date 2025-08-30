@@ -12,9 +12,18 @@
 <div class="header">
   <nav>
   	<div id=messages></div>
-   	<div class="nav-clock topcorner"><span id="theTime">2023-01-01 00:31:49</span></div>
+
+   	<div class="nav-clock topcorner">
+   		<span id="theTime"></span>
+   		<select id="languageSelector" onchange="changeLanguage(this.value)">
+		  <option value="nl">NL</option>
+		  <option value="en">EN</option>
+		  <option value="se">SE</option>
+		  <option value="de">DE</option>		  
+	</select>
+   	</div>
     <ul class="main-navigation" id="myTopnav">
-      <li><a id='Home'   		class='nav-img' href="#DashTab" onclick="activeTab='bDashTab';openTab()"><span class="iconify" data-icon="mdi-chart-box-outline"></span></a></li>
+      <li><a id='Home'   		class='nav-img' href="#DashTab" onclick="document.getElementById('bDashTab').click();"><span class="iconify" data-icon="mdi-chart-box-outline"></span></a></li>
 	  <li><a id='bDashTab'    	data-i18n-key="mnu-dash" class='tabButton nav-item active' href="#DashTab">Dash</a></li>
 	  <li><a id='bActualTab'    data-i18n-key="mnu-actual" class='tabButton nav-item' href="#ActualTab" >Actueel</a></li>
 	  <li><a id='bInsightsTab'    data-i18n-key="mnu-insghts" class='tabButton nav-item' href="#InsightsTab" >Insights</a></li>
@@ -209,18 +218,18 @@
 		</colgroup>
       <thead>
         <tr>
-            <th style="text-align: right;" width='80px'>Maand</th>
-            <th>Jaar</th>
-            <th style="text-align: right;" width='70px'>Electra</th>
-            <th class=mbus-name>Gas</th>
-            <th>Netw.</th>
-            <th style="text-align: right;" width='70px'>Totaal</th>
+            <th data-i18n-key="lbl-month" style="text-align: right;" width='80px'>Maand</th>
+            <th data-i18n-key="lbl-year" data-i18n-key="lbl-year">Jaar</th>
+            <th data-i18n-key="lbl-electricity" style="text-align: right;" width='70px'>Electra</th>
+            <th data-i18n-key="lbl-gas" class=mbus-name>Gas</th>
+            <th data-i18n-key="lbl-network">Netw.</th>
+            <th data-i18n-key="lbl-fm-total" style="text-align: right;" width='70px'>Totaal</th>
 
-            <th>Jaar</th>
-            <th style="text-align: right;" width='70px'>Electra</th>
-            <th class=mbus-name>Gas</th>
-            <th>Netw.</th>
-            <th style="text-align: right;" width='70px'>Totaal</th>
+            <th data-i18n-key="lbl-year">Jaar</th>
+            <th data-i18n-key="lbl-electricity" style="text-align: right;" width='70px'>Electra</th>
+            <th data-i18n-key="lbl-gas" class=mbus-name>Gas</th>
+            <th data-i18n-key="lbl-network">Netw.</th>
+            <th data-i18n-key="lbl-fm-total" style="text-align: right;" width='70px'>Totaal</th>
         </tr>
       </thead>
       <tbody>
@@ -231,15 +240,15 @@
   
   <section id="PlafondTab" class="tabName">
 	<h2 data-i18n-key="tle-cap">Prijsplafond (NL)</h2>
-	<p>Deze grafiek laat verbruik zien t.o.v. prijsplafond om een idee te geven hoe het verbruik zich ontwikkelt.<br>
+	<p data-i18n-key="tle-cap-description">Deze grafiek laat verbruik zien t.o.v. prijsplafond om een idee te geven hoe het verbruik zich ontwikkelt.<br>
 	In de jaargrafieken is de seizoensinvloed meegenomen. In de maandgrafieken is de verdeling linear.<br>
 	Het is een hulpmiddel om een beeld te krijgen van het gebruik ten opzichte van het prijsplafond.</p>
     <div>
-      <b>Grafiek per:</b>
-      <input type="radio" id="btnYear" name=burnup onchange="setViewYEAR()"/>
-      <label for="btnYear">Jaar</label>
-      <input type="radio" id="btnMonth" name=burnup onchange="setViewMONTH()" checked/>
-      <label for="btnMonth">Maand</label>
+      <b data-i18n-key="tle-graph-per">Grafiek per:</b>
+      <input type="radio" id="btnYear" name=burnup onchange="setViewYEAR()" checked/>
+      <label data-i18n-key="lbl-year" for="btnYear">Jaar</label>
+      <input type="radio" id="btnMonth" name=burnup onchange="setViewMONTH()" />
+      <label data-i18n-key="lbl-month" for="btnMonth">Maand</label>
     </div>
     
     <div class="chart-container" style="position: relative; height:40vh; width:80vw">
@@ -255,9 +264,9 @@
       <table id="devInfoTable">
       <thead>
         <tr>
-            <th>Naam</th>
-            <th>Waarde</th>
-            <th>Eenheid</th>
+            <th data-i18n-key="lbl-name">Naam</th>
+            <th data-i18n-key="lbl-value">Waarde</th>
+            <th data-i18n-key="lbl-unit">Eenheid</th>
         </tr>
       </thead>
       <tbody id="tb_info">
@@ -278,6 +287,9 @@
   <section id="TelegramTab" class="tabName subTab">
     <h2 data-i18n-key="tle-telegram">Ruwe Telegram data</h2>
     <div id="rawTelegram">
+    	<button onclick="CopyTelegram()" class="iconify" data-icon="mdi-content-copy" ></button>
+		<pre id="TelData">
+		</pre>
     </div>
     
   </section> <!-- END TelegramTab -->
@@ -416,8 +428,8 @@
       <div id="settings_table" class="inner-div"></div>          
   </div>  <!-- END tabSettings -->
   <div id="settings_btns">
-      <a id='bUndo'   class='btn' onclick="undoReload()">Undo</a>
-      <a id='bSave'   class='btn' onclick="saveData()">Opslaan</a>
+      <a id='bUndo'   class='btn' onclick="undoReload()" data-i18n-key="btn-undo">Undo</a>
+      <a id='bSave'   class='btn' onclick="saveData()" data-i18n-key="btn-save">Opslaan</a>
       </div>
   </section> <!-- end Settings Page -->
  
@@ -437,8 +449,8 @@
 	  </div>  <!-- END tabMonthss -->
   </div> <!-- tabMonths -->
   <div id="settings_btns">
-      <a id='bUndo'   class='btn' onclick="undoReload()">Undo</a>
-      <a id='bSave'   class='btn' onclick="saveData()">Opslaan</a>
+      <a id='bUndo'   class='btn' onclick="undoReload()" data-i18n-key="btn-undo">Undo</a>
+      <a id='bSave'   class='btn' onclick="saveData()" data-i18n-key="btn-save">Opslaan</a>
       </div>
   </section> <!-- end tabEditMonths Page -->
   
@@ -451,7 +463,6 @@
 		  <input id="Ifile" type="file" name="upload">
           <input id="Iupload" type="submit" value="Upload" disabled />
       </form>
-
       <span></span>
       <fileSize></fileSize>
   </section>
@@ -472,7 +483,7 @@
 		<p data-i18n-key="txt-reset-wifi">Na het indrukken van de RESET WIFI knop zal de module herstarten en vragen om het wifi-netwerk opnieuw in te stellen. Zie initiële setup van de module.</p>
         <span>
         <form action='/ResetWifi' >
-          <input id="resetWifi" type='submit' class='button' name='SUBMIT' value='Reset Wifi' hidden/>
+          <input id="resetWifi" type='submit' class='button' name='SUBMIT' value='Reset Wifi'/>
         </form>
       </div> 
   </section> <!-- end Settings Page -->
@@ -497,50 +508,43 @@
 		<div id=eid-setup>
 		<i id=pulse_ico class="iconify" data-icon="mdi-pulse"></i>
 		<h1 class=align-c>Solar Setup</h1><br>
-		<div>Instellen van de koppeling met de PV omvormer om de opbrengst zichtbaar te maken in NRG Monitor. Deze configuratie is in te zien en te wijzigen via het bestandsbeheer van de dongle.<br>
+		<div data-i18n-key="sol-intro-1">Instellen van de koppeling met de PV omvormer om de opbrengst zichtbaar te maken in NRG Monitor. Deze configuratie is in te zien en te wijzigen via het bestandsbeheer van de dongle.<br>
 		<br>
 		</div>
 		<hr>
 		<form id="dataForm">
-		<p>Welk systeem dient gekoppeld te worden?</p>
+		<p data-i18n-key="sol-sys">Welk systeem dient gekoppeld te worden?</p>
  		  <input type="radio" id="pv_enphase" name="solar_system" value="Enphase" onClick="ShowHidePV();" checked="checked">
  		  <label for="enphase">Enphase</label><br>
 		  <input type="radio" id="pv_solaredge" name="solar_system" value="SolarEdge" onClick="ShowHidePV();">
 		  <label for="solaredge">SolarEdge</label><br>
 		<br> 
-			<label for="wp">Systeemvermogen (Wp):</label><br>
+			<label for="wp" data-i18n-key="sol-wp">Systeemvermogen (Wp):</label><br>
 			<input type="number" id="wp" name="wp" value=3500><br><br>
-			<label for="Interval">Update interval (seconden):</label><br>
+			<label for="Interval" data-i18n-key="sol-interval">Update interval (seconden):</label><br>
 			<input type="number" id="interval" name="interval" value=10><br><br>
-			<label for="gw_url">Gateway url of ip-adres:</label><br>
+			<label for="gw_url" data-i18n-key="sol-url">Gateway url of ip-adres:</label><br>
 			<input type="text" id="gw_url" name="gw_url" value="https://envoy/api/v1/production" style="width: 100%"><br><br>
-			<label for="token">Token:</label><br>
-			<input type="text" id="token" name="token" placeholder="bv eyJraWQiOiI3ZDEwMDA1ZC03ODk5LTRk" style="width: 100%"><br><br>
+			<label for="token" data-i18n-key="sol-token">Token:</label><br>
+			<input type="text" id="token" name="token" placeholder="eg eyJraWQiOiI3ZDEwMDA1ZC03ODk5LTRk" style="width: 100%"><br><br>
 			<div id="conf_token" style="display: none">
-				<label for="siteid">SiteID:</label><br>
-				<input type="number" id="siteid" name="siteid" placeholder="bv 125231"><br><br>
+				<label for="siteid" data-i18n-key="sol-siteid">SiteID:</label><br>
+				<input type="number" id="siteid" name="siteid" placeholder="eg 125231"><br><br>
 			</div>	
 		<hr>						
-			<div class=align-c><button type="button" onclick="SolarSendData()">OPSLAAN</button></div>
+			<div class=align-c><button type="button" onclick="SolarSendData()" data-i18n-key="btn-save">Opslaan</button></div>
 		</form>    
 		</div>
     </section>  
 	
 	<section id="NETSW" class="tabName">
 		<div id=eid-setup>
-<!-- 
-		<i id=pulse_ico class="iconify" data-icon="mdi-pulse"></i>
- -->
 		<h1 class=align-c>NetSwitch</h1>
-<!-- 
-		<div>Schakel Shelly toestel op basis van Netbelasting</div>
-		</br>
- -->
-    <label class=ntsw>Zodra het netvermogen boven (min = terugleveren)
+    <label class=ntsw ><span data-i18n-key="net-intro-1">Zodra het netvermogen boven (min = terugleveren)</span>
     <input class=ntsw type="number" id="value" value="100" oninput="NetSwitchUpdateBar()">
 	</label>
 
-    <label class=ntsw>Watt komt, gaat het Shelly toestel of IO </label>
+    <label class=ntsw data-i18n-key="net-intro-2">Watt komt, gaat het Shelly toestel of IO </label>
     <select class=ntsw id="switch_on" onchange="NetSwitchUpdateBar()">
         <option value="true" >ON</option>
         <option value="false" selected>OFF</option>
@@ -556,32 +560,32 @@
     </div>
     
     <hr>
-    <label class=ntsw>Inschakelvertraging (seconden)</label>
+    <label class=ntsw data-i18n-key="net-on-delay">Inschakelvertraging (seconden)</label>
     <input class=ntsw type="number" id="time_true" min="10" max="3600" value="60" >
 
-    <label class=ntsw >Uitschakelvertraging (seconden)</label>
+    <label class=ntsw data-i18n-key="net-off-delay">Uitschakelvertraging (seconden)</label>
     <input class=ntsw type="number" id="time_false" min="10" max="3600" value="120" >
 	
-	<label class=ntsw>State on startup</label>
+	<label class=ntsw data-i18n-key="net-start-state">State on startup</label>
 	<select class=ntsw id="default">
         <option value="true" >ON</option>
         <option value="false" selected>OFF</option>
     </select>
 	<hr>
-	<p>Make a choice to enable shelly or dongle IO. When IO = 0 shelly is active. Any other value disables Shelly function.</p>
-	<label class=ntsw>Dongle IO number</label>
+	<p data-i18n-key="net-io-shelly">Make a choice to enable shelly or dongle IO. When IO = 0 shelly is active. Any other value disables Shelly function.</p>
+	<label class=ntsw data-i18n-key="net-io">Dongle IO number</label>
     <input class=ntsw type="number" id="dongle_io" value="0" min="0" max="44" maxlength="1" >
 	<div id=shelly_conf>
 	<hr>
-    <label class=ntsw>IP address or hostname</label>
+    <label class=ntsw data-i18n-key="net-ip">IP address or hostname</label>
     <input class=ntsw type="text" id="device" placeholder="ip of hostnaam" >
 
-    <label class=ntsw>Relais ID (default 0):</label>
+    <label class=ntsw data-i18n-key="net-relay">Relais ID (default 0):</label>
     <input class=ntsw type="number" id="relay" value="0" min="0" max="4" maxlength="1" >
 
     </div><br>
     <br>
-	<div class=align-c><button onclick="SendNetSwitchJson()">OPSLAAN</button></div>
+	<div class=align-c><button onclick="SendNetSwitchJson()" data-i18n-key="btn-save">Opslaan</button></div>
 	</div>
     </section> 	
 	
@@ -603,18 +607,20 @@
 	<section id="EID" class="tabName">
 		<div id=eid-setup>
 		<h1 class=align-c><img src="https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@master/cdn/assets/eid.png" alt="EnergyID"></h1><br>
-		<div>P1 Dongle Pro koppelen aan EnergyID monitoring systeem.</div><div> Dit geeft uw inzichten in uw verbruik en mogelijkheid om dit te vergelijken met andere gelijke profielen.<br>
+		<div data-i18n-key="eid-intro-1">P1 Dongle Pro koppelen aan EnergyID monitoring systeem.</div>
+		<div data-i18n-key="eid-intro-2"> Dit geeft uw inzichten in uw verbruik en mogelijkheid om dit te vergelijken met andere gelijke profielen.</div>
+		<div>
 		<br>
-		<a class="eid_link" href="https://energyid.eu" target="_blank">Over EnergyID<i class="iconify" data-icon="mdi-external-link"></i></a>
+			<a class="eid_link" href="https://energyid.eu" target="_blank">Over EnergyID<i class="iconify" data-icon="mdi-external-link"></i></a>
 		</div>
 		<hr>
-		<div id=st>Status van de koppeling: <b><span id=status>Status ophalen...</span></b></div>
-		<div class=align-c><button type="button" onclick="getclaim()">Update Status</button></div>
+		<div id=st><span data-i18n-key="eid-status">Status van de koppeling: </span><b><span id=status>...</span></b></div>
+		<div class=align-c><button type="button" onclick="getclaim()" data-i18n-key="btn-upd-status">Update Status</button></div>
 		<div id=claim style="display:none">
 		<hr>
-		U dient de koppeling in EnergyID dashboard te activeren via onderstaande link.</br>
+		<span data-i18n-key="eid-intro-3">U dient de koppeling in EnergyID dashboard te activeren via onderstaande link.</span></br>
 		</br>
-		<b>Let op! knopt opent de EnergyID pagina in een apart tabblad. Keer terug na activatie.</b>
+		<b><span data-i18n-key="eid-reminder">Let op! knopt opent de EnergyID pagina in een apart tabblad. Keer terug na activatie.</span></b>
 		<br>
 		<br>
 		<div class=align-c><b><button><span id=claimurl></span></button></b></div>
@@ -636,10 +642,11 @@
         </tr>
       </thead>
 		<tbody id="InsightsTableBody">
+		<tr><td colspan="3">Geen data beschikbaar.<br>Functie beschikbaar vanaf versie 4.13.0</td></tr>
 		</tbody>
       <tfoot>
         <tr>
-            <td colspan=3 data-i18n-key="lbl-sm-data">Ga met de muis over de naam heen om meer info te krijgen</td>
+            <td colspan=3 data-i18n-key="lbl-footer-ins">Ga met de muis over de naam heen om meer info te krijgen</td>
         </tr>
       <tfoot>
       </table>
@@ -668,7 +675,7 @@
         <tr>
             <th data-i18n-key="lbl-name">Naam</th>
             <th data-i18n-key="lbl-value">Waarde</th>
-            <th style="text-align: center;" data-i18n-key="lbl-unit">Eenheid</th>
+            <th data-i18n-key="lbl-unit" style="text-align: center;" >Eenheid</th>
         </tr>
       </thead>
       <tbody>
@@ -699,7 +706,7 @@
 				<div id=f3 class="lblVerbuik eergisteren" style="display:none">3<span class="tooltiptext">fase 3</span></div>
 			</div>
             <hr/>
-            <div style="text-align:center" data-i18n-key="lbl-actual-kwh">Actueel [<span name="power">kW</span>]</div>
+            <div style="text-align:center" ><span data-i18n-key="lbl-actual">Actueel</span> [<span id="dsh-power">kW</span>]</div>
             <h2 id="power_delivered">0.0</h2>
 <!-- 
             <h3>max: <span id="power_delivered_1max">0.0</span> <span name="power">kW</span></h3>
@@ -709,18 +716,41 @@
         </div>
 		</a>
         <div class=card id=dash_solar style="display:none">
-            <h1 id=dash_solar_h style="background:#f7b638"><span class="iconify" data-icon="mdi-solar-power-variant"></span><span data-i18n-key="dsh-returned">Productie<span></h1>
+            <h1 id=dash_solar_h style="background:#f7b638"><span class="iconify" data-icon="mdi-solar-power-variant"></span><span data-i18n-key="dsh-solar-production">Productie<span></h1>
             <canvas class="chart-container" id="container-solar"></canvas>
 			<div id=legenda style="padding-top:25px">
 			</div>
     		<hr/>
             <div style="text-align:center" data-i18n-key="lbl-today-kwh">Vandaag [kWh]</div>
             <h2 id=dash_solar_p>0.0</h2>
-            <div style="text-align:center">Zelfvoorzienend: <b><span id="seue">-</span> <span>%</span></b></div>
-            <div style="text-align:center">Zelfverbruik: <b><span id="scr">-</span> <span>%</span></b></div>
+            <div style="text-align:center" ><span data-i18n-key="lbl-solar-self-sufficient">Zelfvoorzienend: </span><b><span id="seue">-</span> <span>%</span></b></div>
+            <div style="text-align:center" ><span data-i18n-key="lbl-solar-self-use">Zelfverbruik: </span><b><span id="scr">-</span> <span>%</span></b></div>
 <!--             <div style="text-align:center">Wh/Wp: <b><span id="wpwh">-</span> <span>%</span></b></div> -->
+        </div>
+        
+        <div class=card id=dash_accu style="display:none">
+            <h1 id=dash_solar_h style="background:#007700"><span class="iconify" data-icon="mdi-battery-low"></span><span data-i18n-key="dsh-accu">Opslag<span></h1>
+            <canvas class="chart-container" id="container-accu"></canvas>
+			<div id=legenda style="padding-top:25px">
+			</div>
+    		<hr/>
+            <div style="text-align:center" data-i18n-key="lbl-today-kw">Power [kW]</div>
+            <h2 id=dash_accu_p>0.0</h2>
+			<div style="text-align:center" ><span data-i18n-key="lbl-accu-status">Status: </span><b><span id="accu-status">-</span></b></div>
+        </div>	
 
-        </div>		
+  <div class=card id=dash_peak style="display:none">
+            <h1 id=dash_peak><span class="iconify" data-icon="mdi-format-vertical-align-top"></span><span data-i18n-key="dsh-peak">KwartierPiek<span></h1>
+            <canvas class="chart-container" id="container-peak"></canvas>
+			<div id=legenda style="padding-top:25px">
+			</div>
+    		<hr/>
+            <div style="text-align:center" data-i18n-key="lbl-peak-delta">Piekruimte [kW]</div>
+            <h2 id=dash_peak_delta>0.0</h2>
+            <div style="text-align:center" ><span data-i18n-key="lbl-peak-month">Piek deze maand: </span><b><span id="peak_month">-</span> <span>kW</span></b></div>
+<!--             <div style="text-align:center">Wh/Wp: <b><span id="wpwh">-</span> <span>%</span></b></div> -->
+        </div>
+                	
 		<a href="#HoursTab" style="display:flex">
         <div class=card id=l3 style="display:block">
             <h1 id=Ph><span class="iconify" data-icon="mdi-lightning-bolt"></span><span data-i18n-key="dsh-energy">Elektra</span></h1>

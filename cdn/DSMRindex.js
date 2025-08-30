@@ -1,193 +1,71 @@
 /*
 ***************************************************************************  
-**  Program  : DSMRindex.js, part of DSMRfirmwareAPI
-**  Version  : v4.8.0
-**
-**  Copyright (c) 2023 Smartstuff
+**  Copyright 2025 Smartstuff
 **  Authors  : Martijn Hendriks / Mar10us
-**
-**  TERMS OF USE: MIT License. See bottom of file.                                                            
+**  TERMS OF USE: MIT License.                                      
 ***************************************************************************      
 */
-// const APIGW='http://localhost/dsmr-api/v5/local/api/'; //test only
-const APIHOST = window.location.protocol+'//'+window.location.host;
-const APIGW = APIHOST+'/api/';
-
-const URL_SM_ACTUAL     = APIGW + "v2/sm/actual";
-const URL_DEVICE_INFO   = APIGW + "v2/dev/info";
-const URL_DEVICE_TIME   = APIGW + "v2/dev/time";
-const MAX_SM_ACTUAL     = 15*6; //store the last 15 minutes (each interval is 10sec)
-const MAX_FILECOUNT     = 30;   //maximum filecount on the device is 30
-
-const URL_VERSION_MANIFEST = "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
-const URL_GITHUB_VERSION   = "https://cdn.jsdelivr.net/gh/mhendriks/DSMR-API-V2@master/edge/DSMRversion.dat";
-
-const jsversie			   = 221201;
 
 const SQUARE_M_CUBED 	   = "\u33A5";
-const MONTHS_IN_YEAR_NL    = ["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
-  
+
 "use strict";
 
-  var ota_url 				= "";
+//   let ota_url 				= "";
   let activeTab             = "bDashTab";
   let PauseAPI				= false; //pause api call when browser is inactive
   let presentationType      = "TAB";
   let tabTimer              = 0;
-  let actualTimer           = 0;
-  let timeTimer             = 0;
-  var GitHubVersion         = 0;
-  var GitHubVersion_dspl    = "-";
-  var devVersion			= 0;
-  var firmwareVersion       = 0;
-  var firmwareVersion_dspl  = "-";
-  var newVersionMsg         = "";
+//   let actualTimer           = 0;
+  let devVersion			= 0;
+  let firmwareVersion       = 0;
+  let firmwareVersion_dspl  = "-";
   let NRGStatusTimer		= 0;
   
-//   var tlgrmInterval         = 10;
-  var ed_tariff1            = 0;
-  var ed_tariff2            = 0;
-  var er_tariff1            = 0;
-  var er_tariff2            = 0;
-  var gd_tariff             = 0;
-  var electr_netw_costs     = 0;
-  var gas_netw_costs        = 0;
-  var hostName            	= "-";  
-  var data       			= [];
-  var DayEpoch				= 0;
+  let ed_tariff1            = 0;
+  let ed_tariff2            = 0;
+  let er_tariff1            = 0;
+  let er_tariff2            = 0;
+  let gd_tariff             = 0;
+  let electr_netw_costs     = 0;
+  let gas_netw_costs        = 0;
+  let hostName            	= "-";  
+  let data		 			= [];
+  let DayEpoch				= 0;
   let monthType        		= "ED";
   let settingFontColor 		= 'white';
-  var objDAL = null;
-  var SolarActive 			= false;
-  var Pi_today				= 0;
-  var Pd_today				= 0;
-  var conf_netswitch 		= false;
-    
-  //The Data Access Layer for the DSMR
-  // - acts as an cache between frontend and server
-  // - schedules refresh to keep data fresh
-  // - stores data for the history functions
-  class dsmr_dal_main{
-    constructor() {
-      this.devinfo=[];
-	  this.version_manifest = [];
-      this.actual=[];
-      this.actual_history = [];
-      this.timerREFRESH_ACTUAL = 0;      
-      this.callback=null;
-      }
-  
-    fetchDataJSON(url, fnHandleData) {
-      console.log("DAL::fetchDataJSON( "+url+" )");
-      fetch(url)
-      .then(response => response.json())
-      .then(json => { fnHandleData(json); })
-      .catch(function (error) {
-        console.error("dal::fetchDataJSON() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild( document.createTextNode('Error: ' + error.message) );
-      });
-    }
-
-    //use a callback when you want to know if the data is updated
-    setCallback(fnCB){
-      this.callback = fnCB;
-    }
-  
-    init(){
-      this.refreshDeviceInformation();
-      this.refreshActual();
-    } 	
-
-    //single call; no timer
-    refreshDeviceInformation(){
-      console.log("DAL::refreshDeviceInformation");
-	  this.fetchDataJSON( URL_VERSION_MANIFEST, this.parseVersionManifest.bind(this));
-      this.fetchDataJSON( URL_DEVICE_INFO, this.parseDeviceInfo.bind(this));
-    }
-    //store result and call callback if set
-    parseDeviceInfo(json){
-      this.devinfo = json;
-      if(this.callback) this.callback('devinfo', json);
-    }
-    //store result and call callback if set
-		parseVersionManifest(json){
-			this.version_manifest = json;
-      if(this.callback) this.callback('versionmanifest', json);
-		}
-
-    // refresh and parse actual data, store and add to history
-    //refresh every 10 sec
-    refreshActual(){
-      console.log("DAL::refreshActual");
-      clearInterval(this.timerREFRESH_ACTUAL);      
-      this.fetchDataJSON( URL_SM_ACTUAL, this.parseActual.bind(this));
-      this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), 10 * 1000);
-    }
-    parseActual(json){
-      this.actual = json;
-      this.#addActualHistory( json );
-    }
-    #addActualHistory(json){
-      if( this.actual_history.length >= MAX_SM_ACTUAL) this.actual_history.shift();
-      this.actual_history.push(json);
-    }
-  
-    //
-    // getters
-    //
-    getDeviceInfo(){
-      return this.devinfo;
-    }
-	getVersionManifest(){
-		return this.version_manifest;
-	}
-    getActual(){
-      return this.actual;
-    }    
-    //the last (MAX_ACTUAL_HISTORY) actuals
-    getActualHistory(){
-      return this.actual_history;
-    }
-  }
-                    
-  var monthNames 			= ["indxNul"].concat(MONTHS_IN_YEAR_NL).concat(["\0"]);
+  let SolarActive 			= false;
+  let AccuActive			= false;
+  let Pi_today				= 0;
+  let Pd_today				= 0;
+  let conf_netswitch 		= false;
+  let update_reconnected	= false;
+                   
   const spinner 			= document.getElementById("loader");
 
 //---- frontend settings
-  var AMPS					= 35 	//waarde zekering (meestal 35 of 25 ampere)
-  var ShowVoltage			= true 	//toon spannningsverloop op dashboard
-  var UseCDN				= true	//ophalen van hulpbestanden lokaal of via cdn //nog niet geimplementeerd
-  var Injection				= false	//teruglevering energie false = bepaalt door de data uit slimme meter, true = altijd aan
-  var Phases				= 1		//aantal fases (1,2,3) voor de berekening van de totale maximale stroom Imax = fases * AMPS
-  var HeeftGas				= false	//gasmeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
-  var HeeftWater			= false	//watermeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
-  var EnableHist			= true  //weergave historische gegevens
-  var Act_Watt				= false  //display actual in Watt instead of kW
-  var SettingsRead 			= false 
-  var AvoidSpikes			= false 
-  var IgnoreInjection		= false 
-  var IgnoreGas				= false 
-  var Dongle_Config			= ""
-  var eid_enabled			= false
-  var pairing_enabled    	= false
+  let AMPS					= 35 	//waarde zekering (meestal 35 of 25 ampere)
+  let ShowVoltage			= true 	//toon spannningsverloop op dashboard
+  let UseCDN				= true	//ophalen van hulpbestanden lokaal of via cdn //nog niet geimplementeerd
+  let Injection				= false	//teruglevering energie false = bepaalt door de data uit slimme meter, true = altijd aan
+  let Phases				= 1		//aantal fases (1,2,3) voor de berekening van de totale maximale stroom Imax = fases * AMPS
+  let HeeftGas				= false	//gasmeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
+  let HeeftWater			= false	//watermeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
+  let EnableHist			= true  //weergave historische gegevens
+  let Act_Watt				= false  //display actual in Watt instead of kW
+  let SettingsRead 			= false 
+  let AvoidSpikes			= false 
+  let IgnoreInjection		= false 
+  let IgnoreGas				= false 
+  let Dongle_Config			= ""
+  let eid_enabled			= false
+  let pairing_enabled    	= false
   
-  var locale
-  let translations 			= {}; //json storage translations
+  let locale 				= 'nl';  // standaard
 
-//---- Version globals
-  var LastVersion = "", 
-  LastVersionMajor = 0, 
-  LastVersionMinor = 0, 
-  LastVersionFix = 0, 
-  LastVersionBuid = 0,
-  LastVersionNotes = "", 
-  LastVersionOTA = "";
-  
 // ---- DASH
-var TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wmax;
-var hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
-var day = 0;
+let TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wmax;
+let hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
+let day = 0;
 
 //default struct for the gauge element
 // ! structuredClone can NOT copy a struct with functions
@@ -246,7 +124,6 @@ cfgDefaultTREND.data.datasets[0].label = "vandaag";
 cfgDefaultTREND.data.datasets[1].label = "gister";
 cfgDefaultTREND.data.datasets[2].label = "eergisteren";
 
-
 //phases based gauges
 function renderLabelVoltage(args){return args.value + 207 + " V";}
 let cfgGaugeVOLTAGE = structuredClone(cfgDefaultPHASES);
@@ -263,11 +140,6 @@ function renderLabelElektra(args){return args.value + " kWh";}
 let cfgGaugeELEKTRA = structuredClone(cfgDefaultTREND);
 cfgGaugeELEKTRA.options.title.text = "kWh";
 cfgGaugeELEKTRA.options.plugins.labels.render = renderLabelElektra;
-
-// let cfgGaugeSolar = structuredClone(cfgDefaultTREND);
-// cfgGaugeSolar.options.title.text = "kWh";
-// cfgGaugeSolar.options.plugins.labels.render = renderLabelElektra;
-// cfgGaugeSolar.data.datasets[0].label = "Productie";
 
 let cfgGaugeSolar = {
   type: 'doughnut',
@@ -303,8 +175,23 @@ let cfgGaugeSolar = {
     legend: { display: false },
   }, //options
 };
+
+function renderLabelPeak(args){return args.value + "kW";}
+let cfgGaugePeak = structuredClone(cfgGaugeSolar);
+cfgGaugePeak.options.title.text = "kW";
+cfgGaugePeak.options.plugins.labels.render = renderLabelPeak;
+cfgGaugePeak.data.datasets[0].backgroundColor = ["#009900", "rgba(0,0,0,0.1)"];
+
+// function renderLabelAccu(args){return args.value + "%";}
+function renderLabelAccu(args){return "";}
+let cfgGaugeAccu = structuredClone(cfgGaugeSolar);
+cfgGaugeAccu.options.title.text = "%";
+cfgGaugeAccu.options.plugins.labels.render = renderLabelAccu;
+cfgGaugeAccu.data.datasets[0].backgroundColor = ["#007700", "rgba(0,0,0,0.1)"];
+
 cfgGaugeSolar.options.plugins.labels.render = renderLabelSolar;
-function renderLabelSolar(args){return args.value + "W";}
+// function renderLabelSolar(args){return args.value + "W";}
+function renderLabelSolar(args){return "";}
 
 let cfgGaugeELEKTRA2 = structuredClone(cfgDefaultTREND);
 cfgGaugeELEKTRA2.options.title.text = "kWh";
@@ -340,14 +227,14 @@ function ShowHidePV(){
 	}
 }
   
-function InsightData(){
-	fetch(APIHOST+"/api/v2/stats", {"setTimeout": 5000})
-        .then(response => response.json())
-        .then(data => {
+function InsightData(data){			
             const eenheden = {
                 "U1piek": "V",
                 "U2piek": "V",
                 "U3piek": "V",
+                "U1min": "V",
+                "U2min": "V",
+                "U3min": "V",
                 "I1piek": "A",
                 "I2piek": "A",
                 "I3piek": "A",
@@ -355,60 +242,29 @@ function InsightData(){
                 "P1max": "W",
                 "P2max": "W",
                 "P3max": "W",
+                "P1min": "W",
+                "P2min": "W",
+                "P3min": "W",
                 "TU1over": "sec",
                 "TU2over": "sec",
                 "TU3over": "sec",
                 "start_time": "uu:mm"
             };
-
-            const namen = {
-                "U1piek": "Spanning Piek L1",
-                "U2piek": "Spanning Piek L2",
-                "U3piek": "Spanning Piek L3",
-                "I1piek": "Stroom Piek L1",
-                "I2piek": "Stroom Piek L2",
-                "I3piek": "Stroom Piek L3",
-                "Psluip": "Sluipverbruik",
-                "P1max": "Vermogen Piek L1",
-                "P2max": "Vermogen Piek L2",
-                "P3max": "Vermogen Piek L3",
-                "TU1over": "Tijd Overspanning L1",
-                "TU2over": "Tijd Overspanning L2",
-                "TU3over": "Tijd Overspanning L3",
-                "start_time": "Starttijd meting"
-            };
-            
-            const beschrijvingen = {
-				"U1piek": "Piekspanning fase 1 vandaag",
-				"U2piek": "Piekspanning fase 2 vandaag",
-				"U3piek": "Piekspanning fase 3 vandaag",
-				"I1piek": "Piekstroom fase 1 vandaag, afname of teruglevering",
-				"I2piek": "Piekstroom fase 2 vandaag, afname of teruglevering",
-				"I3piek": "Piekstroom fase 3 vandaag, afname of teruglevering",
-				"Psluip": "Sluipverbruik in Watt tussen 00:00 en 06:00",
-				"P1max": "Piekvermogen fase 1 vandaag, alleen afname",
-				"P2max": "Piekvermogen fase 2 vandaag, alleen afname",
-				"P3max": "Piekvermogen fase 3 vandaag, alleen afname",
-				"TU1over": "Aantal seconde dat fase 1 boven de 253V is geweest",
-                "TU2over": "Aantal seconde dat fase 2 boven de 253V is geweest",
-                "TU3over": "Aantal seconde dat fase 3 boven de 253V is geweest",
-				"start_time": "Starttijd meting of 00:00 of tijd dat de dongle reboot"
-			};
-
+			
             const tbody = document.getElementById("InsightsTableBody");
-            tbody.innerHTML = ""; // maak eerst leeg
-
+			tbody.innerHTML = '';
+			
             for (const key in data) {
-                if (!(key in namen)) continue; // alleen bekende sleutels tonen
+//                 if (!(key in namen)) continue; 
 
                 const row = document.createElement("tr");
                 const naamCell = document.createElement("td");
                	naamCell.textContent = key;
-            	naamCell.title = beschrijvingen[key] || key;  // Tooltip
+            	naamCell.title = t("tip-"+key);
                 const waardeCell = document.createElement("td");
                 const eenheidCell = document.createElement("td");
 
-                naamCell.textContent = namen[key] || key;
+                naamCell.textContent = t("lbl-"+key);
 
                 let waarde = data[key];
 				
@@ -435,12 +291,6 @@ function InsightData(){
                 row.appendChild(eenheidCell);
                 tbody.appendChild(row);
             }
-        })
-        .catch(err => {
-            console.error("Fout bij ophalen van stats:", err);
-            const tbody = document.getElementById("InsightsTableBody");
-            tbody.innerHTML = `<tr><td colspan="3">Geen data beschikbaar.<br>Functie beschikbaar vanaf versie 4.13.0</td></tr>`;
-        });
 }
 
 function SolarSendData() {
@@ -454,8 +304,8 @@ function SolarSendData() {
 		siteid            : parseInt(document.getElementById('siteid').value)
 	};
 
-	if ( document.getElementById('pv_enphase').checked ) var filename = "enphase.json";
-	else var filename = "solaredge.json";
+	var filename = "solaredge.json";
+	if ( document.getElementById('pv_enphase').checked ) filename = "enphase.json"
 
 	let jsonBlob = new Blob([JSON.stringify(jsonData, null, 2)], { type: "application/json" });
     let formData = new FormData();
@@ -471,59 +321,67 @@ function SolarSendData() {
 
 }
 
-function loadIcons(){
-Iconify.addCollection({
-   icons: {
-       "mdi-external-link": {
-           body: '<path d="M12 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6m-7 1l9-9m-5 0h5v5M10 6v2H5v11h11v-5h2v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6Zm11-3v8h-2V6.413l-7.793 7.794l-1.414-1.414L17.585 5H13V3h8Z" fill="currentColor"/>',
-       },
-       "mdi-folder-outline": {
-           body: '<path d="M20 18H4V8h16m0-2h-8l-2-2H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z" fill="currentColor"/>',
-       },
-       "mdi-information-outline": {
-           body: '<path d="M11 9h2V7h-2m1 13c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8m0-18A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m-1 15h2v-6h-2v6Z" fill="currentColor"/>',
-       },
-       "mdi-cog": {
-           body: '<path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" fill="currentColor"/>',
-              },
-       "mdi-gauge": {
-           body: '<path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 2a8 8 0 0 1 8 8c0 2.4-1 4.5-2.7 6c-1.4-1.3-3.3-2-5.3-2s-3.8.7-5.3 2C5 16.5 4 14.4 4 12a8 8 0 0 1 8-8m2 1.89c-.38.01-.74.26-.9.65l-1.29 3.23l-.1.23c-.71.13-1.3.6-1.57 1.26c-.41 1.03.09 2.19 1.12 2.6c1.03.41 2.19-.09 2.6-1.12c.26-.66.14-1.42-.29-1.98l.1-.26l1.29-3.21l.01-.03c.2-.51-.05-1.09-.56-1.3c-.13-.05-.26-.07-.41-.07M10 6a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1M7 9a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1m10 0a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1Z" fill="currentColor"/>',
-       },
-       "mdi-lightning-bolt": {
-           body: '<path d="M11 15H6l7-14v8h5l-7 14v-8Z" fill="currentColor"/>',
-       },       
-       "mdi-home-import-outline": {
-           body: '<path d="m15 13l-4 4v-3H2v-2h9V9l4 4M5 20v-4h2v2h10v-7.81l-5-4.5L7.21 10H4.22L12 3l10 9h-3v8H5Z" fill="currentColor"/>',
-       },       
-       "mdi-home-export-outline": {
-           body: '<path d="m24 13l-4 4v-3h-9v-2h9V9l4 4M4 20v-8H1l10-9l7 6.3v.7h-2.21L11 5.69l-5 4.5V18h10v-2h2v4H4Z" fill="currentColor"/>',
-       },  
-       "mdi-fire": {
-           body: '<path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82c-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32c-2.59 2.08-3.61 5.75-2.39 8.9c.04.1.08.2.08.33c0 .22-.15.42-.35.5c-.23.1-.47.04-.66-.12a.58.58 0 0 1-.14-.17c-1.13-1.43-1.31-3.48-.55-5.12C5.78 10 4.87 12.3 5 14.47c.06.5.12 1 .29 1.5c.14.6.41 1.2.71 1.73c1.08 1.73 2.95 2.97 4.96 3.22c2.14.27 4.43-.12 6.07-1.6c1.83-1.66 2.47-4.32 1.53-6.6l-.13-.26c-.21-.46-.77-1.26-.77-1.26m-3.16 6.3c-.28.24-.74.5-1.1.6c-1.12.4-2.24-.16-2.9-.82c1.19-.28 1.9-1.16 2.11-2.05c.17-.8-.15-1.46-.28-2.23c-.12-.74-.1-1.37.17-2.06c.19.38.39.76.63 1.06c.77 1 1.98 1.44 2.24 2.8c.04.14.06.28.06.43c.03.82-.33 1.72-.93 2.27Z" fill="currentColor"/>',
-       },         
-       "mdi-water": {
-           body: '<path d="M12 20a6 6 0 0 1-6-6c0-4 6-10.75 6-10.75S18 10 18 14a6 6 0 0 1-6 6Z" fill="currentColor"/>',
-       },         
-       "mdi-sine-wave": {
-           body: '<path d="M16.5 21c-3 0-4.19-4.24-5.45-8.72C10.14 9.04 9 5 7.5 5C4.11 5 4 11.93 4 12H2c0-.37.06-9 5.5-9c3 0 4.21 4.25 5.47 8.74C13.83 14.8 15 19 16.5 19c3.44 0 3.53-6.93 3.53-7h2c0 .37-.06 9-5.53 9Z" fill="currentColor"/>',
-       },        
-       "mdi-heat-wave": {
-           body: '<path d="m8.5 4.5l-3.1 5l3.1 5.2l-3.3 5.8l-1.8-.9l2.7-4.9L3 9.5l3.7-5.9l1.8.9m6.2-.1l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9m6.3 0l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9" fill="currentColor"/>',
-       }, 
-       "mdi-chart-box-outline": {
-           body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
-       },
-       "mdi-pulse": {
-           body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
-       },        
-	   "mdi-solar-power-variant": {
-           body: '<path d="M3.33 16H11V13H4L3.33 16M13 16H20.67L20 13H13V16M21.11 18H13V22H22L21.11 18M2 22H11V18H2.89L2 22M11 8H13V11H11V8M15.76 7.21L17.18 5.79L19.3 7.91L17.89 9.33L15.76 7.21M4.71 7.91L6.83 5.79L8.24 7.21L6.12 9.33L4.71 7.91M3 2H6V4H3V2M18 2H21V4H18V2M12 7C14.76 7 17 4.76 17 2H7C7 4.76 9.24 7 12 7Z" fill="currentColor"/>',
-       }, 
-    },
-   width: 24,
-   height: 24,
-});
-}
+// function loadIcons(){
+// Iconify.addCollection({
+//    icons: {
+//        "mdi-external-link": {
+//            body: '<path d="M12 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6m-7 1l9-9m-5 0h5v5M10 6v2H5v11h11v-5h2v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6Zm11-3v8h-2V6.413l-7.793 7.794l-1.414-1.414L17.585 5H13V3h8Z" fill="currentColor"/>',
+//        },
+//        "mdi-folder-outline": {
+//            body: '<path d="M20 18H4V8h16m0-2h-8l-2-2H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Z" fill="currentColor"/>',
+//        },
+//        "mdi-information-outline": {
+//            body: '<path d="M11 9h2V7h-2m1 13c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8m0-18A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m-1 15h2v-6h-2v6Z" fill="currentColor"/>',
+//        },
+//        "mdi-cog": {
+//            body: '<path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z" fill="currentColor"/>',
+//               },
+//        "mdi-gauge": {
+//            body: '<path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2m0 2a8 8 0 0 1 8 8c0 2.4-1 4.5-2.7 6c-1.4-1.3-3.3-2-5.3-2s-3.8.7-5.3 2C5 16.5 4 14.4 4 12a8 8 0 0 1 8-8m2 1.89c-.38.01-.74.26-.9.65l-1.29 3.23l-.1.23c-.71.13-1.3.6-1.57 1.26c-.41 1.03.09 2.19 1.12 2.6c1.03.41 2.19-.09 2.6-1.12c.26-.66.14-1.42-.29-1.98l.1-.26l1.29-3.21l.01-.03c.2-.51-.05-1.09-.56-1.3c-.13-.05-.26-.07-.41-.07M10 6a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1M7 9a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1m10 0a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1Z" fill="currentColor"/>',
+//        },
+//        "mdi-lightning-bolt": {
+//            body: '<path d="M11 15H6l7-14v8h5l-7 14v-8Z" fill="currentColor"/>',
+//        },       
+//        "mdi-home-import-outline": {
+//            body: '<path d="m15 13l-4 4v-3H2v-2h9V9l4 4M5 20v-4h2v2h10v-7.81l-5-4.5L7.21 10H4.22L12 3l10 9h-3v8H5Z" fill="currentColor"/>',
+//        },       
+//        "mdi-home-export-outline": {
+//            body: '<path d="m24 13l-4 4v-3h-9v-2h9V9l4 4M4 20v-8H1l10-9l7 6.3v.7h-2.21L11 5.69l-5 4.5V18h10v-2h2v4H4Z" fill="currentColor"/>',
+//        },  
+//        "mdi-fire": {
+//            body: '<path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82c-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32c-2.59 2.08-3.61 5.75-2.39 8.9c.04.1.08.2.08.33c0 .22-.15.42-.35.5c-.23.1-.47.04-.66-.12a.58.58 0 0 1-.14-.17c-1.13-1.43-1.31-3.48-.55-5.12C5.78 10 4.87 12.3 5 14.47c.06.5.12 1 .29 1.5c.14.6.41 1.2.71 1.73c1.08 1.73 2.95 2.97 4.96 3.22c2.14.27 4.43-.12 6.07-1.6c1.83-1.66 2.47-4.32 1.53-6.6l-.13-.26c-.21-.46-.77-1.26-.77-1.26m-3.16 6.3c-.28.24-.74.5-1.1.6c-1.12.4-2.24-.16-2.9-.82c1.19-.28 1.9-1.16 2.11-2.05c.17-.8-.15-1.46-.28-2.23c-.12-.74-.1-1.37.17-2.06c.19.38.39.76.63 1.06c.77 1 1.98 1.44 2.24 2.8c.04.14.06.28.06.43c.03.82-.33 1.72-.93 2.27Z" fill="currentColor"/>',
+//        },         
+//        "mdi-water": {
+//            body: '<path d="M12 20a6 6 0 0 1-6-6c0-4 6-10.75 6-10.75S18 10 18 14a6 6 0 0 1-6 6Z" fill="currentColor"/>',
+//        },         
+//        "mdi-sine-wave": {
+//            body: '<path d="M16.5 21c-3 0-4.19-4.24-5.45-8.72C10.14 9.04 9 5 7.5 5C4.11 5 4 11.93 4 12H2c0-.37.06-9 5.5-9c3 0 4.21 4.25 5.47 8.74C13.83 14.8 15 19 16.5 19c3.44 0 3.53-6.93 3.53-7h2c0 .37-.06 9-5.53 9Z" fill="currentColor"/>',
+//        },        
+//        "mdi-heat-wave": {
+//            body: '<path d="m8.5 4.5l-3.1 5l3.1 5.2l-3.3 5.8l-1.8-.9l2.7-4.9L3 9.5l3.7-5.9l1.8.9m6.2-.1l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9m6.3 0l-3.1 5.1l3.1 5l-3.3 5.8l-1.8-.9l2.7-4.9l-3.1-5l3.7-6l1.8.9" fill="currentColor"/>',
+//        }, 
+//        "mdi-chart-box-outline": {
+//            body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
+//        },
+//        "mdi-pulse": {
+//            body: '<path d="M9 17H7v-7h2v7m4 0h-2V7h2v10m4 0h-2v-4h2v4m2 2H5V5h14v14.1M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Z" fill="currentColor"/>',
+//        },        
+// 	   "mdi-solar-power-letiant": {
+//            body: '<path d="M3.33 16H11V13H4L3.33 16M13 16H20.67L20 13H13V16M21.11 18H13V22H22L21.11 18M2 22H11V18H2.89L2 22M11 8H13V11H11V8M15.76 7.21L17.18 5.79L19.3 7.91L17.89 9.33L15.76 7.21M4.71 7.91L6.83 5.79L8.24 7.21L6.12 9.33L4.71 7.91M3 2H6V4H3V2M18 2H21V4H18V2M12 7C14.76 7 17 4.76 17 2H7C7 4.76 9.24 7 12 7Z" fill="currentColor"/>',
+//        },
+// 	   "mdi-battery-low": {
+//            body: '<path d="M16 20H8V6H16M16.67 4H15V2H9V4H7.33C6.6 4 6 4.6 6 5.33V20.67C6 21.4 6.6 22 7.33 22H16.67C17.41 22 18 21.41 18 20.67V5.33C18 4.6 17.4 4 16.67 4M15 16H9V19H15V16" />',
+//        }, 
+// 
+// 	   "mdi-format-vertical-align-top": {
+//            body: '<path d="M8,11H11V21H13V11H16L12,7L8,11M4,3V5H20V3H4Z" />',
+//        },        
+//        
+//     },
+//    width: 24,
+//    height: 24,
+// });
+// }
 
 //entry point 
 window.onload=bootsTrapMain;
@@ -533,28 +391,20 @@ window.onload=bootsTrapMain;
 function visibilityListener() {
   switch(document.visibilityState) {
     case "hidden":
-//       console.log("visibilityState: hidden");
-    clearInterval(tabTimer);  
-    clearInterval(actualTimer);
-	clearInterval(timeTimer);
-      PauseAPI=true;
-      break;
+		clearInterval(tabTimer);  
+		PauseAPI=true;
+		break;
     case "visible":
-//       console.log("visibilityState: visable");
-	  PauseAPI=false;
-	  timeTimer = setInterval(refreshDevTime, 10 * 1000); // repeat every 10s
-	  refreshDevTime();
-	  openTab();
-	  if ( activeTab == "bEID") getclaim();
-      break;
-      
+		PauseAPI=false;
+		openTab();
+// 		if ( activeTab == "bEID") getclaim();
+		break;      
     default:
-      console.log("visibilityListener() - unknown visibiltyState");
+		console.log("visibilityListener() - unknown visibiltyState");
   }
-	//alert_message("Connectie met Dongle stond op pauze...nieuwe data ophalen");
 }
 
-document.addEventListener("visibilitychange", visibilityListener);
+document.addEventListener( "visibilitychange", visibilityListener );
 
 //============================================================================  
 // if the user uses the backbutton in the browser
@@ -568,112 +418,146 @@ window.addEventListener('hashchange', () => {
   // Handle the hash change here
 });
 
+
 //============================================================================  
-  
-function SetOnSettings(json){
-	/* 
-	eenmalig bepalen
-	- water aanwezig
-	- gas aanwezig
-	- aantal fases
-	- teruglevering
-	*/
-	//check of gasmeter beschikbaar is	(indien HeeftGas = true uit Frontend,json of eerdere meeting dan niet meer checken uit meterdata, bij false wel checken in meterdata)
-	if (!HeeftGas && !IgnoreGas) HeeftGas = "gas_delivered" in json ? !isNaN(json.gas_delivered.value) : false ;
-	if (!HeeftWater) HeeftWater =  "water" in json ? !isNaN(json.water.value) : false ;
-	//check of teruglevering actief is 
-	if (!Injection) Injection = isNaN(json.energy_returned_tariff1.value)?false:json.energy_returned_tariff1.value;
-	if (!Injection) Injection = isNaN(json.energy_returned_tariff2.value)?false:json.energy_returned_tariff2.value;
-	Injection = Injection && !IgnoreInjection;
-	
-	if (Dongle_Config != "p1-q" ) {
-		//bereken het aantal fases aan de hand van de slimme meter data
-// 		if ( isNaN(json.voltage_l1.value) ) alert_message("Spanningsvelden slimme meter niet gevuld : Pas 'Phases' aan in Frontend.json bij 3 fases");
-		Phases = 1;
-		if (!isNaN(json.current_l2.value)) Phases++;
-		if (!isNaN(json.current_l3.value)) Phases++;
-	}
-	if(!EnableHist){
-		//hide menu elements + dashboard item
-		document.getElementById("bHoursTab").style.display = "none";
-		document.getElementById("bDaysTab").style.display = "none";
-		document.getElementById("bMonthsTab").style.display = "none";
-		document.getElementById("l3").style.display = "none";
-	}
-	
-	show_hide_column('lastHoursTable',  4,HeeftWater);
-	show_hide_column('lastDaysTable',   4,HeeftWater);
-	show_hide_column('lastMonthsTable',13,HeeftWater);
-	show_hide_column('lastMonthsTable',14,HeeftWater);
-	show_hide_column('lastMonthsTable',15,HeeftWater);
-	show_hide_column('lastMonthsTable',16,HeeftWater);
-
-	if ( Dongle_Config != "p1-q" ) {
-		show_hide_column('lastHoursTable',  3,HeeftGas);
-		show_hide_column('lastDaysTable',   3,HeeftGas);
-		show_hide_column('lastMonthsTable', 9,HeeftGas);
-		show_hide_column('lastMonthsTable',10,HeeftGas);
-		show_hide_column('lastMonthsTable',11,HeeftGas);
-		show_hide_column('lastMonthsTable',12,HeeftGas);
-	
-		show_hide_column('lastMonthsTableCosts',  3,HeeftGas);
-		show_hide_column('lastMonthsTableCosts',  8,HeeftGas);
-	}
-	show_hide_column('lastHoursTable',  2,Injection);
-	show_hide_column('lastDaysTable',  	2,Injection);
-
-	show_hide_column('lastMonthsTable', 5,Injection);
-	show_hide_column('lastMonthsTable', 6,Injection);
-	show_hide_column('lastMonthsTable', 7,Injection);
-	show_hide_column('lastMonthsTable', 8,Injection);
-	
-	if ( Dongle_Config == "p1-q" ) {
-		show_hide_column('lastHoursTable',  1,false); //hide Power obtained 
-		show_hide_column('lastDaysTable',  	1,false);
-
-		document.getElementById("l1").style.display = "none";
-		document.getElementById("l3").style.display = "none";
-		document.getElementById("l8").style.display = "block";
-// 		trend_g.options.title.text = "kJ";	
-// 		trend_g.options.labels = "{render: function (args) {return args.value + ' kJ';}";
-		const mbusn = document.querySelectorAll('.mbus-name');
-		mbusn.forEach(tmp => { tmp.innerHTML = "Warmte<br>(GJ)"});
-		const mbusu = document.querySelectorAll('.mbus-unit');
-		mbusu.forEach(tmp => { tmp.innerHTML = "(GJ)"});
-// 		document.getElementById("gasChart").style.height = "250px";
-	}
+function applyShowCols(condition, tablesAndCols) {
+  tablesAndCols.forEach(([table, cols]) => {
+    cols.forEach(col => show_hide_column(table, col, condition));
+  });
 }
 
 //============================================================================  
-function UpdateSolar(){
-	console.log("Update Solar");
-	fetch(APIHOST+"/api/v2/gen", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-			"active" in json ? SolarActive=json.active : SolarActive = false;
-			console.log("SolarActive: "+ SolarActive);
-			if ( SolarActive ) {		
-				console.log("parsed response: "+ JSON.stringify(json));
-				console.log("json.total.daily: "+ json.total.daily);
-				console.log("json.total.actual: "+ json.total.actual);
-				console.log("json.Wp: "+ json.Wp);
-				trend_solar.data.datasets[0].data=[json.total.actual,json.Wp-json.total.actual];	
-				trend_solar.update();
-				document.getElementById('dash_solar_p').innerHTML = formatValue(json.total.daily/1000.0);
-				document.getElementById('dash_solar').style.display = 'block';
+  
+function SetOnSettings(json) {
+	// Initiele detectie: water, gas, teruglevering
+	if (!HeeftGas && !IgnoreGas)
+		HeeftGas = "gas_delivered" in json ? !isNaN(json.gas_delivered.value) : false;
+	if (!HeeftWater)
+		HeeftWater = "water" in json ? !isNaN(json.water.value) : false;
 
-				//SCR
-// console.log("Pi_today: " + Pi_today*1000);
-// console.log("json.total.daily: " + json.total.daily);
-				if ( json.total.daily ) document.getElementById('scr').innerHTML = Number(((json.total.daily-(1000*Pi_today))/json.total.daily)*100).toFixed(0);
-				else document.getElementById('seue').innerHTML = "-";
-// 				Number(maxV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
-				//SEUE				( Productie - Teruglevering ) / ( Afname + Productie - Teruglevering )
-				if ( json.total.daily ) document.getElementById('seue').innerHTML = Number( (json.total.daily-(1000*Pi_today)) / (json.total.daily-(1000*Pi_today)+(Pd_today*1000))*100 ).toFixed(0);
-				else document.getElementById('seue').innerHTML = "-";
-// 				if ( json.Wp ) document.getElementById('wpwh').innerHTML = Number( json.total.daily / json.Wp * 100 ).toFixed(0);				
-			}
-      })
+	if (!Injection) {
+		Injection = !isNaN(json.energy_returned_tariff1?.value) ? json.energy_returned_tariff1.value : false;
+		if (!Injection) Injection = !isNaN(json.energy_returned_tariff2?.value) ? json.energy_returned_tariff2.value : false;
+	}
+	Injection = Injection && !IgnoreInjection;
+
+	// Fasebepaling voor slimme meter
+	if (Dongle_Config !== "p1-q") {
+		Phases = 1;
+		if (!isNaN(json.current_l2?.value)) Phases++;
+		if (!isNaN(json.current_l3?.value)) Phases++;
+	}
+
+	// Verberg historische weergave indien uitgeschakeld
+	if (!EnableHist) {
+		["bHoursTab", "bDaysTab", "bMonthsTab", "l3"].forEach(id => {
+			document.getElementById(id).style.display = "none";
+		});
+	}
+
+	// Kolommen tonen/verbergen op basis van beschikbaarheid
+	const showCols = (table, cols, condition) => cols.forEach(col => show_hide_column(table, col, condition));
+
+	applyShowCols(HeeftWater, [
+	  ['lastHoursTable', [2]],
+	  ['lastDaysTable', [4]],
+	  ['lastMonthsTable', [13, 14, 15, 16]]
+	]);
+
+// 	showCols('lastHoursTable',  [4], HeeftWater);
+// 	showCols('lastDaysTable',   [4], HeeftWater);
+// 	showCols('lastMonthsTable', [13, 14, 15, 16], HeeftWater);
+
+	if (Dongle_Config !== "p1-q") {
+		applyShowCols(HeeftGas, [
+		  ['lastHoursTable', [3]],
+		  ['lastDaysTable', [3]],
+		  ['lastMonthsTable', [9,10,11,12]],
+		  ['lastMonthsTableCosts', [3,8]]
+		]);
+// 
+// 		showCols('lastHoursTable',  [3], HeeftGas);
+// 		showCols('lastDaysTable',   [3], HeeftGas);
+// 		showCols('lastMonthsTable', [9, 10, 11, 12], HeeftGas);
+// 		showCols('lastMonthsTableCosts', [3, 8], HeeftGas);
+	}
+
+	applyShowCols(Injection, [
+	  ['lastHoursTable', [2]],
+	  ['lastDaysTable', [2]],
+	  ['lastMonthsTable', [5, 6, 7, 8]]
+	]);
+
+// 	showCols('lastHoursTable',  [2], Injection);
+// 	showCols('lastDaysTable',   [2], Injection);
+// 	showCols('lastMonthsTable', [5, 6, 7, 8], Injection);
+
+	// Specifieke aanpassing voor p1-q dongle
+	if (Dongle_Config === "p1-q") {
+// 		showCols('lastHoursTable', [1], false);
+// 		showCols('lastDaysTable',  [1], false);
+		
+		applyShowCols(false, [
+		  ['lastHoursTable', [1]],
+		  ['lastDaysTable', [1]],
+		]);
+		
+		["l1", "l3"].forEach(id => document.getElementById(id).style.display = "none");
+		document.getElementById("l8").style.display = "block";
+
+		document.querySelectorAll('.mbus-name').forEach(e => e.innerHTML = "Warmte<br>(GJ)");
+		document.querySelectorAll('.mbus-unit').forEach(e => e.innerHTML = "(GJ)");
+	}
+}
+
+function UpdateAccu(){
+	let json = objDAL.getAccu();
+	"active" in json ? AccuActive=json.active : AccuActive = false;
+	console.log("AccuActive: "+ AccuActive);
+	if ( AccuActive ) {		
+		console.log("parsed response: "+ JSON.stringify(json));
+		console.log("json.status: "+ json.status);
+		console.log("json.unit: "+ json.unit);
+		console.log("json.currentPower: "+ json.currentPower);
+		console.log("json.chargeLevel: "+ json.chargeLevel);				
+		trend_accu.data.datasets[0].data=[json.chargeLevel,100-json.chargeLevel];	
+		trend_accu.options.title.text = Number(json.chargeLevel).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" %";
+		trend_accu.update();
+		document.getElementById('dash_accu_p').innerHTML = formatValue(json.currentPower);
+		document.getElementById('dash_accu').style.display = 'block';
+		document.getElementById('accu-status').innerHTML = json.status;
+
+	}
+ }
+
+//============================================================================  
+function UpdateSolar(){
+
+	let json = objDAL.getSolar();
+	"active" in json ? SolarActive=json.active : SolarActive = false;
+	console.log("SolarActive: "+ SolarActive);
+	if ( SolarActive ) {		
+		console.log("parsed response: "+ JSON.stringify(json));
+		console.log("json.total.daily: "+ json.total.daily);
+		console.log("json.total.actual: "+ json.total.actual);
+		console.log("json.Wp: "+ json.Wp);
+		trend_solar.data.datasets[0].data=[json.total.actual,json.Wp-json.total.actual];	
+		trend_solar.update();
+		document.getElementById('dash_solar_p').innerHTML = formatValue(json.total.daily/1000.0);
+		document.getElementById('dash_solar').style.display = 'block';
+		trend_solar.options.title.text = Number(json.total.actual).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" W";
+
+		//SCR
+		if ( !Pi_today ) return;
+		// console.log("Pi_today: " + Pi_today*1000);
+		// console.log("json.total.daily: " + json.total.daily);
+		if ( json.total.daily ) document.getElementById('scr').innerHTML = Number(((json.total.daily-(1000*Pi_today))/json.total.daily)*100).toFixed(0);
+		else document.getElementById('seue').innerHTML = "-";
+		// Number(maxV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
+		//SEUE				( Productie - Teruglevering ) / ( Afname + Productie - Teruglevering )
+		if ( json.total.daily ) document.getElementById('seue').innerHTML = Number( (json.total.daily-(1000*Pi_today)) / (json.total.daily-(1000*Pi_today)+(Pd_today*1000))*100 ).toFixed(0);
+		else document.getElementById('seue').innerHTML = "-";
+	}
  }
 
 //============================================================================  
@@ -693,7 +577,7 @@ function nrgm_getstatus(){
       .then(response => response.json())
       .then(json => {
         console.log("parsed response: "+ JSON.stringify(json));
-		var nrgstatus;
+		let nrgstatus;
         if ( "status" in json ) {
         	switch(json.status) {
 			  case 0: //_INACTIVE
@@ -723,117 +607,52 @@ function nrgm_getstatus(){
       });
 }
 
-function getclaim(){
-	document.getElementById('status').innerHTML = "Status ophalen...";  
-	
-	fetch(APIHOST+"/eid/getclaim", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-          console.log("parsed response: ["+ JSON.stringify(json)+"]");
+function ProcessEIDClaim(json){
+	if ( "webhookUrl" in json ) {
+		document.getElementById('status').innerHTML = "<FONT COLOR='#70ac4d'>GEKOPPELD";
+		document.getElementById('claim').style.display = 'none';
+	}	
+	if ( "claimUrl" in json ) {
+		document.getElementById('status').innerHTML = "<FONT COLOR='RED'>Waiting for Activation";
+		document.getElementById('claimurl').innerHTML = "<a href='" + json.claimUrl +"'target='_blank'>Activeer koppeling<i class='iconify' data-icon='mdi-external-link'></i></a>";
+		document.getElementById('claim').style.display = 'block';
+	}
 
-        if ( "webhookUrl" in json ) {
-        	document.getElementById('status').innerHTML = "<FONT COLOR='#70ac4d'>GEKOPPELD";
-        	document.getElementById('claim').style.display = 'none';
-        }	
-        if ( "claimUrl" in json ) {
-        	document.getElementById('status').innerHTML = "<FONT COLOR='RED'>Waiting for Activation";
-        	document.getElementById('claimurl').innerHTML = "<a href='" + json.claimUrl +"'target='_blank'>Activeer koppeling<i class='iconify' data-icon='mdi-external-link'></i></a>";
-        	document.getElementById('claim').style.display = 'block';
-        }
-      })
-      .catch(function(error) {
-      	document.getElementById('status').innerHTML = "Fout - Probeer opnieuw!";
-      });
+}
+
+function getclaim(){
+	document.getElementById('status').innerHTML = "Status ophalen...";  	
+	objDAL.refreshEIDClaim();
 }
 
 //============================================================================  
 
 function parseVersionManifest(json)
-{
-  console.log("parseVersionManifest() - ", json);
-  LastVersion = json.version;
-  LastVersionMajor = json.major;
-  LastVersionMinor = json.minor;
-  LastVersionFix = json.fix;
-  LastVersionBuid = json.build;
-  LastVersionNotes = json.notes;
-  LastVersionOTA = json.ota_url;
-}
-//============================================================================  
-  
-function ReadVersionManifest() {
-  console.log("ReadVersionManifest");
-  Spinner(true);
-  fetch("http://" + ota_url + "version-manifest.json?dummy=" + Date.now(), { "setTimeout": 5000 })
-//   fetch(URL_VERSION_MANIFEST, { "setTimeout": 5000 })
-    .then(function (response) {
-      return response.json();})
-    .then(function (json) {
-      console.log("version manifest: " + JSON.stringify(json));
-      parseVersionManifest(json);
-      Spinner(false);
-    }
-  );	// function(json)  
-}
-
-//============================================================================   
-function UpdateDash()
 {	
-	// if (PauseAPI) return;
-/*** 
-	Het dashboard toont verschillende kolommen, namelijk
-	- actueel	: actueel verbruik/teruglevering (altijd)
-	- totaal 	: afname - injectie(teruglevering) (altijd)
-	- afname*3 	: onttrokken van stroomnet
-	- injectie*3: teruglevering aan stroomnet
-	- gas*2 	: indien er een gasmeter aanwezig is
-	- water     : indien watermeter aanwezig 
-	- spanning* : spanningsniveau + aantal fases
-	
+	console.log("json.version:" + json.version + " firmwareVersion: "+ firmwareVersion);
+	if ( json.version != "" && firmwareVersion != "") {
+	  if ( firmwareVersion < (json.major*10000 + 100 * json.minor + json.fix) ) 
+		document.getElementById('message').innerHTML = "Software versie " + json.version + " beschikbaar";
+	  else document.getElementById('message').innerHTML = "";
+	}
+}
 
-	*3 = alleen getoond indien energy_returned_tariff1 > 0
-	* = alleen indien geen teruglevering
-*/
-	var Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
-	console.log("Update dash");
-	if ( SolarActive ) UpdateSolar();
-	
+function refreshDashboard(json){
 	setPresentationType('TAB'); //zet grafische mode uit
 	
+	let Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
 	//check new day = refresh
-	var DayEpochTemp = Math.floor(new Date().getTime() / 86400000.0);
+	let DayEpochTemp = Math.floor(new Date().getTime() / 86400000.0);
 	if (DayEpoch != DayEpochTemp || hist_arrP.length < 4 ) {
-		if ( EnableHist ) refreshDays(); //load data first visit
+		if ( EnableHist ) refreshHistData("Days"); //load data first visit
 		DayEpoch = DayEpochTemp;
 	}
-	Spinner(true);
-	fetch(APIGW+"v2/sm/fields", {"setTimeout": 5000})
-	  .then(response => response.json())
-	  .then(json => {
-	  
-//warmtelink
-// 		  	json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"timestamp":{"value":"230104081758W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.667,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.667,"unit":"m3"},"gas_delivered_timestamp":{"value":"230104081758W"}}');
-// 	   	  json = JSON.parse('{"identification":{"value":"NWA-WARMTELINK"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"221231161038W"},"equipment_id":{"value":"ADD3100000185112"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":4},"mbus1_equipment_id_tc":{"value":"725182662D2C340C"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":16.613,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":16.613,"unit":"m3"},"gas_delivered_timestamp":{"value":"221231161038W"}}');
-// json = JSON.parse('{"identification":{"value":"ISk5=2MT382-1000"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"highest_peak_pwr_13mnd":{"value":"-"},"timestamp":{"value":"230329093336S"},"equipment_id":{"value":"-"},"energy_delivered_tariff1":{"value":"-"},"energy_delivered_tariff2":{"value":"-"},"energy_returned_tariff1":{"value":"-"},"energy_returned_tariff2":{"value":"-"},"electricity_tariff":{"value":"-"},"power_delivered":{"value":"-"},"power_returned":{"value":"-"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"-"},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":"-"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":"-"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":12},"mbus1_equipment_id_tc":{"value":"303030304B414D32"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":35.819,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":6329.819,"unit":"m3"},"gas_delivered_timestamp":{"value":"230329073338S"},"water":{"value":517.916,"unit":"m3"}}');
 
-//others
-//    	  json = JSON.parse('{"timestamp":{"value":"220606085610S"},"energy_delivered_tariff1":{"value":55.026,"unit":"kWh"},"energy_delivered_tariff2":{"value":53.923,"unit":"kWh"},"energy_returned_tariff1":{"value":1,"unit":"kWh"},"energy_returned_tariff2":{"value":0,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.107,"unit":"kW"},"power_returned":{"value":1200,"unit":"kW"},"voltage_l1":{"value":232.5,"unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":0,"unit":"A"},"power_delivered_l1":{"value":0.114,"unit":"kW"},"power_delivered_l2":{"value":0.284,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"gas_delivered":{"value":5471.227,"unit":"m3"},"gas_delivered_timestamp":{"value":"220606085510S"},"water":{"value":379.782,"unit":"m3"}}');	   	  
-//  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.102,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
-//  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.123,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":234.6,"unit":"V"},"voltage_l2":{"value":234,"unit":"V"},"voltage_l3":{"value":234.3,"unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
-//no voltage
-//  		json = JSON.parse('{"identification":{"value":"XMX5LGF0010444312018"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220604080004S"},"equipment_id":{"value":"4530303532303034343331323031383138"},"energy_delivered_tariff1":{"value":27304.577,"unit":"kWh"},"energy_delivered_tariff2":{"value":20883.288,"unit":"kWh"},"energy_returned_tariff1":{"value":4445.384,"unit":"kWh"},"energy_returned_tariff2":{"value":10021.226,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":1.123,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"message_short":{"value":"-"},"message_long":{"value":""},"voltage_l1":{"value":"-","unit":"V"},"voltage_l2":{"value":"-","unit":"V"},"voltage_l3":{"value":"-","unit":"V"},"current_l1":{"value":1,"unit":"A"},"current_l2":{"value":2,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.01,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0.499,"unit":"kW"},"power_returned_l3":{"value":0.613,"unit":"kW"},"mbus1_device_type":{"value":"-"},"mbus1_equipment_id_tc":{"value":"-"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":"-"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"water":{"value":517.916,"unit":"m3"}}');
-// 4.2 meter met teruglevering
-// json = JSON.parse('{"identification":{"value":"KFM5KAIFA-METER"},"p1_version":{"value":"42"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220706121611S"},"equipment_id":{"value":"4530303236303030303134363435373135"},"energy_delivered_tariff1":{"value":16120.922,"unit":"kWh"},"energy_delivered_tariff2":{"value":15221.887,"unit":"kWh"},"energy_returned_tariff1":{"value":32.012,"unit":"kWh"},"energy_returned_tariff2":{"value":106.573,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.252,"unit":"kW"},"message_short":{"value":""},"message_long":{"value":""},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":2,"unit":"A"},"current_l2":{"value":1,"unit":"A"},"current_l3":{"value":1,"unit":"A"},"power_delivered_l1":{"value":0,"unit":"kW"},"power_delivered_l2":{"value":0,"unit":"kW"},"power_delivered_l3":{"value":0,"unit":"kW"},"power_returned_l1":{"value":0.54,"unit":"kW"},"power_returned_l2":{"value":0.461,"unit":"kW"},"power_returned_l3":{"value":0.251,"unit":"kW"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303332353631323431353834373135"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":8979.463,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":8979.463,"unit":"m3"},"gas_delivered_timestamp":{"value":"220706120000S"}}');
-// 2.2 meter met teruglevering
-// json = JSON.parse('{"identification":{"value":"XMX5XMXABCE000060959"},"p1_version":{"value":"-"},"p1_version_be":{"value":"-"},"timestamp":{"value":"220706121611S"},"equipment_id":{"value":"4530303236303030303134363435373135"},"energy_delivered_tariff1":{"value":16120.922,"unit":"kWh"},"energy_delivered_tariff2":{"value":15221.887,"unit":"kWh"},"energy_returned_tariff1":{"value":32.012,"unit":"kWh"},"energy_returned_tariff2":{"value":106.573,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0,"unit":"kW"},"power_returned":{"value":1.252,"unit":"kW"},"message_short":{"value":""},"message_long":{"value":""},"voltage_l1":{"value":"-"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":"-","unit":"A"},"current_l2":{"value":"-","unit":"A"},"current_l3":{"value":"-","unit":"A"},"power_delivered_l1":{"value":"-","unit":"kW"},"power_delivered_l2":{"value":"-","unit":"kW"},"power_delivered_l3":{"value":"-","unit":"kW"},"power_returned_l1":{"value":"-","unit":"kW"},"power_returned_l2":{"value":"-","unit":"kW"},"power_returned_l3":{"value":"-","unit":"kW"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303332353631323431353834373135"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":8979.463,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":8979.463,"unit":"m3"},"gas_delivered_timestamp":{"value":"220706120000S"}}');
-//  json = JSON.parse('{"identification":{"value":"XMX5LGF0000453562119"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"highest_peak_pwr_13mnd":{"value":"-"},"timestamp":{"value":"230310104544W"},"equipment_id":{"value":"4530303531303035333536323131393139"},"energy_delivered_tariff1":{"value":8293.565,"unit":"kWh"},"energy_delivered_tariff2":{"value":9179.965,"unit":"kWh"},"energy_returned_tariff1":{"value":140.447,"unit":"kWh"},"energy_returned_tariff2":{"value":474.874,"unit":"kWh"},"electricity_tariff":{"value":"0002"},"power_delivered":{"value":0.176,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"(3)(0-0:96.7.19)(190515144214S)(0000000596*s)(210311024815W)(0000001506*s)(221021124654S)(0000000958*s)"},"voltage_l1":{"value":238.5,"unit":"V"},"voltage_l2":{"value":"-"},"voltage_l3":{"value":"-"},"current_l1":{"value":3,"unit":"A"},"current_l2":{"value":"-"},"current_l3":{"value":"-"},"power_delivered_l1":{"value":0.176,"unit":"kW"},"power_delivered_l2":{"value":"-"},"power_delivered_l3":{"value":"-"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":"-"},"power_returned_l3":{"value":"-"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303339303031393238303734373139"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":5876.51,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":5876.51,"unit":"m3"},"gas_delivered_timestamp":{"value":"230310104504W"}}');
-// json = JSON.parse('{"identification":{"value":"KFM5KAIFA-METER"},"p1_version":{"value":"50"},"p1_version_be":{"value":"-"},"peak_pwr_last_q":{"value":"-"},"highest_peak_pwr":{"value":"-"},"timestamp":{"value":"230318223355W"},"equipment_id":{"value":"4530303630313030303035303738373232"},"energy_delivered_tariff1":{"value":3158.161,"unit":"kWh"},"energy_delivered_tariff2":{"value":3788.432,"unit":"kWh"},"energy_returned_tariff1":{"value":1000,"unit":"kWh"},"energy_returned_tariff2":{"value":200,"unit":"kWh"},"electricity_tariff":{"value":"0001"},"power_delivered":{"value":0.396,"unit":"kW"},"power_returned":{"value":0,"unit":"kW"},"electricity_threshold":{"value":"-"},"electricity_failure_log":{"value":"(0)(0-0:96.7.19)"},"voltage_l1":{"value":232.9,"unit":"V"},"voltage_l2":{"value":233.8,"unit":"V"},"voltage_l3":{"value":232.5,"unit":"V"},"current_l1":{"value":0,"unit":"A"},"current_l2":{"value":0,"unit":"A"},"current_l3":{"value":2,"unit":"A"},"power_delivered_l1":{"value":0.003,"unit":"kW"},"power_delivered_l2":{"value":0.062,"unit":"kW"},"power_delivered_l3":{"value":0.33,"unit":"kW"},"power_returned_l1":{"value":0,"unit":"kW"},"power_returned_l2":{"value":0,"unit":"kW"},"power_returned_l3":{"value":0,"unit":"kW"},"mbus1_device_type":{"value":3},"mbus1_equipment_id_tc":{"value":"4730303339303031373532383339333137"},"mbus1_equipment_id_ntc":{"value":"-"},"mbus1_valve_position":{"value":"-"},"mbus1_delivered":{"value":6295.621,"unit":"m3"},"mbus1_delivered_ntc":{"value":"-"},"mbus1_delivered_dbl":{"value":"-"},"mbus2_device_type":{"value":"-"},"mbus2_equipment_id_tc":{"value":"-"},"mbus2_equipment_id_ntc":{"value":"-"},"mbus2_valve_position":{"value":"-"},"mbus2_delivered":{"value":"-"},"mbus2_delivered_ntc":{"value":"-"},"mbus2_delivered_dbl":{"value":"-"},"mbus3_device_type":{"value":"-"},"mbus3_equipment_id_tc":{"value":"-"},"mbus3_equipment_id_ntc":{"value":"-"},"mbus3_valve_position":{"value":"-"},"mbus3_delivered":{"value":"-"},"mbus3_delivered_ntc":{"value":"-"},"mbus3_delivered_dbl":{"value":"-"},"mbus4_device_type":{"value":"-"},"mbus4_equipment_id_tc":{"value":"-"},"mbus4_equipment_id_ntc":{"value":"-"},"mbus4_valve_position":{"value":"-"},"mbus4_delivered":{"value":"-"},"mbus4_delivered_ntc":{"value":"-"},"mbus4_delivered_dbl":{"value":"-"},"gas_delivered":{"value":6295.621,"unit":"m3"},"gas_delivered_timestamp":{"value":"230318222504W"}}');
- 		//-------CHECKS
+		//-------CHECKS
 
 		SetOnSettings(json);
-		//check of p1 gegevens via api binnen komen
 		if (json.timestamp.value == "-") {
-			console.log("timestamp missing : p1 gegevens correct?");
+			console.log("timestamp missing : p1 data incorrect!");
 			return;
 		}
 		
@@ -843,15 +662,25 @@ function UpdateDash()
 		if (Injection) {		
 			document.getElementById("l5").style.display = "block";
 			document.getElementById("l6").style.display = "block";
-			document.getElementById("Ph").innerHTML = "<span class='iconify' data-icon='mdi-lightning-bolt'></span>Netto Verbr";
+			document.getElementById("Ph").innerHTML = "<span class='iconify' data-icon='mdi-lightning-bolt'></span>" + t('lbl-net-use');
 		}
 		if (HeeftGas && EnableHist && (Dongle_Config != "p1-q") && !IgnoreGas) document.getElementById("l4").style.display = "block";
 		if (HeeftWater && EnableHist) { 
 			document.getElementById("l7").style.display = "block";
 			document.getElementById("l2").style.display = "none";
 		}
+		if ( json.peak_pwr_last_q.value != "-" ) document.getElementById("dash_peak").style.display = "block";
+
 		
-		//-------SPANNING METER		
+		//-------Kwartierpiek
+		document.getElementById("peak_month").innerHTML = formatValue(json.highest_peak_pwr.value);
+		document.getElementById("dash_peak_delta").innerText = formatValue(json.highest_peak_pwr.value - json.peak_pwr_last_q.value);
+		trend_peak.data.datasets[0].data=[json.peak_pwr_last_q.value, json.highest_peak_pwr.value-json.peak_pwr_last_q.value];	
+		trend_peak.update();
+		if (json.peak_pwr_last_q.value > 0.75 * json.highest_peak_pwr.value ) trend_peak.data.datasets[0].backgroundColor = ["#dd0000", "rgba(0,0,0,0.1)"];
+		else trend_peak.data.datasets[0].backgroundColor = ["#009900", "rgba(0,0,0,0.1)"];
+		
+		//-------VOLTAGE
 		let v1 = 0, v2 = 0, v3 = 0;
 		if (!isNaN(json.voltage_l1.value)) v1 = json.voltage_l1.value; 
 		if (!isNaN(json.voltage_l2.value)) v2 = json.voltage_l2.value;
@@ -881,9 +710,9 @@ function UpdateDash()
 			if (v3) gaugeV.data.datasets[2].data=[v3-207,253-json.voltage_l3.value];
 			gaugeV.update();
 		}
-		//-------ACTUEEL METER		
+		//-------ACTUAL
 		//afname of teruglevering bepalen en signaleren
-		var TotalKW	= json.power_delivered.value - json.power_returned.value;
+		let TotalKW	= json.power_delivered.value - json.power_returned.value;
 
 		if ( TotalKW <= 0 ) { 
 // 			TotalKW = -1.0 * json.power_returned.value;
@@ -932,24 +761,17 @@ function UpdateDash()
 		//update actuele vermogen			
 		if (Act_Watt) {
 			document.getElementById("power_delivered").innerHTML = Number(TotalKW  * 1000).toFixed(0);
+			document.getElementById("dsh-power").textContent = 'Watt';
 		} else {
 			document.getElementById("power_delivered").innerHTML = Number(TotalKW).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} ) ;
+			document.getElementById("dsh-power").textContent = 'kW';
 		}
 
 		//vermogen min - max bepalen
 		let nvKW= TotalKW; 
 		if (minKW == 0.0 || nvKW < minKW) { minKW = nvKW;}
 		if (nvKW> maxKW){ maxKW = nvKW; }
-		
-// 		if (Act_Watt){		
-// 			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW * 1000).toFixed(0);                    
-// 			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW * 1000).toFixed(0);           
-// 			document.getElementsByName('power').forEach(function(ele, idx) { ele.innerHTML = 'Watt'; }) //for all elements
-// 		} else {
-// 			document.getElementById(`power_delivered_1max`).innerHTML = Number(maxKW.toFixed(3)).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} );                    
-// 			document.getElementById(`power_delivered_1min`).innerHTML = Number(minKW.toFixed(3)).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} );                        
-// 		}
-		
+				
     // stop here if there is no history enabled
 		if (!EnableHist) {Spinner(false);return;}
 		
@@ -983,7 +805,7 @@ function UpdateDash()
       }
 		} //!= p1-q
 		
-    //-------GAS METER	
+    //-------GAS	
 		if ( HeeftGas && (Dongle_Config != "p1-q") ) 
 		{
       Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1);
@@ -991,7 +813,7 @@ function UpdateDash()
 			document.getElementById("G").innerHTML = formatValue(Garr[0]);
 		}
 		
-		//-------WATER METER	
+		//-------WATER	
 		if (HeeftWater) 
 		{
       Warr = calculateDifferences(json.water.value, hist_arrW, 1000);
@@ -999,23 +821,30 @@ function UpdateDash()
 			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString();
 		}
 				
-		//-------Warmte METER	
+		//-------HEAT
 		if (Dongle_Config == "p1-q") 
 		{
       Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1000);
       updateGaugeTrend(trend_q, Garr);
 			document.getElementById("Q").innerHTML = Number(Garr[0]).toLocaleString("nl", {minimumFractionDigits: 0, maximumFractionDigits: 0} );
 		}
-										
-		Spinner(false);
-	}); //end fetch fields
+	
+	if ( SolarActive ) UpdateSolar();
+	if ( AccuActive ) UpdateAccu();
 
+}
+
+//============================================================================   
+function UpdateDash()
+{	
+	console.log("Update dash");
+	objDAL.refreshFields();
 }
 
 //bereken verschillen gas, afname, teruglevering en totaal
 function calculateDifferences(curval, hist_arr, factor)
 {
-  var out = []  
+  let out = []  
   for(let i=0; i<3; i++)
   {
     if (i==0) 
@@ -1030,60 +859,14 @@ function calculateDifferences(curval, hist_arr, factor)
 //update dataset and update gauge 
 function updateGaugeTrend(objGauge, arr)
 {
-  var nMax = math.max(arr);
+  let nMax = math.max(arr);
   for(let i=0; i<3; i++){
     objGauge.data.datasets[i].data = [ Number(arr[i]).toFixed(1), Number(nMax-arr[i]).toFixed(1) ];
   }
   objGauge.update();
 }
 	
-//============================================================================      
-function menu() {
-  var x = document.getElementById("myTopnav");
-  if (x.className === "main-navigation") {
-    x.className += " responsive";
-    
-  } else {
-    x.className = "main-navigation";
-  }
-//change menu icon
-    var menu = document.getElementById("menuid");
-	menu.classList.toggle("mdi-close");
-	menu.classList.toggle("mdi-menu");
-}
-   
-// attach an onclick handler for all menuitems
-function handle_menu_click()
-{	
-	var btns = document.getElementsByClassName("nav-item");
-	for (let i = 0; i < btns.length; i++) {
-  		btns[i].addEventListener("click", function() {
-			//reset hamburger menu icon
-			var menu = document.getElementById("menuid");
-			menu.classList.remove("mdi-close");
-			menu.classList.add("mdi-menu");
-	
-			//remove active classes
-			let current = document.getElementById("myTopnav").getElementsByClassName("active");	
-			for (let j=current.length-1; j>=0; j--) {
-	// 					console.log("remove active ["+j+"] current:"+current[j]);
-				current[j].classList.remove("active");
-		}
-		//add new active classes
-			var closest = this.closest("ul");
-			if (closest && !closest.previousElementSibling.classList.contains("active","topcorner","mdi")) {
-				console.log("contains: subnav, closest:" +closest.className);
-				closest.previousElementSibling.classList.add("active");
-			}
-			if(!this.classList.contains("active","nav-img")) 
-			this.classList.add("active");
 
-			activeTab = this.id;
-			//console.log("ActiveID - " + activeTab );
-// 			openTab();  		
-  		});
-	}
-}
 
 //create all chart-based gauges
 function createDashboardGauges()
@@ -1097,22 +880,13 @@ function createDashboardGauges()
 	gauge3f 	= new Chart(document.getElementById("gauge3f"),     cfgGauge3F);
 	gaugeV 		= new Chart(document.getElementById("gauge-v"),     cfgGaugeVOLTAGE);
 	trend_solar	= new Chart(document.getElementById("container-solar"), cfgGaugeSolar);	
+	trend_accu	= new Chart(document.getElementById("container-accu"), cfgGaugeAccu);	
+	trend_peak	= new Chart(document.getElementById("container-peak"), cfgGaugePeak);	
 }
 
-//callback function for the DAL
-function updateFromDAL(source, json)
-{
-  console.log("updateFromDAL(); source="+source);
-  console.log(json);
-  /*
-  switch(source)
-  {
-    case "devinfo": parseDeviceInfo(json); break;
-    case "versionmanifest": parseVersionManifest(json); break;
-    default:
-      console.log("missing handler; source="+source);
-      break;
-  }*/
+function RedirectBtn(){
+
+setTimeout(mijnFunctie, 2000);
 }
 
 //main entry point from DSMRindex.html or window.onload
@@ -1121,53 +895,57 @@ function bootsTrapMain()
   console.log("bootsTrapMain()");
 //   loadIcons();
 
-   getDevSettings();
+	//get and set locale
+	locale = localStorage.getItem('locale') || 'nl'; 
+	console.log("!-- localstorage: "+ locale);
+	loadTranslations(locale); 
+	document.getElementById("languageSelector").value = locale;
 
-  createDashboardGauges();
+	createDashboardGauges();
 
-  //init DAL
-  objDAL = new dsmr_dal_main();
-  objDAL.setCallback(updateFromDAL);
-  objDAL.init();
-  
-            
 	handle_menu_click();
 	FrontendConfig();
-    refreshDevTime();
-    clearInterval(timeTimer);  
-    timeTimer = setInterval(refreshDevTime, 10 * 1000); // repeat every 10s
+	
+	//init DAL
+	initDAL(updateFromDAL);
 
     setMonthTableType();
-    refreshDevInfo();
     openTab();
     initActualGraph();
     setPresentationType('TAB');
-	//after loading ... flow the #target url just for FSExplorer
-// 	console.log("location-hash: " + location.hash );
-// 	console.log("location-pathname: " + location.pathname );
-// 	console.log("location-msg: " + location.hash.split('msg=')[1]);
-// 	console.log("location-hash-split: " + location.hash.split('#')[1].split('?')[0]);
 	
   //goto tab after reload FSExplorer
-  	console.log( "location.hash: " + location.hash);
-    console.log( "location.hash split 0: " + location.hash.split('#')[1] );
-	console.log( "location.hash split ?: " + location.hash.split('#')[1].split('?')[0] );
-	console.log( "location.hash split ?2: " + location.hash.split('#')[1].split('?')[1] );
-	if (location.hash == "#FileExplorer") { document.getElementById('bFSExplorer').click(); }
-	if ( location.hash.startsWith("#UpdateStart") ) {
-		var cmd = location.hash.split('#')[1].split('?');
-// 		console.log( "command: "  + cmd );
-		UpdateStart( cmd[1] && cmd[0] ? cmd[1] : "" );
-	}
-  //handle the redirect after REBOOT / RESET / UPDATE
-	if (location.hash.split('#')[1].split('?')[0] == "Redirect") { handleRedirect(); }
-	if (location.hash.split('#')[1].split('?')[0] == "Updating") { console.log("updating redirect"); }
+  	if ( location.hash ) {
+		const hashPart = location.hash.substring(1); // strip '#'
+		const [cmd, paramString] = hashPart.split("?");
+		const params = new URLSearchParams(paramString || "");
 	
-	//reselect Dash when Home icon has been clicked
- 	document.getElementById("Home").addEventListener("click", function() { document.getElementById('bDashTab').click(); });
+		console.log("hash command:", cmd);
+		console.log("hash params:", paramString);
+	
+		switch (cmd) {
+			case "UpdateStart":
+				UpdateStart(paramString);				
+				break;
+				
+			case "Redirect":
+				handleRedirect();
+				break;
+	
+			case "Updating":
+				console.log("Updaten bezig...");
+				break;
+	
+			default:
+				//redirect to cmd
+				const btn = document.getElementById("b"+cmd);
+				if (btn) btn.click(); else console.log("Button b"+cmd+" not found");
+		}
+	}
     document.getElementById('dongle_io').addEventListener('input', NTSWupdateVisibility);
  	
  	BurnupBootstrap();
+ 	
   } // bootsTrapMain()
   
   
@@ -1175,8 +953,8 @@ function bootsTrapMain()
   function handleRedirect(){
 	console.log("location-handle: " + location.hash.split('msg=')[1]);
 	//close all sections
-   	var elements = document.getElementsByClassName("tabName");
-    for (var i = 0; i < elements.length; i++){
+   	let elements = document.getElementsByClassName("tabName");
+    for (let i = 0; i < elements.length; i++){
         elements[i].style.display = "none";
     }
     //open only redirect section
@@ -1188,8 +966,8 @@ function bootsTrapMain()
    	else if (location.hash.split('msg=')[1] == "Update"){  document.getElementById("RedirectMessage").innerHTML = "Het systeem wordt vernieuwd en daarna opnieuw gestart";} 
 
 	setInterval(function() {
-		var div = document.querySelector('#counter');
-		var count = div.textContent * 1 - 1;
+		let div = document.querySelector('#counter');
+		let count = div.textContent * 1 - 1;
 		div.textContent = count;
 		if (count <= 0) {
 			window.location.replace("/");
@@ -1209,8 +987,8 @@ function bootsTrapMain()
   //============================================================================  
   // shows or hide table column v1
   function show_hide_column(table, col_no, do_show) {
-   var tbl = document.getElementById(table);
-   var col = tbl.getElementsByTagName('col')[col_no];
+   let tbl = document.getElementById(table);
+   let col = tbl.getElementsByTagName('col')[col_no];
    if (col) {
      col.style.visibility=do_show?"":"collapse";
    }
@@ -1220,11 +998,11 @@ function bootsTrapMain()
 // show or hides table column v2
 function show_hide_column2(table, col_no, do_show) {
 
-    var tbl  = document.getElementById(table);
-    var rows = tbl.getElementsByTagName('tr');
+    let tbl  = document.getElementById(table);
+    let rows = tbl.getElementsByTagName('tr');
 // 	console.log("rows: " + rows.length);
-      var cels, header;
-    for (var row=0; row<rows.length;row++) {
+      let cels, header;
+    for (let row=0; row<rows.length;row++) {
       if ( document.getElementById('mCOST').checked ) { 
       	header = 0; 
       	if (row == rows.length-1) continue;
@@ -1271,24 +1049,29 @@ function NetSwitchUpdateBar() {
 	}
 }
 
+function refreshNetSwitch(data){
+	document.getElementById("value").value = data.value;
+	document.getElementById("switch_on").value = data.switch_on ? "true" : "false";
+	document.getElementById("time_true").value = data.time_true || 60;
+	document.getElementById("time_false").value = data.time_false || 120;
+	document.getElementById("dongle_io").value = data.device.dongle_io;
+	document.getElementById("device").value = data.device.name;
+	document.getElementById("relay").value = data.device.relay;
+	document.getElementById("default").value = data.device.default;
+	NetSwitchUpdateBar();
+	NTSWupdateVisibility();
+}
+
   //============================================================================    
 function fetchNetSwitchConfig() {
-    fetch("/netswitch.json")  // Vraag JSON-bestand op van de ESP32-server
-        .then(response => response.json())  // Converteer het antwoord naar JSON
-        .then(data => {
-            // HTML-elementen ophalen
-        document.getElementById("value").value = data.value;
-        document.getElementById("switch_on").value = data.switch_on ? "true" : "false";
-        document.getElementById("time_true").value = data.time_true || 60;
-        document.getElementById("time_false").value = data.time_false || 120;
-        document.getElementById("dongle_io").value = data.device.dongle_io;
-        document.getElementById("device").value = data.device.name;
-        document.getElementById("relay").value = data.device.relay;
-        document.getElementById("default").value = data.device.default;
-        NetSwitchUpdateBar();
-        NTSWupdateVisibility();
-        })
-        .catch(error => console.error("Fout bij ophalen van JSON:", error));
+	objDAL.refreshNetSwitch();
+
+//     fetch( RL_NETSWITCH )  // Vraag JSON-bestand op van de ESP32-server
+//         .then(response => response.json())  // Converteer het antwoord naar JSON
+//         .then(data => {
+//             // HTML-elementen ophalen
+//         })
+//         .catch(error => console.error("Fout bij ophalen van JSON:", error));
 }
 
   //============================================================================   
@@ -1334,70 +1117,36 @@ function SendNetSwitchJson() {
     console.log("openTab : " + activeTab );
     document.getElementById("myTopnav").className = "main-navigation"; //close dropdown menu 
     clearInterval(tabTimer);  
-    clearInterval(actualTimer);
     clearInterval(NRGStatusTimer);
-	
     hideAllCharts();
-
-	if (!EnableHist) {
-	}
-    
-    if (activeTab != "bActualTab") {
-      actualTimer = setInterval(refreshSmActual, 60 * 1000);                  // repeat every 60s
-    }
 
 	switch (activeTab) {
 		case "bActualTab" : 
 			refreshSmActual();
-// 		    if (tlgrmInterval < 10)
-            	actualTimer = setInterval(refreshSmActual, 10 * 1000);            // repeat every 10s
-//       		else  actualTimer = setInterval(refreshSmActual, tlgrmInterval * 1000); // repeat every tlgrmInterval seconds
+			tabTimer = setInterval(refreshSmActual, UPDATE_ACTUAL );            // repeat every 10s
       		break;
-
-		case "bInsightsTab":
-			InsightData();
-			break;
-		case "bPlafondTab":
-			refreshData();
-			break;
-		case "bHoursTab":
-			refreshHours();
-      		clearInterval(tabTimer);
-     		tabTimer = setInterval(refreshHours, 58 * 1000); // repeat every 58s
-     		break;
-     	case "bDaysTab":
-     		refreshDays();
-      		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshDays, 58 * 1000); // repeat every 58s
-      		break;
-      	case "bMonthsTab":
-      		refreshMonths();
-      		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshMonths, 118 * 1000); // repeat every 118s
-      		break;
-      	case "bSysInfoTab":
-	      	refreshDevInfo();
-      		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshDevInfo, 58 * 1000); // repeat every 58s
-      		break;
+		case "bInsightsTab"	: objDAL.refreshInsights(); break;
+		case "bPlafondTab"	: refreshData(); break;
+		case "bHoursTab"	: refreshHistData("Hours"); break;
+     	case "bDaysTab"		: refreshHistData("Days"); break;
+      	case "bMonthsTab"	: refreshHistData("Months"); break;
+      	case "bSysInfoTab"	: refreshDevInfo(); break;
       	case "bFieldsTab":
-      		refreshSmFields();
+      		refreshSmFields();      		
       		clearInterval(tabTimer);
-      		tabTimer = setInterval(refreshSmFields, 58 * 1000); // repeat every 58s
+      		tabTimer = setInterval(refreshSmFields, 10 * 1000);
       		break;
       	case "bTelegramTab":
       		refreshSmTelegram();
-      		clearInterval(tabTimer); // do not repeat!
+      		clearInterval(tabTimer); // dont repeat!
+      		tabTimer = setInterval(refreshSmTelegram, 5 * 1000);
       		break;
       	case "bInfo_APIdoc": // no action
       		break;
       	case "bDashTab":
-      		readGitHubVersion();
 			UpdateDash();
-			UpdateSolar();
 			clearInterval(tabTimer);
-			clearInterval(actualTimer);  
-			tabTimer = setInterval(UpdateDash, 10 * 1000); // repeat every 10s
+			tabTimer = setInterval(UpdateDash, UPDATE_ACTUAL); // repeat every 10s
 			break;
 		case "bFSExplorer":
 		    FSExplorer();
@@ -1405,26 +1154,15 @@ function SendNetSwitchJson() {
 		case "bEditMonths":
 			document.getElementById('tabEditMonths').style.display = "block";
 			document.getElementById('tabEditSettings').style.display = "none";
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
 			EditMonths();
 			break;
 		case "bSettings":
 		case "bEditSettings":
-			refreshDevTime();
-			//refreshDevInfo();
 			data = {};
 			document.getElementById('tabEditSettings').style.display = 'block';
 			document.getElementById('tabEditMonths').style.display = "none";
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-			refreshSettings();
-			getDevSettings();
+			objDAL.refreshDeviceInformation();
 			activeTab = "bEditSettings";
-			break;
-		case "bSysInfoTab":
-			data = {};
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
-			refreshDevInfo();
-			tabTimer = setInterval(refreshDevInfo, 10 * 1000); // repeat every 10s
 			break;
 		case "bEID":
 			getclaim();
@@ -1434,33 +1172,29 @@ function SendNetSwitchJson() {
 			break;			
 		case "bInfo_frontend":
 			data = {};
-			clearInterval(actualTimer); //otherwise the data blok is overwritten bij actual data
 			FrontendConfig();
 			break;
     }
-    
   } // openTab()
   
 
 //============================================================================  
   function FSExplorer() {
-	 let span = document.querySelector('span');
 	 let main = document.querySelector('main');
 	 let fileSize = document.querySelector('fileSize');
 
 	 Spinner(true);
-   //get filelist
 	 fetch('api/listfiles', {"setTimeout": 5000}).then(function (response) {
 		 return response.json();
 	 }).then(function (json) {
 	
 	//clear previous content	 
-	 var list = document.getElementById("FSmain");
+	 let list = document.getElementById("FSmain");
 	 while (list.hasChildNodes()) {  
 	   list.removeChild(list.firstChild);
 	 }
     
-	   nFilecount = json.length - 1; //last object is general information
+	 nFilecount = json.length - 1; //last object is general information
      let dir = '<table id="FSTable" width=90%>';
 	   for (var i = 0; i < json.length - 1; i++) {
 		 dir += "<tr>";
@@ -1468,18 +1202,18 @@ function SendNetSwitchJson() {
 		 dir += `<td width=100px nowrap><small>${json[i].size}</small></td>`;
 		 dir += `<td width=100px nowrap><a href ="${json[i].name}"download="${json[i].name}"> Download </a></td>`;
 		 dir += `<td width=100px nowrap><a href ="${json[i].name}?delete=/${json[i].name}"> Delete </a></td>`;
-// 	     if (json[i].name == '!format') document.getElementById('FormatSPIFFS').disabled = false;
 		 dir += "</tr>";
 	   }	// for ..
 	   main.insertAdjacentHTML('beforeend', dir);
 	   document.querySelectorAll('[href*=delete]').forEach((node) => {
 			 node.addEventListener('click', () => {
-					 if (!confirm('Weet je zeker dat je dit bestand wilt verwijderen?!')) event.preventDefault();  
+					 if (!confirm('Delete, sure ?!')) event.preventDefault();  
 			 });
 	   });
 	   main.insertAdjacentHTML('beforeend', '</table>');
-       main.insertAdjacentHTML('beforeend', `<div id='filecount'>Aantal bestanden: ${nFilecount} </div>`);
-	   main.insertAdjacentHTML('beforeend', `<p id="FSFree">Opslag: <b>${json[i].usedBytes} gebruikt</b> | ${json[i].totalBytes} totaal`);
+//        main.insertAdjacentHTML('beforeend', `<div id='filecount'>Aantal bestanden: ${nFilecount} </div>`);
+       main.insertAdjacentHTML('beforeend', `<div id='filecount'>${t('lbl-fm-files')}: ${nFilecount} </div>`);       
+	   main.insertAdjacentHTML('beforeend', `<p id="FSFree">${t('lbl-fm-storage')}: <b>${json[i].usedBytes} ${t('lbl-fm-used')}</b> | ${json[i].totalBytes} ${t('lbl-fm-total')}`);
 	   free = json[i].freeBytes;
 	   fileSize.innerHTML = "<b> &nbsp; </b><p>";    // spacer                
 	   Spinner(false);
@@ -1490,17 +1224,17 @@ function SendNetSwitchJson() {
       //format filesize
 		  let nBytes = document.getElementById('Ifile').files[0].size;
       let output = `${nBytes} Byte`;
-		  for (var aMultiples = [
+		  for (let aMultiples = [
 			 ' KB',
 			 ' MB'
 			], i = 0, nApprox = nBytes / 1024; nApprox > 1; nApprox /= 1024, i++) {
 			  output = nApprox.toFixed(2) + aMultiples[i];
 			}
 
-      var fUpload = true;
+      let fUpload = true;
       //check freespace
 			if (nBytes > free) {
-			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> niet genoeg ruimte! </strong><p>`;
+			  fileSize.innerHTML = `<p><small> File size: ${output}</small><strong style="color: red;"> not enough space! </strong><p>`;
         fUpload = false;
 			}
       //check filecount
@@ -1508,11 +1242,11 @@ function SendNetSwitchJson() {
       //  Although uploading a new file is blocked, REPLACING a file when the count is 30 must still be possible.
       //  check if filename is already on the list, if so, allow this upload.
 			if ( nFilecount >= MAX_FILECOUNT) {
-			  fileSize.innerHTML = `<p><small> Bestanddgrootte: ${output}</small><strong style="color: red;"> Maximaal aantal bestanden (${MAX_FILECOUNT}) bereikt! </strong><p>`;
+			  fileSize.innerHTML = `<p><small> file size: ${output}</small><strong style="color: red;"> Max number of files (${MAX_FILECOUNT}) reached! </strong><p>`;
         fUpload = false;
 			}
       if( fUpload ){
-        fileSize.innerHTML = `<b>Bestand grootte:</b> ${output}<p>`;
+        fileSize.innerHTML = `<b>File size:</b> ${output}<p>`;
 			  document.getElementById('Iupload').removeAttribute('disabled');
       }
 			else {			  
@@ -1521,83 +1255,70 @@ function SendNetSwitchJson() {
 	 });	
   }
 
-  //parse all json devinfo 
-  function parseDeviceInfo(obj)
-  {
-    var tableRef = document.getElementById('tb_info');
-        //clear table
-		while (tableRef.hasChildNodes()) { tableRef.removeChild(tableRef.lastChild);}
-		console.log("dev info compileoptions: " + obj.compileoptions );
-		if ( obj.compileoptions.includes("[NETSW]") ) {
-			console.log("INCLUDES [NETSW]");
-			conf_netswitch = true;
-			if ( conf_netswitch ) document.getElementById("bNETSW").style.display = "block"; else document.getElementById("bNETSW").style.display = "none";
+function parseDeviceInfo(obj) {
+  const tableRef = document.getElementById('tb_info');
+  tableRef.innerHTML = ""; // clear table
+  console.log("dev info compileoptions:", obj.compileoptions);
 
-		}
-		//add latest software version
-		ReadVersionManifest();
-		if (LastVersion != "") {
-			var newRow=tableRef.insertRow(-1);
-			var VerCel1 = newRow.insertCell(0);
-			var VerCel2 = newRow.insertCell(1);
-			var VerCel3 = newRow.insertCell(2);
-			VerCel1.innerHTML = "Laatste Firmware versie";
-			VerCel2.innerHTML = LastVersion;
-			console.log("last version: " + (Number(LastVersionMajor)*10000 + Number(LastVersionMinor)*100) );
-		}
-		//fill table
-        for( let k in obj ) {
-			var newRow=tableRef.insertRow(-1);
-			var MyCell1 = newRow.insertCell(0);
-			var MyCell2 = newRow.insertCell(1);
-			var MyCell3 = newRow.insertCell(2);
-			MyCell1.innerHTML=translateToHuman(k);
-            if(obj[k] instanceof Object) {
-				MyCell2.innerHTML=obj[k].value;
-				MyCell3.innerHTML=obj[k].unit;
-				MyCell2.style.textAlign = "right";
-             
-            } else { 
-            	MyCell2.innerHTML=obj[k]; 
-            };
-           if (k == "fwversion"){
-			   console.log("fwversion: " + obj[k] );
-			   devVersion = obj[k];
-           }
-        } //for loop      
- 
-	  //new fwversion detection
-  	  document.getElementById('devVersion').innerHTML = obj.fwversion;
-	  var tmpFW = devVersion;
-	  firmwareVersion_dspl = tmpFW;
-	  tmpFW = tmpFW.replace("+", " ");
-	  tmpFW = tmpFW.replace("v", "");
-	  console.log("tmpFW: " + tmpFW);
-	  tmpX = tmpFW.substring(0, tmpFW.indexOf(' '));
-// 	  console.log("tmpX: " + tmpX);
-	  tmpN = tmpX.split(".");
-// 	  	  console.log("tmpN: " + tmpN);
-	  firmwareVersion = tmpN[0]*10000+tmpN[1]*100+tmpN[2]*1;
-	  console.log("firmwareVersion["+firmwareVersion+"] >= GitHubVersion["+GitHubVersion+"]");
-	  if (GitHubVersion == 0 || firmwareVersion >= GitHubVersion)
-			newVersionMsg = "";
-	  else newVersionMsg = " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
-	  document.getElementById('message').innerHTML = newVersionMsg;
-	  console.log(newVersionMsg);
+  // NETSW config
+  const showNetSw = obj.compileoptions.includes("[NETSW]");
+  document.getElementById("bNETSW").style.display = showNetSw ? "block" : "none";
 
-// 	  tlgrmInterval = obj.telegraminterval;
-      if (firmwareVersion > 20000) document.getElementById("resetWifi").removeAttribute('hidden');
-//       if (firmwareVersion > 20102) document.getElementById("update").removeAttribute('hidden');
-		
-	  //check if update is needed
-	  if (LastVersion != "") {
-		  if ( firmwareVersion < (LastVersionMajor*10000 + 100 * LastVersionMinor + LastVersionFix) ) VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>Klik voor update</a>";
-		  else VerCel3.innerHTML = "laatste versie";
-	  }
-//TEST
-// 	  VerCel3.innerHTML = "<a style='color:red' onclick='RemoteUpdate()' href='#'>Klik voor update</a>";
-	
+  // add version info 
+  const manifest = objDAL.version_manifest;
+  if (manifest.version) {
+    const row = tableRef.insertRow(-1);
+    row.insertCell(0).innerHTML = t("lbl-latest-fwversion");
+    row.insertCell(1).innerHTML = manifest.version;
+    row.insertCell(2).innerHTML = `<a style='color:red' onclick='RemoteUpdate("public")' href='#'>${t('lbl-install')}</a>`;
+    console.log("last version:", manifest.major * 10000 + manifest.minor * 100);
   }
+  
+    if (manifest.beta) {
+    const row = tableRef.insertRow(-1);
+    row.insertCell(0).innerHTML = t("lbl-beta-fwversion");
+    row.insertCell(1).innerHTML = manifest.beta;
+    row.insertCell(2).innerHTML = `<a style='color:red' onclick='RemoteUpdate("beta")' href='#'>${t('lbl-install')}</a>`;
+  }
+
+  // add dev info
+  for (let k in obj) {
+    const row = tableRef.insertRow(-1);
+    row.insertCell(0).innerHTML = td(k);
+
+    if (typeof obj[k] === "object") {
+      row.insertCell(1).innerHTML = obj[k].value;
+      row.insertCell(2).innerHTML = obj[k].unit;
+      row.cells[1].style.textAlign = "right";
+    } else {
+      row.insertCell(1).innerHTML = obj[k];
+      row.insertCell(2);
+    }
+
+    if (k === "fwversion") {
+      devVersion = obj[k];
+      console.log("fwversion:", devVersion);
+    }
+  }
+
+  // firmware parsing
+  document.getElementById('devVersion').innerHTML = devVersion;
+  firmwareVersion_dspl = devVersion;
+  let tmpFW = devVersion.replace("+", " ").replace("v", "");
+  const tmpX = tmpFW.split(" ")[0];
+  const [maj, min, fix] = tmpX.split(".").map(Number);
+  const firmwareVersion = maj * 10000 + min * 100 + fix;
+  console.log("tmpFW:", tmpFW);
+
+  // check for update
+  if (manifest.version) {
+    const latest = manifest.major * 10000 + manifest.minor * 100 + manifest.fix;
+//     const updateCell = tableRef.rows[0].cells[2];
+//     updateCell.innerHTML = (firmwareVersion < latest)
+//       ? `<a style='color:red' onclick='RemoteUpdate()' href='#'>${t('lbl-click-update')}</a>`
+//       : td("latest_version");
+  }
+}
     
 function closeUpdate() {
 	document.getElementById("updatePopup").style.visibility = "hidden";
@@ -1625,9 +1346,9 @@ function UpdateStart( msg ){
 	}
 }
         
-function RemoteUpdate() {        
-// 	document.location.href = "/remote-update?version";
-	document.location.href = "/remote-update?version=" + LastVersion;
+function RemoteUpdate(type) {        
+	if ( type == "beta") document.location.href = "/remote-update?version=" + objDAL.version_manifest.beta;
+	else document.location.href = "/remote-update?version=" + objDAL.version_manifest.version;
 }
 
 function updateProgress() {
@@ -1643,38 +1364,22 @@ function updateProgress() {
 }
 
 function checkESPOnline() {
-	statusText.innerText = "Wachten op herstart...";
-
+	statusText.innerText = "Wait on reboot...";
+	update_reconnected = false;
 	checkInterval = setInterval(() => {
-		fetch("/api/v2/dev/info")
-			.then(response => {
-				if (response.status === 200) {
-					clearInterval(checkInterval);
-					progressBar.style.width = "100%";
-					statusText.innerText = "Update voltooid!";
-				}
-			})
-			.catch(() => {
-				console.log("ESP nog niet online...");
-			});
+		objDAL.refreshTime();
+		if ( update_reconnected ){
+			clearInterval(checkInterval);
+			progressBar.style.width = "100%";
+			statusText.innerText = "Update Done!";
+		}
 	}, 2000); // Check elke 2 seconden
 }
   
   //get new devinfo==============================================================  
   function refreshDevInfo()
-  { Spinner(true);
-    fetch(APIGW+"v2/dev/info", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-        console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
-        parseDeviceInfo(json);
-		    Spinner(false);
-      })
-      .catch(function(error) {
-        console.error("main::refreshDevInfo() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(   document.createTextNode('Error: ' + error.message)  );
-      });
+  { 
+	objDAL.refreshDeviceInformation();
   } // refreshDevInfo()
 
 //============================================================================  
@@ -1685,7 +1390,6 @@ function checkESPOnline() {
       .then(response => response.json())
       .then(json => {
 		  data = json;
-          //console.log("parsed frontend config: ["+ JSON.stringify(json)+"]");
           AMPS=json.Fuse;
           ShowVoltage=json.ShowVoltage;
           UseCDN=json.cdn;
@@ -1698,18 +1402,18 @@ function checkESPOnline() {
           "IgnoreGas" in json ? IgnoreGas = json.IgnoreGas : IgnoreGas = false;
 // 		  "i18n" in json ? setLocale(json.i18n) : setLocale("nl");
 
-          for (var item in data) 
+          for (let item in data) 
           {
 //           	console.log("config item: " +item);
 //           	console.log("config data[item].value: " +data[item].value);
-            var tableRef = document.getElementById('frontendTable').getElementsByTagName('tbody')[0];
+            let tableRef = document.getElementById('frontendTable').getElementsByTagName('tbody')[0];
             if( ( document.getElementById("frontendTable_"+item)) == null )
             {
-              var newRow   = tableRef.insertRow();
+              let newRow   = tableRef.insertRow();
               newRow.setAttribute("id", "frontendTable_"+item, 0);
               // Insert a cell in the row at index 0
-              var newCell  = newRow.insertCell(0);                  // name
-              var newText  = document.createTextNode('');
+              let newCell  = newRow.insertCell(0);                  // name
+              let newText  = document.createTextNode('');
               newCell.appendChild(newText);
               newCell  = newRow.insertCell(1);                      // humanName
               newCell.appendChild(newText);
@@ -1718,7 +1422,7 @@ function checkESPOnline() {
             }
             tableCells = document.getElementById("frontendTable_"+item).cells;
             tableCells[0].innerHTML = item;
-            tableCells[1].innerHTML = translateToHuman(item);
+            tableCells[1].innerHTML = td(item);
             tableCells[2].innerHTML = data[item];
           }
          Spinner(false);
@@ -1726,59 +1430,39 @@ function checkESPOnline() {
   }
 
   //============================================================================  
-  function refreshDevTime()
-  {
-	alert_message("");
-  document.getElementById('theTime').classList.remove("afterglow");
-    console.log("Refresh api/v2/dev/time ..");
-    
-	let controller = new AbortController();
-	setTimeout(() => controller.abort(), 5000);    
-    fetch(APIGW+"v2/dev/time", { signal: controller.signal})
-      .then(response => response.json())
-      .then(json => {
-              document.getElementById('theTime').innerHTML = json.time;
-              console.log("parsed .., data is ["+ JSON.stringify(json)+"]");
-
-	  //after reboot checks of the server is up and running and redirects to home
-      if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
-      document.getElementById('theTime').classList.add("afterglow");
-      
-    })
-      .catch(function(error) {    
-		if (error.name === "AbortError") {console.error("time abort error")}
-//         var p = document.createElement('p');
-//         p.appendChild( document.createTextNode('Error: ' + error.message) );
-//         alert_message("Datum/tijd kan niet opgehaald worden");
-      });     
-      
-    document.getElementById('message').innerHTML = newVersionMsg;
+  function refreshTime( json ) {
+  
+	document.getElementById('theTime').classList.remove("afterglow");
+	document.getElementById('theTime').innerHTML = json.time;//formatTimestamp(json.timestamp.value );
+// 	console.log("time parsed .., data is ["+ JSON.stringify(json)+"]");
+	//after reboot checks of the server is up and running and redirects to home
+	if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");
+	document.getElementById('theTime').offsetWidth;
+	document.getElementById('theTime').classList.add("afterglow"); 
 
   } // refreshDevTime()
     
   //============================================================================  
   function refreshSmActual() {
-    document.getElementById("actualTable").classList.remove("afterglow");
-    Spinner(true);
-    var data = objDAL.getActual();
-//     console.log("objDAL: " + JSON.stringify(data));
-    //copyActualToChart(data);
+	objDAL.refreshActual();
+  }
+  
+  function ProcesActual(json){
     if (presentationType == "TAB")
-      showActualTable(data);
+      showActualTable(json);
     else{
-      var hist = objDAL.getActualHistory();  
+      let hist = objDAL.getActualHistory();  
       copyActualHistoryToChart(hist);
       showActualGraph();
-    }
-    Spinner(false);
+    }  
   }
   
 // format a identifier
 // input = "4530303433303036393938313736353137"
 // output = "E0043006998176517"
 function formatIdentifier(value) {
-  var sTotal = "";
-  for (var pos = 0; pos < value.length; pos += 2) {
+  let sTotal = "";
+  for (let pos = 0; pos < value.length; pos += 2) {
     nVal = parseInt(value.substring(pos, pos + 2), 16);
     sTotal += String.fromCharCode(nVal);
   }
@@ -1789,31 +1473,32 @@ function formatIdentifier(value) {
 // input "230125125424W" 
 // output "2023-01-25 12:54:24 (dst=off)"
 function formatTimestamp(value) {
-  var date = value.substring(0, 6);
-  var time = value.substring(6, 12);
-  var dst = value[12] == "S" ? "on" : "off";
-  //console.log(date, time, dst);
-  var sDate = "20" + date.slice(0, 2) + "-" + date.slice(2, 4) + "-" + date.slice(4, 6);
-  var sTime = time.substring(0, 2) + ":" + time.substring(2, 4) + ":" + time.substring(4, 6);
-
-  var sTST = sDate + " " + sTime + " (dst=" + dst + ")";
-  return sTST;
+  	const dst = value[12] == "S" ? "on" : "off";
+	const year = "20" + value.slice(0, 2);  // "25" → 2025
+	const month = value.slice(2, 4);        // "07"
+	const day = value.slice(4, 6);          // "05"
+	const hour = value.slice(6, 8);         // "14"
+	const minute = value.slice(8, 10);      // "10"
+	const second = value.slice(10, 12);     // "09"
+	
+	// Format and return
+	return `${year}-${month}-${day} ${hour}:${minute}:${second}`; //   +(dst=" + dst + ")";
 };
 
 //parse the value from electricity_failure_log into json with timestamp and duration
 //input= ""
 //output = ""
 function parseFailureLog(value) {
-  var failures = [];
+  let failures = [];
   //remove start '(' and end ')'
-  var v = value.slice(1, -1);
-  var items = v.split(")(");
-  var count = items[0];
-  var id = items[1]; //not used for now
-  for (var i = 0; i < count; i++) {
-    var timestamp = items[2 + (i * 2)];
-    var duration = items[3 + (i * 2)];
-    var failure = { 'timestamp': timestamp, 'duration': duration };
+  let v = value.slice(1, -1);
+  let items = v.split(")(");
+  let count = items[0];
+  let id = items[1]; //not used for now
+  for (let i = 0; i < count; i++) {
+    let timestamp = items[2 + (i * 2)];
+    let duration = items[3 + (i * 2)];
+    let failure = { 'timestamp': timestamp, 'duration': duration };
     failures.push(failure);
   }
   return failures;
@@ -1823,9 +1508,9 @@ function parseFailureLog(value) {
 //input: 3600
 //output: 1 hours
 function formatDuration(value) {
-  var t = "";
-  var sMIN = value / 60;
-  var sHRS = value / 3600;
+  let t = "";
+  let sMIN = value / 60;
+  let sHRS = value / 3600;
   if (Math.floor(sHRS) == 0) {
     if (Math.floor(sMIN) == 0) {
       t = value + " sec";
@@ -1848,7 +1533,7 @@ function formatDuration(value) {
   restored on 2022-12-24 03:36:26 (dst=off) after 4.46 hours downtime.
 */
 function formatFailureLog(svalue) {
-  var t = "";
+  let t = "";
   failures = parseFailureLog(svalue);
   for (pos in failures) {
     failure = failures[pos];
@@ -1864,22 +1549,22 @@ function formatFailureLog(svalue) {
   function parseSmFields(data)
   {
     //console.log("parsed .., fields is ["+ JSON.stringify(data)+"]");
-    for (var item in data) 
+    for (let item in data) 
     {
       console.log("fields item: " +item);
       console.log("fields data[item].value: " +data[item].value);
 
-      data[item].humanName = translateToHuman(item);
+      data[item].humanName = td(item);
       //get tableref
-      var tableRef = document.getElementById('fieldsTable').getElementsByTagName('tbody')[0];
+      let tableRef = document.getElementById('fieldsTable').getElementsByTagName('tbody')[0];
       //create row if not exist
       if( ( document.getElementById("fieldsTable_"+item)) == null )
       {
-        var newRow   = tableRef.insertRow();
+        let newRow   = tableRef.insertRow();
         newRow.setAttribute("id", "fieldsTable_"+item, 0);
         // Insert a cell in the row at index 0
-        var newCell  = newRow.insertCell(0);                  // name
-        var newText  = document.createTextNode('');
+        let newCell  = newRow.insertCell(0);                  // name
+        let newText  = document.createTextNode('');
         newCell.appendChild(newText);
         newCell  = newRow.insertCell(1);                      // humanName
         newCell.appendChild(newText);
@@ -1931,37 +1616,24 @@ function formatFailureLog(svalue) {
   }
   
   //============================================================================  
-  //refresh the fields of the SM
-  function refreshSmFields()
+  function refreshSmFields(json)
   { 
-    Spinner(true);
-    fetch(APIGW+"v2/sm/fields", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-        parseSmFields(json);        
-        Spinner(false);
-      })
-      .catch(function(error) {
-        console.error("main::refreshSmFields() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-      }); 
+	objDAL.refreshFields();  
+
   };  // refreshSmFields()
   
   //============================================================================  
   //calculate the diffs, sums and costs per entry
   function expandData(data)
   {
-    var i;
-    var slotbefore;
+    let i;
+    let slotbefore;
     for (let x=data.data.length + data.actSlot; x > data.actSlot; x--)
     {
       i = x % data.data.length;
       slotbefore = math.mod(i-1, data.data.length);
-      var costsED = 0;
-      var costsER = 0;
+      let costsED = 0;
+      let costsER = 0;
       if ( x != data.actSlot 	)
       {
         //avoid gaps and spikes
@@ -1971,6 +1643,11 @@ function formatFailureLog(svalue) {
         	}
         	else  if ( data.data[slotbefore].values[0] == 0 ) data.data[slotbefore].values = data.data[i].values;
         }
+        
+		data.data[i].EEYY = {};
+		data.data[i].MM   = {};
+		data.data[i].EEYY = parseInt("20"+data.data[i].date.substring(0,2));
+		data.data[i].MM   = parseInt(data.data[i].date.substring(2,4));
         
         //simple differences
         data.data[i].p_edt1= (data.data[i].values[0] - data.data[slotbefore].values[0]);
@@ -2026,7 +1703,7 @@ function formatFailureLog(svalue) {
   //limit every value in the array to n decimals
   //toFixed() will convert all into strings, so also add  convertion back to Number
   function applyArrayFixedDecimals(data, decimals){
-    for( var i=0; i<data.length; i++){
+    for( let i=0; i<data.length; i++){
       if( !isNaN(data[i]) ) data[i] = Number(data[i].toFixed(decimals));
     }
   }
@@ -2042,154 +1719,77 @@ function formatFailureLog(svalue) {
 	document.getElementById('messages').innerHTML = msg;
 	} 
   }
-  //============================================================================  
-  function refreshHours()
-  { Spinner(true);
-    console.log("fetch("+APIGW+"../RNGhours.json)");
+//============================================================================  
+function refreshHistData(type) {
+	console.log(`refresh${type}`);
+	let data = objDAL[`get${type}`]();
+	if (data === "") {
+		console.log(`refresh${type} : NO DATA`);
+		return;
+	}
 
-    fetch(APIGW+"../RNGhours.json", {"setTimeout": 5000})
-      .then(function (response) {
-		if (response.status !== 200) {
-			throw new Error(response.status);
-		} else {
-			return response.json();
-		}
-	})
-	.then(function (json) {
-        //console.log(json);
-        data = json;
-        expandData(data);
-        if (presentationType == "TAB")
-              showHistTable(data, "Hours");
-        else  showHistGraph(data, "Hours");
-	 Spinner(false);
+	switch (type) {
+		case "Hours":
+			if (activeTab === "bHoursTab") {
+				presentationType === "TAB" ? showHistTable(data, "Hours") : showHistGraph(data, "Hours");
+			}
+			break;
 
-      })
-      .catch(function(error) {
-        console.error("main::refreshHours() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild( document.createTextNode('Error: ' + error.message) );
-    	alert_message("Fout bij ophalen van de historische uurgegevens");
-      }); 
-  } // resfreshHours()
-  
-  
-  //============================================================================  
-  function refreshDays()
-  {
-	// if (PauseAPI) return;
-	Spinner(true);
-    console.log("fetch("+APIGW+"../RNGdays.json)");
-    fetch(APIGW+"../RNGdays.json", {"setTimeout": 5000})
-    .then(function (response) {
-		if (response.status !== 200) {
-			throw new Error(response.status);
-		} else {
-			return response.json();
-		}
-	})
-	.then(function (json) {
-		data = json;
-        expandData(data);
-        if (presentationType == "TAB")
-              showHistTable(data, "Days");
-        else  showHistGraph(data, "Days");
-		//voor dashboard
-        var act_slot = data.actSlot;
-//         console.log("Refreshdays - actSlot: " + act_slot);
-		for (let i=0;i<4;i++)
-		{	let tempslot = math.mod(act_slot-i,15);
-			hist_arrG[i] = data.data[tempslot].values[4];
-			hist_arrW[i] = data.data[tempslot].values[5];
-			hist_arrPa[i] = data.data[tempslot].values[0] + data.data[tempslot].values[1];
-			hist_arrPi[i] = data.data[tempslot].values[2] + data.data[tempslot].values[3];
-		};
-	    Spinner(false);
-      })
-      .catch(function(error) {
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-    	console.error("main::refreshDays() - " + error);
-    	alert_message("Fout bij ophalen van de historische daggegevens");
-      });
-  } // resfreshDays()
-  
-  
-  //============================================================================  
-  function refreshMonths()
-  {
-  	Spinner(true);
-    console.log("fetch("+APIGW+"../RNGmonths.json)");
-    fetch(APIGW+"../RNGmonths.json", {"setTimeout": 5000})
-      .then(function (response) {
-		if (response.status !== 200) {
-			throw new Error(response.status);
-		} else {
-			return response.json();
-		}
-	})
-	.then(function (json) {
-        //console.log(response);
-        data = json;
-        expandData(data);
-        if (presentationType == "TAB")
-        {
-          if (document.getElementById('mCOST').checked)
-                showMonthsCosts(data);
-          else  showMonthsHist(data);
-        }
-        else  showMonthsGraph(data,"Days");
-        Spinner(false);
-      })
-      .catch(function(error) {
-        console.error("main::refreshMonths() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-    	alert_message("Fout bij ophalen van de historische maandgegevens [" + error.message +"]");
+		case "Days":
+			if (activeTab === "bDaysTab") {
+				presentationType === "TAB" ? showHistTable(data, "Days") : showHistGraph(data, "Days");
+			}
+			// Extra logica voor dashboard
+			let act_slot = data.actSlot;
+			for (let i = 0; i < 4; i++) {
+				let tempslot = math.mod(act_slot - i, 15);
+				let values = data.data[tempslot].values;
+				hist_arrG[i] = values[4];
+				hist_arrW[i] = values[5];
+				hist_arrPa[i] = values[0] + values[1];
+				hist_arrPi[i] = values[2] + values[3];
+			}
+			break;
 
-      });
-  } // resfreshMonths()
+		case "Months":
+			if (activeTab === "bMonthsTab") {
+				presentationType === "TAB" ? showMonthsHist(data) : showMonthsGraph(data, "Months");
+			}
+			break;
+	}
+}
 
-    
+function CopyTelegram(){
+  const element = document.getElementById("TelData");
+  if (!element) return;
+
+  const range = document.createRange();
+  range.selectNodeContents(element);
+
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  try {
+    const success = document.execCommand("copy");
+    if (success) {
+      alert("Copied the text: \n" + element.textContent.trim());
+    } 
+  } catch (err) {console.error("Copy error:", err);}
+
+  selection.removeAllRanges();
+}
+
   //============================================================================  
-  function refreshSmTelegram()
-  { Spinner(true);
-    fetch(APIGW+"v2/sm/telegram")
-      .then(response => response.text())
-      .then(response => {
-        //console.log("parsed .., data is ["+ response+"]");
-    	//console.log('-------------------');
-        var divT = document.getElementById('rawTelegram');
-        if ( document.getElementById("TelData") == null )
-        {
-            console.log("CreateElement(pre)..");
-            var preT = document.createElement('pre');
-            preT.setAttribute("id", "TelData", 0);
-            preT.setAttribute('class', 'telegram');
-            preT.textContent = response;
-            divT.appendChild(preT);
-        }
-        preT = document.getElementById("TelData");
-        preT.textContent = response;
-        Spinner(false);
-      })
-      .catch(function(error) {
-        console.error("main::refreshSmTelegram() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-      });     
+  function refreshSmTelegram(json)
+  { 
+  	objDAL.refreshTelegram();
   } // refreshSmTelegram()
 
   //format a value based on the locale of the client
   function formatValue(value)
   {
-    var t="";
+    let t="";
     if (!isNaN(value) ) 
       t = Number(value).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} );
     else 
@@ -2204,15 +1804,15 @@ function formatFailureLog(svalue) {
 
     console.log("showActual()");
 
-    for (var item in data) 
+    for (let item in data) 
     {
       //skip if dongle=Q
      	if ( (item == "gas_delivered_timestamp") && (Dongle_Config == "p1-q") ) continue;
     	
       //ensure tablerow exists
-      data[item].humanName = translateToHuman(item);
-      var tableRef = document.getElementById('actualTable').getElementsByTagName('tbody')[0];
-      var itemid = "actualTable_"+item;
+      data[item].humanName = td(item);
+      let tableRef = document.getElementById('actualTable').getElementsByTagName('tbody')[0];
+      let itemid = "actualTable_"+item;
       if( ( document.getElementById(itemid)) == null )
       {
         createTableRowWithCells(tableRef, itemid, 3, '');
@@ -2260,28 +1860,28 @@ function formatFailureLog(svalue) {
   { 
     console.log("showHistTable("+type+")");
     // the last element has the metervalue, so skip it
-    var stop = data.actSlot + 1;
-    var start = data.data.length + data.actSlot ;
-    var index;
+    let stop = data.actSlot + 1;
+    let start = data.data.length + data.actSlot ;
+    let index;
     	//console.log("showHistTable start: "+start);
     	//console.log("showHistTable stop: "+stop);
-    var tableRef = document.getElementById('last'+type+'Table');
+    let tableRef = document.getElementById('last'+type+'Table');
 	tableRef.getElementsByTagName('tbody')[0].innerHTML = ''; //clear tbody content
 
     
     for (let i=start; i>stop; i--)
     {  
       index = i % data.data.length;
-      var tref = tableRef.getElementsByTagName('tbody')[0];
-      var itemid = type+"Table_"+type+"_R"+index;
-      var nCells = 5;
+      let tref = tableRef.getElementsByTagName('tbody')[0];
+      let itemid = type+"Table_"+type+"_R"+index;
+      let nCells = 5;
       if (type == "Days") nCells += 1;
       createTableRowWithCells( tref, itemid, nCells, '-');
 
         /*
         newRow.setAttribute("id", itemid, 0);
-        var newCell  = newRow.insertCell(0);
-        var newText  = document.createTextNode('-');
+        let newCell  = newRow.insertCell(0);
+        let newText  = document.createTextNode('-');
         newCell.appendChild(newText);
         newCell  = newRow.insertCell(1);
         newCell.appendChild(newText);
@@ -2328,26 +1928,31 @@ function formatFailureLog(svalue) {
   function showMonthsHist(data)
   { 
     //console.log("now in showMonthsHist() ..");
-    var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
-    var stop = start - 12;
-    var i;
-    var slotyearbefore = 0;
+    if (document.getElementById('mCOST').checked) {
+	    showMonthsCosts(data);
+    	return;
+    }
+    
+    let start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
+    let stop = start - 12;
+    let i;
+    let slotyearbefore = 0;
   
     for (let index=start; index>stop; index--)
     {  i = index % data.data.length;
       	slotyearbefore = math.mod(i-12,data.data.length);
-      var tableRef = document.getElementById('lastMonthsTable').getElementsByTagName('tbody')[0];
+      let tableRef = document.getElementById('lastMonthsTable').getElementsByTagName('tbody')[0];
       if( ( document.getElementById("lastMonthsTable_R"+i)) == null )
       {
         createTableRowWithCells(tableRef, "lastMonthsTable_R"+i, 17, '-' );
       }
-      var mmNr = parseInt(data.data[i].date.substring(2,4), 10);
+      let mmNr = parseInt(data.data[i].date.substring(2,4), 10);
 
       tableCells = document.getElementById("lastMonthsTable_R"+i).cells;
       //fill with default values
       for (y=2; y <= 12; y=y+2){ tableCells[y].innerHTML = "-"; }
       
-      tableCells[0].innerHTML = monthNames[mmNr];                           // maand
+      tableCells[0].innerHTML = t("mth-"+mmNr);//monthNames[mmNr];                           // maand
       
       tableCells[1].innerHTML = "20"+data.data[i].date.substring(0,2);          // jaar
 	  if (data.data[i].p_ed >= 0) tableCells[2].innerHTML = Number(data.data[i].p_ed).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3} );
@@ -2394,8 +1999,8 @@ function formatFailureLog(svalue) {
 		show_hide_column2('lastMonthsTable', 15,false);
 		show_hide_column2('lastMonthsTable', 16,false);
 		
-		var tbl  = document.getElementById('lastMonthsTable');
-    	var rows = tbl.getElementsByTagName('tr');
+		let tbl  = document.getElementById('lastMonthsTable');
+    	let rows = tbl.getElementsByTagName('tr');
 		rows[0].style.display = "none";
 	}	
     document.getElementById("lastMonths").style.display = "block";
@@ -2404,12 +2009,12 @@ function formatFailureLog(svalue) {
 
   function createTableRowWithCells(tableRef, itemid, cellcount, content)
   {
-    var newText  = document.createTextNode(content);
-    var newRow   = tableRef.insertRow();
+    let newText  = document.createTextNode(content);
+    let newRow   = tableRef.insertRow();
     newRow.setAttribute("id", itemid, 0);
-    for( var i=0; i<cellcount; i++)
+    for( let i=0; i<cellcount; i++)
     {
-      var newCell  = newRow.insertCell(i);
+      let newCell  = newRow.insertCell(i);
       newCell.appendChild(newText);
     }
   }
@@ -2423,33 +2028,33 @@ function formatFailureLog(svalue) {
   function showMonthsCosts(data)
   { 
     console.log("now in showMonthsCosts() ..");
-    var totalCost   = 0;
-    var totalCost_1 = 0;
-    var start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
-    var stop = start - 12;
-    var i;
-    var slotyearbefore = 0;
+    let totalCost   = 0;
+    let totalCost_1 = 0;
+    let start = data.data.length + data.actSlot ; //  maar 1 jaar ivm berekening jaar verschil
+    let stop = start - 12;
+    let i;
+    let slotyearbefore = 0;
   
     for (let index=start; index>stop; index--)
     {  i = index % data.data.length;
       	slotyearbefore = math.mod(i-12,data.data.length);
       //console.log("showMonthsHist(): data["+i+"] => data["+i+"].name["+data[i].recid+"]");
-      var tableRef = document.getElementById('lastMonthsTableCosts').getElementsByTagName('tbody')[0];
+      let tableRef = document.getElementById('lastMonthsTableCosts').getElementsByTagName('tbody')[0];
 
       //ensure tablerow exists
-      var itemid = "lastMonthsTableCosts_R"+i;
+      let itemid = "lastMonthsTableCosts_R"+i;
       if( ( document.getElementById(itemid)) == null )
       {
         createTableRowWithCells(tableRef, itemid, 11, '-');       
       }
-      var mmNr = parseInt(data.data[i].date.substring(2,4), 10);
+      let mmNr = parseInt(data.data[i].date.substring(2,4), 10);
 
       //get ref to cells
       tableCells = document.getElementById(itemid).cells;
 
       //fill table
       tableCells[0].style.textAlign = "right";
-      tableCells[0].innerHTML = monthNames[mmNr];                           // maand
+      tableCells[0].innerHTML = t("mth-"+mmNr);//monthNames[mmNr];                           // maand
       
       tableCells[1].style.textAlign = "center";
       tableCells[1].innerHTML = "20"+data.data[i].date.substring(0,2);          // jaar
@@ -2485,11 +2090,11 @@ function formatFailureLog(svalue) {
 
     if( ( document.getElementById("periodicCosts")) == null )
     {
-      var newRow   = tableRef.insertRow();                                // voorschot regel
+      let newRow   = tableRef.insertRow();                                // voorschot regel
       newRow.setAttribute("id", "periodicCosts", 0);
       // Insert a cell in the row at index 0
-      var newCell  = newRow.insertCell(0);                                // maand
-      var newText  = document.createTextNode('-');
+      let newCell  = newRow.insertCell(0);                                // maand
+      let newText  = document.createTextNode('-');
       newCell.appendChild(newText);
       newCell  = newRow.insertCell(1);              // description
       if ( Dongle_Config == "p1-q" ) newCell.setAttribute("colSpan", "3");
@@ -2506,11 +2111,11 @@ function formatFailureLog(svalue) {
     }
     tableCells = document.getElementById("periodicCosts").cells;
     tableCells[1].style.textAlign = "right";
-    tableCells[1].innerHTML = "Voorschot Bedrag"
+    tableCells[1].innerHTML = t("lbl-advance");
     tableCells[2].style.textAlign = "right";
     tableCells[2].innerHTML = "€ " + (totalCost / 12).toFixed(2);
     tableCells[3].style.textAlign = "right";
-    tableCells[3].innerHTML = "Voorschot Bedrag"
+    tableCells[3].innerHTML = t("lbl-advance");
     tableCells[4].style.textAlign = "right";
     tableCells[4].innerHTML = "€ " + (totalCost_1 / 12).toFixed(2);
 
@@ -2539,12 +2144,11 @@ function formatFailureLog(svalue) {
 
   
   //============================================================================  
-  function getDevSettings()
-  { Spinner(true);
-    fetch(APIGW+"v2/dev/settings")
-      .then(response => response.json())
-      .then(json => {
-        console.log("getDevSettings: parsed .., data is ["+ JSON.stringify(json)+"]");
+  function ParseDevSettings()
+  { 
+		let json = objDAL.getDeviceSettings();
+		if ( json == "" ) return;
+        console.log("ParseDevSettings: parsed .., data is ["+ JSON.stringify(json)+"]");
         "ed_tariff1" in json ? ed_tariff1 = json.ed_tariff1.value : ed_tariff1 = 0;
         "ed_tariff2" in json ? ed_tariff2 = json.ed_tariff2.value : ed_tariff2 = 0;
         "er_tariff1" in json ? er_tariff1 = json.er_tariff1.value : er_tariff1 = 0;
@@ -2556,26 +2160,14 @@ function formatFailureLog(svalue) {
         "dev-pairing" in json ? pairing_enabled = json["dev-pairing"]: pairing_enabled = false;
         "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
 
-//         console.log("eid_enabled: " + eid_enabled);
-// 		console.log("dev-pairing: " + pairing_enabled);
-		
         if ( eid_enabled ) document.getElementById("bEid").style.display = "block"; else document.getElementById("bEid").style.display = "none";
         if ( pairing_enabled ) document.getElementById("bNRGM").style.display = "block"; else document.getElementById("bNRGM").style.display = "none";
                 
         gas_netw_costs = json.gas_netw_costs.value;
         hostName = json.hostname.value;
         EnableHist =  "hist" in json ? json.hist : true;
-        Spinner(false);
-        SettingsRead = true;
-      })
-      .catch(function(error) {
-        console.error("main::getDevSettings() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-      });   
-  } // getDevSettings()
+
+  } // ParseDevSettings()
   
     
   //============================================================================  
@@ -2617,9 +2209,9 @@ function formatFailureLog(svalue) {
 //    document.getElementById("APIdocTab").style.display = "none";
 
     if (activeTab == "bActualTab")  refreshSmActual();
-    if (activeTab == "bHoursTab")   refreshHours();
-    if (activeTab == "bDaysTab")    refreshDays();
-    if (activeTab == "bMonthsTab")  refreshMonths();
+    if (activeTab == "bHoursTab")   refreshHistData("Hours");
+    if (activeTab == "bDaysTab")    refreshHistData("Days");
+    if (activeTab == "bMonthsTab")  refreshHistData("Months");
 
   } // setPresenationType()
   
@@ -2637,7 +2229,7 @@ function formatFailureLog(svalue) {
     {
       document.getElementById("lastMonthsTableCosts").style.display = "block";
       document.getElementById("lastMonthsTable").style.display      = "none";
-      refreshMonths();
+      refreshHistData("Months");
 
     }
     else
@@ -2653,120 +2245,100 @@ function formatFailureLog(svalue) {
   function refreshSettings()
   {
     console.log("refreshSettings() ..");
-    Spinner(true);
-    data = {};
-    fetch(APIGW+"v2/dev/settings")
-      .then(response => response.json())
-      .then(json => {
-        console.log("then(json => ..)");
-        data = json;
-        for( let i in data )
-        {
-          if ( i == "conf") continue;
-          console.log("["+i+"]=>["+data[i].value+"]");
-          var settings = document.getElementById('settings_table');
-          if( ( document.getElementById("settingR_"+i)) == null )
-          {
-           
-            var rowDiv = document.createElement("div");
-            rowDiv.setAttribute("class", "settingDiv");
-            rowDiv.setAttribute("id", "settingR_"+i);
-            //--- field Name ---
-              var fldDiv = document.createElement("div");
-              	  if ( (i == "gd_tariff") && (Dongle_Config == "p1-q") ) fldDiv.textContent = "Warmte tarief (GJ)";
-              	  else if ( i == "gas_netw_costs") fldDiv.textContent = "Netwerkkosten Gas/maand";
-                  else fldDiv.textContent = translateToHuman(i);
-                  rowDiv.appendChild(fldDiv);
-            //--- input ---
-              var inputDiv = document.createElement("div");
-                  inputDiv.setAttribute("class", "settings-right");
 
-                    var sInput = document.createElement("INPUT");
-                    sInput.setAttribute("id", "setFld_"+i);
-					if ( data[i].type === undefined ) {
-						sInput.setAttribute("type", "checkbox");
-						sInput.checked = data[i];
-						sInput.style.width = "auto";
-					}
-					else {
-					switch(data[i].type){
-					case "s":
-						sInput.setAttribute("type", "text");
-						sInput.setAttribute("maxlength", data[i].max);
-						sInput.setAttribute("placeholder", "<max " + data[i].max +" tekens>");
-						break;
-					case "f":
-						sInput.setAttribute("type", "number");
-						sInput.max = data[i].max;
-						sInput.min = data[i].min;
-						sInput.step = (data[i].min + data[i].max) / 1000;
-						break;
-					case "i":
-						sInput.setAttribute("type", "number");
-						sInput.max = data[i].max;
-						sInput.min = data[i].min;
-						sInput.step = (data[i].min + data[i].max) / 1000;
-						sInput.step = 1;
-						break;
-					}
-                    sInput.setAttribute("value", data[i].value);
-                    }
-                    sInput.addEventListener('change',
-                                function() { setBackGround("setFld_"+i, "lightgray"); },
-                                            false
-                                );
-                  inputDiv.appendChild(sInput);
-                  
-          if( EnableHist || !( ["ed_tariff1","ed_tariff2", "er_tariff1","er_tariff2" ,"gd_tariff","electr_netw_costs","gas_netw_costs"].includes(i) ) ) {
-				rowDiv.appendChild(inputDiv);
-				settings.appendChild(rowDiv);
-			};
-          }
-          else
-          {
-            document.getElementById("setFld_"+i).style.background = "white";
-            document.getElementById("setFld_"+i).value = data[i].value;
-          }
-        }
-        //console.log("-->done..");
-         Spinner(false);
+	data = objDAL.getDeviceSettings();
+	for( let i in data )
+	{
+	  if ( i == "conf") continue;
+	  console.log("["+i+"]=>["+data[i].value+"]");
+	  let settings = document.getElementById('settings_table');
+	  if( ( document.getElementById("settingR_"+i)) == null )
+	  {
+	   
+		let rowDiv = document.createElement("div");
+		rowDiv.setAttribute("class", "settingDiv");
+		rowDiv.setAttribute("id", "settingR_"+i);
+		//--- field Name ---
+		  let fldDiv = document.createElement("div");
+			  if ( (i == "gd_tariff") && (Dongle_Config == "p1-q") ) fldDiv.textContent = "Warmte tarief (GJ)";
+			  else if ( i == "gas_netw_costs") fldDiv.textContent = "Netwerkkosten Gas/maand";
+			  else fldDiv.textContent = td(i);
+			  rowDiv.appendChild(fldDiv);
+		//--- input ---
+		  let inputDiv = document.createElement("div");
+			  inputDiv.setAttribute("class", "settings-right");
 
-      })
-      .catch(function(error) {
-        console.error("main::refreshSettings() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-      });     
+				let sInput = document.createElement("INPUT");
+				sInput.setAttribute("id", "setFld_"+i);
+				if ( data[i].type === undefined ) {
+					sInput.setAttribute("type", "checkbox");
+					sInput.checked = data[i];
+					sInput.style.width = "auto";
+					if ( i == "dev-pairing") sInput.disabled = true;
+				}
+				else {
+				switch(data[i].type){
+				case "s":
+					sInput.setAttribute("type", "text");
+					sInput.setAttribute("maxlength", data[i].max);
+					sInput.setAttribute("placeholder", "<max " + data[i].max +">");
+					break;
+				case "f":
+					sInput.setAttribute("type", "number");
+					sInput.max = data[i].max;
+					sInput.min = data[i].min;
+					sInput.step = (data[i].min + data[i].max) / 1000;
+					break;
+				case "i":
+					sInput.setAttribute("type", "number");
+					sInput.max = data[i].max;
+					sInput.min = data[i].min;
+					sInput.step = (data[i].min + data[i].max) / 1000;
+					sInput.step = 1;
+					break;
+				}
+				sInput.setAttribute("value", data[i].value);
+				}
+				sInput.addEventListener('change',
+							function() { setBackGround("setFld_"+i, "lightgray"); },
+										false
+							);
+			  inputDiv.appendChild(sInput);
+			  
+	  if( EnableHist || !( ["ed_tariff1","ed_tariff2", "er_tariff1","er_tariff2" ,"gd_tariff","electr_netw_costs","gas_netw_costs"].includes(i) ) ) {
+			rowDiv.appendChild(inputDiv);
+			settings.appendChild(rowDiv);
+		};
+	  }
+	  else
+	  {
+		document.getElementById("setFld_"+i).style.background = "white";
+		document.getElementById("setFld_"+i).value = data[i].value;
+	  }
+	}
 
-      document.getElementById('message').innerHTML = newVersionMsg;
+//       document.getElementById('message').innerHTML = newVersionMsg;
       
   } // refreshSettings()
   
   
   //============================================================================  
-  function EditMonths()
-  {	Spinner(true);
-    console.log("fetch("+APIGW+"v2/hist/months)");
-    fetch(APIGW+"v2/hist/months", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-        //console.log(response);
-        data = json;
-        expandDataSettings(data);
-        showMonthsV2(data, monthType);
-        Spinner(false);
-      })
-      .catch(function(error) {
-        console.error("main::EditMonths() - " + error.message);
-        var p = document.createElement('p');
-        p.appendChild(
-          document.createTextNode('Error: ' + error.message)
-        );
-      });
+  function EditMonths() {	
+  console.log("EditMonths()");
+  
+  const data = objDAL.getMonths();
 
-      document.getElementById('message').innerHTML = newVersionMsg;
+  if (!data || !Array.isArray(data.data) || data.data.length === 0) {
+    console.warn("EditMonths(): Data error");
+    return;
+  }
+
+  if (typeof monthType === "undefined") {
+    console.warn("EditMonths(): monthType undefined");
+    return;
+  }
+
+  showMonthsV2(data, monthType);
   } // EditMonths()
 
   
@@ -2774,33 +2346,41 @@ function formatFailureLog(svalue) {
   function showMonthsV2(data, type)
   { 
     console.log("showMonthsV2("+type+")");
-    //--- first remove all Children ----
-    var allChildren = document.getElementById('editMonths');
-    while (allChildren.firstChild) {
-      allChildren.removeChild(allChildren.firstChild);
-    }
-    var dlength = data.data.length;
+
+	const em = document.getElementById("editMonths");
+	
+	if (!em) {
+		console.error("element not found");
+		return;
+	}
+	if (!data || !Array.isArray(data.data)) {
+		console.error("showMonthsV2(): data error");
+		return;
+	}
+
+	em.innerHTML = "";
+	
+    let dlength = data.data.length;
     console.log("Now fill the DOM!");    
     console.log("data.data.length: " + dlength);
   
     for (let index=data.actSlot + dlength; index>data.actSlot; index--)
     {  let i = index % dlength;
 
-      //console.log("["+i+"] >>>["+data.data[i].EEYY+"-"+data.data[i].MM+"]");
+      console.log("["+i+"] >>>["+data.data[i].EEYY+"-"+data.data[i].MM+"]");
       
-      var em = document.getElementById('editMonths');
-
       if( ( document.getElementById("em_R"+i)) == null )
       {
-        var div1 = document.createElement("div");
+		console.log("==null");
+        let div1 = document.createElement("div");
             div1.setAttribute("class", "settingDiv");
             div1.setAttribute("id", "em_R"+i);
             if (i == (data.data.length -1))  // last row
             {
             }
-            var span2 = document.createElement("span");
+            let span2 = document.createElement("span");
               //--- create input for EEYY
-              var sInput = document.createElement("INPUT");
+              let sInput = document.createElement("INPUT");
               sInput.setAttribute("id", "em_YY_"+i);
               sInput.setAttribute("class", "tab_editMonth");
               sInput.setAttribute("type", "number");
@@ -2811,7 +2391,7 @@ function formatFailureLog(svalue) {
                       function() { setNewValue(i, "EEYY", "em_YY_"+i); }, false);
               span2.appendChild(sInput);
               //--- create input for months
-              var sInput = document.createElement("INPUT");
+              sInput = document.createElement("INPUT");
               sInput.setAttribute("id", "em_MM_"+i);
               sInput.setAttribute("class", "tab_editMonth");
               sInput.setAttribute("type", "number");
@@ -2849,7 +2429,7 @@ function formatFailureLog(svalue) {
               if (type == "ED")
               {
                 //console.log("add input for edt2..");
-                var sInput = document.createElement("INPUT");
+                let sInput = document.createElement("INPUT");
                 sInput.setAttribute("id", "em_in2_"+i);
                 sInput.setAttribute("class", "tab_editMonth");        
                 sInput.setAttribute("type", "number");
@@ -2861,7 +2441,7 @@ function formatFailureLog(svalue) {
               else if (type == "ER")
               {
                 //console.log("add input for ert2..");
-                var sInput = document.createElement("INPUT");
+                let sInput = document.createElement("INPUT");
                 sInput.setAttribute("id", "em_in2_"+i);
               sInput.setAttribute("class", "tab_editMonth");
                 sInput.setAttribute("type", "number");
@@ -2907,7 +2487,7 @@ function formatFailureLog(svalue) {
     //--- sequence EEYY and MM data
 // 	console.log("actslot: " + data.actSlot);
 
-    var changed = false;
+    let changed = false;
     for (let index=data.actSlot+dlength; index>data.actSlot; index--)
     {  let i = index % dlength;
        let next = math.mod(i-1,dlength);
@@ -2931,22 +2511,6 @@ function formatFailureLog(svalue) {
 
   } // showMonthsV2()
 
-  
-  //============================================================================  
-  function expandDataSettings(data)
-  { 
-    for (let i=0; i<data.data.length; i++)
-    {
-      data.data[i].EEYY = {};
-      data.data[i].MM   = {};
-      data.data[i].EEYY = parseInt("20"+data.data[i].date.substring(0,2));
-      data.data[i].MM   = parseInt(data.data[i].date.substring(2,4));
-    }
-      console.log("expandDataSettings(): "+JSON.stringify(data));
-
-
-  } // expandDataSettings()
-  
       
   //============================================================================  
   function undoReload()
@@ -2956,8 +2520,10 @@ function formatFailureLog(svalue) {
       EditMonths();
     } else if (activeTab == "bEditSettings") {
       console.log("undoReload(): reload Settings..");
-      data = {};
-      refreshSettings();
+//       data = {};
+//       refreshSettings();
+		document.getElementById('settings_table').innerHTML = '';
+		objDAL.refreshDeviceInformation();
 
     } else {
       console.log("undoReload(): I don't knwo what to do ..");
@@ -2985,30 +2551,32 @@ function formatFailureLog(svalue) {
   //============================================================================  
   function saveSettings() 
   {
-    for(var i in data)
+    for( let i in objDAL.dev_settings )
     {
 	  if ( i == "conf" || document.getElementById("setFld_"+i ) == undefined ) continue;
 	  
-	  var fldId  = i;
-      var newVal = document.getElementById("setFld_"+fldId).value;
-	  if ( data[i].value === undefined ) {
+	  let fldId  = i;
+      let newVal = document.getElementById("setFld_"+fldId).value;
+	  if ( objDAL.dev_settings[i].value === undefined ) {
 	     newVal = document.getElementById("setFld_"+fldId).checked;
-	     if (data[i] != newVal) {
-	     console.log("save data ["+i+"] => from["+data[i]+"] to["+newVal+"]");
+	     if (objDAL.dev_settings[i] != newVal) {
+	     console.log("save data ["+i+"] => from["+objDAL.dev_settings[i]+"] to["+newVal+"]");
 	     sendPostSetting(fldId, newVal);
 	    }
 	  }
-	  else if (data[i].value != newVal)
+	  else if (objDAL.dev_settings[i].value != newVal)
       {
-        console.log("save data ["+i+"] => from["+data[i].value+"] to["+newVal+"]");
+        console.log("save data ["+i+"] => from["+objDAL.dev_settings[i].value+"] to["+newVal+"]");
         sendPostSetting(fldId, newVal);
       }
     }    
-    // delay refresh as all fetch functions are asynchroon!!
+    // delay refresh as all fetch functions are async!!
     setTimeout(function() {
-      refreshSettings();
+//       refreshSettings();
+		document.getElementById('settings_table').innerHTML = '';
+		objDAL.refreshDeviceInformation();
     }, 1000);
-    getDevSettings();
+//     ParseDevSettings();
   } // saveSettings()
   
   
@@ -3024,7 +2592,8 @@ function formatFailureLog(svalue) {
       return;
     }
     **/
-    
+    let data = objDAL.getMonths();
+//     console.log(data.data);
     //--- has anything changed?
     for (i in data.data)
     {
@@ -3077,7 +2646,7 @@ function formatFailureLog(svalue) {
         mode : "no-cors"
     };
 	Spinner(true);
-    fetch(APIGW+"v2/dev/settings", other_params)
+    fetch( URL_DEVICE_SETTINGS, other_params )
       .then(function(response) {
             //console.log(response.status );    //=> number 100–599
             //console.log(response.statusText); //=> String
@@ -3234,56 +2803,7 @@ function formatFailureLog(svalue) {
         method : "POST",
         mode : "cors"
     };
-    Spinner(true);
-    fetch(APIGW+"v2/hist/months", other_params)
-      .then(function(response) {
-      Spinner(false);
-      }, function(error) {
-        console.log("Error["+error.message+"]"); //=> String
-      });
-      
   } // sendPostReading()
-
-  function parseGitHubVersion(text){
-    var tmpGHF = text.replace(/(\r\n|\n|\r)/gm, "");
-    GitHubVersion_dspl = tmpGHF;
-    //console.log("parsed: GitHubVersion is ["+GitHubVersion_dspl+"]");
-    tmpX = tmpGHF.substring(1, tmpGHF.indexOf(' '));
-    tmpN = tmpX.split(".");
-    GitHubVersion = tmpN[0]*10000 + tmpN[1]*100 + tmpN[2]*1;    
-    //console.log("firmwareVersion["+firmwareVersion+"] >= GitHubVersion["+GitHubVersion+"]");
-    if (firmwareVersion == 0 || firmwareVersion >= GitHubVersion)
-          newVersionMsg = "";
-    else  newVersionMsg = firmwareVersion_dspl + " nieuwere versie ("+GitHubVersion_dspl+") beschikbaar";
-    //set
-    document.getElementById('message').innerHTML = newVersionMsg;
-    //console.log(newVersionMsg);
-  }
-
-  //============================================================================  
-  function readGitHubVersion()
-  {
-    if (GitHubVersion != 0) return;
-
-    fetch(URL_GITHUB_VERSION)
-      .then(response => {
-        if (response.ok) {
-          return response.text();
-        } else {
-          console.log('Something went wrong');
-          return "";
-        }
-      })
-      .then(text => {
-        parseGitHubVersion(text);
-      })
-      .catch(function(error) {
-        console.error("main::readGitHubVersion() - " + error.message);
-        GitHubVersion_dspl   = "";
-        GitHubVersion        = 0;
-      });
-  } // readGitHubVersion()
-
   /*
   ****************************** UTILS *******************************************
   */
@@ -3352,13 +2872,13 @@ function formatFailureLog(svalue) {
   function validateNumber(field) {
     console.log("validateNumber(): ["+field+"]");
     if (field == "EDT1" || field == "EDT2" || field == "ERT1" || field == "ERT2" || field == "GAS") {
-      var pattern = /^\d{1,1}(\.\d{1,5})?$/;
-      var max = 1.99999;
+      let pattern = /^\d{1,1}(\.\d{1,5})?$/;
+      let max = 1.99999;
     } else {
-      var pattern = /^\d{1,2}(\.\d{1,2})?$/;
-      var max = 99.99;
+      let pattern = /^\d{1,2}(\.\d{1,2})?$/;
+      let max = 99.99;
     }
-    var newVal = document.getElementById(field).value;
+    let newVal = document.getElementById(field).value;
     newVal = newVal.replace( /[^0-9.]/g, '' );
     if (!pattern.test(newVal)) {
       document.getElementById(field).style.color = 'orange';
@@ -3375,21 +2895,6 @@ function formatFailureLog(svalue) {
     document.getElementById(field).value = newVal * 1;
     
   } // validateNumber()
-
-  
-  //============================================================================  
-  function translateToHuman(longName) {
-    //for(var index = 0; index < (translateFields.length -1); index++) 
-    for(var index = 0; index < translateFields.length; index++) 
-    {
-        if (translateFields[index][0] == longName)
-        {
-          return translateFields[index][1];
-        }
-    };
-    return longName;
-    
-  } // translateToHuman()
 
   
   //============================================================================  
@@ -3414,10 +2919,10 @@ function formatFailureLog(svalue) {
   //============================================================================  
   function recidToEpoch(dateIn) 
   {
-    var YY = "20"+dateIn.substring(0,2);
+    let YY = "20"+dateIn.substring(0,2);
     console.log("["+YY+"]["+(dateIn.substring(2,4)-1)+"]["+dateIn.substring(4,6)+"]");
     //-------------------YY-------------------(MM-1)----------------------DD---------------------HH--MM--SS
-    var epoch = Date.UTC(YY, (dateIn.substring(2,4)-1), dateIn.substring(4,6), dateIn.substring(6,8), 1, 1);
+    let epoch = Date.UTC(YY, (dateIn.substring(2,4)-1), dateIn.substring(4,6), dateIn.substring(6,8), 1, 1);
     //console.log("epoch is ["+epoch+"]");
 
     return epoch;
@@ -3428,11 +2933,11 @@ function formatFailureLog(svalue) {
   //============================================================================  
   function recidToWeekday(dateIn)
   {
-    var YY = "20"+dateIn.substring(0,2);
+    let YY = "20"+dateIn.substring(0,2);
     //-------------------YY-------------------(MM-1)----------------------DD---------------------HH--MM--SS
-    var dt = new Date(Date.UTC(YY, (dateIn.substring(2,4)-1), dateIn.substring(4,6), 1, 1, 1));
+    let dt = new Date(Date.UTC(YY, (dateIn.substring(2,4)-1), dateIn.substring(4,6), 1, 1, 1));
 
-    return dt.toLocaleDateString('nl-NL', {weekday: 'long'});
+    return dt.toLocaleDateString(locale, {weekday: 'long'});
     
   } // epochToWeekday()
   
@@ -3440,190 +2945,96 @@ function formatFailureLog(svalue) {
   //============================================================================  
   function round(value, precision) 
   {
-    var multiplier = Math.pow(10, precision || 0);
+    let multiplier = Math.pow(10, precision || 0);
     return Math.round(value * multiplier) / multiplier;
   }
-  
-  //translation array
-  var translateFields = [
-           [ "author",                    "Auteur" ]
-          ,[ "identification",            "Slimme Meter ID" ]
-		  ,[ "timestamp",            	  "Tijdcode" ]
-          ,[ "p1_version",                "P1 Versie" ]
-          ,[ "energy_delivered_tariff1",  "Energie Afgenomen teller 1" ]
-          ,[ "energy_delivered_tariff2",  "Energie Afgenomen teller 2" ]
-          ,[ "energy_returned_tariff1",   "Energie Teruggeleverd teller 1" ]
-          ,[ "energy_returned_tariff2",   "Energie Teruggeleverd teller 2" ]
-          ,[ "electricity_tariff",        "Huidig Teller Tarief" ]
-          ,[ "power_delivered",           "Vermogen Afgenomen" ]
-          ,[ "power_returned",            "Vermogen Teruggeleverd" ]
-          ,[ "electricity_threshold",     "Electricity Threshold" ]
-          ,[ "electricity_switch_position","Electricity Switch Position" ]
-          ,[ "electricity_failures",      "Electricity Failures" ]
-          ,[ "electricity_long_failures", "Electricity Long Failures" ]
-          ,[ "electricity_failure_log",   "Electricity Failure log" ]
-          ,[ "electricity_sags_l1",       "Electricity Sags L1" ]
-          ,[ "electricity_sags_l2",       "Electricity Sags L2" ]
-          ,[ "electricity_sags_l3",       "Electricity Sags L3" ]
-          ,[ "electricity_swells_l1",     "Electricity Swells L1" ]
-          ,[ "electricity_swells_l2",     "Electricity Swells L2" ]
-          ,[ "electricity_swells_l3",     "Electricity Swells L3" ]
-          ,[ "message_short",             "Korte Boodschap" ]
-          ,[ "message_long",              "Lange Boodschap" ]
-          ,[ "voltage_l1",                "Spanning L1" ]
-          ,[ "voltage_l2",                "Spanning L2" ]
-          ,[ "voltage_l3",                "Spanning L3" ]
-          ,[ "current_l1",                "Stroom L1" ]
-          ,[ "current_l2",                "Stroom L2" ]
-          ,[ "current_l3",                "Stroom L3" ]
-          ,[ "power_delivered_l1",        "Vermogen Afgenomen L1" ]
-          ,[ "power_delivered_l2",        "Vermogen Afgenomen L2" ]
-          ,[ "power_delivered_l3",        "Vermogen Afgenomen L3" ]
-          ,[ "power_returned_l1",         "Vermogen Teruggeleverd L1" ]
-          ,[ "power_returned_l2",         "Vermogen Teruggeleverd L2" ]
-          ,[ "power_returned_l3",         "Vermogen Teruggeleverd L3" ]
-          ,[ "gas_device_type",           "Gas Toestel Type" ]
-          ,[ "gas_equipment_id",          "Gas Toestel ID" ]
-          ,[ "gas_valve_position",        "Gas Klep Positie" ]
-          ,[ "gas_delivered",             "Gasmeterstand" ]
-          ,[ "thermal_device_type",       "Thermal Device Type" ]
-          ,[ "thermal_equipment_id",      "Thermal Equipment ID" ]
-          ,[ "thermal_valve_position",    "Thermal Klep Positie" ]
-          ,[ "thermal_delivered",         "Thermal Gebruikt" ]
-          ,[ "water_device_type" ,        "Water Device Type" ]
-          ,[ "water_equipment_id",        "Water Equipment ID" ]
-          ,[ "water_valve_position",      "Water Klep Positie" ]
-          ,[ "water_delivered",           "Water Gebruikt" ]
-          ,[ "slave_device_type",         "Slave Device Type" ]
-          ,[ "slave_equipment_id",        "Slave Equipment ID" ]
-          ,[ "slave_valve_position",      "Slave Klep Positie" ]
-          ,[ "slave_delivered",           "Slave Gebruikt" ]
-          ,[ "ed_tariff1",                "Energy Afgenomen Tarief-1/kWh" ]
-          ,[ "ed_tariff2",                "Energy Afgenomen Tarief-2/kWh" ]
-          ,[ "er_tariff1",                "Energy Teruggeleverd Tarief-1/kWh" ]
-          ,[ "er_tariff2",                "Energy Teruggeleverd Tarief-2/kWh" ]
-          ,[ "gd_tariff" ,                "Gas Tarief/m3" ]
-          ,[ "electr_netw_costs",         "Netwerkkosten Energie/maand" ]
-          ,[ "gas_netw_costs",            "Netwerkkosten Gas/maand" ]
-		  ,[ "water_netw_costs",	  	  "Netwerkkosten Water/maand"]
-		  ,[ "w_tariff",	  		  	  "Water Tarief/m3"]  
-          
-          ,[ "smhasfaseinfo",             "SM Has Fase Info (0=No, 1=Yes)" ]
-          ,[ "sm_has_fase_info",          "SM Has Fase Info (0=No, 1=Yes)" ]
-          ,[ "tlgrm_interval",            "Telegram Lees Interval (Sec.)" ]
-          ,[ "telegraminterval",          "Telegram Lees Interval (Sec.)" ]
-          ,[ "index_page",                "Te Gebruiken index.html Pagina" ]
-          ,[ "mqttbroker",                "MQTT Broker IP/URL" ]
-          ,[ "mqtt_broker",               "MQTT Broker IP/URL" ]
-          ,[ "mqttbrokerport",            "MQTT Broker Poort" ]
-          ,[ "mqtt_broker_port",          "MQTT Broker Poort" ]
-          ,[ "mqttuser",                  "MQTT Gebruiker" ]
-          ,[ "mqtt_user",                 "MQTT Gebruiker" ]
-          ,[ "mqttpasswd",                "Password MQTT Gebruiker" ]
-          ,[ "mqtt_passwd",               "Password MQTT Gebruiker" ]
-          ,[ "mqtttoptopic",              "MQTT Top Topic" ]
-          ,[ "mqtt_toptopic",             "MQTT Top Topic" ]
-          ,[ "mqttinterval",              "Verzend MQTT Berichten (Sec.)" ]
-          ,[ "mqtt_interval",             "Verzend MQTT Berichten (Sec.)" ]
-          ,[ "mqttbroker_connected",      "MQTT broker verbonden" ]
 
-          ,[ "telegramcount",             "Telegrammen verwerkt" ]
-          ,[ "telegramerrors",            "Telegrammen met fouten" ]          
-          ,[ "fwversion",                 "Huidige Firmware Versie" ]
-          ,[ "compiled",                  "Gecompileerd" ]
-          ,[ "hostname",                  "HostName" ]
-          ,[ "ipaddress",                 "IP adres" ]
-          ,[ "macaddress",                "MAC adres" ]
-          ,[ "indexfile",                 "Te Gebruiken index.html Pagina" ]
-          ,[ "freeheap",                  "Free Heap Space" ]
-          ,[ "maxfreeblock",              "Max. Free Heap Blok" ]
-          ,[ "chipid",                    "Chip ID" ]
-          ,[ "coreversion",               "ESP Core Versie" ]
-          ,[ "sdkversion",                "SDK versie" ]
-          ,[ "cpufreq",                   "CPU Frequency" ]
-          ,[ "sketchsize",                "Sketch Size" ]
-          ,[ "freesketchspace",           "Free Sketch Space" ]
-          ,[ "flashchipid",               "Flash Chip ID" ]
-          ,[ "flashchipsize",             "Flash Chip Size" ]
-          ,[ "flashchiprealsize",         "Flash Chip Real Size" ]
-          ,[ "spiffssize",                "Geheugen omvang" ]
-          ,[ "FSsize", 					  "File System Size" ]
-          ,[ "flashchipspeed",            "Flash Chip Speed" ]
-          ,[ "flashchipmode",             "Flash Chip Mode" ]
-          ,[ "boardtype",                 "Bord Type" ]
-          ,[ "compileoptions",            "Compiler Opties" ]
-          ,[ "ssid",                      "WiFi SSID" ]
-          ,[ "wifirssi",                  "WiFi RSSI" ]
-          ,[ "uptime",                    "Up Time [dagen] - [hh:mm]" ]
-          ,[ "reboots",                   "Aantal keer opnieuw opgestart" ]
-          ,[ "lastreset",                 "Laatste Reset reden" ]
-          ,[ "smr_version",               "NL of BE Slimme Meter" ]
-          ,[ "ShowVoltage",               "Toon spanningmeter in Dashboard" ]
-          ,[ "Injection",                 "Wordt er stroom opgewekt (bv zonnecellen)" ]
-          ,[ "Phases",                    "Hoeveel Fases heeft de meter [0-3]<br>[0=check op basis van meterdata]" ]
-          ,[ "Fuse",                      "Wat is de waarde van de hoofdzekering(en)" ]
-          ,[ "cdn",               		  "Frontend html/css uit de cloud" ]
-          ,[ "GasAvailable",			  "Gasmeter beschikbaar? <br>[True = geen check op basis van meterdata]<br>[False = wel checken]"]
-          ,[ "water",				  	  "Watermeter"]
-          ,[ "b_auth_user",				  "Basic Auth. Gebruiker"]
-          ,[ "b_auth_pw",				  "Basic Auth. Wachtwoord"]
-          ,[ "water_enabl",				  "Watersensor aanwezig"]
-          ,[ "led",				  		  "LED aan"]
-          ,[ "ha_disc_enabl",			  "HA Auto discovery"]
-          ,[ "ota_url",				  	  "Update url (zonder http://)"]
-  	 	  ,[ "hist",				  	  "Metergegevens lokaal opslaan"]
-		  ,[ "auto_update",				  "Automatisch updaten"]
-		  ,[ "pre40",				  	  "SMR 2 & 3 support"]
-		  ,[ "raw-port",				  "Telegram op poort 82"]
-		  ,[ "led-prt",				  	  "Bridge leds aan/uit"]      
-      ,[ "gas_delivered_timestamp", "Tijdcode Gasmeterstand" ]
-      ,[ "equipment_id",          "Toestel ID"]
-      ,[ "mbus1_equipment_id_tc", "Toestel ID MBUS1"]      
-      ,[ "mbus2_equipment_id_tc", "Toestel ID MBUS2"]
-      ,[ "mbus3_equipment_id_tc", "Toestel ID MBUS3"]
-      ,[ "mbus4_equipment_id_tc", "Toestel ID MBUS4"]
-      ,[ "mbus1_device_type",     "Toestel Type MBUS1"]
-      ,[ "mbus2_device_type",     "Toestel Type MBUS2"]
-      ,[ "mbus3_device_type",     "Toestel Type MBUS3"]
-      ,[ "mbus4_device_type",     "Toestel Type MBUS4"]
+//================ NAV.json
 
-      ,[ "mbus1_delivered",       "Toestel Geleverd MBUS1"]
-      ,[ "mbus1_delivered",       "Toestel Geleverd MBUS2"]
-      ,[ "mbus1_delivered",       "Toestel Geleverd MBUS3"]
-      ,[ "mbus1_delivered",       "Toestel Geleverd MBUS4"]
+function menu() {
+  let x = document.getElementById("myTopnav");
+  if (x.className === "main-navigation") {
+    x.className += " responsive";
+    
+  } else {
+    x.className = "main-navigation";
+  }
+//change menu icon
+    let menu = document.getElementById("menuid");
+	menu.classList.toggle("mdi-close");
+	menu.classList.toggle("mdi-menu");
+}
+   
+//============================================================================         
+// attach an onclick handler for all menuitems
+function handle_menu_click()
+{	
+	let btns = document.getElementsByClassName("nav-item");
+	for (let i = 0; i < btns.length; i++) {
+  		btns[i].addEventListener("click", function() {
+			//reset hamburger menu icon
+			let menu = document.getElementById("menuid");
+			menu.classList.remove("mdi-close");
+			menu.classList.add("mdi-menu");
+	
+			//remove active classes
+			let current = document.getElementById("myTopnav").getElementsByClassName("active");	
+			for (let j=current.length-1; j>=0; j--) {
+	// 					console.log("remove active ["+j+"] current:"+current[j]);
+				current[j].classList.remove("active");
+		}
+		//add new active classes
+			let closest = this.closest("ul");
+			if (closest && !closest.previousElementSibling.classList.contains("active","topcorner","mdi")) {
+				console.log("contains: subnav, closest:" +closest.className);
+				closest.previousElementSibling.classList.add("active");
+			}
+			if(!this.classList.contains("active","nav-img")) 
+			this.classList.add("active");
 
-      ,[ "p1_version_be",         "P1 Versie BE"]
-      ,[ "peak_pwr_last_q",       "Gemiddelde Elektra laatste kwartier"]
-      ,[ "highest_peak_pwr",      "Piek Elektra huidige maand"]
-      ,[ "highest_peak_pwr_13mnd","Piek Elektra over 13 maanden"]
-      ,[ "water_delivered_ts",	  "Tijdcode Watermeterstand"]
-	  ,[ "mqtt_tls",	  		  "MQTT over tls"]
-	  ,[ "dev-pairing",	  		  "Peer2Peer communication"]
-	  ,[ "eid-enabled",	  		  "EnergyID aan/uit"]	
-	  ,[ "utilization",	  		  "CPU gebruik"]	  		  
-  ];
+			activeTab = this.id;
+			//console.log("ActiveID - " + activeTab );
+// 			openTab();  		
+  		});
+	}
+}
 
-/*
-***************************************************************************
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to permit
-* persons to whom the Software is furnished to do so, subject to the
-* following conditions:
-*
-* The above copyright notice and this permission notice shall be included
-* in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
-* THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-* 
-***************************************************************************
-*/
+//====== I18N.JS ====
+
+let translations = {};
+const URL_I18N = typeof DEBUG !== 'undefined' && DEBUG
+  ? "http://localhost/~martijn/dsmr-api/v5/lang"
+  : "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/cdn/lang";
+
+function t(key) {
+  return translations[key] || key;
+}
+
+function td(key) {
+  return t("dict_" + key);
+}
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n-key]').forEach(el => {
+    const key = el.getAttribute('data-i18n-key');
+    if (translations[key]) el.innerHTML = translations[key];
+  });
+}
+
+function changeLanguage(lang) {
+  locale = lang;
+  localStorage.setItem('locale', lang);
+  loadTranslations(lang);
+  document.location.href="/";
+}
+
+function loadTranslations(lang) {
+	console.log(URL_I18N + `/${lang}.json`);
+  fetch( URL_I18N + `/${lang}.json` )
+    .then(response => response.json())
+    .then(json => {
+      translations = json;
+      applyTranslations();
+    })
+    .catch(err => console.error("Error fetching lang file:", err));
+}

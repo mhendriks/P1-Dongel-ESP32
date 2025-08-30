@@ -2,179 +2,20 @@
 	plugin by Mar10us
 */
 
-//  const APIGW = window.location.protocol+'//'+window.location.host+'/api/';
-const URL_HISTORY_HOURS = APIGW + "../RNGhours.json";
-const URL_HISTORY_DAYS = APIGW + "../RNGdays.json";
-const URL_HISTORY_MONTHS = APIGW + "../RNGmonths.json";
-const URL_HISTORY_ACTUAL = APIGW + "v2/sm/actual";
-const MAX_ACTUAL_HISTORY = 15*6;	//store last 15 minutes (with a call per 10 sec)
 const listMONTHS_SHORT = ["JAN", "FEB", "MRT", "APR", "MEI", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 
-//Deze data is gebaseerd op een gemiddeld gebruikprofiel. 
+// Deze data is gebaseerd op een gemiddeld gebruikprofiel. 
 // zie o.a.
-//  https://www.anwb.nl/huis/energie/het-prijsplafond-voor-energie
-//  https://www.vattenfall.nl/nieuws/verbruiksplafond/
+// https://www.anwb.nl/huis/energie/het-prijsplafond-voor-energie
+// https://www.vattenfall.nl/nieuws/verbruiksplafond/
 const listValuesCeilingE = [339, 280, 267, 207, 181, 159, 161, 176, 199, 266, 306, 356];	//totaal 2900 kWh	
 const listValuesCeilingG = [221, 188, 159,  86,  35,  19,  17,  17,  24,  81, 146, 207];	//totaal 1200 m3
 
-
 let timerRefresh = 0;
 let sCurrentChart = "YEAR"; //YEAR
-var objStorage;
 var fLoadedBurnup = false;
 var objChart1;
 var objChart2;
-
-//DSMR DataAccessLayer
-//TODO: merge with DAL from index.js
-class dsmr_dal_burnup{
-	constructor() {
-        this.months=[];
-        this.days=[];
-        this.hours=[];
-        this.minutes=[];	//not used for now
-		this.timerREFRESH = 0;
-		this.actual=[];
-		this.actual_history = [];
-		this.timerREFRESH_ACTUAL = 0;
-		this.init();
-    }
-
-	fetchDataJSON(url, fnHandleData)
-	{
-		console.log("fetchDataJSON("+url+")");		
-		fetch(url)
-		.then(response => response.json())
-		.then(json => { fnHandleData(json); })
-		.catch(function (error) {
-			var p = document.createElement('p');
-			p.appendChild( document.createTextNode('Error: ' + error.message) );
-		});
-	}	
-
-	init()
-	{
-		this.refresh();
-		//this.refreshActual();
-	}
-
-    // refresh and parse the ringfiles
-	// refresh every 60 sec
-    refresh()
-	{
-		console.log("refresh");
-		clearInterval(this.timerREFRESH);
-		this.fetchDataJSON( URL_HISTORY_MONTHS, this.parseMonths.bind(this));
-		this.fetchDataJSON( URL_HISTORY_DAYS, this.parseDays.bind(this));
-		this.fetchDataJSON( URL_HISTORY_HOURS, this.parseHours.bind(this));
-    	this.timerREFRESH = setInterval(this.refresh.bind(this), 60 * 1000);
-	}
-	parseMonths(json)
-	{
-		console.log("parseMonths");
-		console.log(json);
-		//TODO: filter out the corrupt row
-		this.months = json;
-	}
-	parseDays(json)
-	{
-		console.log("parseDays");
-		console.log(json);
-		//TODO: filter out the corrupt row
-		this.days = json;
-	}
-	parseHours(json)
-	{
-		console.log("parseHours");
-		console.log(json);
-		//TODO: filter out the corrupt row
-		this.hours = json;
-	}
-
-	// refresh and parse actual data, store and add to history
-	//refresh every 10 sec
-	refreshActual()
-	{
-		console.log("refreshActual");
-		clearInterval(this.timerREFRESH_ACTUAL);
-		this.fetchDataJSON( URL_HISTORY_ACTUAL, this.parseActual.bind(this));
-    	this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), 10 * 1000);
-	}
-	parseActual(json)
-	{
-		this.actual = json;
-		this.addActualHistory( json );
-	}
-	addActualHistory(json)
-	{
-		if( this.actual_history.length >= MAX_ACTUAL_HISTORY) this.actual_history.shift();
-		this.actual_history.push(json);
-	}
-
-	//
-	// get functions
-	getMonths()
-	{
-		return this.months;
-	}
-	getDays()
-	{
-		return this.days;
-	}
-	getHours()
-	{
-		return this.hours;
-	}
-
-	//get a specific YYMM row
-	getMonth(nYY, nMM)
-	{
-		var ret = [];
-		var sYYMM = (""+nYY)+((nMM<=9)?"0"+nMM:nMM);
-// 		console.log("sYYMM: "+sYYMM);
-			for(var i=0;i<this.months.data.length; i++)
-		{
-			var item = this.months.data[i];
-			var date = item.date;
-			if( sYYMM == date.substring(0,4))
-			{
-				ret.push( item )
-			}
-		}		
-		return ret;
-	}
-
-	//get every row from a specific year
-	getYear(nYY)
-	{
-		var ret = [];
-		var sYY = ""+nYY;
-		for(var i=0;i<this.months.data.length; i++)
-		{
-			var item = this.months.data[i];
-			var date = item.date;
-			if( sYY == date.substring(0,2))
-			{
-				ret.push( item )
-			}
-		}
-		ret.sort((a, b) => {
-			return a.date.localeCompare(b.date);
-		});
-		return ret;
-	}
-
-	getActual()
-	{
-		return this.actual;
-	}
-	
-	//the last (MAX_ACTUAL_HISTORY) actuals
-	getActualHistory()
-	{
-		return this.actual_history;
-	}
-}
 
 function createCharts() {
 	const ctx1 = document.getElementById('myChart1').getContext('2d');
@@ -327,8 +168,8 @@ function BurnupBootstrap()
 	createCharts();
 
 	//create storage
-	objStorage = new dsmr_dal_burnup();
-
+// 	objStorage = new dsmr_dal_burnup();
+	
 	//set a flag that we are ready
 	fLoadedBurnup = true;
 
@@ -338,7 +179,7 @@ function BurnupBootstrap()
     //timerRefresh = setInterval(refreshData, 30 * 1000); // repeat every 20s
 
 	//default view
-	setViewMONTH();
+// 	setViewMONTH();
 }
 
 // when network is slow, the bootstrap function of this file is not available 
@@ -352,6 +193,7 @@ function ensureBurnupLoaded()
 //entry point from radiobutton 'Maand' in HTML
 function setViewMONTH()
 {
+	console.log("setViewMONTH");
 	ensureBurnupLoaded();
 	sCurrentChart = "MONTH";
 	getDays();
@@ -379,7 +221,7 @@ function refreshData()
 
 function getMonths()
 {
-	var json = objStorage.getMonths();
+	var json = objDAL.getMonths();
 	parseMonths(json);
 }
 
@@ -395,6 +237,11 @@ function parseMonths(json)
 function expandData_v2(dataIN) {
 // 	console.log("expandData_v2()");
 // 	console.log(dataIN);
+	
+	if (!dataIN || !Array.isArray(dataIN.data)) {
+		console.error("expandData_v2: Ongeldige input", dataIN);
+		return { data: [], actSlot: 0 };
+	}
 	
 	var i;
 	var slotbefore;
@@ -459,7 +306,14 @@ function showMonths(histdata)
 }
 
 function getDays() {
-	json = objStorage.getDays();
+	console.log("getDays");
+	var json = objDAL.getDays();
+	
+	if ( json == "") {
+		console.log("getDays: json is ongeldig");
+		return;
+	}
+
 	parseDays(json);
 }
 
@@ -497,8 +351,8 @@ function prepareDataBURNUP_DAYSINMONTH(histdata)
 
 // 	console.log("nYY: "+nYY+" nMM: "+nMM);
 	//current month start is previous month end
-// 	var itemCM = objStorage.getMonth(nYY,nMM-1)[0]; //issue in january
-	var itemCM = objStorage.getMonth(nMM==1?nYY-1:nYY,nMM==1?nMM=12:nMM-1)[0];
+// 	var itemCM = objDAL.getMonth(nYY,nMM-1)[0]; //issue in january
+	var itemCM = objDAL.getMonth(nMM==1?nYY-1:nYY,nMM==1?nMM=12:nMM-1)[0];
 
 // 	console.log("itemCM: " + itemCM);
 	var nCED0 = itemCM.values[0] + itemCM.values[1];
@@ -516,7 +370,7 @@ function prepareDataBURNUP_DAYSINMONTH(histdata)
 		
 // 	console.log("nYY: "+nYY+" nMM: "+nMM);
 		
-	var itemPM = objStorage.getMonth(nYY,nMM)[0];
+	var itemPM = objDAL.getMonth(nYY,nMM)[0];
 // 	console.log("itemPM: "+itemPM);
 	if (itemPM != undefined ) {
 
