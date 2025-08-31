@@ -28,7 +28,7 @@ bool                 WtrMtr         = false;
 #define              DEBOUNCETIMER 1700
 
 struct {
-  uint8_t map = 0;
+  // uint8_t map = 0; = SelMap TODO
   uint8_t id = 1;
   uint16_t baud = 9600;
   uint32_t parity = SERIAL_8E1;
@@ -340,6 +340,9 @@ bool        bRawPort = false;
 bool        bLED_PRT = true;
 bool        P1Out = false;
 bool        bP1offline = true;
+bool        bV5meter = true;
+time_t      last_telegram_t = 0;
+
 uint32_t    P1error_cnt_sequence = 0;
 byte        RxP1 = RXP1;
 byte        TxO1 = TXO1;

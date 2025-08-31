@@ -93,8 +93,14 @@ void setupFSexplorer() {
     DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
     String filename = httpServer.uri();
     DebugT("Filename: ");Debugln(filename);
-    if ( !handleFile(filename.c_str()) ) httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
     
+    bool handle = handleFile(filename.c_str());
+    if ( filename == "/" && !handle ) {
+      httpServer.sendHeader("Location", "/#DashTab", true);
+      httpServer.send ( 303, "text/plain", "");
+    }
+    if ( !handle ) httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
+
   });
   httpServer.begin();
   // server.begin();

@@ -120,6 +120,10 @@ void writeSettings() {
   docw["raw-port"] = bRawPort;
   docw["led-prt"] = bLED_PRT;
   docw["mb_map"] = SelMap;
+  docw["mb_id"] = mb_config.id;
+  docw["mb_port"] = mb_config.port;
+  docw["mb_baud"] = mb_config.baud;
+  docw["mb_parity"] = mb_config.parity - 134217700;
 
 #ifdef VOLTAGE_MON
   docw["max-volt"] = MaxVoltage;
@@ -384,6 +388,12 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "raw-port")) bRawPort = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "act-json-mqtt")) bActJsonMQTT = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "eid-enabled")) bEID_enabled = (stricmp(newValue, "true") == 0?true:false);  
+  
+  if (!stricmp(field, "mb_map")) setModbusMapping(String(newValue).toInt());  
+  if (!stricmp(field, "mb_id")) mb_config.id = String(newValue).toInt();  
+  if (!stricmp(field, "mb_port")) mb_config.port = String(newValue).toInt();  
+  if (!stricmp(field, "mb_baud")) mb_config.baud = String(newValue).toInt();  
+  if (!stricmp(field, "mb_parity")) mb_config.parity = String(newValue).toInt();  
 
   writeSettings();
   

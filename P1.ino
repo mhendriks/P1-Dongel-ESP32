@@ -182,6 +182,7 @@ void handleSlimmemeter()
       } else processSlimmemeter();
       ToggleLED(LED_OFF);
     } //available
+    if (millis() - last_telegram_t > (bV5meter ? 3500 : 35000)) bP1offline = true;
 } // handleSlimmemeter()
 
 //==================================================================================
@@ -216,6 +217,8 @@ void SMCheckOnce(){
   DebugTf("mbusWater: %d\r\n",mbusWater);
   DebugTf("mbusGas: %d\r\n",mbusGas);
   ResetStats();
+  if ( !DSMRdata.voltage_l1_present && !DSMRdata.voltage_l2_present && !DSMRdata.voltage_l2_present ) bV5meter = false;
+
 }
 //==================================================================================
 void processSlimmemeter() {
@@ -235,6 +238,7 @@ void processSlimmemeter() {
       bP1offline = false;
       P1error_cnt_sequence = 0;
       DSMRdata = DSMRdataNew;
+      last_telegram_t = millis();
       if ( (telegramCount - telegramErrors) == 1) SMCheckOnce(); //only the first succesfull telegram
       else {
         //use the keys from the initial check; saves processing power

@@ -233,7 +233,7 @@
   "dict_sm_has_fase_info": "SM har fasinformation (0=Nej, 1=Ja)",
   "dict_tlgrm_interval": "Läsintervall för telegram (sek.)",
   "dict_telegraminterval": "Läsintervall för telegram (sek.)",
-  "dict_index_page": "Index.html-sida att använda",
+  "dict_IndexPage": "Index.html-sida att använda",
   "dict_mqttbroker": "MQTT Broker IP/URL",
   "dict_mqtt_broker": "MQTT Broker IP/URL",
   "dict_mqttbrokerport": "MQTT Broker Port",
@@ -333,5 +333,10 @@
   "tip-P3min": "lägsta effekt fas 3 idag (negativ är returledning)",
   "tip-U1min": "lägsta spänning fas 1 idag",
   "tip-U2min": "lägsta spänning fas 2 idag",
-  "tip-U3min": "lägsta spänning fas 3 idag"
+  "tip-U3min": "lägsta spänning fas 3 idag",
+  "dict_mb_id":"Modbus ID",
+  "dict_mb_port":"Modbus Port",
+  "dict_mb_baud":"Modbus Baudrate",
+  "dict_mb_parity":"Modbus Parity",
+  "dict_mb_map":"Modbus Mapping"
 }

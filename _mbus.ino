@@ -200,7 +200,7 @@ std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[8] = { 48, 204+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2, 52 };
+uint16_t MaxReg[8] = { 48, 204+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2, 54 };
 
 // Change active mapping
 void setModbusMapping(int mappingChoice) {

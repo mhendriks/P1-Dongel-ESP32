@@ -35,10 +35,6 @@ BACKLOG
 - improvement: modbus in own process = non-blocking 
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
-ezen
-
-4.15.9
-- add modbus float default 
 
 V6
 - mqtt 1 data and 1 vital json (with uptime)

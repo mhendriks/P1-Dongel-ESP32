@@ -340,6 +340,14 @@ void sendDeviceSettings() {
   ADD_SETTING("b_auth_user", "s", 0, sizeof(bAuthUser) - 1, bAuthUser);
   ADD_SETTING("b_auth_pw", "s", 0, sizeof(bAuthPW) - 1, bAuthPW);
 
+  //MODBUS TCP settings
+  ADD_SETTING("mb_map", "i", 0, 7, SelMap); //RTU+TCP
+  ADD_SETTING("mb_id", "i", 1, 255, mb_config.id); //RTU+TCP
+  ADD_SETTING("mb_port", "i", 0, 65535, mb_config.port); //TCP
+  if ( mb_rx != -1 ){ //check if modbus rtu hardware is available
+    ADD_SETTING("mb_baud", "i", 300, 115200, mb_config.baud); //RTU
+    ADD_SETTING("mb_parity", "i", 134217744, 134217791, mb_config.parity); //RTU
+  }
   //booleans
   doc["hist"] = EnableHistory;
   doc["water_enabl"] = WtrMtr;
@@ -351,7 +359,7 @@ void sendDeviceSettings() {
 #endif
 
   doc["ha_disc_enabl"] = EnableHAdiscovery;
-if ( P1Status.dev_type == PRO_BRIDGE ) doc["led-prt"] = bLED_PRT;
+  if ( P1Status.dev_type == PRO_BRIDGE ) doc["led-prt"] = bLED_PRT;
 
   if ( bWarmteLink ) { // IF HEATLINK
     doc["conf"] = "p1-q";
