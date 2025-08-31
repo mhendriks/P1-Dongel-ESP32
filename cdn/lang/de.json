@@ -175,7 +175,7 @@
   "dict_sm_has_fase_info": "SM Has Fase Info (0=Nee, 1=Ja)",
   "dict_tlgrm_interval": "Telegram Leseintervall (Sek.)",
   "dict_telegraminterval": "Telegram Leseintervall (Sek.)",
-  "dict_index_page": "Zu verwendende index.html-Seite",
+  "dict_IndexPage": "Zu verwendende index.html-Seite",
   "dict_mqttbroker": "MQTT-Broker-IP/URL",
   "dict_mqtt_broker": "MQTT-Broker-IP/URL",
   "dict_mqttbrokerport": "MQTT Broker Port",
@@ -333,5 +333,10 @@
   "tip-P3min": "niedrigste Leistung in Phase 3 heute (negativ ist Rückkehr)",
   "tip-U1min": "niedrigste Spannung Phase 1 heute",
   "tip-U2min": "niedrigste Spannung Phase 2 heute",
-  "tip-U3min": "niedrigste Spannung Phase 3 heute"
+  "tip-U3min": "niedrigste Spannung Phase 3 heute",
+  "dict_mb_id":"Modbus ID",
+  "dict_mb_port":"Modbus Port",
+  "dict_mb_baud":"Modbus Baudrate",
+  "dict_mb_parity":"Modbus Parity",
+  "dict_mb_map":"Modbus Mapping"
 }

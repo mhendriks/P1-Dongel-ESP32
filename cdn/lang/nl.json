@@ -1,4 +1,9 @@
 {
+  "dict_mb_id":"Modbus ID",
+  "dict_mb_port":"Modbus Port (TCP)",
+  "dict_mb_baud":"Modbus Baudrate (RTU)",
+  "dict_mb_parity":"Modbus Parity (RTU)",
+  "dict_mb_map":"Modbus Mapping",
   "lbl-P1min": "Vermogen Dal L1",
   "lbl-P2min": "Vermogen Dal L2",
   "lbl-P3min": "Vermogen Dal L3",
@@ -187,7 +192,7 @@
   "dict_sm_has_fase_info": "SM Has Fase Info (0=Nee, 1=Ja)",
   "dict_tlgrm_interval": "Telegram Lees Interval (Sec.)",
   "dict_telegraminterval": "Telegram Lees Interval (Sec.)",
-  "dict_index_page": "Te Gebruiken index.html Pagina",
+  "dict_IndexPage": "Te Gebruiken index.html Pagina",
   "dict_mqttbroker": "MQTT Broker IP/URL",
   "dict_mqtt_broker": "MQTT Broker IP/URL",
   "dict_mqttbrokerport": "MQTT Broker Poort",
