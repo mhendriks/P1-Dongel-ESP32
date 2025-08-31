@@ -27,6 +27,37 @@ void JsonGas(){
   jsonDoc["gas_delivered_timestamp"]["value"] = gasDeliveredTimestamp;
 }
 
+int signalToEnum(const char* signal) {
+  if (strcmp(signal, "--") == 0) return 0;
+  if (strcmp(signal, "-") == 0)  return 1;
+  if (strcmp(signal, "0") == 0)  return 2;
+  if (strcmp(signal, "+") == 0)  return 3;
+  if (strcmp(signal, "++") == 0) return 4;
+  return -1; // ongeldige waarde
+}
+
+void JsonEIDplanner(){
+  
+  if ( StroomPlanData.size() == 0 ) { sendApiNoContent(); return;}
+
+  const char* timestamp = StroomPlanData["data"][0]["timestamp"];
+  if (timestamp && strlen(timestamp) < 13) {
+    DebugTln(F("Ongeldige of ontbrekende timestamp"));
+    sendApiNoContent();
+    return;
+  }
+
+  String data = "{\"h_start\":";
+  data += String((timestamp[11] - '0') * 10 + (timestamp[12] - '0')) + ",\"data\":[";
+  for (int i = 0; i < 14; i++ ){
+    if ( i > 0 ) data += ",";
+    data += String(signalToEnum(StroomPlanData["data"][i]["signal"]));
+  }
+  data += "]}";
+  DebugTf( "EIDPlanner json: %s\n", data.c_str() );
+  sendJsonBuffer( data.c_str() );
+}
+
 void JsonWater(){
 
   if ( !WtrMtr && !mbusWater ) return;  
@@ -181,8 +212,6 @@ struct buildJson {
 
 }; // buildjson{} 
  
-
-
 template <typename TSource>
 void sendJson(const TSource &doc) 
 {  
@@ -380,6 +409,11 @@ void sendApiNotFound() {
 
 } // sendApiNotFound()
 
+void sendApiNoContent() {
+  
+  httpServer.send(204, "application/json");  
+
+} // sendApiNoContent()
 
 //====================================================
 void handleSmApiField(){

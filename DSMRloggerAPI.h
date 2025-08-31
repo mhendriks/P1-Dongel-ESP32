@@ -10,7 +10,7 @@
 #ifndef _DSMRAPI_H
 #define _DSMRAPI_H
 
-//SDK 3.x.x
+// SDK 3.x.x
 #if ARDUINO_USB_CDC_ON_BOOT
   #define USBSerial HWCDCSerial
 #else
@@ -417,6 +417,8 @@ bool      bAutoUpdate = false;
 int8_t mb_rx  = -1;
 int8_t mb_tx  = -1;
 int8_t mb_rts = -1;
+
+JsonDocument StroomPlanData;
 
 #include "Debug.h"
 #include <ESPmDNS.h>  

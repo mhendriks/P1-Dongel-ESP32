@@ -76,7 +76,8 @@ void AutoDiscoverHA(){
 //#ifndef HEATLINK
   if ( ! bWarmteLink ) { // IF NO HEATLINK  
     SendAutoDiscoverHA("timestamp", "timestamp", "DSMR Last Update", "", "{{ strptime(value[:-1] + '-+0200' if value[12] == 'S' else value[:-1] + '-+0100', '%y%m%d%H%M%S-%z') }}","", "\"icon\": \"mdi:clock\",");
-    
+    SendAutoDiscoverHA("uptime", "duration", "Uptime", "", "","","");
+
     SendAutoDiscoverHA("power_delivered", "power", "Power Delivered", "W", "{{ value | round(3) * 1000 }}","measurement","");
     SendAutoDiscoverHA("power_returned" , "power", "Power Returned" , "W", "{{ value | round(3) * 1000 }}","measurement","");  
     

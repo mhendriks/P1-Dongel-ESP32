@@ -73,6 +73,7 @@ void setupFSexplorer() {
   httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){ auth(); handleSmApiField(); });
 
   httpServer.on("/eid/getclaim",[](){ auth(); EIDGetClaim(); });
+  httpServer.on("/eid/planner",[](){ auth(); JsonEIDplanner(); });
 #ifdef DEV_PAIRING
   httpServer.on("/pair",[](){ HandlePairing(); });
 #endif

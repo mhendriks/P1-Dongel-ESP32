@@ -36,6 +36,16 @@ BACKLOG
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
 
+4.16.0
+√ default modbus mapping reg 10 and 12 is filled with  T1 + T2 when not available from the P1 meter
+√ add: stroomplanner update interval
+- add: stroomplanner to dashboard
+- add: stroomplanner to p2p communication
+√ check interval ophalen stroomplanner gegevens (om het uur toch 2 intervallen extra)
+√ fix: virtual ip write otherwise it is lost by eache save
+√ add HA autodiscovery uptime config
+
+
 V6
 - mqtt 1 data and 1 vital json (with uptime)
 - HA mqtt autodiscovery for the new format
@@ -79,9 +89,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
-// #define ULTRA         //ultra (mini) dongle
-#define ETHERNET      //ethernet dongle
-#define ETH_P1EP          //ethernet pro+ dongle
+#define ULTRA         //ultra (mini) dongle
+// #define ETHERNET      //ethernet dongle
+// #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 

@@ -137,6 +137,10 @@ void writeSettings() {
   docw["pt_end_point"] = pt_end_point;
 #endif
 
+#ifdef VIRTUAL_P1
+  if ( strlen(virtual_p1_ip) )  docw["virtual_p1_ip"] = virtual_p1_ip;
+#endif  
+
   writeToJsonFile(docw, SettingsFile);
   
 } // writeSettings()
