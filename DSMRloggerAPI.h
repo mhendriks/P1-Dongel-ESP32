@@ -407,7 +407,7 @@ bool      bSendMQTT = false;
 bool      bMQTToverTLS = false;
 
 //update
-char      BaseOTAurl[45] = OTAURL;
+char      BaseOTAurl[45] = OTAURL OTAURL_PREFIX;
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;

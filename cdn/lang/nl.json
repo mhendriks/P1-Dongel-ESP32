@@ -1,4 +1,5 @@
 {
+  "dict_eid-planner":"EnergieID Stroomplanner",
   "dict_mb_id":"Modbus ID",
   "dict_mb_port":"Modbus Port (TCP)",
   "dict_mb_baud":"Modbus Baudrate (RTU)",
