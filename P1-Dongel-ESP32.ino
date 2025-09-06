@@ -44,7 +44,7 @@ BACKLOG
 √ check interval ophalen stroomplanner gegevens (om het uur toch 2 intervallen extra)
 √ fix: virtual ip write otherwise it is lost by eache save
 √ add HA autodiscovery uptime config
-
+- fix: FE meetstanden error
 
 V6
 - mqtt 1 data and 1 vital json (with uptime)
