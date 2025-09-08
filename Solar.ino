@@ -12,8 +12,8 @@ struct SolarPwrSystems {
   char    file_name[20];
 };
 
-SolarPwrSystems Enphase   = { false, "https://envoy/api/v1/production", "", 0, 0, 0, 0, 0,  60, 0, "/enphase.json"  }, SolarEdge = { false, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
-
+// SolarPwrSystems Enphase   = { false, "https://envoy/api/v1/production", "", 0, 0, 0, 0, 0,  60, 0, "/enphase.json"  }, SolarEdge = { false, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
+SolarPwrSystems Enphase   = { false, "https://envoy/ivp/pdm/energy", "", 0, 0, 0, 0, 0,  60, 0, "/enphase.json"  }, SolarEdge = { false, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
 void ReadSolarConfig( SolarSource src ){
   SolarPwrSystems* solarSystem = (src == ENPHASE ? &Enphase : &SolarEdge);
   
@@ -120,8 +120,12 @@ void GetSolarData( SolarSource src, bool forceUpdate ){
     solarSystem->Actual = solarDoc["i_pow_n"].as<int>();
     solarSystem->Daily  = (int) ((float)solarDoc["i_eday"] * 1000);
   } else {
-    solarSystem->Actual = (src == ENPHASE) ? solarDoc["wattsNow"].as<int>()       : solarDoc["overview"]["currentPower"]["power"].as<int>();
-    solarSystem->Daily  = (src == ENPHASE) ? solarDoc["wattHoursToday"].as<int>() : solarDoc["overview"]["lastDayData"]["energy"].as<int>();  
+    // solarSystem->Actual = (src == ENPHASE) ? solarDoc["wattsNow"].as<int>()       : solarDoc["overview"]["currentPower"]["power"].as<int>();
+    // solarSystem->Daily  = (src == ENPHASE) ? solarDoc["wattHoursToday"].as<int>() : solarDoc["overview"]["lastDayData"]["energy"].as<int>();  
+
+    solarSystem->Actual = (src == ENPHASE) ? solarDoc["production"]["pcu"]["wattsNow"].as<int>()       : solarDoc["overview"]["currentPower"]["power"].as<int>();
+    solarSystem->Daily  = (src == ENPHASE) ? solarDoc["production"]["pcu"]["wattHoursToday"].as<int>() : solarDoc["overview"]["lastDayData"]["energy"].as<int>();  
+
   }
   
 #ifdef DEBUG

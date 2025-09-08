@@ -51,7 +51,7 @@ const char *resetReasonsIDF[] PROGMEM = {
 void SetupWDT(){
   esp_task_wdt_deinit();
   esp_task_wdt_config_t cfg = {
-    .timeout_ms = 10000, //in 10sec default 
+    .timeout_ms = 15000, //in 15sec default 
     // .idle_core_mask = (1<<0) | (1<<1), //S3 watch idle core 0 & 1
     // .idle_core_mask = (1<<0), //C3 watch idle core 0 
     .idle_core_mask = 0, //idle core watch dog OFF
