@@ -36,6 +36,9 @@ BACKLOG
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
 
+4.15.11
+- todo: check behaviour with wrong wifi pw
+
 V6
 - mqtt 1 data and 1 vital json (with uptime)
 - HA mqtt autodiscovery for the new format
@@ -80,8 +83,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
 // #define ULTRA         //ultra (mini) dongle
-#define ETHERNET      //ethernet dongle
-#define ETH_P1EP          //ethernet pro+ dongle
+// #define ETHERNET      //ethernet dongle
+// #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 

@@ -58,6 +58,7 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   let IgnoreGas				= false 
   let Dongle_Config			= ""
   let eid_enabled			= false
+  let eid_planner_enabled	= false
   let pairing_enabled    	= false
   
   let locale 				= 'nl';  // standaard
@@ -398,7 +399,7 @@ function visibilityListener() {
 		PauseAPI=false;
 		openTab();
 // 		if ( activeTab == "bEID") getclaim();
-		break;      
+		break;
     default:
 		console.log("visibilityListener() - unknown visibiltyState");
   }
@@ -620,6 +621,62 @@ function ProcessEIDClaim(json){
 
 }
 
+function ProcessEIDPlanner(jsonData){
+	console.log("process EID Planner");
+// 	jsonData = {"h_start":21,"data":[1,1,1,1,2,2,2,2,2,1]}
+	
+	const kleurMapping = [
+	{ kleur: "red", tekst: "ZEER SLECHT MOMENT" },
+	{ kleur: "orange", tekst: "SLECHT MOMENT" },
+	{ kleur: "grey", tekst: "NEUTRAAL" },
+	{ kleur: "lightgreen", tekst: "GOED MOMENT" },
+	{ kleur: "green", tekst: "ZEER GOED MOMENT" },
+	];
+	
+	const huidigeUur = new Date().getHours();
+	const offset = Math.max(0, huidigeUur - jsonData.h_start);
+	const slicedData = jsonData.data.slice(offset, offset + 8);
+	
+	const container = document.getElementById("stroomplanner-hours");
+	const footer = document.getElementById("stroomplanner-footer");
+	
+	container.innerHTML = "";
+	footer.innerHTML = "";
+	
+	const eersteWaarde = slicedData[0];
+	const kleurClass = kleurMapping[eersteWaarde].kleur;
+	const tekstOmschrijving = kleurMapping[eersteWaarde].tekst;
+	
+	let duur = 1;
+	for (let i = 1; i < slicedData.length; i++) {
+	if (slicedData[i] === eersteWaarde) {
+	  duur++;
+	} else {
+	  break;
+	}
+	}
+	
+	const vanUur = jsonData.h_start + offset;
+	const totUur = (vanUur + duur) % 24;
+	
+	footer.innerHTML = `
+	<span class="dot ${kleurClass}"></span> 
+	Nu tot ${totUur}u: <strong>${tekstOmschrijving}</strong>
+	`;
+	
+	// fill hours 
+	slicedData.forEach((value, index) => {
+	const kleur = kleurMapping[value].kleur;
+	const uur = (jsonData.h_start + offset + index) % 24;
+	
+	const div = document.createElement("div");
+	div.className = `eid-hour ${kleur}`;
+	div.textContent = `${uur}u`;
+	container.appendChild(div);
+	});
+	
+}
+
 function getclaim(){
 	document.getElementById('status').innerHTML = "Status ophalen...";  	
 	objDAL.refreshEIDClaim();
@@ -671,6 +728,8 @@ function refreshDashboard(json){
 		}
 		if ( json.peak_pwr_last_q.value != "-" ) document.getElementById("dash_peak").style.display = "block";
 
+		//------- EID Planner
+		if ( eid_planner_enabled ) objDAL.refreshEIDPlanner();
 		
 		//-------Kwartierpiek
 		document.getElementById("peak_month").innerHTML = formatValue(json.highest_peak_pwr.value);
@@ -780,8 +839,8 @@ function refreshDashboard(json){
 		if (Dongle_Config != "p1-q") {
 
       //bereken verschillen afname, teruglevering en totaal
-      let nPA = json.energy_delivered_tariff1.value + json.energy_delivered_tariff2.value;
-      let nPI = json.energy_returned_tariff1.value  + json.energy_returned_tariff2.value;
+      let nPA = isNaN(json.energy_delivered_tariff1.value)? 0:json.energy_delivered_tariff1.value + isNaN(json.energy_delivered_tariff2.value)?0:json.energy_delivered_tariff2.value;
+      let nPI = isNaN(json.energy_returned_tariff1.value) ? 0:json.energy_returned_tariff1.value  + isNaN(json.energy_returned_tariff2.value) ?0:json.energy_returned_tariff2.value;
       Parra = calculateDifferences( nPA, hist_arrPa, 1);
       Parri = calculateDifferences( nPI, hist_arrPi, 1);
       for(let i=0;i<3;i++){ Parr[i]=Parra[i] - Parri[i]; }
@@ -1340,7 +1399,7 @@ function UpdateStart( msg ){
 	if ( msg && msg.split('=')[0] == "error") {
 		statusText.innerText = "Error: " + msg.split('=')[1];
 	} else {
-		statusText.innerText = "Update gestart...";
+		statusText.innerText = t(lbl_update_start);
 		progress = 0;
 		updateProgress();
 	}
@@ -1371,7 +1430,7 @@ function checkESPOnline() {
 		if ( update_reconnected ){
 			clearInterval(checkInterval);
 			progressBar.style.width = "100%";
-			statusText.innerText = "Update Done!";
+			statusText.innerText = t(lbl_update_done);
 		}
 	}, 2000); // Check elke 2 seconden
 }
@@ -2158,9 +2217,11 @@ function CopyTelegram(){
         "electr_netw_costs" in json ? electr_netw_costs = json.electr_netw_costs.value : electr_netw_costs = 0;
         "eid-enabled" in json ? eid_enabled = json["eid-enabled"]: eid_enabled = false;
         "dev-pairing" in json ? pairing_enabled = json["dev-pairing"]: pairing_enabled = false;
+        "eid-planner" in json ? eid_planner_enabled = json["eid-planner"]: eid_planner_enabled = false;
         "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
 
         if ( eid_enabled ) document.getElementById("bEid").style.display = "block"; else document.getElementById("bEid").style.display = "none";
+        if ( eid_planner_enabled ) document.getElementById("dash_eid").style.display = "flex"; else document.getElementById("dash_eid").style.display = "none";
         if ( pairing_enabled ) document.getElementById("bNRGM").style.display = "block"; else document.getElementById("bNRGM").style.display = "none";
                 
         gas_netw_costs = json.gas_netw_costs.value;

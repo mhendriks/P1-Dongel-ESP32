@@ -334,9 +334,13 @@
   "tip-U1min": "lägsta spänning fas 1 idag",
   "tip-U2min": "lägsta spänning fas 2 idag",
   "tip-U3min": "lägsta spänning fas 3 idag",
-  "dict_mb_id":"Modbus ID",
-  "dict_mb_port":"Modbus Port",
-  "dict_mb_baud":"Modbus Baudrate",
-  "dict_mb_parity":"Modbus Parity",
-  "dict_mb_map":"Modbus Mapping"
+  "dict_mb_id": "Modbus ID",
+  "dict_mb_port": "Modbus Port",
+  "dict_mb_baud": "Modbus Baudrate",
+  "dict_mb_parity": "Modbus Parity",
+  "dict_mb_map": "Modbus Mapping",
+  "lbl_update_start":"Update started...",
+  "lbl_update_done": "Update Done!",
+  "lbl_update_title":"Software Update",
+  "btn_update_close":"Close"
 }
