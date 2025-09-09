@@ -217,7 +217,7 @@ void SMCheckOnce(){
   DebugTf("mbusWater: %d\r\n",mbusWater);
   DebugTf("mbusGas: %d\r\n",mbusGas);
   ResetStats();
-  if ( !DSMRdata.voltage_l1_present && !DSMRdata.voltage_l2_present && !DSMRdata.voltage_l2_present ) bV5meter = false;
+  bV5meter = DSMRdata.voltage_l1_present || DSMRdata.voltage_l2_present || DSMRdata.voltage_l3_present;
 
 }
 //==================================================================================

@@ -65,8 +65,22 @@ std::map<uint16_t, ModbusMapping> mapping_default_2 = {
     { 4,  { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_delivered_tariff2_present && !bUseEtotals) ? DSMRdata.energy_delivered_tariff2.int_val() : NAN); }}},
     { 6,  { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_returned_tariff1_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff1.int_val() : NAN); }}},
     { 8,  { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_returned_tariff2_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff2.int_val() : NAN); }}},
-    { 10, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_delivered_total_present) ? DSMRdata.energy_delivered_total.int_val() : NAN); }}},
-    { 12, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_returned_total_present) ? DSMRdata.energy_returned_total.int_val() : NAN); }}},
+    { 10, { ModbusDataType::FLOAT, []() { 
+      return packF(
+        DSMRdata.energy_delivered_total_present 
+        ? DSMRdata.energy_delivered_total.int_val() 
+        :( (DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.int_val():0) + 
+           (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.int_val():0) )
+      ); 
+    }}},
+    { 12, { ModbusDataType::FLOAT, []() { 
+      return packF(
+        DSMRdata.energy_returned_total_present 
+        ? DSMRdata.energy_returned_total.int_val() 
+        : ( (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.int_val():0) + 
+            (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.int_val():0) ) 
+      );
+    }}},
     { 14, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_delivered_present) ? DSMRdata.power_delivered.int_val() : NAN); }}},
     { 16, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_returned_present) ? DSMRdata.power_returned.int_val() : NAN); }}},
     { 18, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_delivered_present) ? (DSMRdata.power_delivered.val() - DSMRdata.power_returned.val()) * 1000.0 : NAN); }}},

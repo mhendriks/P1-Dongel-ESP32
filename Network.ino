@@ -52,6 +52,8 @@ void GetMacAddress(){
 void PostMacIP() {
   HTTPClient http;
   http.begin(wifiClient, APIURL);
+  http.setConnectTimeout(4000);
+  http.setTimeout(5000);
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
   
   String httpRequestData = "mac=" + String(macStr) + "&ip=" + IP_Address() + "&version=" + _VERSION_ONLY;           
@@ -67,11 +69,11 @@ void PostMacIP() {
 }
 
 void WifiOff(){
-  if ( WiFi.isConnected() ) WiFi.disconnect(true,true);
+  if ( WiFi.isConnected() ) WiFi.disconnect(false,false);
   btStop();
   WiFi.mode(WIFI_OFF);
-  esp_wifi_stop();
-  esp_wifi_deinit();
+  // esp_wifi_stop();
+  // esp_wifi_deinit();
   WiFi.setSleep(true);
 }
 
