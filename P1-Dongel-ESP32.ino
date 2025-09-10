@@ -36,9 +36,6 @@ BACKLOG
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
 
-4.15.11
-- todo: check behaviour with wrong wifi pw
-
 V6
 - mqtt 1 data and 1 vital json (with uptime)
 - HA mqtt autodiscovery for the new format
