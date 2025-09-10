@@ -36,8 +36,6 @@ BACKLOG
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
 
-4.15.11
-- todo: check behaviour with wrong wifi pw
 
 4.16.0
 √ default modbus mapping reg 10 and 12 is filled with  T1 + T2 when not available from the P1 meter
@@ -48,7 +46,6 @@ BACKLOG
 √ fix: virtual ip write otherwise it is lost by eache save
 √ add HA autodiscovery uptime config
 - fix: FE meetstanden error
-
 
 V6
 - mqtt 1 data and 1 vital json (with uptime)

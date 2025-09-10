@@ -166,19 +166,17 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
 
 //gets called when WiFiManager enters configuration mode
 //===========================================================================================
-void configModeCallback (WiFiManager *myWiFiManager) 
-{
-  DebugTln(F("Entered config mode\r"));
+void configModeCallback (WiFiManager *myWiFiManager) {
+  DebugTln(F("Wifi Connection Failed -> Entered config mode\r"));
   DebugTln(WiFi.softAPIP().toString());
-  //if you used auto generated SSID, print it
   DebugTln(myWiFiManager->getConfigPortalSSID());
+  esp_task_wdt_reset();
 } // configModeCallback()
 
 //===========================================================================================
 #include <esp_wifi.h>
 
-void startWiFi(const char* hostname, int timeOut) 
-{  
+void startWiFi(const char* hostname, int timeOut) {  
 
 #if not defined ETHERNET || defined ULTRA
 #ifdef ULTRA
@@ -202,8 +200,6 @@ void startWiFi(const char* hostname, int timeOut)
   esp_wifi_set_ps(WIFI_PS_NONE); // IDF: forced NO modem-sleep
 
   WiFi.setHostname(hostname);
-  // WiFi.enableIPv6();
-//  WiFi.setMinSecurity(WIFI_AUTH_WEP);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   
   WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);  //to solve mesh issues 
@@ -212,7 +208,8 @@ void startWiFi(const char* hostname, int timeOut)
   WiFiManager manageWiFi;
   LogFile("Wifi Starting",true);
   SwitchLED( LED_OFF, LED_BLUE );  
-
+  
+  manageWiFi.setConnectTimeout(15);
   manageWiFi.setConfigPortalBlocking(false);
   manageWiFi.setDebugOutput(false);
   manageWiFi.setShowStaticFields(true); // force show static ip fields
@@ -221,19 +218,18 @@ void startWiFi(const char* hostname, int timeOut)
   manageWiFi.setScanDispPerc(true); // display percentages instead of graphs for RSSI
   //  manageWiFi.setWiFiAutoReconnect(true); //buggy
 
-  //add custom html at inside <head> for all pages -> show pasessword function
   manageWiFi.setClass("invert"); //dark theme
   
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
   manageWiFi.setAPCallback(configModeCallback);
-
-  // manageWiFi.setTimeout(timeOut);  // in seconden ...
   manageWiFi.setConfigPortalTimeout(timeOut); //config portal timeout in seconds
+  
+  esp_task_wdt_reset();
   manageWiFi.autoConnect(_HOTSPOT);
 
-  //handle wifi webinterface timeout and connection (timeOut in sec)
+  //handle wifi webinterface timeout and connection (timeOut in sec) timeout in 30 sec
   uint16_t i = 0;
-  while ( (i++ < timeOut*15) && (netw_state == NW_NONE) && !bEthUsage ){
+  while ( (i++ < 3000) && (netw_state == NW_NONE) && !bEthUsage ) {
     Debug("*");
     delay(100);
     manageWiFi.process();
