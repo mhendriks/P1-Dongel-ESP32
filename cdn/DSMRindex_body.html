@@ -696,6 +696,14 @@
     <h3 id=w8api style="margin-top:50%" data-i18n-key="lbl-sm-data-wait">Wacht op gegevens van Slimme Meter</h3>
     <div class=outer id="inner-dash" style="display:none">
 
+        <div class=card id=dash_eid style="display:none;">
+            <h1 id=dash_eid_h style="background:green;"><span class="iconify" data-icon="mdi-calendar-check"></span><span data-i18n-key="dsh-eid">Stroomplanner<span></h1>
+		  <div id=eid-info>Vind de ideale momenten om stroom te verbruiken.</div>
+		  <div id="stroomplanner-hours"></div>
+		  <div id=eid-powered>Powered by: <a href="https://www.energyid.eu/nl/" target="_blank"><img src="https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@master/cdn/assets/eid.png" alt="EnergyID"></a></div>
+		  <div id="stroomplanner-footer"></div>
+        </div>
+
         <a href="#ActualTab" style="display:flex">
         <div class=card id=l1 style="display:block">
 			<h1 id=power_delivered_l1h><span class="iconify" data-icon="mdi-gauge"></span><span data-i18n-key="dsh-actual">Actueel</span></h1>
@@ -854,12 +862,12 @@
   <div id="update">
      <div class="overlay" id="updatePopup">
         <div class="popup">
-            <h2>Software Update</h2>
+            <h2 data-i18n-key="lbl_update_title">Software Update</h2>
             <div class="progress">
                 <div class="progress-bar" id="progressBar"></div>
             </div>
             <p id="updatestatus"></p>
-            <button onclick="closeUpdate()">Sluiten</button>
+            <button onclick="closeUpdate()" data-i18n-key="btn_update_close">Sluiten</button>
         </div>
     </div>  </div> <!-- update -->
   </div>

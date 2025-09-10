@@ -12,6 +12,7 @@ const UPDATE_HIST 		= DEBUG ? 1000 * 10 : 1000 * 300;
 const UPDATE_ACTUAL 	= DEBUG ? 1000 * 5 	: 1000 * 5;
 const UPDATE_SOLAR		= DEBUG ? 1000 * 30 : 1000 * 60;
 const UPDATE_ACCU		= DEBUG ? 1000 * 30 : 1000 * 60;
+const UPDATE_PLAN		= DEBUG ? 1000 * 10 : 1000 * 60;
 	
 if (!DEBUG) {	//production
   	console.log = function () {};
@@ -33,6 +34,7 @@ const URL_SOLAR				= APIGW + "v2/gen";
 const URL_ACCU				= APIGW + "v2/accu";
 const URL_INSIGHTS			= APIGW + "v2/stats";
 const URL_EID_CLAIM			= "/eid/getclaim";
+const URL_EID_PLAN			= "/eid/planner";
 const URL_NETSWITCH			= "/netswitch.json";
 const URL_VERSION_MANIFEST 	= "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
 
@@ -63,6 +65,7 @@ let objDAL 					= null;
 	  this.hours=[];
 	  this.eid_claim=[];
 	  this.netswitch=[];
+	  this.eid_planner=[];
       this.actual_history = [];
       this.timerREFRESH_TIME = 0;
       this.timerREFRESH_HIST = 0;
@@ -71,6 +74,7 @@ let objDAL 					= null;
 	  this.timerREFRESH_MANIFEST = 0; 
 	  this.timerREFRESH_SOLAR = 0;  	    
 	  this.timerREFRESH_ACCU = 0;  
+	  this.timerREFRESH_EIDPLAN = 0;  	  
       this.callback=null;
       }
   
@@ -117,6 +121,18 @@ let objDAL 					= null;
 // 	  this.refreshFields(); //always called in initial call (dashboard)
 
     } 
+	
+	refreshEIDPlanner(){
+		console.log("DAL::refreshEIDPlanner");
+		clearInterval(this.timerREFRESH_EIDPLAN);
+      	this.fetchDataJSON( URL_EID_PLAN, this.parseEIDplan.bind(this));
+      	this.timerREFRESH_EIDPLAN = setInterval(this.refreshEIDPlanner.bind(this), UPDATE_PLAN);
+	}
+	
+	parseEIDplan(json){
+		this.eid_planner = json;
+		this.callback?.('eid_planner', json);
+	}
 	
 	refreshHist()
 	{
@@ -399,6 +415,7 @@ function updateFromDAL(source, json)
 	case "fields": SetOnSettings(json); if (activeTab=="bDashTab") refreshDashboard(json);else parseSmFields(json); break;
 	case "telegram": document.getElementById("TelData").textContent = json; break;
 	case "eid_claim":ProcessEIDClaim(json); break;
+	case "eid_planner":ProcessEIDPlanner(json); break;
 	case "netswitch": refreshNetSwitch(json);break;
     default:
       console.error("missing handler; source="+source);

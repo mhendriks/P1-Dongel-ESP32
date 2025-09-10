@@ -102,6 +102,9 @@ void RemoteUpdate(const char* versie, bool sketch){
   path = String(BaseOTAurl) + otaFile;
 #endif
 
+  //TEST esphome install via webinterface
+  // if ( _versie == "esphome") path = "http://ota.smart-stuff.nl/esphome/nrgd.factory.bin";
+  
   Debugf("OTA versie: %s | flashsize: %i Mb\n", _versie.c_str(), flashSize);
   Debugln("OTA path: " + path);
 
