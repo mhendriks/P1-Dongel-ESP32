@@ -1,4 +1,5 @@
 {
+  "lbl_update_wait":"Wait on reboot...",
   "lbl_update_start":"Update gestart...",
   "lbl_update_done": "Update Done!",
   "lbl_update_title":"Software Update",

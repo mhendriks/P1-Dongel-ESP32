@@ -3,6 +3,7 @@
   "lbl_update_done": "Update Done!",
   "lbl_update_title":"Software Update",
   "btn_update_close":"Close",
+  "lbl_update_wait":"Wait on reboot...",
   "lbl-beta-fwversion": "Beta Firmware",
   "lbl-install": "Install",
   "lbl-accu-status": "Status: ",

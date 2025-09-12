@@ -839,8 +839,8 @@ function refreshDashboard(json){
 		if (Dongle_Config != "p1-q") {
 
       //bereken verschillen afname, teruglevering en totaal
-      let nPA = isNaN(json.energy_delivered_tariff1.value)? 0:json.energy_delivered_tariff1.value + isNaN(json.energy_delivered_tariff2.value)?0:json.energy_delivered_tariff2.value;
-      let nPI = isNaN(json.energy_returned_tariff1.value) ? 0:json.energy_returned_tariff1.value  + isNaN(json.energy_returned_tariff2.value) ?0:json.energy_returned_tariff2.value;
+      let nPA = (isNaN(json.energy_delivered_tariff1.value)? 0:json.energy_delivered_tariff1.value) + (isNaN(json.energy_delivered_tariff2.value)?0:json.energy_delivered_tariff2.value);
+      let nPI = (isNaN(json.energy_returned_tariff1.value) ? 0:json.energy_returned_tariff1.value)  + (isNaN(json.energy_returned_tariff2.value) ?0:json.energy_returned_tariff2.value);
       Parra = calculateDifferences( nPA, hist_arrPa, 1);
       Parri = calculateDifferences( nPI, hist_arrPi, 1);
       for(let i=0;i<3;i++){ Parr[i]=Parra[i] - Parri[i]; }
@@ -1386,20 +1386,20 @@ function closeUpdate() {
 }    
 
 let progress = 0;
-let progressBar, statusText, checkInterval, update_interval; 
+let progressBar, checkInterval, update_interval; 
 
 function UpdateStart( msg ){
-	console.log("Updatestatus msg: " + msg );
+// 	console.log("Updatestatus msg: " + msg );
 // 	console.log("Updatestatus error: " + msg.split('=')[1] );
 
 	document.getElementById("updatePopup").style.visibility = "visible";
 	progressBar = document.getElementById("progressBar");
-	statusText = document.getElementById("updatestatus");
-	
-	if ( msg && msg.split('=')[0] == "error") {
-		statusText.innerText = "Error: " + msg.split('=')[1];
+  	
+  	const [type, detail] = String(msg || '').split('=', 2);
+
+	if (type === "error") {
+		document.getElementById("updatestatus").innerText = "Error: " + (detail || "");
 	} else {
-		statusText.innerText = t(lbl_update_start);
 		progress = 0;
 		updateProgress();
 	}
@@ -1411,28 +1411,33 @@ function RemoteUpdate(type) {
 }
 
 function updateProgress() {
-	 update_interval = setInterval(() => {
-		if (progress < 90) {
-			progress += 5; // 18 seconden naar 90%
-			progressBar.style.width = progress + "%";
-		} else {
-			clearInterval(update_interval);
-			checkESPOnline(); // Start controle ESP32 na 90%
-		}
-	}, 1000);
+  if (update_interval) clearInterval(update_interval);
+  update_interval = setInterval(() => {
+    if (progress < 90) {
+      progress += 5;
+      progressBar.style.width = progress + "%";
+	  document.getElementById("updatestatus").innerText = t("lbl_update_start");
+    } else {
+      clearInterval(update_interval);
+      update_interval = null;
+      checkESPOnline();
+    }
+  }, 1000);
 }
 
 function checkESPOnline() {
-	statusText.innerText = "Wait on reboot...";
-	update_reconnected = false;
-	checkInterval = setInterval(() => {
-		objDAL.refreshTime();
-		if ( update_reconnected ){
-			clearInterval(checkInterval);
-			progressBar.style.width = "100%";
-			statusText.innerText = t(lbl_update_done);
-		}
-	}, 2000); // Check elke 2 seconden
+  document.getElementById("updatestatus").innerText = t("lbl_update_wait");
+  update_reconnected = false;
+  if (checkInterval) clearInterval(checkInterval);
+  checkInterval = setInterval(() => {
+    objDAL.refreshTime(); // ergens anders zet je update_reconnected = true
+    if (update_reconnected) {
+      clearInterval(checkInterval);
+      checkInterval = null;
+      progressBar.style.width = "100%";
+      document.getElementById("updatestatus").innerText = t("lbl_update_done");
+    }
+  }, 2000);
 }
   
   //get new devinfo==============================================================  
