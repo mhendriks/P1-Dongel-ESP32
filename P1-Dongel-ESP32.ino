@@ -37,7 +37,7 @@ BACKLOG
 - hostname aanpassen met laatste 3 segmenten mac-adres
 
 4.15.14
-- fix wifi reconnect (thanks Leo and ... for the hint)
+- fix wifi reconnect (thanks Leo and ... for the hint) -> SDK 3.2.1 resolved the issue
 
 V6
 - mqtt 1 data and 1 vital json (with uptime)

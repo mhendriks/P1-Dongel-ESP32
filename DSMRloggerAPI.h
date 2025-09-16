@@ -66,8 +66,8 @@ void P1Reboot();
 WebServer httpServer(80);
 NetServer ws_raw(82);
 
-time_t tWifiLost        = 0;
-byte  WifiReconnect     = 0;
+// time_t tWifiLost        = 0;
+// byte  WifiReconnect     = 0;
 IPAddress staticIP, gateway, subnet, dns;
 bool bFixedIP = false;
 

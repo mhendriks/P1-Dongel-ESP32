@@ -20,6 +20,7 @@
   #define ETH_TYPE            ETH_PHY_W5500
   #define ETH_RST            -1
   #define ETH_ADDR            1
+  
 
   //workaround to use the ESP_MAC_ETH mac address instead of local mac address
   class EthernetClass {
@@ -127,14 +128,14 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
         LogFile(cMsg, true);
-//        tWifiLost = 0;
+      //  tWifiLost = 0;
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: //7
         LogFile("Wifi Connected",true);
         SwitchLED( LED_ON, LED_BLUE );
         Debug (F("IP address: " ));  Debug (WiFi.localIP());
         Debug(" )\n\n");
-        WifiReconnect = 0;
+        // WifiReconnect = 0;
         if ( bEthUsage ) WifiOff();        
         else {
           enterPowerDownMode(); //disable ETH
@@ -143,10 +144,8 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
         bNoNetworkConn = false;
         break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-        tWifiLost = millis();
         if ( netw_state != NW_ETH ) netw_state = NW_NONE;
-        if ( !bNoNetworkConn ) LogFile("Wifi connection lost",true);
-        bNoNetworkConn = true;
+        if ( !bNoNetworkConn ) LogFile("Wifi connection lost - LOST IP",true); //only once
         break;           
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: //5
 #ifdef ULTRA
@@ -154,7 +153,8 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
 #else
         SwitchLED( LED_OFF, LED_BLUE );
 #endif      
-        if ( !bNoNetworkConn ) LogFile("Wifi connection lost",true);
+        if ( !bNoNetworkConn ) LogFile("Wifi connection lost - DISCONNECTED",true); //only once
+        // tWifiLost = millis();
         bNoNetworkConn = true;
         break;
     default:
@@ -163,6 +163,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
         break;
     }
 }
+
 
 //gets called when WiFiManager enters configuration mode
 //===========================================================================================
