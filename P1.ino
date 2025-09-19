@@ -402,10 +402,6 @@ void ResetStats(){
   P1Stats.StartTime = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), false);
 }
 
-// unsigned long overspanningL1 = 0;
-// unsigned long overspanningL2 = 0;
-// unsigned long overspanningL3 = 0;
-
 unsigned long startTijdL1 = 0;
 unsigned long startTijdL2 = 0;
 unsigned long startTijdL3 = 0;
