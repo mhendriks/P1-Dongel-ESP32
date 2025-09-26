@@ -399,27 +399,37 @@ void updateSetting(const char *field, const char *newValue)
   
 } // updateSetting()
 
+//bugfix file size append sdk 3.3.1
+size_t fileSizeOf(const char* path) {
+  struct stat st;
+  if (stat(path, &st) == 0) return (size_t)st.st_size;
+  return 0; // not found or error
+}
+
 //=======================================================================
 void LogFile(const char* payload, bool toDebug) {
   if (toDebug) DebugTln(payload);
   if (!FSmounted) return;
+  // File LogFile = LittleFS.open("/P1.log", "r"); // open for read  - bugfix sdk 3.3.1 
+  size_t size = fileSizeOf("/littlefs/P1.log");
+  Debug("filesizeof: ");Debugln(size); 
+
+  //log rotate
+  if (size > 12000){ 
+    LittleFS.remove("/P1_old.log");     //remove .log if existing 
+    LittleFS.remove("/P1_log.old");     //remove .old if existing 
+    //rename file
+    DebugTln(F("RebootLog: log rotation"));
+    LittleFS.rename("/P1.log", "/P1_old.log");
+  }
+
+  //appending
   File LogFile = LittleFS.open("/P1.log", "a"); // open for appending  
   if (!LogFile) {
     DebugTln(F("open P1.log FAILED!!!--> Bailout\r\n"));
     LogFile.close(); 
     return;
   }
-  //log rotate
-  if (LogFile.size() > 12000){ 
-//    DebugT(F("LogFile filesize: "));Debugln(RebootFile.size());
-    LittleFS.remove("/P1_old.log");     //remove .old if existing 
-    LittleFS.remove("/P1_log.old");     //remove .old if existing 
-    //rename file
-    DebugTln(F("RebootLog: rename file"));
-    LogFile.close(); 
-    LittleFS.rename("/P1.log", "/P1_old.log");
-    LogFile = LittleFS.open("/P1.log", "a"); // open for appending  
-    }
     
     String log_payload = "{\"up\":";
     log_payload += String(uptime());

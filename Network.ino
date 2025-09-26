@@ -11,6 +11,7 @@
 */
 
 #include "DSMRloggerAPI.h"
+#include "esp_timer.h"
 
 #ifdef ETHERNET
   #include <ETH.h>
@@ -34,6 +35,13 @@
 
   EthernetClass myEthernet;
 #endif
+
+//int WifiDisconnect = 0;
+bool bNoNetworkConn = false;
+bool bEthUsage = false;
+static esp_timer_handle_t s_reconnTimer = nullptr;
+
+static void scheduleReconnect(uint32_t delayMs); // fwd
 
 void GetMacAddress(){
 
@@ -78,9 +86,22 @@ void WifiOff(){
   WiFi.setSleep(true);
 }
 
-//int WifiDisconnect = 0;
-bool bNoNetworkConn = false;
-bool bEthUsage = false;
+static inline bool isAuthError(uint8_t reason)
+{
+  // Enum is wifi_err_reason_t (esp_wifi_types.h). Niet alle borden hebben dezelfde set,
+  // dus houd 'm iets breder:
+  switch (reason) {
+    case WIFI_REASON_AUTH_EXPIRE:             // 2
+    case WIFI_REASON_AUTH_FAIL:               // (ESP-IDF nieuwe naam, bij sommige cores is dit 202)
+    case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:  // 15
+    case WIFI_REASON_HANDSHAKE_TIMEOUT:       // alias op sommige targets
+    case WIFI_REASON_NOT_AUTHED:              // 6
+    case WIFI_REASON_ASSOC_FAIL:              // 18 (kan ook auth-gerelateerd zijn)
+      return true;
+    default:
+      return false;
+  }
+}
 
 // Network event -> Ethernet is dominant
 // https://github.com/espressif/arduino-esp32/blob/master/libraries/Network/src/NetworkEvents.h
@@ -118,7 +139,6 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     case ARDUINO_EVENT_ETH_STOP: //2
       DebugTln("!!! ETH Stopped");
     case ARDUINO_EVENT_ETH_DISCONNECTED: //4
-      // if ( Update.isRunning() ) Update.abort();
       if ( netw_state != NW_WIFI ) netw_state = NW_NONE;
       SwitchLED( LED_ON , LED_RED );
       LogFile("ETH Disconnected", true);
@@ -133,30 +153,45 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: //7
         LogFile("Wifi Connected",true);
         SwitchLED( LED_ON, LED_BLUE );
-        Debug (F("IP address: " ));  Debug (WiFi.localIP());
-        Debug(" )\n\n");
-        // WifiReconnect = 0;
+        Debug (F("IP address: " ));  Debug (WiFi.localIP());Debug(" )\n\n");
+
         if ( bEthUsage ) WifiOff();        
         else {
           enterPowerDownMode(); //disable ETH
           netw_state = NW_WIFI;
         }
+        
         bNoNetworkConn = false;
         break;
+    case ARDUINO_EVENT_WIFI_STA_STOP: //8
+      // Voor de zekerheid: driver soms stopt STA → start ’m weer
+      LogFile("Wifi STA stopped-> restart",true);
+      esp_wifi_start(); // idempotent als al gestart
+      break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP:
         if ( netw_state != NW_ETH ) netw_state = NW_NONE;
         if ( !bNoNetworkConn ) LogFile("Wifi connection lost - LOST IP",true); //only once
         break;           
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: //5
-#ifdef ULTRA
-        if ( netw_state != NW_ETH ) SwitchLED( LED_ON, LED_RED );
-#else
-        SwitchLED( LED_OFF, LED_BLUE );
-#endif      
-        if ( !bNoNetworkConn ) LogFile("Wifi connection lost - DISCONNECTED",true); //only once
-        // tWifiLost = millis();
+      {
+        #ifdef ULTRA
+          if ( netw_state != NW_ETH ) SwitchLED( LED_ON, LED_RED );
+        #else
+          SwitchLED( LED_OFF, LED_BLUE );
+        #endif      
+        uint8_t reason = info.wifi_sta_disconnected.reason;
+        String discon_res = "Wifi connection lost - DISCONNECTED | reason: " + String(reason);
+        // if ( !bNoNetworkConn ) LogFile("Wifi connection lost - DISCONNECTED",true); //only once
+        LogFile(discon_res.c_str(),true); //every time
+              
         bNoNetworkConn = true;
+
+        if (reason == WIFI_REASON_ASSOC_LEAVE /*8*/ || reason == WIFI_REASON_END_BA /*37*/){
+          esp_wifi_start();
+          esp_wifi_connect();
+        }
         break;
+        }
     default:
         sprintf(cMsg,"Network-event : %d | reason: %d| rssi: %d | channel : %i",event, info.wifi_sta_disconnected.reason, WiFi.RSSI(), WiFi.channel());
         LogFile(cMsg, true);
