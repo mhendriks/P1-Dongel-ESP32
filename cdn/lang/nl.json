@@ -1,5 +1,10 @@
 {
   "dict_eid-planner":"EnergieID Stroomplanner",
+  "lbl_update_wait":"Wait on reboot...",
+  "lbl_update_start":"Update gestart...",
+  "lbl_update_done": "Update Done!",
+  "lbl_update_title":"Software Update",
+  "btn_update_close":"Sluiten",
   "dict_mb_id":"Modbus ID",
   "dict_mb_port":"Modbus Port (TCP)",
   "dict_mb_baud":"Modbus Baudrate (RTU)",

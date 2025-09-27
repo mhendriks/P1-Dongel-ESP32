@@ -98,12 +98,9 @@ static void onNetworkEvent (WiFiEvent_t event) {
         bEthUsage = true; //set only once 
         SwitchLED( LED_ON, LED_BLUE ); //Ethernet available = RGB LED Blue
         // tLastConnect = 0;
+        bNoNetworkConn = false;
         break;
-      }
-    // case ARDUINO_EVENT_ETH_LOST_IP: //6 not available in SDK 2.x
-    //   DebugTln("!!! ETH Lost IP");
-    //   netw_connected = false;
-    //   break;
+      } 
     case ARDUINO_EVENT_ETH_STOP: //2
       DebugTln("!!! ETH Stopped");
     case ARDUINO_EVENT_ETH_DISCONNECTED: //4
@@ -111,6 +108,7 @@ static void onNetworkEvent (WiFiEvent_t event) {
       if ( netw_state != NW_WIFI ) netw_state = NW_NONE;
       SwitchLED( LED_ON , LED_RED );
       LogFile("ETH Disconnected", true);
+      bNoNetworkConn = true;
       break;
 #endif //ETHERNET
 //WIFI
