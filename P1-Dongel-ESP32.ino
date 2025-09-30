@@ -36,19 +36,6 @@ BACKLOG
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
 
-4.15.14
-- fix wifi reconnect -> SDK issue when second disconnect take place 
-- change europe ntp pool to nl/de/be
-- fix filesize on append bug 3.3.1
-
-V6
-- mqtt 1 data and 1 vital json (with uptime)
-- HA mqtt autodiscovery for the new format
-- async webserver 
-- RNGDays 31 days
-- autodetect v2 meters
-- connect via proxy to dongle
-
 Default checks
 - wifi
 - port 82
@@ -80,14 +67,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
 // #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
-#define NRG_DONGLE 
+// #define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
 //SPECIAL

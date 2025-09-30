@@ -86,20 +86,20 @@ void IRAM_ATTR dtr_out_int() {
 void SetupP1Out(){
   if ( !P1Out ) return; 
   //setup ports
-  pinMode(O1_DTR_IO, INPUT);
-  if ( P1_LED != -1 ) {
-    pinMode(P1_LED, OUTPUT);
+  pinMode(DTR_out, INPUT);
+  if ( LED_out != -1 ) {
+    pinMode(LED_out, OUTPUT);
   
     //hello world lights
-    digitalWrite(P1_LED, HIGH); //inverse
+    digitalWrite(LED_out, HIGH); //inverse
     delay(500);
-    digitalWrite(P1_LED, LOW); //inverse
+    digitalWrite(LED_out, LOW); //inverse
   }
     //detect DTR changes
-  attachInterrupt( O1_DTR_IO , dtr_out_int, RISING);
+  attachInterrupt( DTR_out , dtr_out_int, RISING);
       
   //initial host dtr when p1 device is connected before power up the bridge
-  if ( digitalRead(O1_DTR_IO) == HIGH ) SetDTR(true);
+  if ( digitalRead(DTR_out) == HIGH ) SetDTR(true);
 
   // Serial.begin(115200, SERIAL_8N1, -1, TXO1, false);
 
@@ -110,12 +110,12 @@ void SetupP1Out(){
 void P1OutBridge(){
   if ( P1Out && dtr1 && Out1Avail ) {
 
-    if ( P1_LED >= 0 ) digitalWrite(P1_LED, HIGH);
+    if ( LED_out >= 0 ) digitalWrite(LED_out, HIGH);
     Serial1.println(CapTelegram);
     Serial1.flush();
     Out1Avail = false; 
-    if ( digitalRead(O1_DTR_IO) == LOW ) SetDTR(false);
-    if ( P1_LED >= 0 ) digitalWrite(P1_LED, LOW);
+    if ( digitalRead(DTR_out) == LOW ) SetDTR(false);
+    if ( LED_out >= 0 ) digitalWrite(LED_out, LOW);
   }
 } 
 

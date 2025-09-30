@@ -40,6 +40,61 @@
 bool bNoNetworkConn = false;
 bool bEthUsage = false;
 static esp_timer_handle_t s_reconnTimer = nullptr;
+static bool     s_authBlocked = false;
+static uint32_t s_lastKickMs  = 0;
+static const uint32_t KICK_DEBOUNCE_MS = 1500;
+
+static inline bool isCoreReconnectable(uint8_t r){
+  switch (r) {
+    case WIFI_REASON_UNSPECIFIED:
+    // timeouts (retry)
+    case WIFI_REASON_AUTH_EXPIRE:
+    case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:
+    case WIFI_REASON_GROUP_KEY_UPDATE_TIMEOUT:
+    case WIFI_REASON_802_1X_AUTH_FAILED:     // enterprise: core probeert nog
+    case WIFI_REASON_HANDSHAKE_TIMEOUT:
+    // transient (reconnect)
+    case WIFI_REASON_AUTH_LEAVE:
+    case WIFI_REASON_ASSOC_EXPIRE:
+    case WIFI_REASON_ASSOC_TOOMANY:
+    case WIFI_REASON_NOT_AUTHED:
+    case WIFI_REASON_NOT_ASSOCED:
+    case WIFI_REASON_ASSOC_NOT_AUTHED:
+    case WIFI_REASON_MIC_FAILURE:
+    case WIFI_REASON_IE_IN_4WAY_DIFFERS:
+    case WIFI_REASON_INVALID_PMKID:
+    case WIFI_REASON_BEACON_TIMEOUT:         // 200
+    case WIFI_REASON_NO_AP_FOUND:            // 201
+    case WIFI_REASON_ASSOC_FAIL:
+    case WIFI_REASON_CONNECTION_FAIL:
+    case WIFI_REASON_AP_TSF_RESET:
+    case WIFI_REASON_ROAMING:
+      return true;
+    default:
+      return false;
+  }
+}
+
+WiFiManager manageWiFi;
+
+// Echte “fatal auth” (verkeerd wachtwoord) → blokkeer tot user ingrijpt
+static inline bool isAuthFatal(uint8_t r){
+  switch (r) {
+    case WIFI_REASON_AUTH_FAIL:            // 202 op veel targets
+    case WIFI_REASON_INVALID_PMKID:        // vaak ook definitief fout
+      return true;
+    default:
+      return false;
+  }
+}
+
+static void kickOnce(){
+  uint32_t now = millis();
+  if (now - s_lastKickMs < KICK_DEBOUNCE_MS) return;
+  esp_wifi_start();                 // idempotent; start STA als die gestopt is
+  esp_wifi_connect();               // als driver al bezig is → ESP_ERR_WIFI_CONN
+  s_lastKickMs = now;
+}
 
 static void scheduleReconnect(uint32_t delayMs); // fwd
 
@@ -145,6 +200,10 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       break;
 #endif //ETHERNET
 //WIFI
+    case ARDUINO_EVENT_WIFI_STA_START: //110
+      // initial nudge (soms is begin() traag met eerste connect)
+      if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
+      break;
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
         LogFile(cMsg, true);
@@ -160,7 +219,8 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
           enterPowerDownMode(); //disable ETH
           netw_state = NW_WIFI;
         }
-        
+        s_authBlocked = false;
+        s_lastKickMs = 0;               // reset voor snelle roam
         bNoNetworkConn = false;
         break;
     case ARDUINO_EVENT_WIFI_STA_STOP: //8
@@ -168,7 +228,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       LogFile("Wifi STA stopped-> restart",true);
       esp_wifi_start(); // idempotent als al gestart
       break;
-    case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+    case ARDUINO_EVENT_WIFI_STA_LOST_IP: //117
         if ( netw_state != NW_ETH ) netw_state = NW_NONE;
         if ( !bNoNetworkConn ) LogFile("Wifi connection lost - LOST IP",true); //only once
         break;           
@@ -186,10 +246,29 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
               
         bNoNetworkConn = true;
 
-        if (reason == WIFI_REASON_ASSOC_LEAVE /*8*/ || reason == WIFI_REASON_END_BA /*37*/){
-          esp_wifi_start();
-          esp_wifi_connect();
-        }
+        if (isAuthFatal(reason)) {
+        s_authBlocked = true;
+        // hier evt: WiFi.disconnect(true,true); startPortal();
+        return;                       // niets forceren
+      }
+      s_authBlocked = false;
+
+      if (reason == WIFI_REASON_ASSOC_LEAVE /*8*/) {
+        // Bekende “stilte”-case: STA valt stil → start & één kick
+        esp_wifi_start();
+        kickOnce();
+        return;
+      }
+
+      if (isCoreReconnectable(reason)) {
+        // Laat de core z’n autoretry doen; niets extra’s om dubbelwerk te vermijden
+        return;
+      }
+
+      // Rest: core retryt niet → help een handje (rate-limited)
+      
+      if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
+      else Debugln("config portal active - no kickonce");
         break;
         }
     default:
@@ -241,7 +320,6 @@ void startWiFi(const char* hostname, int timeOut) {
   WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);  //to solve mesh issues 
   WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);      //to solve mesh issues 
   if ( bFixedIP ) WiFi.config(staticIP, gateway, subnet, dns);
-  WiFiManager manageWiFi;
   LogFile("Wifi Starting",true);
   SwitchLED( LED_OFF, LED_BLUE );  
   
@@ -273,11 +351,12 @@ void startWiFi(const char* hostname, int timeOut) {
     SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE); //fast blinking
   }
   Debugln();
+  manageWiFi.stopWebPortal();
+
   if ( netw_state == NW_NONE && !bEthUsage ) {
     LogFile("reboot: Wifi failed to connect and hit timeout",true);
     P1Reboot(); //timeout 
   }
-  manageWiFi.stopWebPortal();
   if ( netw_state == NW_ETH || bEthUsage ) {
     WifiOff();
     delay(500);
@@ -384,6 +463,8 @@ void startMDNS(const char *Hostname)
 
 #ifdef ETHERNET
 
+byte cs = CS_GPIO;
+
 void startETH(){
   
   //derive ETH mac address
@@ -391,19 +472,24 @@ void startETH(){
   esp_read_mac(mac_eth, ESP_MAC_ETH);
   
   // ETH.enableIPv6();
-  myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, CS_GPIO, INT_GPIO, ETH_RST, NULL, SCK_GPIO, MISO_GPIO, MOSI_GPIO, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
+  if ( HardwareType == P1UX2 ) {
+    myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, 13, 18, ETH_RST, NULL, 14, 15, 16, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
+    cs = 13;
+  }
+  else myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, CS_GPIO, INT_GPIO, ETH_RST, NULL, SCK_GPIO, MISO_GPIO, MOSI_GPIO, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
 
 }
 
 void W5500_Read_PHYCFGR() {
-    digitalWrite(CS_GPIO, LOW);
+    // byte cs = CS_GPIO;
+    digitalWrite(cs, LOW);
 
     // Stuur het PHYCFGR-adres met het "read" bit (bit 15 = 1)
     SPI.transfer16(0x802E); // 0x802E = 0x002E met "read" bit ingesteld
     uint8_t phycfgr = SPI.transfer(0x00); // Ontvang data
 
-    digitalWrite(CS_GPIO, HIGH);
+    digitalWrite(cs, HIGH);
 
 #ifdef DEBUG
     // Print registerwaarde en status
@@ -423,12 +509,12 @@ void enterPowerDownMode() {
   // Select the W5500 chip
   W5500_Read_PHYCFGR();
 
-  digitalWrite(CS_GPIO, LOW);
+  digitalWrite(cs, LOW);
   SPI.transfer((0x002E >> 8) & 0x7F); // Upper address byte
   SPI.transfer(0x002E & 0xFF);        // Lower address byte
   SPI.transfer(0x04);               // Control byte (W5500 write)
   SPI.transfer(0x70);              // Data to write
-  digitalWrite(CS_GPIO, HIGH);
+  digitalWrite(cs, HIGH);
   
   // ETH.end(); //controler stopped and this will throw an error
   delay(500);

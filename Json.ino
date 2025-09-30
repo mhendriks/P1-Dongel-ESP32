@@ -231,7 +231,7 @@ void sendDeviceInfo()
   doc["macaddress"] = macStr;
   doc["freeheap"] ["value"] = ESP.getFreeHeap();
   doc["freeheap"]["unit"] = "bytes";
- 
+  doc["hardware"]= HWTypeNames[HardwareType];
   esp_chip_info_t chip_info;
   esp_chip_info(&chip_info);
 

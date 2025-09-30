@@ -15,11 +15,11 @@
 #include "esp_efuse_table.h"
 
 // ------------------ ENUMS & CONSTANTS ------------------ //
-enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S };
-const char HWTypeNames[][5] = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S" };
+enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2 };
+const char HWTypeNames[][6] = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S", "P1UX2" };
 
 // ------------------ GLOBAL VARIABLES ------------------ //
-uint16_t HardwareType = UNDETECTED; 
+uint16_t HardwareType = UNDETECTED;
 uint16_t HardwareVersion = 0; 
 byte     rgbled_io = RGBLED_PIN;
 
@@ -132,7 +132,19 @@ void DetectModule() {
 #endif   
 
 #ifdef ULTRA
-  if ( HardwareType == P1U ) {
+  if ( HardwareType == P1UX2 ) {
+    rgbled_io =  9;
+    RxP1 = 12;
+    TxO1 = 21; //same as others
+    DTR_out = 10;
+    LED_out = 11;
+    active_mod_conf = &module_config[2];
+    DetectModule(0); 
+    ActivateModule(0);
+    DetectModule(1); 
+    ActivateModule(1);
+  }
+  else if ( HardwareType == P1U ) {
     rgbled_io =  9; //Ultra V2
     active_mod_conf = &module_config[1];
     DetectModule(0); 

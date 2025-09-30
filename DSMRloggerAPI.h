@@ -346,6 +346,9 @@ time_t      last_telegram_t = 0;
 uint32_t    P1error_cnt_sequence = 0;
 byte        RxP1 = RXP1;
 byte        TxO1 = TXO1;
+byte        DTR_out = O1_DTR_IO;
+byte        LED_out = P1_LED;
+
 //bool        bWriteFiles = false;
 
 //vitals
