@@ -1,8 +1,11 @@
 {
+"dict_hardware":"Hardware type",
   "lbl_update_start":"Update started...",
   "lbl_update_done": "Update Done!",
   "lbl_update_title":"Software Update",
   "btn_update_close":"Close",
+  "lbl_update_wait":"Wait on reboot...",
+  "dict_eid-planner":"EnergieID Stroomplanner",
   "lbl-beta-fwversion": "Beta Firmware",
   "lbl-install": "Install",
   "lbl-accu-status": "Status: ",
