@@ -333,6 +333,7 @@ ul:after { clear: both; }
     background-color: transparent;
 	color: white!important;
 	}
+	
 nav {
 	position: absolute;
     left: 0;
@@ -620,6 +621,90 @@ input.ntsw, select.ntsw { width: 100%; padding: 8px; margin: 0px 0 10px;    -web
 .progress-bar {	height: 20px;width: 0%;background: #4CAF50;border-radius: 5px; }
 
 select#languageSelector {background-color: unset; color: #fff; border: none;color: #aaa;}
+
+/*** STROOMPLANNER ***/
+#dash_eid {
+	max-width: fit-content;
+	display: flex;
+    flex-direction: column;
+	padding-bottom:0;
+}
+
+#eid-info {
+	margin:20px 16px;
+	max-width:284px;
+}
+    
+#DashTab .stroomplanner-card {
+  width: fit-content;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  font-family: sans-serif;
+  overflow: hidden;
+  background: white;
+  border: 1px solid #ccc;
+}
+
+#DashTab #stroomplanner-hours {
+  display: flex;
+  padding: 4px 16px 12px 16px;
+  gap: 4px;
+  flex: 1;
+}
+
+.eid-hour {
+  width: 32px;
+  height: 75px;
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+  font-size: 13px;
+  color: #000;
+}
+
+#DashTab .label.bold {
+  font-weight: bold;
+}
+
+#DashTab .green    { background-color: #008000; color: white; }
+#DashTab .lightgreen { background-color: #B9E7C9; }
+#DashTab .grey     { background-color: #F0F0F0; color: #666; }
+#DashTab .orange   { background-color: #F6B64C; }
+#DashTab .red      { background-color: #D32F2F; color: white; }
+
+#DashTab #stroomplanner-footer {
+  background-color: #DFF0DF;
+  padding: 10px 16px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid #b2d8b2;
+}
+#DashTab #stroomplanner-footer strong {background:none}
+
+#DashTab .dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+#eid-powered {
+	padding: 10px 16px;
+	display: flex;
+	justify-content: flex-end;
+  	align-items: center;
+}
+
+#eid-powered img {
+	max-width: 80px;
+	margin-left:5px;
+}
+
+#eid-powered a {display: contents;}
 
 /*
 ***************************************************************************

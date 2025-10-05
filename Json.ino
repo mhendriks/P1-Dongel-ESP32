@@ -253,7 +253,6 @@ void sendDeviceInfo()
 {
   JsonDocument doc;
   doc["fwversion"] = _VERSION_ONLY " ( " __DATE__ " " __TIME__ " )";
-  // doc["compiled"] = __DATE__ " " __TIME__;  
   doc["hostname"] = settingHostname;
   doc["ipaddress"] = IP_Address();
   doc["indexfile"] = settingIndexPage;
@@ -383,6 +382,7 @@ void sendDeviceSettings() {
   doc["led"] = LEDenabled;
   doc["raw-port"] = bRawPort;
   doc["eid-enabled"] = bEID_enabled;
+  doc["eid-planner"] = StroomPlanData.size() > 0 ? true : false;
 #ifdef DEV_PAIRING
   doc["dev-pairing"] = true;
 #endif

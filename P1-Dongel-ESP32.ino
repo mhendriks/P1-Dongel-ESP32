@@ -36,16 +36,6 @@ BACKLOG
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
 
-4.16.0
-√ default modbus mapping reg 10 and 12 is filled with  T1 + T2 when not available from the P1 meter
-√ add: stroomplanner update interval
-√ add: stroomplanner to dashboard
-- add: stroomplanner to p2p communication
-√ check interval ophalen stroomplanner gegevens (om het uur toch 2 intervallen extra)
-√ fix: virtual ip write otherwise it is lost by eache save
-√ add HA autodiscovery uptime config
-- fix: FE meetstanden error
-
 Default checks
 - wifi
 - port 82

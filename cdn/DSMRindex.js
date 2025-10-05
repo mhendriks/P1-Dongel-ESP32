@@ -2454,7 +2454,7 @@ function CopyTelegram(){
               sInput.setAttribute("max", 2099);
               sInput.size              = 5;
               sInput.addEventListener('change',
-                      function() { setNewValue(i, "EEYY", "em_YY_"+i); }, false);
+                      function() { setNewValue(data, i, "EEYY", "em_YY_"+i); }, false);
               span2.appendChild(sInput);
               //--- create input for months
               sInput = document.createElement("INPUT");
@@ -2465,7 +2465,7 @@ function CopyTelegram(){
               sInput.setAttribute("max", 12);
               sInput.size              = 3;
               sInput.addEventListener('change',
-                      function() { setNewValue(i, "MM", "em_MM_"+i); }, false);
+                      function() { setNewValue(data, i, "MM", "em_MM_"+i); }, false);
               span2.appendChild(sInput);
               //--- create input for data column 1
               sInput = document.createElement("INPUT");
@@ -2477,17 +2477,17 @@ function CopyTelegram(){
               if (type == "ED")
               {
                 sInput.addEventListener('change',
-                    function() { setNewValue(i, "edt1", "em_in1_"+i); }, false );
+                    function() { setNewValue(data, i, "edt1", "em_in1_"+i); }, false );
               }
               else if (type == "ER")
               {
                 sInput.addEventListener('change',
-                    function() { setNewValue(i, "ert1", "em_in1_"+i); }, false);
+                    function() { setNewValue(data, i, "ert1", "em_in1_"+i); }, false);
               }
               else if (type == "GD")
               {
                 sInput.addEventListener('change',
-                    function() { setNewValue(i, "gdt", "em_in1_"+i); }, false);
+                    function() { setNewValue(data, i, "gdt", "em_in1_"+i); }, false);
               }
               
               span2.appendChild(sInput);
@@ -2501,7 +2501,7 @@ function CopyTelegram(){
                 sInput.setAttribute("type", "number");
                 sInput.setAttribute("step", 0.001);
                 sInput.addEventListener('change',
-                      function() { setNewValue(i, "edt2", "em_in2_"+i); }, false);
+                      function() { setNewValue(data, i, "edt2", "em_in2_"+i); }, false);
                 span2.appendChild(sInput);
               }
               else if (type == "ER")
@@ -2513,7 +2513,7 @@ function CopyTelegram(){
                 sInput.setAttribute("type", "number");
                 sInput.setAttribute("step", 0.001);
                 sInput.addEventListener('change',
-                      function() { setNewValue(i, "ert2", "em_in2_"+i); }, false);
+                      function() { setNewValue(data, i, "ert2", "em_in2_"+i); }, false);
                 span2.appendChild(sInput);
               }
               div1.appendChild(span2);
@@ -2848,7 +2848,7 @@ function CopyTelegram(){
     console.log("sendPostReadings["+i+"]..");
     let sYY = (row[i].EEYY - 2000).toString();
     let sMM = "00";
-    if ((row[i].MM *1) < 1 || (row[i].MM *1) > 12)
+    if ((row[i].MM *1) < 1 || (row[i].MM *1) > 24)
     {
       console.log("send: ERROR MM["+row[i].MM+"]");
       return;
@@ -2869,6 +2869,11 @@ function CopyTelegram(){
         method : "POST",
         mode : "cors"
     };
+    fetch(APIGW+"v2/hist/months", other_params)
+      .then(function(response) {
+      }, function(error) {
+        console.log("Error["+error.message+"]"); //=> String
+      });
   } // sendPostReading()
   /*
   ****************************** UTILS *******************************************
@@ -2906,9 +2911,8 @@ function CopyTelegram(){
 
    
   //============================================================================  
-  function setNewValue(i, dField, field) {
+  function setNewValue(data, i, dField, field) {
     document.getElementById(field).style.background = "lightgray";
-    //--- this is ugly!!!! but don't know how to do it better ---
     if (dField == "EEYY")       data.data[i].EEYY = document.getElementById(field).value;
     else if (dField == "MM")    data.data[i].MM   = document.getElementById(field).value;
     else if (dField == "edt1")  data.data[i].values[0] = document.getElementById(field).value;
