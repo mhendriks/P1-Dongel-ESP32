@@ -416,7 +416,7 @@ void LogFile(const char* payload, bool toDebug) {
   if (!FSmounted) return;
   // File LogFile = LittleFS.open("/P1.log", "r"); // open for read  - bugfix sdk 3.3.1 
   size_t size = fileSizeOf("/littlefs/P1.log");
-  Debug("filesizeof: ");Debugln(size); 
+  // Debug("filesizeof: ");Debugln(size); 
 
   //log rotate
   if (size > 12000){ 
