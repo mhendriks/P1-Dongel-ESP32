@@ -46,6 +46,9 @@ Default checks
 - ethernet
 - 4h test
 
+4.17.0
+- Shelly EM udp emulation
+
 - winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
 --> oplossing : 
 
@@ -71,7 +74,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
-// #define ULTRA         //ultra (mini) dongle
+#define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 
@@ -90,6 +93,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define POST_TELEGRAM
 // #define MQTTKB
 // #define MB_RTU
+#define SHELLY_EMU
 
 #include "DSMRloggerAPI.h"
 
@@ -178,7 +182,7 @@ void setup()
   StartP1Task();
   StartMqttTask();
   EIDStart();
-
+  ShellyEmuBegin();
   // setupWS();
 
   DebugTf("Startup complete! actTimestamp: [%s]\r\n", actTimestamp);  

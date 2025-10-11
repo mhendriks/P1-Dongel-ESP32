@@ -424,6 +424,7 @@ int8_t mb_rts = -1;
 JsonDocument StroomPlanData;
 
 #include "Debug.h"
+#include "ShellyEmu.h"
 #include <ESPmDNS.h>  
 #include <Update.h>
 #include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager
