@@ -11,6 +11,69 @@
 */
 
 #include "DSMRloggerAPI.h"
+#include "esp_timer.h"
+
+//int WifiDisconnect = 0;
+bool bNoNetworkConn = false;
+bool bEthUsage = false;
+static esp_timer_handle_t s_reconnTimer = nullptr;
+static bool     s_authBlocked = false;
+static uint32_t s_lastKickMs  = 0;
+static const uint32_t KICK_DEBOUNCE_MS = 1500;
+
+static inline bool isCoreReconnectable(uint8_t r){
+  switch (r) {
+    case WIFI_REASON_UNSPECIFIED:
+    // timeouts (retry)
+    case WIFI_REASON_AUTH_EXPIRE:
+    case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:
+    case WIFI_REASON_GROUP_KEY_UPDATE_TIMEOUT:
+    case WIFI_REASON_802_1X_AUTH_FAILED:     // enterprise: core probeert nog
+    case WIFI_REASON_HANDSHAKE_TIMEOUT:
+    // transient (reconnect)
+    case WIFI_REASON_AUTH_LEAVE:
+    case WIFI_REASON_ASSOC_EXPIRE:
+    case WIFI_REASON_ASSOC_TOOMANY:
+    case WIFI_REASON_NOT_AUTHED:
+    case WIFI_REASON_NOT_ASSOCED:
+    case WIFI_REASON_ASSOC_NOT_AUTHED:
+    case WIFI_REASON_MIC_FAILURE:
+    case WIFI_REASON_IE_IN_4WAY_DIFFERS:
+    case WIFI_REASON_INVALID_PMKID:
+    case WIFI_REASON_BEACON_TIMEOUT:         // 200
+    case WIFI_REASON_NO_AP_FOUND:            // 201
+    case WIFI_REASON_ASSOC_FAIL:
+    case WIFI_REASON_CONNECTION_FAIL:
+    case WIFI_REASON_AP_TSF_RESET:
+    case WIFI_REASON_ROAMING:
+      return true;
+    default:
+      return false;
+  }
+}
+
+WiFiManager manageWiFi;
+
+// Echte “fatal auth” (verkeerd wachtwoord) → blokkeer tot user ingrijpt
+static inline bool isAuthFatal(uint8_t r){
+  switch (r) {
+    case WIFI_REASON_AUTH_FAIL:            // 202 op veel targets
+    case WIFI_REASON_INVALID_PMKID:        // vaak ook definitief fout
+      return true;
+    default:
+      return false;
+  }
+}
+
+static void kickOnce(){
+  uint32_t now = millis();
+  if (now - s_lastKickMs < KICK_DEBOUNCE_MS) return;
+  esp_wifi_start();                 // idempotent; start STA als die gestopt is
+  esp_wifi_connect();               // als driver al bezig is → ESP_ERR_WIFI_CONN
+  s_lastKickMs = now;
+}
+
+static void scheduleReconnect(uint32_t delayMs); // fwd
 
 void GetMacAddress(){
 
@@ -34,6 +97,8 @@ void GetMacAddress(){
 void PostMacIP() {
   HTTPClient http;
   http.begin(wifiClient, APIURL);
+  http.setConnectTimeout(4000);
+  http.setTimeout(5000);
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
   
   String httpRequestData = "mac=" + String(macStr) + "&ip=" + IP_Address() + "&version=" + _VERSION_ONLY;           
@@ -60,20 +125,37 @@ void WifiOff() {
 #ifndef ESPNOW 
   if ( WiFi.isConnected() ) WiFi.disconnect(true,true);
   WiFi.mode(WIFI_OFF);
-  esp_wifi_stop();
-  esp_wifi_deinit();
+  // esp_wifi_stop();
+  // esp_wifi_deinit();
   WiFi.setSleep(true);
 #endif
   btStop();
 }
 
+static inline bool isAuthError(uint8_t reason)
+{
+  // Enum is wifi_err_reason_t (esp_wifi_types.h). Niet alle borden hebben dezelfde set,
+  // dus houd 'm iets breder:
+  switch (reason) {
+    case WIFI_REASON_AUTH_EXPIRE:             // 2
+    case WIFI_REASON_AUTH_FAIL:               // (ESP-IDF nieuwe naam, bij sommige cores is dit 202)
+    case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:  // 15
+    case WIFI_REASON_HANDSHAKE_TIMEOUT:       // alias op sommige targets
+    case WIFI_REASON_NOT_AUTHED:              // 6
+    case WIFI_REASON_ASSOC_FAIL:              // 18 (kan ook auth-gerelateerd zijn)
+      return true;
+    default:
+      return false;
+  }
+}
+
 //int WifiDisconnect = 0;
-bool bNoNetworkConn = false;
-bool bEthUsage = false;
+// bool bNoNetworkConn = false;
+// bool bEthUsage = false;
 
 // Network event -> Ethernet is dominant
 // https://github.com/espressif/arduino-esp32/blob/master/libraries/Network/src/NetworkEvents.h
-static void onNetworkEvent (WiFiEvent_t event) {
+static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
   switch (event) {
 #ifdef ETHERNET  
   //ETH    
@@ -112,41 +194,79 @@ static void onNetworkEvent (WiFiEvent_t event) {
       break;
 #endif //ETHERNET
 //WIFI
+    case ARDUINO_EVENT_WIFI_STA_START: //110
+      // initial nudge (soms is begin() traag met eerste connect)
+      if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
+      break;
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
         LogFile(cMsg, true);
-//        tWifiLost = 0;
+      //  tWifiLost = 0;
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: //7
         LogFile("Wifi Connected",true);
         SwitchLED( LED_ON, LED_BLUE );
-        Debug (F("IP address: " ));  Debug (WiFi.localIP());
-        Debug(" )\n\n");
-        WifiReconnect = 0;
+        Debug (F("IP address: " ));  Debug (WiFi.localIP());Debug(" )\n\n");
+
         if ( bEthUsage ) WifiOff();        
         else {
           enterPowerDownMode(); //disable ETH
           netw_state = NW_WIFI;
         }
+        s_authBlocked = false;
+        s_lastKickMs = 0;               // reset voor snelle roam
         bNoNetworkConn = false;
         break;
-    case ARDUINO_EVENT_WIFI_STA_LOST_IP:
-        tWifiLost = millis();
+    case ARDUINO_EVENT_WIFI_STA_STOP: //8
+      // Voor de zekerheid: driver soms stopt STA → start ’m weer
+      LogFile("Wifi STA stopped-> restart",true);
+      esp_wifi_start(); // idempotent als al gestart
+      break;
+    case ARDUINO_EVENT_WIFI_STA_LOST_IP: //117
         if ( netw_state != NW_ETH ) netw_state = NW_NONE;
-        if ( !bNoNetworkConn ) LogFile("Wifi connection lost",true);
-        bNoNetworkConn = true;
+        if ( !bNoNetworkConn ) LogFile("Wifi connection lost - LOST IP",true); //only once
         break;           
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: //5
-#ifdef ULTRA
-        if ( netw_state != NW_ETH ) SwitchLED( LED_ON, LED_RED );
-#else
-        SwitchLED( LED_OFF, LED_BLUE );
-#endif      
-        if ( !bNoNetworkConn ) LogFile("Wifi connection lost",true);
+      {
+        #ifdef ULTRA
+          if ( netw_state != NW_ETH ) SwitchLED( LED_ON, LED_RED );
+        #else
+          SwitchLED( LED_OFF, LED_BLUE );
+        #endif      
+        uint8_t reason = info.wifi_sta_disconnected.reason;
+        String discon_res = "Wifi connection lost - DISCONNECTED | reason: " + String(reason);
+        // if ( !bNoNetworkConn ) LogFile("Wifi connection lost - DISCONNECTED",true); //only once
+        LogFile(discon_res.c_str(),true); //every time
+              
         bNoNetworkConn = true;
+
+        if (isAuthFatal(reason)) {
+        s_authBlocked = true;
+        // hier evt: WiFi.disconnect(true,true); startPortal();
+        return;                       // niets forceren
+      }
+      s_authBlocked = false;
+
+      if (reason == WIFI_REASON_ASSOC_LEAVE /*8*/) {
+        // Bekende “stilte”-case: STA valt stil → start & één kick
+        esp_wifi_start();
+        kickOnce();
+        return;
+      }
+
+      if (isCoreReconnectable(reason)) {
+        // Laat de core z’n autoretry doen; niets extra’s om dubbelwerk te vermijden
+        return;
+      }
+
+      // Rest: core retryt niet → help een handje (rate-limited)
+      
+      if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
+      else Debugln("config portal active - no kickonce");
         break;
+        }
     default:
-        sprintf(cMsg,"Network-event : %d | rssi: %d | channel : %i",event, WiFi.RSSI(), WiFi.channel());
+        sprintf(cMsg,"Network-event : %d | reason: %d| rssi: %d | channel : %i",event, info.wifi_sta_disconnected.reason, WiFi.RSSI(), WiFi.channel());
         LogFile(cMsg, true);
         break;
     }
@@ -158,46 +278,14 @@ void configModeCallback (WiFiManager *myWiFiManager)
 {
   DebugTln(F("Entered config mode\r"));
   DebugTln(WiFi.softAPIP().toString());
-  //if you used auto generated SSID, print it
   DebugTln(myWiFiManager->getConfigPortalSSID());
+  esp_task_wdt_reset();
 } // configModeCallback()
-
-//===========================================================================================
-// void WifiWatchDog(){
-// #if not defined ETHERNET || defined ULTRA
-//   //try to reconnect or reboot when wifi is down
-//   if ( bEthUsage ) return; //leave when ethernet is prefered network
-//   if ( WiFi.status() != WL_CONNECTED ){
-//     if ( !bNoNetworkConn ) {
-//       LogFile("Wifi connection lost",true); //log only once 
-//       tWifiLost = millis();
-//       bNoNetworkConn = true;
-//     }
-    
-//     if ( (millis() - tWifiLost) >= 20000 ) {
-//       DebugTln("WifiLost > 20.000, disconnect");
-//       WiFi.disconnect();
-//       delay(100); //give it some time
-//       WiFi.reconnect();
-// //      Wifi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // better to disconnect and begin?
-//       tWifiLost = millis();
-//       WifiReconnect++;
-//       DebugT("WifiReconnect: ");Debug(WifiReconnect);
-//       return;
-//    }
-//     if (WifiReconnect >= 3) {
-//       LogFile("Wifi -> Reboot because of timeout",true); //log only once 
-//       P1Reboot(); //after 3 x 20.000 millis
-//     }
-//   }
-// #endif  
-// }
 
 //===========================================================================================
 #include <esp_wifi.h>
 
-void startWiFi(const char* hostname, int timeOut) 
-{  
+void startWiFi(const char* hostname, int timeOut) {  
 
 #if not defined ETHERNET || defined ULTRA
 #ifdef ULTRA
@@ -214,39 +302,22 @@ void startWiFi(const char* hostname, int timeOut)
   
   if ( netw_state != NW_NONE ) return;
   
-  //lower calibration power
-  // esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
-
-  
   esp_wifi_set_ps(WIFI_PS_MAX_MODEM); //lower calibration power
 
   WiFi.setAutoReconnect(true);
-  WiFi.setSleep(false); 
-  esp_wifi_set_ps(WIFI_PS_NONE); // IDF: forceer geen modem-sleep
-
-  
-  // WiFi.mode(WIFI_STA);
-  // wifi_config_t sta_config;
-  // esp_err_t ret = esp_wifi_get_config(WIFI_IF_STA, &sta_config);
-
-  // if (ret == ESP_OK) {
-  // Debug("getWiFiPass: ");Debugln( (char*)sta_config.sta.password );
-  // Debug("getWiFiSSID: ");Debugln( (char*)sta_config.sta.ssid );
-
-  // }
+  WiFi.setSleep(false);  
+  esp_wifi_set_ps(WIFI_PS_NONE); // IDF: forced NO modem-sleep
 
   WiFi.setHostname(hostname);
-  // WiFi.enableIPv6();
-//  WiFi.setMinSecurity(WIFI_AUTH_WEP);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   
   WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);  //to solve mesh issues 
   WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);      //to solve mesh issues 
   if ( bFixedIP ) WiFi.config(staticIP, gateway, subnet, dns);
-  WiFiManager manageWiFi;
   LogFile("Wifi Starting",true);
   SwitchLED( LED_OFF, LED_BLUE );  
-
+  
+  manageWiFi.setConnectTimeout(15);
   manageWiFi.setConfigPortalBlocking(false);
   manageWiFi.setDebugOutput(false);
   manageWiFi.setShowStaticFields(true); // force show static ip fields
@@ -255,31 +326,31 @@ void startWiFi(const char* hostname, int timeOut)
   manageWiFi.setScanDispPerc(true); // display percentages instead of graphs for RSSI
   //  manageWiFi.setWiFiAutoReconnect(true); //buggy
 
-  //add custom html at inside <head> for all pages -> show pasessword function
   manageWiFi.setClass("invert"); //dark theme
   
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
   manageWiFi.setAPCallback(configModeCallback);
-
-  // manageWiFi.setTimeout(timeOut);  // in seconden ...
   manageWiFi.setConfigPortalTimeout(timeOut); //config portal timeout in seconds
+  
+  esp_task_wdt_reset();
   manageWiFi.autoConnect(_HOTSPOT);
 
-  //handle wifi webinterface timeout and connection (timeOut in sec)
+  //handle wifi webinterface timeout and connection (timeOut in sec) timeout in 30 sec
   uint16_t i = 0;
-  while ( (i++ < timeOut*10) && (netw_state == NW_NONE) && !bEthUsage ){
+  while ( (i++ < 3000) && (netw_state == NW_NONE) && !bEthUsage ) {
     Debug("*");
     delay(100);
     manageWiFi.process();
-    SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE); //fast blinking
     esp_task_wdt_reset();
+    SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE); //fast blinking
   }
   Debugln();
+  manageWiFi.stopWebPortal();
+
   if ( netw_state == NW_NONE && !bEthUsage ) {
-    LogFile("WIFI: failed to connect and hit timeout",true);
+    LogFile("reboot: Wifi failed to connect and hit timeout",true);
     P1Reboot(); //timeout 
   }
-  manageWiFi.stopWebPortal();
   if ( netw_state == NW_ETH || bEthUsage ) {
     WifiOff();
     delay(500);
@@ -343,8 +414,7 @@ bool validateConfig() {
 void startNetwork()
 {
   Network.onEvent(onNetworkEvent);
-  // Network.hostname(settingHostname);
-  // Network.enableIPv6();  
+  // Network.enableIPv6();
   if ( loadFixedIPConfig("/fixedip.json") ) bFixedIP = validateConfig();
   startETH();
   startWiFi(settingHostname, 240);  // timeout 4 minuten
