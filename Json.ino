@@ -27,6 +27,10 @@ void JsonGas(){
   jsonDoc["gas_delivered_timestamp"]["value"] = gasDeliveredTimestamp;
 }
 
+void JsonPP(){
+  if ( DSMRdata.highest_peak_pwr_present ) jsonDoc["highest_peak_pwr_timestamp"]["value"] = DSMRdata.highest_peak_pwr.timestamp;
+}
+
 int signalToEnum(const char* signal) {
   if (strcmp(signal, "--") == 0) return 0;
   if (strcmp(signal, "-") == 0)  return 1;
@@ -417,12 +421,17 @@ void sendApiNoContent() {
 
 //====================================================
 void handleSmApiField(){
+  if ( httpServer.pathArg(0) == "gas_delivered" ) JsonGas();
+  else if ( httpServer.pathArg(0) == "water_delivered") JsonWater();
+  else {
+    //other fields
     onlyIfPresent = false;
     strCopy(Onefield, 24, httpServer.pathArg(0).c_str());
     fieldsElements = FIELDELEMENTS;
     jsonDoc.clear();
     DSMRdata.applyEach(buildJson());
-    sendJson(jsonDoc);
+  }
+  sendJson(jsonDoc);
 }
 
 void handleSmApi()
@@ -461,6 +470,7 @@ void handleSmApi()
     DSMRdata.applyEach(buildJson());
     JsonGas();
     JsonWater();
+    JsonPP();
     sendJson(jsonDoc);
     
 } // handleSmApi()

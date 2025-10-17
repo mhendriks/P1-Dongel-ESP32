@@ -46,6 +46,10 @@ Default checks
 - ethernet
 - 4h test
 
+4.16.1
+- fix gas/water fields item api
+- add highest_peak_pwr timestammp in fields total
+
 4.17.0
 - Shelly EM udp emulation
 
@@ -74,9 +78,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
-#define ULTRA         //ultra (mini) dongle
-// #define ETHERNET      //ethernet dongle
-// #define ETH_P1EP          //ethernet pro+ dongle
+// #define ULTRA         //ultra (mini) dongle
+#define ETHERNET      //ethernet dongle
+#define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
@@ -93,7 +97,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define POST_TELEGRAM
 // #define MQTTKB
 // #define MB_RTU
-#define SHELLY_EMU
+// #define SHELLY_EMU
 
 #include "DSMRloggerAPI.h"
 
