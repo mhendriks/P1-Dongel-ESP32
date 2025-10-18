@@ -1,4 +1,7 @@
 {
+"lbl-download-popup-1":"=== FIRMWARE UPDATE ===\n\nAfter OK, the RNG data files will be downloaded first.\nYou can then start the update.",
+"lbl-download-popup-2":"The RNG data files have been downloaded.\n\nDo you want to start the firmware update now?",
+"dict_hardware":"Hardware type",
   "lbl_update_start":"Update started...",
   "lbl_update_done": "Update Done!",
   "lbl_update_title":"Software Update",

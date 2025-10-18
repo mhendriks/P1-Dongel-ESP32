@@ -1,4 +1,7 @@
 {
+"lbl-download-popup-1":"=== FIRMWARE UPDATE ===\n\nNa OK worden eerst de RNG-datafiles gedownload.\nDaarna kunt u de update starten.",
+"lbl-download-popup-2":"De RNG-datafiles zijn gedownload.\n\nWilt u nu de firmware-update starten?",
+"dict_hardware":"Hardware type",
   "dict_eid-planner":"EnergieID Stroomplanner",
   "lbl_update_wait":"Wait on reboot...",
   "lbl_update_start":"Update gestart...",

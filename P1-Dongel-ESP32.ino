@@ -48,12 +48,6 @@ Default checks
     - loadbalancing over de fases heen
     - detail P per fase afgelopen uur (sample eens per 10s)
 
-5.2.1
-√ index file 5.x 
-√ proper website reload after index file removal
-- 4.16 files naar 5.2. (stroomplanner)
-- todo; check  WDT bij opstart .. waarom lange opstart
-
 Planner display checks
 √ niet aanwezig
 √ updaten 5.2 en de 3.0.0
@@ -87,7 +81,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 
