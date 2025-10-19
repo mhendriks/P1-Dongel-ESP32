@@ -1,4 +1,8 @@
 {
+"btn-migrate":"MIGREER",
+"txt-esphome-migrate":"Wilt u de dongle gebruiken met ESPHome software dan kunt u met een druk op de knop hieronder de software migreren naar ESPHome.</br></br><b>LET OP! <br>-huidige software en data worden gewist. <br>-Wifi dient opnieuw gekoppeld te worden.</b>",
+"lbl-download-popup-1":"=== FIRMWARE UPDATE ===\n\nNa OK worden eerst de RNG-datafiles gedownload.\nDaarna kunt u de update starten.",
+"lbl-download-popup-2":"De RNG-datafiles zijn gedownload.\n\nWilt u nu de firmware-update starten?",
 "dict_hardware":"Hardware type",
   "dict_eid-planner":"EnergieID Stroomplanner",
   "lbl_update_wait":"Wait on reboot...",

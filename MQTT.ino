@@ -76,7 +76,7 @@ void AutoDiscoverHA(){
 //#ifndef HEATLINK
   if ( ! bWarmteLink ) { // IF NO HEATLINK  
     SendAutoDiscoverHA("timestamp", "timestamp", "DSMR Last Update", "", "{{ strptime(value[:-1] + '-+0200' if value[12] == 'S' else value[:-1] + '-+0100', '%y%m%d%H%M%S-%z') }}","", "\"icon\": \"mdi:clock\",");
-    SendAutoDiscoverHA("uptime", "duration", "Uptime", "", "","","");
+    SendAutoDiscoverHA("uptime", "duration", "Uptime", "s", "","","");
 
     SendAutoDiscoverHA("power_delivered", "power", "Power Delivered", "W", "{{ value | round(3) * 1000 }}","measurement","");
     SendAutoDiscoverHA("power_returned" , "power", "Power Returned" , "W", "{{ value | round(3) * 1000 }}","measurement","");  
@@ -334,9 +334,12 @@ void MQTTSend(const char* item, String value, bool ret){
 //===========================================================================================
 
 void MQTTSend(const char* item, float value){
+  // prevent invalid negatives for total_increasing sensors
+  if (strstr(item, "gas_delivered") || strstr(item, "water")) if (value < 0) value = 0.0;
+
   char temp[10];
   sprintf(temp,"%.3f",value);
-  MQTTSend( item, temp, true );
+  MQTTSend(item, temp, true);
 }
 
 //===========================================================================================

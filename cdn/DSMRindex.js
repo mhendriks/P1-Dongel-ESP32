@@ -1322,14 +1322,14 @@ function parseDeviceInfo(obj) {
   // NETSW config
   const showNetSw = obj.compileoptions.includes("[NETSW]");
   document.getElementById("bNETSW").style.display = showNetSw ? "block" : "none";
-
+    
   // add version info 
   const manifest = objDAL.version_manifest;
   if (manifest.version) {
     const row = tableRef.insertRow(-1);
     row.insertCell(0).innerHTML = t("lbl-latest-fwversion");
     row.insertCell(1).innerHTML = manifest.version;
-    row.insertCell(2).innerHTML = `<a style='color:red' onclick='RemoteUpdate("public")' href='#'>${t('lbl-install')}</a>`;
+    row.insertCell(2).innerHTML = `<a style='color:red' onclick='startUpdateFlow("stable")' href='#'>${t('lbl-install')}</a>`;
     console.log("last version:", manifest.major * 10000 + manifest.minor * 100);
   }
   
@@ -1337,7 +1337,7 @@ function parseDeviceInfo(obj) {
     const row = tableRef.insertRow(-1);
     row.insertCell(0).innerHTML = t("lbl-beta-fwversion");
     row.insertCell(1).innerHTML = manifest.beta;
-    row.insertCell(2).innerHTML = `<a style='color:red' onclick='RemoteUpdate("beta")' href='#'>${t('lbl-install')}</a>`;
+    row.insertCell(2).innerHTML = `<a style='color:red' onclick='startUpdateFlow("beta")' href='#'>${t('lbl-install')}</a>`;
   }
 
   // add dev info
@@ -1372,10 +1372,6 @@ function parseDeviceInfo(obj) {
   // check for update
   if (manifest.version) {
     const latest = manifest.major * 10000 + manifest.minor * 100 + manifest.fix;
-//     const updateCell = tableRef.rows[0].cells[2];
-//     updateCell.innerHTML = (firmwareVersion < latest)
-//       ? `<a style='color:red' onclick='RemoteUpdate()' href='#'>${t('lbl-click-update')}</a>`
-//       : td("latest_version");
   }
 }
     
@@ -1406,8 +1402,44 @@ function UpdateStart( msg ){
 }
         
 function RemoteUpdate(type) {        
-	if ( type == "beta") document.location.href = "/remote-update?version=" + objDAL.version_manifest.beta;
-	else document.location.href = "/remote-update?version=" + objDAL.version_manifest.version;
+  if (type == "esphome") document.location.href = "/remote-update?version=esphome";
+  else if (type == "beta")
+    document.location.href = "/remote-update?version=" + objDAL.version_manifest.beta;
+  else
+    document.location.href = "/remote-update?version=" + objDAL.version_manifest.version;
+}
+
+// klein hulpfunctietje om even te pauzeren
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// downloads één voor één starten (betrouwbaarder voor popup/download-blockers)
+async function downloadFilesSequential(urls) {
+  for (const url of urls) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = ''; // laat browser bestandsnaam bepalen
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // mini-pauze zodat de browser de download kan initialiseren
+    await sleep(150);
+  }
+}
+
+async function startUpdateFlow( type ) {
+  if (!confirm( t("lbl-download-popup-1") )) return;
+
+  // 1) Start downloads (in dezelfde user-gesture context)
+  await downloadFilesSequential([
+    "/RNGdays.json",
+    "/RNGhours.json",
+    "/RNGmonths.json"
+  ]);
+
+  // 2) Tweede bevestiging voor de update
+  if (confirm(t("lbl-download-popup-2"))) {
+    RemoteUpdate( type );
+  }
 }
 
 function updateProgress() {
@@ -2341,6 +2373,7 @@ function CopyTelegram(){
 					sInput.checked = data[i];
 					sInput.style.width = "auto";
 					if ( i == "dev-pairing") sInput.disabled = true;
+					if ( i == "eid-planner") sInput.disabled = true;
 				}
 				else {
 				switch(data[i].type){

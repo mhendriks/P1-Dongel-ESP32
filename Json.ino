@@ -421,14 +421,14 @@ void sendApiNoContent() {
 
 //====================================================
 void handleSmApiField(){
+  jsonDoc.clear();
   if ( httpServer.pathArg(0) == "gas_delivered" ) JsonGas();
-  else if ( httpServer.pathArg(0) == "water_delivered") JsonWater();
+  else if ( httpServer.pathArg(0) == "water") JsonWater();
   else {
     //other fields
     onlyIfPresent = false;
     strCopy(Onefield, 24, httpServer.pathArg(0).c_str());
     fieldsElements = FIELDELEMENTS;
-    jsonDoc.clear();
     DSMRdata.applyEach(buildJson());
   }
   sendJson(jsonDoc);
