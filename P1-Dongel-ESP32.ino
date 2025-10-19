@@ -48,6 +48,7 @@ Default checks
 
 4.17.0
 - Shelly EM udp emulation
+- ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
 
 - winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
 --> oplossing : 

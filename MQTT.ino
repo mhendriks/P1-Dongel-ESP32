@@ -352,7 +352,6 @@ void MQTTSentStaticInfo(){
   MQTTSend( "equipment_id",DSMRdata.equipment_id, true );
   MQTTSend( "firmware",_VERSION_ONLY, true );
   MQTTSend( "ip_address",IP_Address(), true);
-  MQTTSend( "uptime",String(uptime()), true);
   MQTTSend( "wifi_rssi",String( WiFi.RSSI() ), true );
 
   if (DSMRdata.mbus1_equipment_id_tc_present){ MQTTSend("gas_equipment_id",DSMRdata.mbus1_equipment_id_tc, true); }  
@@ -455,6 +454,7 @@ if ( mbusWater ){
   if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
   MQTTsendGas();
   MQTTsendWater();  
+  MQTTSend( "uptime",String(uptime()), false);
 
 #ifdef VICTRON_GRID
   MQTTSendVictronData();
