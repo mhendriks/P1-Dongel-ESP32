@@ -12,6 +12,7 @@
 
 #include "DSMRloggerAPI.h"
 #include "esp_timer.h"
+#include "esp_mac.h"
 
 //int WifiDisconnect = 0;
 bool bNoNetworkConn = false;
@@ -458,7 +459,7 @@ void startMDNS(const char *Hostname)
 
 #include <ETH.h>
 #include <SPI.h>
-#include "esp_mac.h"
+
 
 #define ETH_TYPE            ETH_PHY_W5500
 #define ETH_RST            -1
