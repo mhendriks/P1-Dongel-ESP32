@@ -95,8 +95,6 @@ static void kickOnce(){
   s_lastKickMs = now;
 }
 
-static void scheduleReconnect(uint32_t delayMs); // fwd
-
 void GetMacAddress(){
 
   String _mac = MAC_Address();
@@ -133,28 +131,13 @@ void PostMacIP() {
 
 void WifiOff(){
   if ( WiFi.isConnected() ) WiFi.disconnect(false,false);
+#ifdef CONFIG_BT_ENABLED
   btStop();
+#endif
   WiFi.mode(WIFI_OFF);
   esp_wifi_stop();
   // esp_wifi_deinit();
   WiFi.setSleep(true);
-}
-
-static inline bool isAuthError(uint8_t reason)
-{
-  // Enum is wifi_err_reason_t (esp_wifi_types.h). Niet alle borden hebben dezelfde set,
-  // dus houd 'm iets breder:
-  switch (reason) {
-    case WIFI_REASON_AUTH_EXPIRE:             // 2
-    case WIFI_REASON_AUTH_FAIL:               // (ESP-IDF nieuwe naam, bij sommige cores is dit 202)
-    case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:  // 15
-    case WIFI_REASON_HANDSHAKE_TIMEOUT:       // alias op sommige targets
-    case WIFI_REASON_NOT_AUTHED:              // 6
-    case WIFI_REASON_ASSOC_FAIL:              // 18 (kan ook auth-gerelateerd zijn)
-      return true;
-    default:
-      return false;
-  }
 }
 
 // https://github.com/espressif/arduino-esp32/blob/master/libraries/Network/src/NetworkEvents.h
@@ -191,6 +174,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     //   break;
     case ARDUINO_EVENT_ETH_STOP: //2
       DebugTln("!!! ETH Stopped");
+      [[fallthrough]];
     case ARDUINO_EVENT_ETH_DISCONNECTED: //4
       if ( netw_state != NW_WIFI ) netw_state = NW_NONE;
       SwitchLED( LED_ON , LED_RED );
@@ -201,11 +185,11 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     case ARDUINO_EVENT_WIFI_STA_START: //110
       // initial nudge (soms is begin() traag met eerste connect)
       if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
+      // Debugln("--- WIFI START ----");
       break;
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
         LogFile(cMsg, true);
-      //  tWifiLost = 0;
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: //7
         LogFile("Wifi Connected",true);
@@ -302,6 +286,7 @@ void startWiFi(const char* hostname, int timeOut) {
   Debugln();
   if ( netw_state != NW_NONE ) return;
   enterPowerDownMode(); //disable ETH after 6.5 sec waiting ... lower power consumption
+  LogFile("ETH timeout -> going WiFi",true);
 #endif 
   
   if ( netw_state != NW_NONE ) return;
@@ -465,7 +450,7 @@ void startETH(){
   uint8_t sck   = SCK_GPIO;
   uint8_t _int  = INT_GPIO;
 
-  uint8_t mac_eth[6] = { 0xFE, 0xED, 0xDE, 0xAD, 0xBE, 0xEF };
+  uint8_t mac_eth[6];
   esp_read_mac(mac_eth, ESP_MAC_ETH); //derive ETH mac address
 
   if ( HardwareType == P1UX2 ) {
@@ -474,7 +459,6 @@ void startETH(){
     mosi  = 16;
     sck   = 14;
     _int  = 18;
-    
     }
 
   myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, cs, _int, ETH_RST, NULL, sck, miso, mosi, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
@@ -512,14 +496,22 @@ void enterPowerDownMode() {
   ETH.end();
   pinMode(cs, OUTPUT);
   SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO);
+  
 
   W5500_Read_PHYCFGR();
 
+  // NOTE:
+  // We gebruiken control byte 0x04 (FDM write mode) i.p.v. 0x00 (VDM write).
+  // Op dit board reageert de W5500 na ETH.end() niet op 0x00,
+  // maar 0x04 + 0x70 zet 'm wél betrouwbaar in low-power.
+  // Niet veranderen naar 0x00 tenzij je TEST dat powerdown nog steeds werkt.
+  SPI.beginTransaction(SPISettings(8000000UL, MSBFIRST, SPI_MODE0));
   digitalWrite(cs, LOW);
   SPI.transfer16(0x002E);
   SPI.transfer(0x04);               // Control byte (W5500 write)
   SPI.transfer(0x70);              // Data to write
   digitalWrite(cs, HIGH);
+  SPI.endTransaction();
 
   delay(500);
   W5500_Read_PHYCFGR();
