@@ -234,6 +234,12 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
       if ( MQTTclient.connected() ) MQTTclient.disconnect();
       writeSettings();
   }
+  if ( StrTopic.indexOf("ota-url") >= 0) {
+      strncpy( BaseOTAurl, StrPayload, sizeof(BaseOTAurl) );
+      if (BaseOTAurl[strlen(BaseOTAurl)-1] != '/') strcat(BaseOTAurl,"/");
+      writeSettings();
+  }
+
 }
 
 //===========================================================================================
@@ -255,16 +261,22 @@ void MQTTConnect() {
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
-      sprintf( cMsg,"%supdate", MQTopTopic );
-	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
-      sprintf(cMsg,"%sinterval",MQTopTopic);
-      MQTTclient.subscribe(cMsg); //subscribe mqtt interval
-      sprintf(cMsg,"%sreboot",MQTopTopic);
-      MQTTclient.subscribe(cMsg); //subscribe mqtt reboot
-      sprintf(cMsg,"%sreconfig",MQTopTopic);
-      MQTTclient.subscribe(cMsg); //subscribe mqtt reconfig
-      sprintf(cMsg,"%stoptopic",MQTopTopic);
-      MQTTclient.subscribe(cMsg); //subscribe mqtt toptopic
+      
+      const char* topics[] = {
+          "update",
+          "interval",
+          "reboot",
+          "reconfig",
+          "toptopic",
+          "ota-url"
+        };
+
+      // subscribe on all topics
+      for (auto& t : topics) {
+        snprintf(cMsg, sizeof(cMsg), "%s%s", MQTopTopic, t);
+        MQTTclient.subscribe(cMsg);
+      }
+
 #ifndef NO_HA_AUTODISCOVERY
       if ( EnableHAdiscovery ) AutoDiscoverHA();
 #endif      

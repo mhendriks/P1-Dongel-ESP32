@@ -214,7 +214,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
 
         if ( bEthUsage ) WifiOff();        
         else {
-          enterPowerDownMode(); //disable ETH
+          // enterPowerDownMode(); //disable ETH
           netw_state = NW_WIFI;
         }
         s_authBlocked = false;
@@ -294,16 +294,18 @@ void startWiFi(const char* hostname, int timeOut) {
 #ifdef ULTRA
   //lets wait on ethernet first for 4.5sec and consume some time to charge the capacitors
   uint8_t timeout = 0;
-  while ( (netw_state == NW_NONE) && (timeout++ < 45) ) {
+  while ( (netw_state == NW_NONE) && (timeout++ < 65) ) {
     delay(100); 
     Debug("e");
     esp_task_wdt_reset();
   } 
   Debugln();
+  if ( netw_state != NW_NONE ) return;
+  enterPowerDownMode(); //disable ETH after 6.5 sec waiting ... lower power consumption
 #endif 
   
   if ( netw_state != NW_NONE ) return;
-  
+
   esp_wifi_set_ps(WIFI_PS_MAX_MODEM); //lower calibration power
 
   WiFi.setAutoReconnect(true);
