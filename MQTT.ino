@@ -55,7 +55,7 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
   msg_payload += AddPayload( "uniq_id"        , dev_name);
   msg_payload += AddPayload( "dev_cla"        , dev_class);
   msg_payload += AddPayload( "name"           , dev_title);
-  msg_payload += AddPayload( "stat_t"         , String((String)settingMQTTtopTopic + (String)dev_name).c_str() );
+  msg_payload += AddPayload( "stat_t"         , String((String)MQTopTopic + (String)dev_name).c_str() );
   msg_payload += AddPayload( "unit_of_meas"   , dev_unit);
   msg_payload += AddPayload( "val_tpl"        , dev_payload);
   msg_payload += AddPayload( "stat_cla"       , state_class);
@@ -121,12 +121,12 @@ void AutoDiscoverHA(){
 
 void MQTTSetBaseInfo(){
 #ifdef MQTTKB
-  sprintf( settingMQTTtopTopic,"%s/%s/", _DEFAULT_HOSTNAME, macID );
+  sprintf( MQTopTopic,"%s/%s/", _DEFAULT_HOSTNAME, macID );
 #endif  
 }
 
 void MQTTDisconnect(){
-  sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
+  sprintf(cMsg,"%sLWT",MQTopTopic);
   MQTTclient.publish(cMsg,"Offline", true); //LWT status update
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
 }
@@ -206,7 +206,7 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
 
   DebugTf("Message length: %d\n",len );
   for (int i=0;i<len;i++) StrPayload[i] = (char)payload[i];
-  payload[len] = '\0';
+  StrPayload[len] = '\0';
   DebugT("Message arrived [" + StrTopic + "] ");Debugln(StrPayload);
 
   if ( StrTopic.indexOf("update") >= 0) {
@@ -227,6 +227,13 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
   if ( StrTopic.indexOf("reconfig") >= 0) {
     MqttReconfig(StrPayload);
   }
+  if ( StrTopic.indexOf("toptopic") >= 0) {
+      strncpy( settingMQTTtopTopic, StrPayload, sizeof(settingMQTTtopTopic) );
+      if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+      snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
+      if ( MQTTclient.connected() ) MQTTclient.disconnect();
+      writeSettings();
+  }
 }
 
 //===========================================================================================
@@ -239,7 +246,7 @@ void MQTTConnect() {
     LogFile("MQTT: DISCONNECTED to broker ... try to reconnect", true);
     char MqttID[30+13];
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
-    snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
+    snprintf( cMsg, 150, "%sLWT", MQTopTopic );
     DebugTf("connect %s %s %s %s\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
     
     // if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
@@ -248,14 +255,16 @@ void MQTTConnect() {
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
-      sprintf( cMsg,"%supdate", settingMQTTtopTopic );
+      sprintf( cMsg,"%supdate", MQTopTopic );
 	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
-      sprintf(cMsg,"%sinterval",settingMQTTtopTopic);
+      sprintf(cMsg,"%sinterval",MQTopTopic);
       MQTTclient.subscribe(cMsg); //subscribe mqtt interval
-      sprintf(cMsg,"%sreboot",settingMQTTtopTopic);
+      sprintf(cMsg,"%sreboot",MQTopTopic);
       MQTTclient.subscribe(cMsg); //subscribe mqtt reboot
-      sprintf(cMsg,"%sreconfig",settingMQTTtopTopic);
+      sprintf(cMsg,"%sreconfig",MQTopTopic);
       MQTTclient.subscribe(cMsg); //subscribe mqtt reconfig
+      sprintf(cMsg,"%stoptopic",MQTopTopic);
+      MQTTclient.subscribe(cMsg); //subscribe mqtt toptopic
 #ifndef NO_HA_AUTODISCOVERY
       if ( EnableHAdiscovery ) AutoDiscoverHA();
 #endif      
@@ -285,7 +294,7 @@ struct buildJsonMQTT {
           // add value to '/all' topic
           if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
           if ( MQTTclient.connected() && (!bActJsonMQTT || EnableHAdiscovery) ) {
-            sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
+            sprintf(cMsg,"%s%s",MQTopTopic,Name);
             MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
           }
     } // if isInFieldsArray && present
@@ -323,7 +332,7 @@ struct buildJsonMQTT {
 
 void MQTTSend(const char* item, String value, bool ret){
   if ( value.length()==0 || !MQTTclient.connected() ) return;
-  sprintf(cMsg,"%s%s", settingMQTTtopTopic,item);
+  sprintf(cMsg,"%s%s", MQTopTopic,item);
   if (!MQTTclient.publish(cMsg, value.c_str(), ret )) {
     DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, value.c_str(), (strlen(cMsg) + value.length()));
     StaticInfoSend = false; //probeer het later nog een keer

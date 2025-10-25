@@ -138,6 +138,7 @@ void DetectModule() {
     TxO1 = 21; //same as others
     DTR_out = 10;
     LED_out = 11;
+    
     active_mod_conf = &module_config[2];
     DetectModule(0); 
     ActivateModule(0);

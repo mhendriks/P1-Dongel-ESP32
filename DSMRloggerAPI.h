@@ -368,7 +368,7 @@ float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
 uint8_t   settingSmHasFaseInfo = 1;
 char      settingHostname[30] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
-enum tNetwState { NW_NONE, NW_WIFI, NW_ETH};
+enum tNetwState { NW_NONE, NW_WIFI, NW_ETH, NW_ETH_LINK};
 uint8_t netw_state = NW_NONE;
 bool      FSmounted = false;
 //MQTT
@@ -401,6 +401,11 @@ String    smID;
 bool      StaticInfoSend = false;
 bool      bSendMQTT = false;
 bool      bMQTToverTLS = false;
+
+bool      hideMQTTsettings = false;
+bool      RemoveIndexAfterUpdate = true;
+bool      MacIDinToptopic = false;
+char      MQTopTopic[50+14] = "";
 
 //update
 char      BaseOTAurl[45] = OTAURL;

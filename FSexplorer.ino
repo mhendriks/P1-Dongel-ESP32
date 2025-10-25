@@ -62,7 +62,18 @@ void setupFSexplorer() {
 
   httpServer.on("/api/v2/hist/months", HTTP_POST, [](){ writeRingFile(RINGMONTHS, httpServer.arg(0).c_str(), false); });
 
-  httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
+  httpServer.on("/logout", HTTP_GET, []() {  
+    // httpServer.sendHeader("Location", "/#Logout"); 
+  // static uint32_t realmNonce = 0; realmNonce++;
+  // String realm = "ESP-" + String(realmNonce);
+
+  // httpServer.sendHeader("WWW-Authenticate", "Basic realm=\"" + realm + "\"");
+  httpServer.sendHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  httpServer.sendHeader("Pragma", "no-cache");
+  httpServer.sendHeader("Connection", "close");
+    httpServer.send(401, "text/html", "<!doctype html><html><head><meta charset='utf-8' /><meta http-equiv='refresh' content='0; url=/#Logout'><title>User is not authenticated</title></head><body></body></html>"); 
+  });
+
   httpServer.on("/login", HTTP_GET, []() { auth(); });
   httpServer.on("/api/v1/data", HTTP_GET, []() { auth(); HWapi(); });
   httpServer.on("/api", HTTP_GET, []() { auth(); HWapi_root(); });

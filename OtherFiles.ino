@@ -124,6 +124,9 @@ void writeSettings() {
   docw["mb_port"] = mb_config.port;
   docw["mb_baud"] = mb_config.baud;
   docw["mb_parity"] = mb_config.parity - 134217700;
+  docw["mqtt-hide"] = hideMQTTsettings;
+  docw["remove-index"] = RemoveIndexAfterUpdate;
+  docw["macid-topic"] = MacIDinToptopic;
 
 #ifdef VOLTAGE_MON
   docw["max-volt"] = MaxVoltage;
@@ -197,6 +200,10 @@ void readSettings(bool show)
   if (doc["WaterVasteKosten"].is<float>()) settingWNBK = doc["WaterVasteKosten"];
   settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
+  if (doc["mqtt-hide"].is<bool>()) hideMQTTsettings = doc["mqtt-hide"];
+  if (doc["remove-index"].is<bool>()) RemoveIndexAfterUpdate = doc["remove-index"];
+  if (doc["macid-topic"].is<bool>()) MacIDinToptopic = doc["macid-topic"];
+  
 //  settingTelegramInterval = doc["TelegramInterval"];
 //  CHANGE_INTERVAL_SEC(nextTelegram, settingTelegramInterval);
 // 
@@ -208,6 +215,7 @@ void readSettings(bool show)
   settingMQTTinterval = doc["MQTTinterval"];
   strcpy(settingMQTTtopTopic, doc["MQTTtopTopic"]);
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+  snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
   if (doc["mqtt_tls"].is<bool>()) bMQTToverTLS = doc["mqtt_tls"];
   
   CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
@@ -361,6 +369,7 @@ void updateSetting(const char *field, const char *newValue)
     strCopy(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), newValue);  
   }
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+  snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
 #endif
   
   if (!stricmp(field, "b_auth_user")) strCopy(bAuthUser,25, newValue);  

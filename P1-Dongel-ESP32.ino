@@ -36,6 +36,13 @@ BACKLOG
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
 
+4.16.2
+√ mqtt toptopic change on demand
+√ hide mqtt config setting
+√ settingsoption -> macadres in toptopic
+√ no refresh index file after update option
+√ fix bugje mqtt command payload length
+
 Default checks
 - wifi
 - port 82
@@ -71,11 +78,11 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
-// #define ULTRA         //ultra (mini) dongle
+#define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 

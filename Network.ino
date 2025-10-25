@@ -90,7 +90,7 @@ static inline bool isAuthFatal(uint8_t r){
 static void kickOnce(){
   uint32_t now = millis();
   if (now - s_lastKickMs < KICK_DEBOUNCE_MS) return;
-  esp_wifi_start();                 // idempotent; start STA als die gestopt is
+  esp_wifi_start();                 //  start STA als die gestopt is
   esp_wifi_connect();               // als driver al bezig is → ESP_ERR_WIFI_CONN
   s_lastKickMs = now;
 }
@@ -135,7 +135,7 @@ void WifiOff(){
   if ( WiFi.isConnected() ) WiFi.disconnect(false,false);
   btStop();
   WiFi.mode(WIFI_OFF);
-  // esp_wifi_stop();
+  esp_wifi_stop();
   // esp_wifi_deinit();
   WiFi.setSleep(true);
 }
@@ -157,12 +157,11 @@ static inline bool isAuthError(uint8_t reason)
   }
 }
 
-// Network event -> Ethernet is dominant
 // https://github.com/espressif/arduino-esp32/blob/master/libraries/Network/src/NetworkEvents.h
 static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
   switch (event) {
 #ifdef ETHERNET  
-  //ETH    
+  //****** ETH    
     case ARDUINO_EVENT_ETH_START: //1
       DebugTln("ETH Started");
       ETH.setHostname(settingHostname);
@@ -170,7 +169,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     case ARDUINO_EVENT_ETH_CONNECTED: //3
       DebugTln("\nETH Connected");
       WifiOff();
-      // netw_state = NW_ETH;
+      netw_state = NW_ETH_LINK;
       bEthUsage = true; //set only once 
       break;
     case ARDUINO_EVENT_ETH_GOT_IP6: //7
@@ -198,7 +197,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       LogFile("ETH Disconnected", true);
       break;
 #endif //ETHERNET
-//WIFI
+    //****** WIFI
     case ARDUINO_EVENT_WIFI_STA_START: //110
       // initial nudge (soms is begin() traag met eerste connect)
       if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
@@ -224,8 +223,8 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
         break;
     case ARDUINO_EVENT_WIFI_STA_STOP: //8
       // Voor de zekerheid: driver soms stopt STA → start ’m weer
-      LogFile("Wifi STA stopped-> restart",true);
-      esp_wifi_start(); // idempotent als al gestart
+      // LogFile("Wifi STA stopped-> restart",true);
+      // esp_wifi_start(); // idempotent als al gestart
       break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP: //117
         if ( netw_state != NW_ETH ) netw_state = NW_NONE;
@@ -248,7 +247,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
         if (isAuthFatal(reason)) {
         s_authBlocked = true;
         // hier evt: WiFi.disconnect(true,true); startPortal();
-        return;                       // niets forceren
+        return;
       }
       s_authBlocked = false;
 
@@ -277,7 +276,6 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     }
 }
 
-
 //gets called when WiFiManager enters configuration mode
 //===========================================================================================
 void configModeCallback (WiFiManager *myWiFiManager) {
@@ -294,15 +292,14 @@ void startWiFi(const char* hostname, int timeOut) {
 
 #if not defined ETHERNET || defined ULTRA
 #ifdef ULTRA
-  //lets wait on ethernet first for 3.5sec and consume some time to charge the capacitors
+  //lets wait on ethernet first for 4.5sec and consume some time to charge the capacitors
   uint8_t timeout = 0;
-  while ( (netw_state == NW_NONE) && (timeout++ < 35) ) {
+  while ( (netw_state == NW_NONE) && (timeout++ < 45) ) {
     delay(100); 
-    Debug(".");
+    Debug("e");
     esp_task_wdt_reset();
   } 
   Debugln();
-  // w5500_powerDown();
 #endif 
   
   if ( netw_state != NW_NONE ) return;
@@ -369,7 +366,7 @@ void startWiFi(const char* hostname, int timeOut) {
 //===========================================================================================
 void WaitOnNetwork()
 {
-  while ( netw_state == NW_NONE ) { //endless wait for network connection
+  while ( netw_state != NW_ETH && netw_state != NW_WIFI ) { //endless wait for network connection
     Debug(".");
     delay(200);
     esp_task_wdt_reset();
@@ -437,10 +434,8 @@ void startTelnet()
   DebugTln(F("Telnet server started .."));
 } // startTelnet()
 
-
 //=======================================================================
-void startMDNS(const char *Hostname) 
-{
+void startMDNS(const char *Hostname) {
   DebugTf("[1] mDNS setup as [%s.local]\r\n", Hostname);
   if ( !MDNS.begin(Hostname) ) DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
   else {
@@ -455,40 +450,45 @@ void startMDNS(const char *Hostname)
     MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1P" );    
 #endif
   }
-  
 } // startMDNS()
 
 #endif
 
 #ifdef ETHERNET
-
-byte cs = CS_GPIO;
+  uint8_t cs = CS_GPIO;
 
 void startETH(){
-  
-  //derive ETH mac address
+  uint8_t miso  = MISO_GPIO;
+  uint8_t mosi  = MOSI_GPIO;
+  uint8_t sck   = SCK_GPIO;
+  uint8_t _int  = INT_GPIO;
+
   uint8_t mac_eth[6] = { 0xFE, 0xED, 0xDE, 0xAD, 0xBE, 0xEF };
-  esp_read_mac(mac_eth, ESP_MAC_ETH);
-  
-  // ETH.enableIPv6();
+  esp_read_mac(mac_eth, ESP_MAC_ETH); //derive ETH mac address
+
   if ( HardwareType == P1UX2 ) {
-    myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, 13, 18, ETH_RST, NULL, 14, 15, 16, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
-    cs = 13;
-  }
-  else myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, CS_GPIO, INT_GPIO, ETH_RST, NULL, SCK_GPIO, MISO_GPIO, MOSI_GPIO, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
+    cs    = 13;
+    miso  = 15;
+    mosi  = 16;
+    sck   = 14;
+    _int  = 18;
+    
+    }
+
+  myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, cs, _int, ETH_RST, NULL, sck, miso, mosi, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
+
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
 
 }
 
 void W5500_Read_PHYCFGR() {
-    // byte cs = CS_GPIO;
-    digitalWrite(cs, LOW);
+  digitalWrite(cs, LOW);
 
-    // Stuur het PHYCFGR-adres met het "read" bit (bit 15 = 1)
-    SPI.transfer16(0x802E); // 0x802E = 0x002E met "read" bit ingesteld
-    uint8_t phycfgr = SPI.transfer(0x00); // Ontvang data
-
-    digitalWrite(cs, HIGH);
+  SPI.transfer16(0x002E);     // MSB, LSB
+  SPI.transfer(0x01);       // control: BSB=0 (common), OM=VDM, RWB=1(read)
+  uint8_t phycfgr = SPI.transfer(0x00);
+  
+  digitalWrite(cs, HIGH);
 
 #ifdef DEBUG
     // Print registerwaarde en status
@@ -505,17 +505,20 @@ void W5500_Read_PHYCFGR() {
 }
 
 void enterPowerDownMode() {
-  // Select the W5500 chip
+  DebugTln(F("ETH POWER DOWN"));
+  
+  ETH.end();
+  pinMode(cs, OUTPUT);
+  SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO);
+
   W5500_Read_PHYCFGR();
 
   digitalWrite(cs, LOW);
-  SPI.transfer((0x002E >> 8) & 0x7F); // Upper address byte
-  SPI.transfer(0x002E & 0xFF);        // Lower address byte
+  SPI.transfer16(0x002E);
   SPI.transfer(0x04);               // Control byte (W5500 write)
   SPI.transfer(0x70);              // Data to write
   digitalWrite(cs, HIGH);
-  
-  // ETH.end(); //controler stopped and this will throw an error
+
   delay(500);
   W5500_Read_PHYCFGR();
 }
@@ -543,25 +546,3 @@ String MAC_Address(){
   return WiFi.macAddress();
 #endif
 }
-/***************************************************************************
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to permit
-* persons to whom the Software is furnished to do so, subject to the
-* following conditions:
-*
-* The above copyright notice and this permission notice shall be included
-* in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
-* THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-* 
-***************************************************************************/
