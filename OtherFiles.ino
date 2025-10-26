@@ -423,9 +423,7 @@ size_t fileSizeOf(const char* path) {
 void LogFile(const char* payload, bool toDebug) {
   if (toDebug) DebugTln(payload);
   if (!FSmounted) return;
-  // File LogFile = LittleFS.open("/P1.log", "r"); // open for read  - bugfix sdk 3.3.1 
   size_t size = fileSizeOf("/littlefs/P1.log");
-  // Debug("filesizeof: ");Debugln(size); 
 
   //log rotate
   if (size > 12000){ 
@@ -451,7 +449,7 @@ void LogFile(const char* payload, bool toDebug) {
     log_payload += "\",\"";
     
     if ( strlen(payload)==0 ) {
-       log_payload += PROFILE " REBOOT reason: ";
+       log_payload += PROFILE " [" _VERSION_ONLY "] REBOOT reason: ";
        log_payload += String(lastReset);
        log_payload += " | reboots: ";
        log_payload += String(P1Status.reboots);

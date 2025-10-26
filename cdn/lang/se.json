@@ -1,8 +1,8 @@
 {
 "btn-migrate":"MIGRATE",
 "txt-esphome-migrate":"Om du vill använda dongeln med ESPHome-programvaran kan du migrera till ESPHome genom att trycka på knappen nedan.</br></br><b>OBS! <br>-Nuvarande programvara och data kommer att raderas. <br>-Wi-Fi måste anslutas igen.</b>",
-"lbl-download-popup-1":"=== FIRMWARE UPDATE ===\n\nAfter OK, the RNG data files will be downloaded first.\nYou can then start the update.",
-"lbl-download-popup-2":"The RNG data files have been downloaded.\n\nDo you want to start the firmware update now?",
+"lbl-download-popup-1":"=== UPDATE -> DOWNLOAD FILES ? ===\n\nOK = Downloading RNG data files.\nCANCEL = Do not download.\n\n > Next step > Start update.",
+"lbl-download-popup-2":"=== UPDATE -> START ===\n\nDo you want to start the firmware update now?",
 "dict_hardware":"Hardware typ",
   "lbl-beta-fwversion": "Beta mjukvara",
   "lbl-install": "installera",

@@ -986,7 +986,10 @@ function bootsTrapMain()
 			case "UpdateStart":
 				UpdateStart(paramString);				
 				break;
-				
+			case "Logout":
+				console.log("logout : " + "http://logout:logout@ultra-dongle.local/#Logout" );
+				location.href = "http://logout:logout@ultra-dongle.local/";
+				break;				
 			case "Redirect":
 				handleRedirect();
 				break;
@@ -1427,14 +1430,14 @@ async function downloadFilesSequential(urls) {
 }
 
 async function startUpdateFlow( type ) {
-  if (!confirm( t("lbl-download-popup-1") )) return;
-
+  if (confirm( t("lbl-download-popup-1") )){
   // 1) Start downloads (in dezelfde user-gesture context)
   await downloadFilesSequential([
     "/RNGdays.json",
     "/RNGhours.json",
     "/RNGmonths.json"
   ]);
+}	
 
   // 2) Tweede bevestiging voor de update
   if (confirm(t("lbl-download-popup-2"))) {

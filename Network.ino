@@ -90,8 +90,8 @@ static inline bool isAuthFatal(uint8_t r){
 static void kickOnce(){
   uint32_t now = millis();
   if (now - s_lastKickMs < KICK_DEBOUNCE_MS) return;
-  esp_wifi_start();                 //  start STA als die gestopt is
-  esp_wifi_connect();               // als driver al bezig is → ESP_ERR_WIFI_CONN
+  esp_wifi_start();                 //  start STA if stopped
+  esp_wifi_connect();               // driver allready in action → ESP_ERR_WIFI_CONN
   s_lastKickMs = now;
 }
 
@@ -184,7 +184,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     //****** WIFI
     case ARDUINO_EVENT_WIFI_STA_START: //110
       // initial nudge (soms is begin() traag met eerste connect)
-      if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
+      // if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
       // Debugln("--- WIFI START ----");
       break;
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
@@ -253,10 +253,14 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       else Debugln("config portal active - no kickonce");
         break;
         }
-    default:
-        sprintf(cMsg,"Network-event : %d | reason: %d| rssi: %d | channel : %i",event, info.wifi_sta_disconnected.reason, WiFi.RSSI(), WiFi.channel());
+    default:{
+        const char *ename = Network.eventName((arduino_event_id_t)event);
+        int rssi = WiFi.isConnected() ? WiFi.RSSI() : 0;
+        int ch   = WiFi.isConnected() ? WiFi.channel() : 0;
+        sprintf(cMsg,
+        "Network-event : %d (%s) | %s | rssi:%d | ch:%d", event, ename ? ename : "?", WiFi.isConnected() ? "wifi" : "no-wifi", rssi, ch);
         LogFile(cMsg, true);
-        break;
+        break;}
     }
 }
 
@@ -286,7 +290,6 @@ void startWiFi(const char* hostname, int timeOut) {
   Debugln();
   if ( netw_state != NW_NONE ) return;
   enterPowerDownMode(); //disable ETH after 6.5 sec waiting ... lower power consumption
-  LogFile("ETH timeout -> going WiFi",true);
 #endif 
   
   if ( netw_state != NW_NONE ) return;
@@ -491,8 +494,8 @@ void W5500_Read_PHYCFGR() {
 }
 
 void enterPowerDownMode() {
-  DebugTln(F("ETH POWER DOWN"));
-  
+  // DebugTln(F("ETH POWER DOWN"));
+  LogFile("ETH powered down, switching to WiFi", true);
   ETH.end();
   pinMode(cs, OUTPUT);
   SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO);
