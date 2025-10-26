@@ -36,18 +36,6 @@ BACKLOG
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
 
-4.16.2
-- mqtt toptopic change on demand
-- hide mqtt config setting
-- settingsoption -> macadres in toptopic
-- no refresh index file after update option
-- fix bug mqtt command payload length
-- improve logging
-- refactor pushbutton
-- add: mqtt ota-url subscribe incl refactoring
-- fix: ethernet power down on Wifi (power saving)
-
-
 Default checks
 - wifi
 - port 82
