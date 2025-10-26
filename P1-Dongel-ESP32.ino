@@ -106,7 +106,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define MQTTKB
 // #define MB_RTU
 #define ESPNOW
-// #define POST_POWERCH
+#define POST_POWERCH
 
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>

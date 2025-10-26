@@ -281,9 +281,6 @@ void sendDeviceInfo()
       doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
   }
   
-  // if ( DSMRdata.p1_version == "50" /*|| !DSMR_NL */) doc["telegraminterval"] = 1; 
-  // else doc["telegraminterval"] = 10; 
-
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
 
@@ -294,6 +291,8 @@ void sendDeviceInfo()
   if (MQTTclient.connected()) doc["mqttbroker_connected"] = "yes";
   else  doc["mqttbroker_connected"] = "no";
 #endif
+  
+  doc["paired"] = Pref.peers;
 
   doc["reboots"] = (int)P1Status.reboots;
   doc["lastreset"] = lastReset;  

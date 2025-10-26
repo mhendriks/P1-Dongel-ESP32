@@ -51,8 +51,10 @@
 			<li><a id='bEditMonths'   data-i18n-key="mnu-editmonths" class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
 			<li><a id='bReset'   	  data-i18n-key="mnu-reset" class='tabButton nav-item' href="#Reset" >Reset/boot</a></li>
 			<li><a id='bSolar'   	  data-i18n-key="mnu-solar" class='tabButton nav-item' href="#Solar" >Solar Setup</a></li>
+			<li><a id='bESPHome'   	  data-i18n-key="mnu-esphome" class='tabButton nav-item' href="#ESPHome" >ESPHome</a></li>
 <!-- 			<li><a id='bAbout'   	  class='tabButton nav-item' href="#About" >About</a></li> -->
 		</ul></li>
+<!-- 	  <li><a id='bLogout'      class='nav-img nav-item' href="/logout" ><span class="iconify" data-icon="mdi-logout"></span></a>    		 -->
 	  <li><a href="javascript:void(0);" class="icon" onclick="menu()"><i id="menuid" class="iconify" data-icon="mdi-menu"></i></a></li>
    </ul>
    </nav> <!-- end nav-main -->  
@@ -467,25 +469,52 @@
       <fileSize></fileSize>
   </section>
   
+ <section id="Logout" class="tabName">
+      <!-- START Tabbladen -->
+      <div id=logout>
+	  	<h2 class=align-c data-i18n-key="tle-logout">Logout</h2>
+      	<hr>
+        <h2>Je bent uitgelogd</h2>
+        <p>Je sessie is verlopen of je hebt zelf uitgelogd.</p>
+        <button onclick="location.href='/'">Inloggen opnieuw</button>
+
+      </div> 
+  </section> <!-- logout -->
+  
+  
 <section id="Reset" class="tabName">
       <!-- START Tabbladen -->
-  <h2 data-i18n-key="tle-reset-update">Reset en Update</h2>
-      <hr>
-            <div id="btnReboot" class="act_btn">
-      	<p data-i18n-key="txt-reboot">Na het indrukken van de REBOOT knop zal de Dongel opnieuw opstarten.</p>
-        <span>
-        <form  action='/ReBoot'>
-          <input type='submit' class='button' name='SUBMIT' value='Reboot'>
-        </form>
+      <div id=eid-setup>
+	  	<h2 class=align-c data-i18n-key="tle-reset-update">Reset en Update</h2>
+      	<hr>
+        <div id="btnReboot" class="act_btn">
+      		<p data-i18n-key="txt-reboot">Na het indrukken van de REBOOT knop zal de Dongel opnieuw opstarten.</p>
+        	<span></span>
+			<form  action='/ReBoot'>
+				<input type='submit' class='button' name='SUBMIT' value='Reboot'>
+			</form>
+      	</div> 
+      	<br>
+     	<hr>
+      	<div id="btnResetWifi" class="act_btn">
+			<p data-i18n-key="txt-reset-wifi">Na het indrukken van de RESET WIFI knop zal de module herstarten en vragen om het wifi-netwerk opnieuw in te stellen. Zie initiële setup van de module.</p>
+			<span></span>
+			<form action='/ResetWifi' >
+			  <input id="resetWifi" type='submit' class='button' name='SUBMIT' value='Reset Wifi'/>
+			</form>
+      	</div> 
+
       </div> 
-     <hr>
-      <div id="btnResetWifi" class="act_btn">
-		<p data-i18n-key="txt-reset-wifi">Na het indrukken van de RESET WIFI knop zal de module herstarten en vragen om het wifi-netwerk opnieuw in te stellen. Zie initiële setup van de module.</p>
-        <span>
-        <form action='/ResetWifi' >
-          <input id="resetWifi" type='submit' class='button' name='SUBMIT' value='Reset Wifi'/>
-        </form>
-      </div> 
+  </section> <!-- end Settings Page -->
+  
+  <section id="ESPHome" class="tabName">
+      <!-- START Tabbladen -->
+	<div id=eid-setup>
+  		<h2 class=align-c data-i18n-key="tle-esphome">ESPHome</h2>
+      	<div id="btnResetWifi" class="act_btn">
+		<p data-i18n-key="txt-esphome-migrate"></p></br>
+		<div class=align-c><button type="button" onclick='RemoteUpdate("esphome");' data-i18n-key="btn-migrate">MIGREER</button></div>
+    </div> 
   </section> <!-- end Settings Page -->
   
 <section id="About" class="tabName">

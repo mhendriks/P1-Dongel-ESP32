@@ -131,6 +131,7 @@ let objDAL 					= null;
 	
 	parseEIDplan(json){
 		this.eid_planner = json;
+		console.log("DAL::parseEIDplan -> " + json );
 		this.callback?.('eid_planner', json);
 	}
 	

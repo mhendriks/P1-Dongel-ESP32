@@ -53,7 +53,8 @@ void AutoDiscoverHA(){
 //#ifndef HEATLINK
   if ( ! bWarmteLink ) { // IF NO HEATLINK  
     SendAutoDiscoverHA("timestamp", "timestamp", "DSMR Last Update", "", "{{ strptime(value[:-1] + '-+0200' if value[12] == 'S' else value[:-1] + '-+0100', '%y%m%d%H%M%S-%z') }}","", "\"icon\": \"mdi:clock\",");
-    
+    SendAutoDiscoverHA("uptime", "duration", "Uptime", "s", "","","");
+
     SendAutoDiscoverHA("power_delivered", "power", "Power Delivered", "W", "{{ value | round(3) * 1000 }}","measurement","");
     SendAutoDiscoverHA("power_returned" , "power", "Power Returned" , "W", "{{ value | round(3) * 1000 }}","measurement","");  
     
@@ -77,10 +78,10 @@ void AutoDiscoverHA(){
     SendAutoDiscoverHA("current_l1", "current", "Current l1", "A", "{{ value | round(3) }}","measurement","");
     SendAutoDiscoverHA("current_l2", "current", "Current l2", "A", "{{ value | round(3) }}","measurement","");
     SendAutoDiscoverHA("current_l3", "current", "Current l3", "A", "{{ value | round(3) }}","measurement","");
+  
+    SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(3) }}","total_increasing","");
     SendAutoDiscoverHA("peak_pwr_last_q", "power", "Peak last Quarter", "W", "{{ value | round(3) * 1000 }}","measurement","");
     SendAutoDiscoverHA("highest_peak_pwr", "power", "Highest Peak this month", "W", "{{ value | round(3) * 1000 }}","measurement","");
-
-    SendAutoDiscoverHA("gas_delivered", "gas", "Gas Delivered", "m³", "{{ value | round(3) }}","total_increasing","");
     
     SendAutoDiscoverHA("water", "water", "Waterverbruik", "m³", "{{ value | round(3) }}","total_increasing","\"icon\": \"mdi:water\",");
 //#else 
@@ -181,7 +182,7 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
 
   DebugTf("Message length: %d\n",len );
   for (int i=0;i<len;i++) StrPayload[i] = (char)payload[i];
-  payload[len] = '\0';
+  StrPayload[len] = '\0';
   DebugT("Message arrived [" + StrTopic + "] ");Debugln(StrPayload);
 
   if ( StrTopic.indexOf("update") >= 0) {
@@ -196,11 +197,25 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
     writeSettings();
   }
   if ( StrTopic.indexOf("reboot") >= 0) {
+    LogFile("reboot: mqtt command", false);
     P1Reboot();
   }
   if ( StrTopic.indexOf("reconfig") >= 0) {
     MqttReconfig(StrPayload);
   }
+//   if ( StrTopic.indexOf("toptopic") >= 0) {
+//       strncpy( settingMQTTtopTopic, StrPayload, sizeof(settingMQTTtopTopic) );
+//       if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+//       snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
+//       if ( MQTTclient.connected() ) MQTTclient.disconnect();
+//       writeSettings();
+//   }
+  if ( StrTopic.indexOf("ota-url") >= 0) {
+      strncpy( BaseOTAurl, StrPayload, sizeof(BaseOTAurl) );
+      if (BaseOTAurl[strlen(BaseOTAurl)-1] != '/') strcat(BaseOTAurl,"/");
+      writeSettings();
+  }
+
 }
 
 //===========================================================================================
@@ -221,14 +236,22 @@ void MQTTConnect() {
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
-      sprintf( cMsg,"%supdate", settingMQTTtopTopic );
-	    MQTTclient.subscribe(cMsg); //subscribe mqtt update
-      sprintf(cMsg,"%sinterval",settingMQTTtopTopic);
-      MQTTclient.subscribe(cMsg); //subscribe mqtt interval
-      sprintf(cMsg,"%sreboot",settingMQTTtopTopic);
-      MQTTclient.subscribe(cMsg); //subscribe mqtt reboot
-      sprintf(cMsg,"%sreconfig",settingMQTTtopTopic);
-      MQTTclient.subscribe(cMsg); //subscribe mqtt reconfig
+      
+      const char* topics[] = {
+          "update",
+          "interval",
+          "reboot",
+          "reconfig",
+          "toptopic",
+          "ota-url"
+        };
+
+      // subscribe on all topics
+      for (auto& t : topics) {
+        snprintf(cMsg, sizeof(cMsg), "%s%s", settingMQTTtopTopic, t);
+        MQTTclient.subscribe(cMsg);
+      }
+
 #ifndef NO_HA_AUTODISCOVERY
       if ( EnableHAdiscovery ) AutoDiscoverHA();
 #endif      
@@ -402,6 +425,15 @@ void sendMQTTData() {
 
   DSMRdata.applyEach(buildJsonMQTT());
   
+
+if ( mbusWater ){
+    MQTTSend( "water", waterDelivered );
+    MQTTSend( "water_ts", waterDeliveredTimestamp, true );    
+  } else {
+    sprintf(cMsg,"%d.%3.3d",P1Status.wtr_m3,P1Status.wtr_l);
+    MQTTSend("water",cMsg, true);    
+  }
+
   if ( bActJsonMQTT ) {
     String buffer;
     if ( gasDelivered ) {
@@ -410,12 +442,11 @@ void sendMQTTData() {
     }
     serializeJson(jsonDoc,buffer);
     MQTTSend("all", buffer, false);
-  } else {
-	  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
-
-	  MQTTsendGas();
-	  MQTTsendWater();
-  }  
+  }
+  if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
+  MQTTsendGas();
+  MQTTsendWater();  
+  MQTTSend( "uptime",String(uptime()), false);
 
 #ifdef VICTRON_GRID
   MQTTSendVictronData();

@@ -424,7 +424,7 @@ void LogFile(const char* payload, bool toDebug) {
     log_payload += "\",\"";
     
     if ( strlen(payload)==0 ) {
-       log_payload += PROFILE " REBOOT reason: ";
+       log_payload += PROFILE " [" _VERSION_ONLY "] REBOOT reason: ";
        log_payload += String(lastReset);
        log_payload += " | reboots: ";
        log_payload += String(P1Status.reboots);

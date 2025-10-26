@@ -1,6 +1,9 @@
 {
-"lbl-download-popup-1":"=== FIRMWARE UPDATE ===\n\nAfter OK, the RNG data files will be downloaded first.\nYou can then start the update.",
-"lbl-download-popup-2":"The RNG data files have been downloaded.\n\nDo you want to start the firmware update now?",
+"dict_paired":"Paired Devices",
+"btn-migrate":"MIGRATE",
+"txt-esphome-migrate":"If you want to use the dongle with ESPHome software, you can migrate the software to ESPHome by pressing the button below.</br></br><b>NOTE! <br>-Current software and data will be erased. <br>-Wi-Fi must be reconnected.</b>",
+"lbl-download-popup-1":"=== UPDATE -> DOWNLOAD FILES ? ===\n\nOK = Downloading RNG data files.\nCANCEL = Do not download.\n\n > Next step > Start update.",
+"lbl-download-popup-2":"=== UPDATE -> START ===\n\nDo you want to start the firmware update now?",
 "dict_hardware":"Hardware type",
   "lbl_update_start":"Update started...",
   "lbl_update_done": "Update Done!",

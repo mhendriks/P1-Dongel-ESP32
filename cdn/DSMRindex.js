@@ -986,7 +986,10 @@ function bootsTrapMain()
 			case "UpdateStart":
 				UpdateStart(paramString);				
 				break;
-				
+			case "Logout":
+				console.log("logout : " + "http://logout:logout@ultra-dongle.local/#Logout" );
+				location.href = "http://logout:logout@ultra-dongle.local/";
+				break;				
 			case "Redirect":
 				handleRedirect();
 				break;
@@ -1322,7 +1325,7 @@ function parseDeviceInfo(obj) {
   // NETSW config
   const showNetSw = obj.compileoptions.includes("[NETSW]");
   document.getElementById("bNETSW").style.display = showNetSw ? "block" : "none";
-
+    
   // add version info 
   const manifest = objDAL.version_manifest;
   if (manifest.version) {
@@ -1372,10 +1375,6 @@ function parseDeviceInfo(obj) {
   // check for update
   if (manifest.version) {
     const latest = manifest.major * 10000 + manifest.minor * 100 + manifest.fix;
-//     const updateCell = tableRef.rows[0].cells[2];
-//     updateCell.innerHTML = (firmwareVersion < latest)
-//       ? `<a style='color:red' onclick='RemoteUpdate()' href='#'>${t('lbl-click-update')}</a>`
-//       : td("latest_version");
   }
 }
     
@@ -1406,7 +1405,8 @@ function UpdateStart( msg ){
 }
         
 function RemoteUpdate(type) {        
-  if (type == "beta")
+  if (type == "esphome") document.location.href = "/remote-update?version=esphome";
+  else if (type == "beta")
     document.location.href = "/remote-update?version=" + objDAL.version_manifest.beta;
   else
     document.location.href = "/remote-update?version=" + objDAL.version_manifest.version;
@@ -1430,14 +1430,14 @@ async function downloadFilesSequential(urls) {
 }
 
 async function startUpdateFlow( type ) {
-  if (!confirm( t("lbl-download-popup-1") )) return;
-
+  if (confirm( t("lbl-download-popup-1") )){
   // 1) Start downloads (in dezelfde user-gesture context)
   await downloadFilesSequential([
     "/RNGdays.json",
     "/RNGhours.json",
     "/RNGmonths.json"
   ]);
+}	
 
   // 2) Tweede bevestiging voor de update
   if (confirm(t("lbl-download-popup-2"))) {

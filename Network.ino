@@ -1,20 +1,10 @@
 #ifndef _NETWORK_H
 #define _NETWORK_H
-/*
-***************************************************************************  
-**  Program  : network.h, part of DSMRloggerAPI
-**
-**  Copyright (c) 2021 Willem Aandewiel / Martijn Hendriks
-**
-**  TERMS OF USE: MIT License. See bottom of file.                                                            
-***************************************************************************      
-*/
 
 #include "DSMRloggerAPI.h"
 #include "esp_timer.h"
 #include "esp_mac.h"
 
-//int WifiDisconnect = 0;
 bool bNoNetworkConn = false;
 bool bEthUsage = false;
 static esp_timer_handle_t s_reconnTimer = nullptr;
@@ -74,8 +64,6 @@ static void kickOnce(){
   s_lastKickMs = now;
 }
 
-static void scheduleReconnect(uint32_t delayMs); // fwd
-
 void GetMacAddress(){
 
   String _mac = MAC_Address();
@@ -130,7 +118,9 @@ void WifiOff() {
   // esp_wifi_deinit();
   WiFi.setSleep(true);
 #endif
+#ifdef CONFIG_BT_ENABLED
   btStop();
+#endif
 }
 
 static inline bool isAuthError(uint8_t reason)
@@ -167,7 +157,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     case ARDUINO_EVENT_ETH_CONNECTED: //3
       DebugTln("\nETH Connected");
       WifiOff();
-      // netw_state = NW_ETH;
+      netw_state = NW_ETH_LINK;
       bEthUsage = true; //set only once 
       break;
     case ARDUINO_EVENT_ETH_GOT_IP6: //7
@@ -186,6 +176,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       } 
     case ARDUINO_EVENT_ETH_STOP: //2
       DebugTln("!!! ETH Stopped");
+      [[fallthrough]];
     case ARDUINO_EVENT_ETH_DISCONNECTED: //4
       // if ( Update.isRunning() ) Update.abort();
       if ( netw_state != NW_WIFI ) netw_state = NW_NONE;
@@ -197,7 +188,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
 //WIFI
     case ARDUINO_EVENT_WIFI_STA_START: //110
       // initial nudge (soms is begin() traag met eerste connect)
-      if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
+//       if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
       break;
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
@@ -211,7 +202,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
 
         if ( bEthUsage ) WifiOff();        
         else {
-          enterPowerDownMode(); //disable ETH
+//           enterPowerDownMode(); //disable ETH
           netw_state = NW_WIFI;
         }
         s_authBlocked = false;
@@ -266,10 +257,14 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       else Debugln("config portal active - no kickonce");
         break;
         }
-    default:
-        sprintf(cMsg,"Network-event : %d | reason: %d| rssi: %d | channel : %i",event, info.wifi_sta_disconnected.reason, WiFi.RSSI(), WiFi.channel());
+    default:{
+        const char *ename = Network.eventName((arduino_event_id_t)event);
+        int rssi = WiFi.isConnected() ? WiFi.RSSI() : 0;
+        int ch   = WiFi.isConnected() ? WiFi.channel() : 0;
+        sprintf(cMsg,
+        "Network-event : %d (%s) | %s | rssi:%d | ch:%d", event, ename ? ename : "?", WiFi.isConnected() ? "wifi" : "no-wifi", rssi, ch);
         LogFile(cMsg, true);
-        break;
+        break;}
     }
 }
 
@@ -292,13 +287,14 @@ void startWiFi(const char* hostname, int timeOut) {
 #ifdef ULTRA
   //lets wait on ethernet first for 3.5sec and consume some time to charge the capacitors
   uint8_t timeout = 0;
-  while ( (netw_state == NW_NONE) && (timeout++ < 35) ) {
+  while ( (netw_state == NW_NONE) && (timeout++ < 65) ) {
     delay(100); 
-    Debug(".");
+    Debug("e");
     esp_task_wdt_reset();
   } 
   Debugln();
-  // w5500_powerDown();
+  if ( netw_state != NW_NONE ) return;
+  enterPowerDownMode(); //disable ETH after 6.5 sec waiting ... lower power consumption
 #endif 
   
   if ( netw_state != NW_NONE ) return;
@@ -365,7 +361,7 @@ void startWiFi(const char* hostname, int timeOut) {
 //===========================================================================================
 void WaitOnNetwork()
 {
-  while ( netw_state == NW_NONE ) { //endless wait for network connection
+  while ( netw_state != NW_ETH && netw_state != NW_WIFI ) { //endless wait for network connection
     Debug(".");
     delay(200);
     esp_task_wdt_reset();
@@ -480,7 +476,7 @@ EthernetClass myEthernet;
 void startETH(){
   
   //derive ETH mac address
-  uint8_t mac_eth[6] = { 0xFE, 0xED, 0xDE, 0xAD, 0xBE, 0xEF };
+  uint8_t mac_eth[6];
   esp_read_mac(mac_eth, ESP_MAC_ETH);
   
   // ETH.enableIPv6();
@@ -492,10 +488,10 @@ void startETH(){
 void W5500_Read_PHYCFGR() {
     digitalWrite(CS_GPIO, LOW);
 
-    // Stuur het PHYCFGR-adres met het "read" bit (bit 15 = 1)
-    SPI.transfer16(0x802E); // 0x802E = 0x002E met "read" bit ingesteld
-    uint8_t phycfgr = SPI.transfer(0x00); // Ontvang data
-
+	SPI.transfer16(0x002E);     // MSB, LSB
+	SPI.transfer(0x01);       // control: BSB=0 (common), OM=VDM, RWB=1(read)
+	uint8_t phycfgr = SPI.transfer(0x00);
+  
     digitalWrite(CS_GPIO, HIGH);
 
 #ifdef DEBUG
@@ -513,17 +509,21 @@ void W5500_Read_PHYCFGR() {
 }
 
 void enterPowerDownMode() {
-  // Select the W5500 chip
+  LogFile("ETH powered down, switching to WiFi", true);
+  ETH.end();
+  pinMode(CS_GPIO, OUTPUT);
+  SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO);
+  
   W5500_Read_PHYCFGR();
 
+  SPI.beginTransaction(SPISettings(8000000UL, MSBFIRST, SPI_MODE0));
   digitalWrite(CS_GPIO, LOW);
-  SPI.transfer((0x002E >> 8) & 0x7F); // Upper address byte
-  SPI.transfer(0x002E & 0xFF);        // Lower address byte
+  SPI.transfer16(0x002E);
   SPI.transfer(0x04);               // Control byte (W5500 write)
   SPI.transfer(0x70);              // Data to write
   digitalWrite(CS_GPIO, HIGH);
+  SPI.endTransaction();
   
-  // ETH.end(); //controler stopped and this will throw an error
   delay(500);
   W5500_Read_PHYCFGR();
 }
