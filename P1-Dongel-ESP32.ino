@@ -35,6 +35,7 @@ BACKLOG
 - improvement: modbus in own process = non-blocking 
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
+- Huawei FusionSolar integratie ( Francis )
 
 Default checks
 - wifi
@@ -45,6 +46,10 @@ Default checks
 - dev_pairing
 - ethernet
 - 4h test
+
+4.16.3
+- update dsmr2.h library support AT/CH/DE obis telegrams
+- update dsmr libr due to MCS501 issue (P version)
 
 4.17.0
 - Shelly EM udp emulation
@@ -76,8 +81,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
 // #define ULTRA         //ultra (mini) dongle
-// #define ETHERNET      //ethernet dongle
-// #define ETH_P1EP          //ethernet pro+ dongle
+#define ETHERNET      //ethernet dongle
+#define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 

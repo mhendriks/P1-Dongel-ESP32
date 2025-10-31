@@ -412,6 +412,7 @@ void startNetwork()
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   WaitOnNetwork();
   GetMacAddress();
+  snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" ); //set proper MQTTtoptopic
   USBPrint("Ip-addr: ");USBPrintln(IP_Address());
 }
 

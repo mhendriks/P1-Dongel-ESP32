@@ -134,19 +134,19 @@ void DetectModule() {
 #ifdef ULTRA
   if ( HardwareType == P1UX2 ) {
     rgbled_io =  9;
-    RxP1 = 12;
-    TxO1 = 21; //same as others
-    DTR_out = 10;
-    LED_out = 11;
+    RxP1      = 12;
+    TxO1      = 21; //same as others
+    DTR_out   = 10;
+    LED_out   = 11;
     
     active_mod_conf = &module_config[2];
-    DetectModule(0); 
+    DetectModule(0);
     ActivateModule(0);
-    DetectModule(1); 
+    DetectModule(1);
     ActivateModule(1);
   }
   else if ( HardwareType == P1U ) {
-    rgbled_io =  9; //Ultra V2
+    rgbled_io       =  9; //Ultra V2
     active_mod_conf = &module_config[1];
     DetectModule(0); 
     ActivateModule(0);
@@ -205,10 +205,9 @@ void SetConfig(){
   //pin modes
   pinMode(DTR_IO, OUTPUT);
   if ( LED !=-1  ) pinMode(LED, OUTPUT);
-  if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP);   
+  if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP);
   
-  Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);
-  // if ( UseRGB ) rgb.begin();
+  Debugf("---> Config set UseRGB [%s] IOWater [%d]\n\n", UseRGB ? "true" : "false", IOWater);
   
   // sign of life = ON during setup or change config
   SwitchLED( LED_ON, LED_BLUE );

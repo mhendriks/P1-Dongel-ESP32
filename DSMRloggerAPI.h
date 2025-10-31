@@ -79,7 +79,7 @@ TaskHandle_t tP1Reader; //  own proces for P1 reading
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS, RINGVOLTAGE};
-enum  SolarSource { ENPHASE, SOLAR_EDGE };
+enum  SolarSource { ENPHASE, SOLAR_EDGE, SMA };
 
 //test
 struct RingRecord {
@@ -270,7 +270,7 @@ void SetConfig();
 
 //===========================GLOBAL VAR'S======================================
 #ifndef MQTT_DISABLE 
-  #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
+  #include <PubSubClient.h>           // https://github.com/hmueller01/pubsubclient3.git or https://github.com/knolleary/pubsubclient
 #endif
   WiFiClientSecure wifiClientTLS;
   WiFiClient wifiClient;

@@ -218,7 +218,9 @@ void SMCheckOnce(){
   DebugTf("mbusGas: %d\r\n",mbusGas);
   ResetStats();
   bV5meter = DSMRdata.voltage_l1_present || DSMRdata.voltage_l2_present || DSMRdata.voltage_l3_present;
-
+  DebugTf("bV5meter: %d\r\n",bV5meter);
+  DebugTf("bUseEtotals: %d\r\n",bUseEtotals);
+  DebugTf("bWarmteLink: %d\r\n",bWarmteLink);
 }
 //==================================================================================
 void processSlimmemeter() {
