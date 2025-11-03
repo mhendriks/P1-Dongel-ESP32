@@ -52,6 +52,8 @@ Default checks
 - update dsmr libr due to MCS501 issue (P version)
 
 4.17.0
+- change: solar support for 3 inverters
+- add: SMA support
 - Shelly EM udp emulation
 - ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
 
@@ -76,13 +78,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
-// #define ULTRA         //ultra (mini) dongle
-#define ETHERNET      //ethernet dongle
-#define ETH_P1EP          //ethernet pro+ dongle
+#define ULTRA         //ultra (mini) dongle
+// #define ETHERNET      //ethernet dongle
+// #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
@@ -105,9 +107,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 void setup() 
 {
+  DebugBegin(115200);
   uint16_t Freq = getCpuFrequencyMhz();
   setCpuFrequencyMhz(80); //lower power mode
-  DebugBegin(115200);
   USBPrintf( "\n\n------> BOOTING %s %s ( %s %s ) <------\n\n", _DEFAULT_HOSTNAME, _VERSION_ONLY, __DATE__, __TIME__ ); 
   Debugf("Original cpu speed: %d\n",Freq);
   SetupWDT();
