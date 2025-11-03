@@ -286,7 +286,7 @@ void P2PSendActualData(){
   ActualData.e_t2r  = DSMRdata.energy_returned_tariff2.int_val() - dataYesterday.t2r;
   if ( mbusGas ) ActualData.Gas = gasDelivered * 1000 - dataYesterday.gas;
   else ActualData.Gas = UINT32_MAX; 
-  if ( mbusWater ) ActualData.Water  = waterDelivered * 1000 - dataYesterday.water;
+  if ( WtrMtr ) ActualData.Water  = (P1Status.wtr_m3 * 1000.0 + P1Status.wtr_l + waterDelivered * 1000) - dataYesterday.water;
   else ActualData.Water = UINT32_MAX;
   ActualData.Esolar = Enphase.Daily + SolarEdge.Daily;
   

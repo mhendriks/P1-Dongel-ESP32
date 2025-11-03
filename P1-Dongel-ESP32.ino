@@ -55,6 +55,9 @@ Planner display checks
 √ uur overgang
  
 
+ 5.2.6
+- fix: bug watermeter data naar NRG Monitor
+
 task wtd
 - https://forum.arduino.cc/t/watchdog-reset-esp32-if-stuck-more-than-120-seconds/1266565/2
 - https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/wdts.html
@@ -89,7 +92,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
-// #define NRG_DONGLE   
+#define NRG_DONGLE   
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
 //SPECIAL
