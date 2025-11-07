@@ -22,7 +22,7 @@ void fNetSwitchProc( void * pvParameters ){
 }
 
 void SetupNetSwitch(){
-  if( xTaskCreate( fNetSwitchProc, "netswitch", 4*1024, NULL, 3, NULL ) == pdPASS ) DebugTln(F("Netswitch task succesfully created"));
+  if( xTaskCreate( fNetSwitchProc, "netswitch", 4*1024, NULL, 4, NULL ) == pdPASS ) DebugTln(F("Netswitch task succesfully created"));
 }
 
 uint32_t uptimeSEC(){

@@ -55,9 +55,6 @@ Planner display checks
 √ uur overgang
  
 
- 5.2.6
-- fix: bug watermeter data naar NRG Monitor
-
 task wtd
 - https://forum.arduino.cc/t/watchdog-reset-esp32-if-stuck-more-than-120-seconds/1266565/2
 - https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/wdts.html
@@ -92,7 +89,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
-#define NRG_DONGLE   
+// #define NRG_DONGLE   
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
 //SPECIAL
@@ -109,7 +106,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define MQTTKB
 // #define MB_RTU
 #define ESPNOW
-#define POST_POWERCH
+// #define POST_POWERCH
 
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>
@@ -223,8 +220,8 @@ void setup()
 
   //create a task that will be executed in the fP1Reader() function, with priority 1
   //p1 task runs always on core 0. On the dual core models Arduino runs on core 1. It isn't possible that the process runs on both cores.
-  if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 2, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
-  if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*6, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
+  if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 10, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
+  if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*6, NULL, 6, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
   StartESPNOW();
   StartPowerCH();

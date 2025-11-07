@@ -93,7 +93,7 @@ void fAuxProc(void *pvParameters) {
 }
 
 void SetupButton() {
-  if( xTaskCreatePinnedToCore( fAuxProc, "Aux", 1024*5, NULL, 2, NULL, 0) == pdPASS ) DebugTln(F("Task Aux succesfully created"));
+  if( xTaskCreatePinnedToCore( fAuxProc, "Aux", 1024*5, NULL, 4, NULL, 0) == pdPASS ) DebugTln(F("Task Aux succesfully created"));
   // gpio_dump_io_configuration(stdout, 1ULL << 0);
 }
 

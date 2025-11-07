@@ -294,15 +294,15 @@ void processTelegram(){
   newT = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), true); // update system time
   
   //cal current more accurate; only works with SMR 5 meters
-  if ( DSMRdata.voltage_l1_present && DSMRdata.voltage_l1 ){
+  if ( DSMRdata.voltage_l1_present && DSMRdata.voltage_l1 && DSMRdata.power_delivered_l1.int_val() ){
     DSMRdata.current_l1._value = (uint32_t)((DSMRdata.power_delivered_l1.int_val() + DSMRdata.power_returned_l1.int_val())/DSMRdata.voltage_l1*1000);
     DSMRdata.current_l1_present = true;
   }
-  if ( DSMRdata.voltage_l2_present && DSMRdata.voltage_l2 ){
+  if ( DSMRdata.voltage_l2_present && DSMRdata.voltage_l2 && DSMRdata.power_delivered_l2.int_val() ){
     DSMRdata.current_l2._value = (uint32_t)((DSMRdata.power_delivered_l2.int_val() + DSMRdata.power_returned_l2.int_val())/DSMRdata.voltage_l2*1000);
     DSMRdata.current_l2_present = true;
   }
-  if ( DSMRdata.voltage_l3_present && DSMRdata.voltage_l3 ){
+  if ( DSMRdata.voltage_l3_present && DSMRdata.voltage_l3 && DSMRdata.power_delivered_l3.int_val()){
     DSMRdata.current_l3._value = (uint32_t)((DSMRdata.power_delivered_l3.int_val() + DSMRdata.power_returned_l3.int_val())/DSMRdata.voltage_l3*1000);
     DSMRdata.current_l3_present = true;
   }
