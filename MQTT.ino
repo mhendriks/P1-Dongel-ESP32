@@ -33,8 +33,7 @@ void fMqtt( void * pvParameters ){
 }
 
 void StartMqttTask(){
-  if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*6, NULL, 1, NULL      , /*core*/ 0 ) == pdPASS ) \
-    DebugTln(F("Task MQTT succesfully created"));
+  if( xTaskCreate( fMqtt, "mqtt", 1024*6, NULL, 6, NULL) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
 }
 
 void handleMQTT(){

@@ -47,9 +47,6 @@ Default checks
 - ethernet
 - 4h test
 
-4.16.3
-- update dsmr2.h library support AT/CH/DE obis telegrams
-- update dsmr libr due to MCS501 issue (P version)
 
 4.17.0
 - change: solar support for 3 inverters
@@ -78,11 +75,11 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
-#define ULTRA         //ultra (mini) dongle
+// #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 

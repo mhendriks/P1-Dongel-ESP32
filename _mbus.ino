@@ -239,7 +239,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
     ModbusMessage response;
     request.get(2, address);
     request.get(4, words);
-
+    
     Debugf("addr [0x%X] words [0x%02X] DevID [0x%02X] FC [0x%02X]\n", address, words, request.getServerID(), request.getFunctionCode());
 
     if ( (address + words) > MaxReg[SelMap] ){
