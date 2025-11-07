@@ -1,4 +1,5 @@
 {
+"dict_paired":"Gekoppelde toestellen",
 "btn-migrate":"MIGREER",
 "txt-esphome-migrate":"Wilt u de dongle gebruiken met ESPHome software dan kunt u met een druk op de knop hieronder de software migreren naar ESPHome.</br></br><b>LET OP! <br>-huidige software en data worden gewist. <br>-Wifi dient opnieuw gekoppeld te worden.</b>",
 "lbl-download-popup-1":"=== UPDATE -> DOWNLOAD BESTANDEN ? ===\n\nOK = RNG-datafiles downloaden.\nCANCEL = niet downloaden.\n\n > Volgende stap > start update.",

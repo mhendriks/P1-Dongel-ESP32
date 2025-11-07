@@ -1,4 +1,6 @@
 {
+
+"dict_paired":"Paired Devices",
 "btn-migrate":"MIGRATE",
 "txt-esphome-migrate":"Om du vill använda dongeln med ESPHome-programvaran kan du migrera till ESPHome genom att trycka på knappen nedan.</br></br><b>OBS! <br>-Nuvarande programvara och data kommer att raderas. <br>-Wi-Fi måste anslutas igen.</b>",
 "lbl-download-popup-1":"=== UPDATE -> DOWNLOAD FILES ? ===\n\nOK = Downloading RNG data files.\nCANCEL = Do not download.\n\n > Next step > Start update.",
