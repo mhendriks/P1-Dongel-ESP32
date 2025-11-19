@@ -17,6 +17,7 @@
 // ------------------ ENUMS & CONSTANTS ------------------ //
 enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2 };
 const char HWTypeNames[][6] = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S", "P1UX2" };
+const char ModTypeNames[][6] = { "N/A", "IO+", "H2O", "RS485" };
 
 // ------------------ GLOBAL VARIABLES ------------------ //
 uint16_t HardwareType = UNDETECTED;

@@ -436,6 +436,7 @@ JsonDocument StroomPlanData;
 #include <HTTPClient.h>
 #include "NetTypes.h"        //included in #include "ESPTelnet.h"
 #include "_Button.h"
+// #include "usb-config-wifi.h"
 
 //===========================================================================================
 // setup timers 

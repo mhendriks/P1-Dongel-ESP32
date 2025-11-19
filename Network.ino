@@ -76,6 +76,7 @@ static inline bool isCoreReconnectable(uint8_t r){
 
 WiFiManager manageWiFi;
 
+
 // Echte “fatal auth” (verkeerd wachtwoord) → blokkeer tot user ingrijpt
 static inline bool isAuthFatal(uint8_t r){
   switch (r) {

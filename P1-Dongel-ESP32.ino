@@ -52,6 +52,10 @@ Default checks
 - change: solar support for 3 inverters
 - add: SMA support
 - Shelly EM udp emulation
+- SDK 3.3.4
+- default mqtt : mqtt://core-mosquitto:1883 en addons als user
+
+4.17.1
 - ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
 
 - winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
@@ -75,14 +79,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+// #define DEBUG 
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
 // #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
-// #define NRG_DONGLE 
+#define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
 //SPECIAL
@@ -99,6 +103,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define MQTTKB
 // #define MB_RTU
 // #define SHELLY_EMU
+#define USB_CONFIG
 
 #include "DSMRloggerAPI.h"
 
@@ -137,7 +142,7 @@ void setup()
   // patchJsonFile_Add7thValue(RINGHOURS);
   // convertRingfileWithSlotExpansion(RINGDAYS,32);
 //=============start Networkstuff ==================================
-  
+  USBconfigBegin();
   startNetwork();
   PostMacIP(); //post mac en ip
   delay(100); 
@@ -189,7 +194,6 @@ void setup()
   EIDStart();
   ShellyEmuBegin();
   // setupWS();
-
   DebugTf("Startup complete! actTimestamp: [%s]\r\n", actTimestamp);  
 
 } // setup()

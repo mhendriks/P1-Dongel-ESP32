@@ -69,7 +69,6 @@ void P1SetDevType(){
 void P1StatusWrite(){
     strcpy(P1Status.timestamp, actTimestamp);
     preferences.putUInt("reboots", P1Status.reboots);
-//    preferences.putUInt("sloterrors", P1Status.sloterrors);
     preferences.putString("timestamp",P1Status.timestamp);
     preferences.putShort("wtr_m3", P1Status.wtr_m3);
     preferences.putUInt("wtr_l", P1Status.wtr_l);
