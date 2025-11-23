@@ -44,12 +44,12 @@ static bool smaLogin(const String& baseUrl, const String& password, const char* 
   String resp;
   String url  = baseUrl + "/dyn/login.json";
   String body = String("{\"pass\":\"") + password + "\",\"right\":\"" + right + "\"}";
-  if (!smaHttpPOST(url, body, resp)) { _sma_sid = ""; return false; }
-
+  if (!smaHttpPOST(url, body, resp)) { _sma_sid = ""; DebugTln("Error smaHttpPOST"); return false; }
+  DebugT("sma POST resp: ");Debugln(resp);
   JsonDocument doc;
-  if (deserializeJson(doc, resp))     { _sma_sid = ""; return false; }
+  if (deserializeJson(doc, resp))     { _sma_sid = ""; DebugTln("Error sma deserializeJson error");return false; }
   String sid = doc["result"]["sid"].as<String>();
-  if (sid.isEmpty())                  { _sma_sid = ""; return false; }
+  if (sid.isEmpty())                  { _sma_sid = ""; DebugTln("Error SMA sid empty");return false; }
   _sma_sid = sid; _sma_sid_t0 = millis();
   return true;
 }
@@ -61,8 +61,8 @@ static bool smaGetPacAndDay(const String& baseUrl, long& pac_W, long& day_Wh) {
   String resp;
   String url  = baseUrl + "/dyn/getValues.json?sid=" + _sma_sid;
   String body = "{\"destDev\":[],\"keys\":[\"6100_40263F00\",\"6400_00262200\"]}";
-  if (!smaHttpPOST(url, body, resp)) return false;
-
+  if (!smaHttpPOST(url, body, resp)) DebugTln("Error smaHttpPOST values"); return false;
+  DebugT("sma POST resp: ");Debugln(resp);
   JsonDocument doc; // ~8k is genoeg voor deze response
   if (deserializeJson(doc, resp)) return false;
 
