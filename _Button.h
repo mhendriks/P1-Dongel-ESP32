@@ -76,7 +76,7 @@ public:
       FacReset();
     } else {
       // DebugTln(F("Button SHORT Press = Reboot"));
-      P1Reboot();
+      if ( netw_state == NW_NONE && !skipNetwork ) skipNetwork = true; else P1Reboot();
     }
   }
 } PushButton;

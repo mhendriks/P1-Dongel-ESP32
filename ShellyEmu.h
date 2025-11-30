@@ -210,6 +210,7 @@ inline void fillStatus( JsonObject dst, bool EM_only ){
 } shellyUDP;
 
 void ShellyEmuBegin(){
+  if ( skipNetwork ) return;
   shellyUDP.begin(/*also2220=*/true);  // luistert op 1010 én 2220
 }
 #else

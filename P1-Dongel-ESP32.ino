@@ -48,15 +48,11 @@ Default checks
 - 4h test
 
 
-4.17.0
-- change: solar support for 3 inverters
-- add: SMA support
-- Shelly EM udp emulation
-- SDK 3.3.4
-- default mqtt : mqtt://core-mosquitto:1883 en addons als user
-- issue cost gas 4.16/5.2 (Karel)
-
 4.17.1
+- default mqtt : mqtt://core-mosquitto:1883 en addons als user
+- change: solar support for 3 inverters
+- Shelly EM udp emulation
+- issue cost gas 4.16/5.2 (Karel)
 - ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
 
 - winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
@@ -80,14 +76,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 */
 /******************** compiler options  ********************************************/
 
-// #define DEBUG 
+// #define DEBUG
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi P1 Dongle Pro
-#define ULTRA         //ultra (mini) dongle
+// #define ULTRA        //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
-// #define NRG_DONGLE 
+// #define NRG_DONGLE
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
 //SPECIAL
@@ -152,6 +148,7 @@ void setup()
   startNTP();
 
 //================ Check necessary files ============================
+  if ( !skipNetwork ) {
   if (!DSMRfileExist(settingIndexPage, false) ) {
     DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
     GetFile(settingIndexPage, PATH_DATA_FILES); //download file from cdn
@@ -171,7 +168,8 @@ void setup()
   }
   
   setupFSexplorer();
- 
+  } //! skipNetwork
+
   esp_register_shutdown_handler(ShutDownHandler);
 
   setupWater();
@@ -201,7 +199,7 @@ void setup()
 
 void loop () { 
   // handleWS();
-  httpServer.handleClient();      
+  if ( !skipNetwork ) httpServer.handleClient();      
   if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
     P1StatusWrite();
     MQTTSentStaticInfo();

@@ -31,6 +31,7 @@ static bool smaHttpPOST(const String& url, const String& body, String& out) {
   else       { client   = new WiFiClient();        http.begin(*client,   url); }
 
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("Connection", "close");
   http.setTimeout(5000);
   int rc = http.POST(body);
   if (rc == 200) out = http.getString();
@@ -47,9 +48,9 @@ static bool smaLogin(const String& baseUrl, const String& password, const char* 
   if (!smaHttpPOST(url, body, resp)) { _sma_sid = ""; DebugTln("Error smaHttpPOST"); return false; }
   DebugT("sma POST resp: ");Debugln(resp);
   JsonDocument doc;
-  if (deserializeJson(doc, resp))     { _sma_sid = ""; DebugTln("Error sma deserializeJson error");return false; }
+  if (deserializeJson(doc, resp))     { _sma_sid = ""; DebugTln("Error sma deserializeJson error"); return false; }
   String sid = doc["result"]["sid"].as<String>();
-  if (sid.isEmpty())                  { _sma_sid = ""; DebugTln("Error SMA sid empty");return false; }
+  if (sid.isEmpty())                  { _sma_sid = ""; DebugTln("Error SMA sid empty"); return false; }
   _sma_sid = sid; _sma_sid_t0 = millis();
   return true;
 }
@@ -61,7 +62,7 @@ static bool smaGetPacAndDay(const String& baseUrl, long& pac_W, long& day_Wh) {
   String resp;
   String url  = baseUrl + "/dyn/getValues.json?sid=" + _sma_sid;
   String body = "{\"destDev\":[],\"keys\":[\"6100_40263F00\",\"6400_00262200\"]}";
-  if (!smaHttpPOST(url, body, resp)) DebugTln("Error smaHttpPOST values"); return false;
+  if (!smaHttpPOST(url, body, resp)) { DebugTln("Error smaHttpPOST values"); return false; }
   DebugT("sma POST resp: ");Debugln(resp);
   JsonDocument doc; // ~8k is genoeg voor deze response
   if (deserializeJson(doc, resp)) return false;
@@ -116,6 +117,7 @@ void ReadSolarConfig(SolarSource src) {
 }
 
 void ReadSolarConfigs() {
+  if ( skipNetwork ) return;
   ReadSolarConfig(ENPHASE);
   ReadSolarConfig(SOLAR_EDGE);
   ReadSolarConfig(SMA);
@@ -169,7 +171,13 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   if (httpResponseCode <= 0) { http.end(); return; }
 
   String payload = http.getString();
-  Debugln(payload);
+  #ifdef DEBUG
+  if (payload.length() > 256) {
+    Debugln(String("payload[256]: ") + payload.substring(0,256) + "...");
+  } else {
+    Debugln(payload);
+  }
+  #endif
   http.end();
 
   JsonDocument solarDoc;
@@ -199,6 +207,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
 }
 
 void GetSolarDataN() {
+  if ( skipNetwork ) return;
   GetSolarData(ENPHASE,   false);
   GetSolarData(SOLAR_EDGE,false);
   GetSolarData(SMA,       false);

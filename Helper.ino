@@ -134,6 +134,11 @@ void DetectModule() {
 
 #ifdef ULTRA
   if ( HardwareType == P1UX2 ) {
+    if ( HardwareVersion >= 101) { 
+      //disable W5500 RESET only 1.1+ hardware
+      pinMode(17, OUTPUT); 
+      digitalWrite(17,HIGH);
+    }
     rgbled_io =  9;
     RxP1      = 12;
     TxO1      = 21; //same as others
@@ -147,6 +152,10 @@ void DetectModule() {
     ActivateModule(1);
   }
   else if ( HardwareType == P1U ) {
+    //old hardware versions with DTR P1 IN -> forced to read.
+    pinMode(17, OUTPUT); 
+    digitalWrite(17,LOW);
+
     rgbled_io       =  9; //Ultra V2
     active_mod_conf = &module_config[1];
     DetectModule(0); 
@@ -204,7 +213,7 @@ void SetConfig(){
   }
 #endif
   //pin modes
-  pinMode(DTR_IO, OUTPUT);
+  // pinMode(DTR_IO, OUTPUT);
   if ( LED !=-1  ) pinMode(LED, OUTPUT);
   if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP);
   

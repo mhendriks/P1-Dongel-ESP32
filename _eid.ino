@@ -31,11 +31,12 @@
     DECLARE_TIMER_MIN(T_EID_PLAN, 60); //refresh planner evry hour
 
     void EIDStart(){
+      if ( skipNetwork ) return;
       if ( bEID_enabled ) EIDPostHello();
     }
 
     void handleEnergyID(){  
-
+      if ( skipNetwork ) return;
       if ( !bEID_enabled ) return;
       
       if ( P1Status.eid_state == EID_ENROLLED ) {

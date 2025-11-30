@@ -127,6 +127,7 @@ void writeSettings() {
   docw["mqtt-hide"] = hideMQTTsettings;
   docw["remove-index"] = RemoveIndexAfterUpdate;
   docw["macid-topic"] = MacIDinToptopic;
+  docw["skip-network"] = skipNetwork;
 
 #ifdef VOLTAGE_MON
   docw["max-volt"] = MaxVoltage;
@@ -262,6 +263,7 @@ void readSettings(bool show)
   if (doc["mb_port"].is<int>()) mb_config.port = doc["mb_port"];
   if (doc["mb_baud"].is<int>()) mb_config.baud = doc["mb_baud"];
   if (doc["mb_parity"].is<int>()) mb_config.parity = 134217700 + doc["mb_parity"].as<int>();
+  if (doc["skip-network"].is<bool>()) skipNetwork = doc["skip-network"];
 
   SettingsFile.close();
   //end json
@@ -363,7 +365,7 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "mqtt_interval")) {
     settingMQTTinterval   = String(newValue).toInt();  
     CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
-    if ( settingMQTTinterval == 0 )  MQTTDisconnect();
+    // if ( settingMQTTinterval == 0 )  MQTTDisconnect();
   }
   if (!stricmp(field, "mqtt_toptopic")) {
     strCopy(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), newValue);  

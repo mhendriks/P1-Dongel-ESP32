@@ -33,12 +33,14 @@ void fMqtt( void * pvParameters ){
 }
 
 void StartMqttTask(){
+  if ( skipNetwork ) return;
   if( xTaskCreate( fMqtt, "mqtt", 1024*6, NULL, 6, NULL) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
 }
 
 void handleMQTT(){
   MQTTclient.loop();
   if ( bSendMQTT ) sendMQTTData();
+  MQTTConnect();
 }
 
 String AddPayload(const char* key, const char* value ){
@@ -116,8 +118,6 @@ void AutoDiscoverHA(){
 
 }
 
-// #include "_mqtt_kb.h" //duplicate
-
 void MQTTSetBaseInfo(){
 #ifdef MQTTKB
   sprintf( MQTopTopic,"%s/%s/", _DEFAULT_HOSTNAME, macID );
@@ -125,6 +125,7 @@ void MQTTSetBaseInfo(){
 }
 
 void MQTTDisconnect(){
+  if ( skipNetwork) return;
   sprintf(cMsg,"%sLWT",MQTopTopic);
   MQTTclient.publish(cMsg,"Offline", true); //LWT status update
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
@@ -132,8 +133,9 @@ void MQTTDisconnect(){
 
 void MQTTsetServer(){
 #ifndef MQTT_DISABLE 
+  MQTTDisconnect(); //close active connection
   if ((settingMQTTbrokerPort == 0) || (strlen(settingMQTTbroker) < 4) ) return;
-  MQTTDisconnect();
+  // MQTTDisconnect();
   if (bMQTToverTLS) {
     wifiClientTLS.setInsecure();
     MQTTclient.setClient(wifiClientTLS);
@@ -243,12 +245,13 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
 
 //===========================================================================================
 void MQTTConnect() {
-#ifndef ETHERNET
-  if ( DUE( reconnectMQTTtimer) && (WiFi.status() == WL_CONNECTED)) {
-#else
-  if ( DUE( reconnectMQTTtimer) ) {    
-#endif    
-    LogFile("MQTT: DISCONNECTED to broker ... try to reconnect", true);
+// #ifndef ETHERNET
+//   if ( DUE( reconnectMQTTtimer) && (WiFi.status() == WL_CONNECTED)) {
+// #else
+  if ( MQTTclient.connected() || !strlen(settingMQTTbroker) || settingMQTTbrokerPort == 0 ) return; //interval 0 will connect to the broker
+  if ( DUE( reconnectMQTTtimer) && ( netw_state == NW_ETH || netw_state == NW_WIFI) ) {    
+// #endif    
+    LogFile("MQTT: RECONNECT to broker...", true);
     char MqttID[30+13];
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
     snprintf( cMsg, 150, "%sLWT", MQTopTopic );
@@ -364,6 +367,7 @@ void MQTTSend(const char* item, float value){
 
 //===========================================================================================
 void MQTTSentStaticInfo(){
+  if ( skipNetwork ) return;
   if ((settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   StaticInfoSend = true;
   MQTTSend( "identification",DSMRdata.identification, true );
@@ -433,7 +437,7 @@ void sendMQTTData() {
   if ( WiFi.status() != WL_CONNECTED ) return;
 #endif  
   if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
-  if (!MQTTclient.connected()) MQTTConnect();
+  MQTTConnect();
   if ( MQTTclient.connected() ) {   
     
   DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
@@ -460,8 +464,6 @@ if ( mbusWater ){
     MQTTSend("water",cMsg, true);    
   }
 
-
-
   if ( bActJsonMQTT ) {
     String buffer;
       jsonDoc["water"]    = waterDelivered;
@@ -483,7 +485,7 @@ if ( mbusWater ){
   }
 }
 
-#else
+#else //MQTT disabled
 
 void MQTTSentStaticInfo(){}
 void MQTTSend(const char* item, String value, bool ret){}

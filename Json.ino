@@ -124,7 +124,9 @@ void HWapi() {
     JsonDocument jsonDoc;
     #define F3DEC(...) serialized(String(__VA_ARGS__,3))
     
-    jsonDoc["wifi_ssid"] = WiFi.SSID();  
+    if ( WiFi.SSID().length() ) jsonDoc["wifi_ssid"] = WiFi.SSID();
+    else jsonDoc["wifi_ssid"] = "NO-WIFI";
+
     jsonDoc["wifi_strength"] = WiFi.RSSI();
     jsonDoc["smr_version"] = DSMRdata.p1_version;
     jsonDoc["meter_model"] = DSMRdata.identification;
@@ -163,20 +165,45 @@ void HWapi() {
     // jsonDoc["voltage_swell_l2_count"] = DSMRdata.electricity_swells_l2;
     // jsonDoc["voltage_swell_l3_count"] = DSMRdata.electricity_swells_l3;
 
-    // Gasverbruik via M-Bus
-    // jsonDoc["gas_unique_id"] = ;
-    jsonDoc["total_gas_m3"] = F3DEC(gasDelivered);
-    jsonDoc["gas_timestamp"] = gasDeliveredTimestamp;
-
     // Externe apparaten (zoals gasmeter)
-    // JsonArray external = jsonDoc.createNestedArray("external");
-    // JsonObject gasMeter = external.createNestedObject();
-    // gasMeter["unique_id"] = DSMRdata.mbus1_equipment_id_tc;
-    // gasMeter["type"] = "gas_meter";
-    // gasMeter["timestamp"] = DSMRdata.mbus1_timestamp;
-    // gasMeter["value"] = DSMRdata.mbus1_delivered;
-    // gasMeter["unit"] = "m3";
+    JsonArray external;
+    if ( mbusGas || WtrMtr ) external = jsonDoc.createNestedArray("external");
+    // Gasverbruik via M-Bus  
+    if ( mbusGas ) {
+      jsonDoc["total_gas_m3"] = F3DEC(gasDelivered);
+      jsonDoc["gas_timestamp"] = strtoull( gasDeliveredTimestamp.substring(0, gasDeliveredTimestamp.length() - 1).c_str(), nullptr, 10);
+      
+     jsonDoc["gas_unique_id"] = 
+        mbusGas == 1 ? DSMRdata.mbus1_equipment_id_tc :
+        mbusGas == 2 ? DSMRdata.mbus2_equipment_id_tc :
+        mbusGas == 3 ? DSMRdata.mbus3_equipment_id_tc :
+        mbusGas == 4 ? DSMRdata.mbus4_equipment_id_tc :
+        "";
+      JsonObject gasMeter = external.createNestedObject();
+      gasMeter["unique_id"] = jsonDoc["gas_unique_id"];
+      gasMeter["type"] = "gas_meter";
+      gasMeter["timestamp"] =  strtoull( gasDeliveredTimestamp.substring(0, gasDeliveredTimestamp.length() - 1).c_str(), nullptr, 10);
+      gasMeter["value"] = F3DEC(gasDelivered);
+      gasMeter["unit"] = "m3";
+    }
 
+    if ( WtrMtr ) {
+      JsonObject waterMeter = external.createNestedObject();
+
+        jsonDoc["unique_id"] = 
+        mbusWater == 1 ? DSMRdata.mbus1_equipment_id_tc :
+        mbusWater == 2 ? DSMRdata.mbus2_equipment_id_tc :
+        mbusWater == 3 ? DSMRdata.mbus3_equipment_id_tc :
+        mbusWater == 4 ? DSMRdata.mbus4_equipment_id_tc :
+        "8369788379824579787689"; //SENSOR-ONLY
+
+      // waterMeter["unique_id"] = mbusGas ? DSMRdata.mbus1_equipment_id_tc;
+      waterMeter["type"] = "water_meter";
+      String Timestamp = actTimestamp;
+      waterMeter["timestamp"] =  mbusWater ? waterDeliveredTimestamp.substring(0, waterDeliveredTimestamp.length() - 1): Timestamp.substring(0, Timestamp.length() - 1);
+      waterMeter["value"] = mbusWater ? F3DEC(waterDelivered) : F3DEC(P1Status.wtr_m3+P1Status.wtr_l/1000.0) ;
+      waterMeter["unit"] = "m3";
+    }
     String jsonString;
     serializeJson(jsonDoc, jsonString);
     sendJsonBuffer(  jsonString.c_str() );
@@ -301,8 +328,7 @@ void sendDeviceInfo()
   snprintf(cMsg, sizeof(cMsg), "%s:%04d", settingMQTTbroker, settingMQTTbrokerPort);
   doc["mqttbroker"] = cMsg;
   doc["mqttinterval"] = settingMQTTinterval;
-  if (MQTTclient.connected()) doc["mqttbroker_connected"] = "yes";
-  else  doc["mqttbroker_connected"] = "no";
+  doc["mqttbroker_connected"] = MQTTclient.connected() ? "yes" : "no";
 #endif
 
   doc["reboots"] = (int)P1Status.reboots;

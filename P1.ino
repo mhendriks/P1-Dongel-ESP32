@@ -21,7 +21,7 @@ void fP1Reader( void * pvParameters ){
   SetupP1Out();
   slimmeMeter.enable(false);
 #ifdef ULTRA
-  digitalWrite(DTR_IO, LOW); //default on
+  // digitalWrite(17, LOW); //default on
 #endif   
   while(true) {
     PrintHWMark(0);
@@ -132,6 +132,7 @@ void virtSetLastData(){
 }
 
 void handleVirtualP1(){
+  if ( skipNetwork ) return;
   if (strlen(virtual_p1_ip) == 0) {
     if (vp1_client.connected()) {
       bVirt_connected = false;
@@ -267,7 +268,7 @@ void processSlimmemeter() {
         gasDeliveredTimestamp = mbusDeliveredTimestamp;
 
       } else  {
-        if (!DSMRdata.timestamp_present) { 
+        if (!DSMRdata.timestamp_present && !skipNetwork ) { 
           if (Verbose2) DebugTln(F("NTP Time set"));
         if ( getLocalTime(&tm) ) {
             DSTactive = tm.tm_isdst;
@@ -342,16 +343,17 @@ void processTelegram(){
   }
 #endif
   
-  //handle mqtt
-#ifndef MQTT_DISABLE
-  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1) bSendMQTT = true; //handled in main flow
-#endif  
+  if ( !skipNetwork ) {
+    #ifndef MQTT_DISABLE
+      if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1) bSendMQTT = true; //handled in main flow
+    #endif  
   
-  ProcessStats();
-  ProcessMaxVoltage();
-  NetSwitchStateMngr();
-  // PostHomey();
-
+    ProcessStats();
+    ProcessMaxVoltage();
+    NetSwitchStateMngr();
+    // PostHomey();
+  }
+  
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
   actT = newT;

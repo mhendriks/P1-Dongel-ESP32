@@ -1,6 +1,7 @@
 void PostTelegram() {
 
 #ifdef POST_TELEGRAM
+  if ( skipNetwork ) return;
   if ( !strlen(pt_end_point) ) return;
   if ( ( (esp_log_timestamp()/1000) - TelegramLastPost) < pt_interval ) return;
   

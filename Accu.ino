@@ -13,6 +13,7 @@ struct AccuPwrSystems {
 AccuPwrSystems SolarEdgeAccu = { false, "", "", "", 0.0, 0, 300, 0, "/se_accu.json"  };
  
 void ReadAccuConfig(){
+  if ( skipNetwork ) return;
   AccuPwrSystems* solarSystem = &SolarEdgeAccu;
   
   if ( !FSmounted || !LittleFS.exists( solarSystem->file_name ) ) return;
@@ -50,6 +51,7 @@ void ReadAccuConfig(){
 }
 
 void GetAccuDataN() {
+  if ( skipNetwork ) return;
   GetAccuData( false );
 }
 

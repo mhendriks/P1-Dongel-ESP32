@@ -112,6 +112,7 @@ void GetMacAddress(){
     http://g2pc1.bu.edu/~qzpeng/manual/MySQL%20Commands.htm
 **/
 void PostMacIP() {
+  if ( skipNetwork ) return;
   HTTPClient http;
   http.begin(wifiClient, APIURL);
   http.setConnectTimeout(4000);
@@ -158,7 +159,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       break;
     case ARDUINO_EVENT_ETH_GOT_IP6: //7
       LogFile("ETH GOT IP V6", true);
-      break;
+      [[fallthrough]];
     case ARDUINO_EVENT_ETH_GOT_IP: //5
       {
         netw_state = NW_ETH;
@@ -198,10 +199,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
         Debug (F("IP address: " ));  Debug (WiFi.localIP());Debug(" )\n\n");
 
         if ( bEthUsage ) WifiOff();        
-        else {
-          // enterPowerDownMode(); //disable ETH
-          netw_state = NW_WIFI;
-        }
+        else netw_state = NW_WIFI;
         s_authBlocked = false;
         s_lastKickMs = 0;               // reset voor snelle roam
         bNoNetworkConn = false;
@@ -278,7 +276,7 @@ void configModeCallback (WiFiManager *myWiFiManager) {
 #include <esp_wifi.h>
 
 void startWiFi(const char* hostname, int timeOut) {  
-
+if ( skipNetwork ) return;
 #if not defined ETHERNET || defined ULTRA
 #ifdef ULTRA
   //lets wait on ethernet first for 4.5sec and consume some time to charge the capacitors
@@ -330,16 +328,17 @@ void startWiFi(const char* hostname, int timeOut) {
 
   //handle wifi webinterface timeout and connection (timeOut in sec) timeout in 30 sec
   uint16_t i = 0;
-  while ( (i++ < 3000) && (netw_state == NW_NONE) && !bEthUsage ) {
+  while ( (i++ < 3000) && (netw_state == NW_NONE) && !bEthUsage && !skipNetwork ) {
     Debug("*");
     delay(100);
     manageWiFi.process();
+    PushButton.handler();
     esp_task_wdt_reset();
     SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE); //fast blinking
   }
   Debugln();
   manageWiFi.stopWebPortal();
-
+  if ( skipNetwork ) return; 
   if ( netw_state == NW_NONE && !bEthUsage ) {
     LogFile("reboot: Wifi failed to connect and hit timeout",true);
     P1Reboot(); //timeout 
@@ -357,6 +356,14 @@ void startWiFi(const char* hostname, int timeOut) {
 //===========================================================================================
 void WaitOnNetwork()
 {
+  if ( skipNetwork ) { 
+    enterPowerDownMode();   //ethernet power down
+    WifiOff();              //wifi power down
+    EnableHistory = false;  //not usefull to store data
+    writeSettings();        //make persistant
+    SwitchLED(LED_OFF,LED_BLUE); //erase led status 
+    return; 
+    }
   while ( netw_state != NW_ETH && netw_state != NW_WIFI ) { //endless wait for network connection
     Debug(".");
     delay(200);
@@ -420,6 +427,7 @@ void startNetwork()
 //===========================================================================================
 void startTelnet() 
 {
+  if ( skipNetwork ) return;
   TelnetStream.begin();
   ws_raw.begin();
   TelnetStream.flush();
@@ -428,6 +436,7 @@ void startTelnet()
 
 //=======================================================================
 void startMDNS(const char *Hostname) {
+  if ( skipNetwork ) return;
   DebugTf("[1] mDNS setup as [%s.local]\r\n", Hostname);
   if ( !MDNS.begin(Hostname) ) DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
   else {
@@ -448,11 +457,11 @@ void startMDNS(const char *Hostname) {
 
 #ifdef ETHERNET
   uint8_t cs = CS_GPIO;
-
-void startETH(){
   uint8_t miso  = MISO_GPIO;
   uint8_t mosi  = MOSI_GPIO;
   uint8_t sck   = SCK_GPIO;
+  
+void startETH(){
   uint8_t _int  = INT_GPIO;
 
   uint8_t mac_eth[6];
@@ -499,10 +508,13 @@ void enterPowerDownMode() {
   // DebugTln(F("ETH POWER DOWN"));
   LogFile("ETH powered down, switching to WiFi", true);
   ETH.end();
-  pinMode(cs, OUTPUT);
-  SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO);
   
+  //powerdown W5500 when RST is connected to the ESP32
+  if ( HardwareType == P1UX2 && HardwareVersion >= 101 ) { digitalWrite(17,LOW); return;}
 
+  pinMode(cs, OUTPUT);
+  SPI.begin(sck, miso, mosi);
+  
   W5500_Read_PHYCFGR();
 
   // NOTE:

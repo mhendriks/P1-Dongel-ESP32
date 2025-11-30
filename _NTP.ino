@@ -53,6 +53,7 @@ void cbSyncTime(struct timeval *tv)  // callback function to show when NTP was s
 
 //=======================================================================
 void startNTP() {
+  if ( skipNetwork ) return;
   DebugTln(F("Starting NTP"));
 
   sntp_set_time_sync_notification_cb(cbSyncTime);  // set a Callback function for time synchronization notification
