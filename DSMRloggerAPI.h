@@ -20,7 +20,7 @@
 #include "Config.h"
 
 // water sensor
-volatile byte        WtrFactor      = 1;
+volatile float       WtrFactor      = 1;
 volatile time_t      WtrTimeBetween = 0;
 volatile byte        debounces      = 0;
 volatile time_t      WtrPrevReading = 0;
