@@ -251,16 +251,16 @@ void sendStatic() {
 void SendTariffData(){
   
   TariffData.msgType= NRGTARIFS;
-  TariffData.Efixed = (uint32_t)(settingENBK*100000.0);
-  TariffData.Gfixed = (uint32_t)(settingGNBK*100000.0);
-  TariffData.Wfixed = (uint32_t)(settingWNBK*100000.0);
+  TariffData.Efixed = (uint32_t)round(settingENBK*100000.0);
+  TariffData.Gfixed = (uint32_t)round(settingGNBK*100000.0);
+  TariffData.Wfixed = (uint32_t)round(settingWNBK*100000.0);
 
-  TariffData.Et1    = (uint32_t)(settingEDT1*100000.0);
-  TariffData.Et2    = (uint32_t)(settingEDT2*100000.0);
-  TariffData.Et1r   = (uint32_t)(settingERT1*100000.0);
-  TariffData.Et2r   = (uint32_t)(settingERT2*100000.0);
-  TariffData.G      = (uint32_t)(settingGDT*100000.0);
-  TariffData.W      = (uint32_t)(settingWDT*100000.0);
+  TariffData.Et1    = (uint32_t)round(settingEDT1*100000.0);
+  TariffData.Et2    = (uint32_t)round(settingEDT2*100000.0);
+  TariffData.Et1r   = (uint32_t)round(settingERT1*100000.0);
+  TariffData.Et2r   = (uint32_t)round(settingERT2*100000.0);
+  TariffData.G      = (uint32_t)round(settingGDT*100000.0);
+  TariffData.W      = (uint32_t)round(settingWDT*100000.0);
 
   // Debugf( "TariffData.Efixed : %i\n", TariffData.Efixed );
   // Debugf( "TariffData.Gfixed : %i\n", TariffData.Gfixed );
