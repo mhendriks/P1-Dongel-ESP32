@@ -431,10 +431,8 @@ function applyShowCols(condition, tablesAndCols) {
   
 function SetOnSettings(json) {
 	// Initiele detectie: water, gas, teruglevering
-	if (!HeeftGas && !IgnoreGas)
-		HeeftGas = "gas_delivered" in json ? !isNaN(json.gas_delivered.value) : false;
-	if (!HeeftWater)
-		HeeftWater = "water" in json ? !isNaN(json.water.value) : false;
+	if (!HeeftGas && !IgnoreGas) HeeftGas = "gas_delivered" in json ? !isNaN(json.gas_delivered.value) : false;
+	if (!HeeftWater) HeeftWater = "water" in json ? !isNaN(json.water.value) : false;
 
 	if (!Injection) {
 		Injection = !isNaN(json.energy_returned_tariff1?.value) ? json.energy_returned_tariff1.value : false;

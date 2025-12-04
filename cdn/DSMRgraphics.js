@@ -151,7 +151,7 @@ function ensureChartsReady()
       myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
       myGasChart.update();
       document.getElementById("gasChart").style.display   = "block";
-    }
+    } else document.getElementById("gasChart").style.display   = "none";
 
     if (HeeftWater) {
       myWaterChart.data = waterData;
@@ -190,7 +190,7 @@ function ensureChartsReady()
       myGasChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
       myGasChart.update();
       document.getElementById("gasChart").style.display = "block";
-    }
+    } else document.getElementById("gasChart").style.display   = "none";
 
     if (HeeftWater) {
       myWaterChart.data = waterData;
@@ -428,8 +428,8 @@ function ensureChartsReady()
     document.getElementById("actual").style.display    = "none";
     //--- show canvas
     document.getElementById("dataChart").style.display = "block";
-    document.getElementById("gasChart").style.display  = "block";
-
+    if ( HeeftGas ) document.getElementById("gasChart").style.display  = "block";
+	else document.getElementById("gasChart").style.display   = "none";
     //display current listTELEGRAMS
     const [dcEX, dcGX] = createDataContainersACTUAL( listTELEGRAMS );
     

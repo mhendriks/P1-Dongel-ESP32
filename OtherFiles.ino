@@ -83,7 +83,6 @@ void writeSettings() {
   if (settingMQTTbrokerPort < 1)    settingMQTTbrokerPort = 1883;
     
   DebugTln(F("Start writing setting data to json settings file"));
-  
   JsonDocument docw; 
   docw["Hostname"] = settingHostname;
   docw["EnergyDeliveredT1"] = settingEDT1;
