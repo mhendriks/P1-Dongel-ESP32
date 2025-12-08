@@ -57,6 +57,7 @@ portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void LogFile(const char* payload, bool toDebug = false);
 void P1Reboot();
+void SendTariffData();
 
 WebServer httpServer(80);
 NetServer ws_raw(82);
@@ -425,7 +426,7 @@ int8_t mb_rx  = -1;
 int8_t mb_tx  = -1;
 int8_t mb_rts = -1;
 
-#include <ESPmDNS.h>  
+#include <ESPmDNS.h>
 #include <Update.h>
 #include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager
 #include <HTTPClient.h>

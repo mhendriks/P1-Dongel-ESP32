@@ -19,7 +19,6 @@ volatile uint16_t lastAckPacketId = 0;
 volatile bool lastAckSuccess = false;
 
 command_t Command;
-uint8_t P2PType = 0;
 uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 ActualData_t ActualData;
 tariff_t TariffData;
@@ -164,6 +163,11 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         Debugln("Received data with incorrect length, ignoring.");
         return;
       }
+    case NRGTARIFS:
+      DebugTln("NRGTARIFS");
+      memcpy(&TariffData, incomingData, sizeof(TariffData));
+      ReceiveTariffData();
+      break;
       procesACK(incomingData);
   } //switch 
 }
@@ -248,8 +252,41 @@ void sendStatic() {
   esp_err_t result = esp_now_send(NULL, (uint8_t *) &Static, sizeof(Static));
 }
 
+void ReceiveTariffData() {
+
+  settingENBK = TariffData.Efixed / 100000.0f;
+  settingGNBK = TariffData.Gfixed / 100000.0f;
+  settingWNBK = TariffData.Wfixed / 100000.0f;
+
+  settingEDT1 = TariffData.Et1 / 100000.0f;
+  settingEDT2 = TariffData.Et2 / 100000.0f;
+
+  settingERT1 = TariffData.Et1r / 100000.0f;
+  settingERT2 = TariffData.Et2r / 100000.0f;
+
+  settingGDT  = TariffData.G / 100000.0f;
+  settingWDT  = TariffData.W / 100000.0f;
+
+  //update settingsfile
+  writeSettings();
+
+#ifdef DEBUG
+  Debugf("settingENBK : %.5f\n", settingENBK);
+  Debugf("settingGNBK : %.5f\n", settingGNBK);
+  Debugf("settingWNBK : %.5f\n", settingWNBK);
+
+  Debugf("settingEDT1 : %.5f\n", settingEDT1);
+  Debugf("settingEDT2 : %.5f\n", settingEDT2);
+  Debugf("settingERT1 : %.5f\n", settingERT1);
+  Debugf("settingERT2 : %.5f\n", settingERT2);
+
+  Debugf("settingGDT  : %.5f\n", settingGDT);
+  Debugf("settingWDT  : %.5f\n", settingWDT);
+#endif
+}
+
 void SendTariffData(){
-  
+  if ( ! Pref.peers || ! bESPNowInit ) return;
   TariffData.msgType= NRGTARIFS;
   TariffData.Efixed = (uint32_t)round(settingENBK*100000.0);
   TariffData.Gfixed = (uint32_t)round(settingGNBK*100000.0);
@@ -462,6 +499,9 @@ void handleP2P(){
     case STROOMPLANNER:
       sendStroomPlanner();
       break;
+    // case NRGTARIFS:
+    //   SendTariffData();
+    //   break;
   }
   P2PType = 0;
 }

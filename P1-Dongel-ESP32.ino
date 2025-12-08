@@ -53,7 +53,6 @@ Planner display checks
 √ updaten 5.2 en de 3.0.0
 - eid stond aan maar is uitgezet
 √ uur overgang
- 
 
 task wtd
 - https://forum.arduino.cc/t/watchdog-reset-esp32-if-stuck-more-than-120-seconds/1266565/2

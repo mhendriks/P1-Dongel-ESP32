@@ -2,7 +2,7 @@
 
 #define _VERSION_MAJOR 5
 #define _VERSION_MINOR 2
-#define _VERSION_PATCH 7
+#define _VERSION_PATCH 8
 #define _VERSION_ONLY STR(_VERSION_MAJOR) "." STR(_VERSION_MINOR) "." STR(_VERSION_PATCH)
 
 // #define __MON__ ((__DATE__[0] + __DATE__[1] + __DATE__[2]) == 281   ? "01" \

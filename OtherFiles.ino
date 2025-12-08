@@ -379,7 +379,7 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "raw-port")) bRawPort = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "act-json-mqtt")) bActJsonMQTT = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "eid-enabled")) bEID_enabled = (stricmp(newValue, "true") == 0?true:false);  
-
+  SendTariffData(); // P2PType = NRGTARIFS;
   writeSettings();
   
 } // updateSetting()
