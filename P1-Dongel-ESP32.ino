@@ -67,6 +67,10 @@ bool isDSTTransition(int lastHour, int currentHour) {
 }
 - inlezen van solar config in frontend
 
+5.2.9
+- refactoring EID
+- fix issue with NRG Monitor Update
+
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Board: "ESP32C3 Dev Module"

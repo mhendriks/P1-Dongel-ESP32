@@ -58,6 +58,7 @@ portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 void LogFile(const char* payload, bool toDebug = false);
 void P1Reboot();
 void SendTariffData();
+void EID_RESTART_IDLE_TIMER();
 
 WebServer httpServer(80);
 NetServer ws_raw(82);

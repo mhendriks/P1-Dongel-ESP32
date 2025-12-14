@@ -163,12 +163,13 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         Debugln("Received data with incorrect length, ignoring.");
         return;
       }
+      procesACK(incomingData);
+      break;
     case NRGTARIFS:
       DebugTln("NRGTARIFS");
       memcpy(&TariffData, incomingData, sizeof(TariffData));
       ReceiveTariffData();
       break;
-      procesACK(incomingData);
   } //switch 
 }
 

@@ -16,19 +16,28 @@
     bool bGotDirective = false;
     bool bGetPlannerDetails = false;
 
-    // String  eid_interval;
     uint32_t eid_interval_sec = 300;
-    uint8_t claimTimeout = 0;
 
-    #define CLAIM_RETRY 60*1
+#ifdef DEBUG
+  #define EID_IDLE_TIME 15 //sec
+  #define EID_CLAIM_RETRY 20*1 //sec
+  #define EID_REFRESH_TIME 1*60
+#else
+  #define EID_IDLE_TIME 3600
+  #define EID_CLAIM_RETRY 60*1
+  #define EID_REFRESH_TIME 24*60
+#endif
 
-    //String eid_claim_code = "",eid_claim_url = "";
-    //time_t eid_claim_exp;
-
-    DECLARE_TIMER_SEC(T_EID, 10);
-    DECLARE_TIMER_SEC(T_EID_CLAIM, CLAIM_RETRY);
-    DECLARE_TIMER_MIN(T_EID_REFRESH, 24*60);
+    DECLARE_TIMER_SEC(T_EID_IDLE, EID_IDLE_TIME); //idle timeout
+    DECLARE_TIMER_SEC(T_EID, 10); // eid throttling
+    DECLARE_TIMER_SEC(T_EID_CLAIM, EID_CLAIM_RETRY); 
+    DECLARE_TIMER_MIN(T_EID_REFRESH, EID_REFRESH_TIME);
     DECLARE_TIMER_MIN(T_EID_PLAN, 60); //refresh planner evry hour
+    DECLARE_TIMER_SEC(T_EID_HELLO_FAIL, 1);
+
+  void EID_RESTART_IDLE_TIMER(){
+    RESTART_TIMER(T_EID_IDLE);
+  }
 
     void EIDStart(){
       if ( bEID_enabled ) EIDPostHello();
@@ -37,35 +46,47 @@
     void handleEnergyID(){  
 
       if ( !bEID_enabled ) return;
-      
-      if ( P1Status.eid_state == EID_ENROLLED ) {
-        claimTimeout = 0;
-        if ( !eid_webhook.length() ) EIDPostHello(); //get the webhook url
-        else if ( DUE(T_EID) )  { //is enrolled and got webhook url
-          PostEnergyID();
-          CHANGE_INTERVAL_SEC(T_EID, eid_interval_sec);
-        }
-      } else if ( claimTimeout >= (3600/CLAIM_RETRY) ) { //3600 = 1h timeout
-        bEID_enabled = false; //takes to long = disable eid function
-        claimTimeout = 0;
-        P1StatusWrite(); //save state to NVS
-        return;
+
+      //detect state change
+      static uint8_t last_state = 255;
+      if (last_state != P1Status.eid_state) {
+        last_state = P1Status.eid_state;
+        if (last_state == EID_IDLE) RESTART_TIMER(T_EID_IDLE);
+        if (last_state == EID_CLAIMING) RESTART_TIMER(T_EID_CLAIM);
+        if (last_state == EID_ENROLLED) RESTART_TIMER(T_EID);
+        String log = "EID: State change -> " + String(P1Status.eid_state);
+        LogFile( log.c_str(),true );
+        P1StatusWrite(); //write state change
       }
 
-      if ( P1Status.eid_state == EID_CLAIMING && DUE(T_EID_CLAIM) ) {
-        DebugTln("EID_CLAIMING");
-        EIDPostHello(); //refresh every 1m
-        claimTimeout++;
-      }
-      
-      if ( DUE(T_EID_REFRESH) ) EIDPostHello(); //refresh every 24h
-
-      if ( recordNumber != "" && apiAccessToken != "" && !bGotDirective ) EIDGetDirectives(); //4.16 feature
-      if ( bGetPlannerDetails ) EIDGetDirectDetails();
-      if ( DUE(T_EID_PLAN) ) bGetPlannerDetails = true;
-      //do nothing on EID_IDLE
-
-    }
+      switch ( P1Status.eid_state ) {
+        case EID_ENROLLED:
+            if ( !eid_webhook.length() ) { if ( DUE(T_EID_HELLO_FAIL) ) EIDPostHello(); } //get the webhook url
+            else if ( DUE(T_EID) )  { //is enrolled and got webhook url
+              PostEnergyID();
+            }
+            if ( DUE(T_EID_REFRESH) ) EIDPostHello(); //refresh every 24h
+            if ( recordNumber != "" && apiAccessToken != "" && !bGotDirective ) EIDGetDirectives(); //4.16 feature
+            if ( bGetPlannerDetails ) EIDGetDirectDetails();
+            if ( DUE(T_EID_PLAN) ) bGetPlannerDetails = true;
+          break;
+        case EID_CLAIMING:
+          if ( DUE(T_EID_CLAIM) ) {
+            DebugTln("EID_CLAIMING");
+            EIDPostHello(); //refresh every 1m
+          }
+          break;
+        case EID_IDLE:
+          if ( DUE(T_EID_IDLE) ) { 
+            //inden na 3600 sec nog geen status verandering dan disable
+            bEID_enabled = false;
+            writeSettings(); //write state change
+            LogFile( "EID - auto turn off", true );
+            return;
+          }
+          break;
+      } //switch
+    } //handleEnergyID()
 
     /*
     curl --location 'https://hooks.energyid.eu/hello' \
@@ -173,8 +194,6 @@
             Debug(F("recordNumber    : ")); Debugln(recordNumber);
             Debug(F("apiAccessToken  : ")); Debugln(apiAccessToken);
 
-            // Opslaan config en state
-            // EIDWriteConfig(payload);
             P1Status.eid_state = EID_ENROLLED;
           }
 
@@ -182,8 +201,15 @@
         }
       } else {
         Debugln(F("HTTP request failed or invalid response"));
-        P1Status.eid_state = EID_CLAIMING;
+        eid_webhook = "";
+        RESTART_TIMER(T_EID_HELLO_FAIL);
         httpServer.send(400);
+      }
+      
+      static bool firstHelloDone = false;
+      if (!firstHelloDone) {
+        CHANGE_INTERVAL_SEC(T_EID_HELLO_FAIL, 60);  // na eerste hello
+        firstHelloDone = true;
       }
 
       http.end();
@@ -219,7 +245,7 @@
 
     void EIDGetDirectDetails(){
       
-      if ( EIDDirectiveID == nullptr || EIDDirectiveID == "") { DebugTln("No ID present"); bGetPlannerDetails = false; return; }
+      if ( EIDDirectiveID.length() == 0 )  { DebugTln("No ID present"); bGetPlannerDetails = false; return; }
 
       String ApiURL = "https://api.energyid.eu/api/v1/records/"+recordNumber+"/directives/"+EIDDirectiveID+"?limit=14&offset=0";
       DebugT(F("ApiURL:"));Debugln(ApiURL);
@@ -278,42 +304,6 @@
       return DateTime;
     }
 
-    /*
-    String JsonEnergyID ( const char* id, const char* metric, double sm_value, const char* unit, const char* type ){
-    */
-    /*  
-      {
-        "remoteId": "p1-dongle-pro",
-        "remoteName": "P1 Dongle Pro",
-        "metric": "electricityExport",
-        "readingType": "counter",
-        "unit": "kWh",    
-        "data": [
-            ["2023-06-10T08:01+0200", 1.123]
-        ]
-    }
-    */  
-    /*
-      String Json;
-      Json  = "{\"remoteId\": \"p1-dongle-pro-" + String(id) + "\"";
-      Json += ",\"remoteName\": \"P1 " + String(id) + "\"";
-      Json += ",\"metric\":\"" + String(metric) + "\"";
-      Json += ",\"readingType\": \"counter\"";
-      Json += ",\"unit\": \"" + String(unit) + "\"";
-      Json += ",\"interval\": \"" + eid_interval + "\"";  
-      if ( strlen(type) > 0 ) Json += ",\"register\": \"" + String(type) + "\"";
-      Json += ",\"data\":[";
-      //data 
-      Json +="[\"" + IsoTS() + "\"," + sm_value + "]";
-      Json += "]}";
-
-      Debug("JsonEnergyID : "); Debugln(Json);
-      
-      return Json;
-
-    }
-    */
-
     String JsonBuildMBus(String key, time_t epoch, long value ){
     /*  
         {
@@ -358,7 +348,7 @@
     ]
 
     */
-
+      if ( eid_webhook.length() == 0 || !telegramCount ) return;
       String payload;
       int httpResponseCode;
       String Json = "[{";
@@ -422,8 +412,9 @@
       Debug(F("response body: "));Debugln(payload); 
         if ( httpResponseCode != 201 ) { 
           DebugTln(F("Response Error"));
-          P1Status.eid_state = EID_CLAIMING; //try /hello within 5min
+          eid_webhook = "";
+          RESTART_TIMER(T_EID_HELLO_FAIL);
         }
-      
+      CHANGE_INTERVAL_SEC(T_EID, eid_interval_sec);
       http.end();
     }
