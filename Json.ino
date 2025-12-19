@@ -190,7 +190,7 @@ void HWapi() {
     if ( WtrMtr ) {
       JsonObject waterMeter = external.createNestedObject();
 
-        jsonDoc["unique_id"] = 
+        waterMeter["unique_id"] = 
         mbusWater == 1 ? DSMRdata.mbus1_equipment_id_tc :
         mbusWater == 2 ? DSMRdata.mbus2_equipment_id_tc :
         mbusWater == 3 ? DSMRdata.mbus3_equipment_id_tc :
@@ -200,7 +200,7 @@ void HWapi() {
       // waterMeter["unique_id"] = mbusGas ? DSMRdata.mbus1_equipment_id_tc;
       waterMeter["type"] = "water_meter";
       String Timestamp = actTimestamp;
-      waterMeter["timestamp"] =  mbusWater ? waterDeliveredTimestamp.substring(0, waterDeliveredTimestamp.length() - 1): Timestamp.substring(0, Timestamp.length() - 1);
+      waterMeter["timestamp"] =  strtoull( mbusWater ? waterDeliveredTimestamp.substring(0, waterDeliveredTimestamp.length() - 1).c_str(): Timestamp.substring(0, Timestamp.length() - 1).c_str(), nullptr, 10);
       waterMeter["value"] = mbusWater ? F3DEC(waterDelivered) : F3DEC(P1Status.wtr_m3+P1Status.wtr_l/1000.0) ;
       waterMeter["unit"] = "m3";
     }
