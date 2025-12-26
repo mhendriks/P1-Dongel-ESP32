@@ -47,11 +47,6 @@ Default checks
 - ethernet
 - 4h test
 
-
-4.17.1
-- fix: watermeter factor incorrect 
-- fix: HW api water meter
-
 - default mqtt : mqtt://core-mosquitto:1883 en addons als user
 - change: solar support for 3 inverters
 - Shelly EM udp emulation
