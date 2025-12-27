@@ -1,4 +1,5 @@
 {
+"dict_network":"Connected to",
 "dict_paired":"Paired Devices",
 "btn-migrate":"MIGRATE",
 "txt-esphome-migrate":"If you want to use the dongle with ESPHome software, you can migrate the software to ESPHome by pressing the button below.</br></br><b>NOTE! <br>-Current software and data will be erased. <br>-Wi-Fi must be reconnected.</b>",

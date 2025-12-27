@@ -1,4 +1,5 @@
 {
+"dict_network":"Connected to",
 "dict_paired":"Paired Devices",
 "btn-migrate":"MIGRATE",
 "txt-esphome-migrate":"Wenn Sie den Dongle mit der ESPHome-Software verwenden möchten, können Sie die Software mit einem Klick auf die Schaltfläche unten auf ESPHome migrieren.</br></br><b>ACHTUNG! <br>-Aktuelle Software und Daten werden gelöscht. <br>-WLAN muss erneut verbunden werden.</b>",

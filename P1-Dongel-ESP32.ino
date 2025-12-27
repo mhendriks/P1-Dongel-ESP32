@@ -87,16 +87,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 
 5.3.0
-- merge 4.17.1 into 5.2.9
-- add: network connection information
+√ merge 4.17.1 into 5.2.9
+√ add: network connection information
+√ SDK 3.3.5
 
-- add: auto detect P1 version
-- 
+- add: auto detect P1 meter (v5/v4 or v2)
+
 
 */
-
-
-
 
 /******************** compiler options  ********************************************/
 
