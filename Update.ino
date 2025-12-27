@@ -27,8 +27,8 @@ void update_started() {
     int cnt = 0;
     while (cnt++ < 10) {
       httpServer.handleClient();
-      delay(100);
       esp_task_wdt_reset();
+      delay(100);
     }
   }
 }
@@ -102,6 +102,9 @@ void RemoteUpdate(const char* versie, bool sketch){
   path = String(BaseOTAurl) + otaFile;
 #endif
 
+  //TEST esphome install via webinterface
+  // if ( _versie == "esphome") path = "http://ota.smart-stuff.nl/esphome/nrgd.factory.bin";
+  
   Debugf("OTA versie: %s | flashsize: %i Mb\n", _versie.c_str(), flashSize);
   Debugln("OTA path: " + path);
 
@@ -129,7 +132,8 @@ void RemoteUpdate(const char* versie, bool sketch){
         break;
 
       case HTTP_UPDATE_OK:
-        LittleFS.remove("/DSMRindexEDGE.html");
+        if ( RemoveIndexAfterUpdate ) LittleFS.remove("/DSMRindexEDGE.html");
+        LogFile("reboot: after update OK",false);
         P1Reboot();
         break;
     }

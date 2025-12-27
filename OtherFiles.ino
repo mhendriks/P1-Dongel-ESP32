@@ -83,6 +83,7 @@ void writeSettings() {
   if (settingMQTTbrokerPort < 1)    settingMQTTbrokerPort = 1883;
     
   DebugTln(F("Start writing setting data to json settings file"));
+  
   JsonDocument docw; 
   docw["Hostname"] = settingHostname;
   docw["EnergyDeliveredT1"] = settingEDT1;
@@ -119,6 +120,14 @@ void writeSettings() {
   docw["raw-port"] = bRawPort;
   docw["led-prt"] = bLED_PRT;
   docw["mb_map"] = SelMap;
+  docw["mb_id"] = mb_config.id;
+  docw["mb_port"] = mb_config.port;
+  docw["mb_baud"] = mb_config.baud;
+  docw["mb_parity"] = mb_config.parity - 134217700;
+  docw["mqtt-hide"] = hideMQTTsettings;
+  docw["remove-index"] = RemoveIndexAfterUpdate;
+  docw["macid-topic"] = MacIDinToptopic;
+  docw["skip-network"] = skipNetwork;
 
 #ifdef VOLTAGE_MON
   docw["max-volt"] = MaxVoltage;
@@ -132,6 +141,10 @@ void writeSettings() {
   docw["pt_interval"] = pt_interval;
   docw["pt_end_point"] = pt_end_point;
 #endif
+
+#ifdef VIRTUAL_P1
+  if ( strlen(virtual_p1_ip) )  docw["virtual_p1_ip"] = virtual_p1_ip;
+#endif  
 
   writeToJsonFile(docw, SettingsFile);
   
@@ -189,6 +202,10 @@ void readSettings(bool show)
   if (doc["WaterVasteKosten"].is<float>()) settingWNBK = doc["WaterVasteKosten"];
   settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
+  if (doc["mqtt-hide"].is<bool>()) hideMQTTsettings = doc["mqtt-hide"];
+  if (doc["remove-index"].is<bool>()) RemoveIndexAfterUpdate = doc["remove-index"];
+  if (doc["macid-topic"].is<bool>()) MacIDinToptopic = doc["macid-topic"];
+  
 //  settingTelegramInterval = doc["TelegramInterval"];
 //  CHANGE_INTERVAL_SEC(nextTelegram, settingTelegramInterval);
 // 
@@ -200,6 +217,7 @@ void readSettings(bool show)
   settingMQTTinterval = doc["MQTTinterval"];
   strcpy(settingMQTTtopTopic, doc["MQTTtopTopic"]);
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+  snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
   if (doc["mqtt_tls"].is<bool>()) bMQTToverTLS = doc["mqtt_tls"];
   
   CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
@@ -242,7 +260,12 @@ void readSettings(bool show)
   temp = doc["basic-auth"]["pass"];
   if (temp) strcpy(bAuthPW, temp);
   if (doc["mb_map"].is<int>()) setModbusMapping(doc["mb_map"]);
-  
+  if (doc["mb_id"].is<int>()) mb_config.id = doc["mb_id"];
+  if (doc["mb_port"].is<int>()) mb_config.port = doc["mb_port"];
+  if (doc["mb_baud"].is<int>()) mb_config.baud = doc["mb_baud"];
+  if (doc["mb_parity"].is<int>()) mb_config.parity = 134217700 + doc["mb_parity"].as<int>();
+  if (doc["skip-network"].is<bool>()) skipNetwork = doc["skip-network"];
+
   SettingsFile.close();
   //end json
 
@@ -343,12 +366,13 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "mqtt_interval")) {
     settingMQTTinterval   = String(newValue).toInt();  
     CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
-    if ( settingMQTTinterval == 0 )  MQTTDisconnect();
+    // if ( settingMQTTinterval == 0 )  MQTTDisconnect();
   }
   if (!stricmp(field, "mqtt_toptopic")) {
     strCopy(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), newValue);  
   }
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+  snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
 #endif
   
   if (!stricmp(field, "b_auth_user")) strCopy(bAuthUser,25, newValue);  
@@ -380,6 +404,13 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "raw-port")) bRawPort = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "act-json-mqtt")) bActJsonMQTT = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "eid-enabled")) bEID_enabled = (stricmp(newValue, "true") == 0?true:false);  
+  
+  if (!stricmp(field, "mb_map")) setModbusMapping(String(newValue).toInt());  
+  if (!stricmp(field, "mb_id")) mb_config.id = String(newValue).toInt();  
+  if (!stricmp(field, "mb_port")) mb_config.port = String(newValue).toInt();  
+  if (!stricmp(field, "mb_baud")) mb_config.baud = String(newValue).toInt();  
+  if (!stricmp(field, "mb_parity")) mb_config.parity = String(newValue).toInt();  
+
   SendTariffData(); // P2PType = NRGTARIFS;
   writeSettings();
   
@@ -396,9 +427,7 @@ size_t fileSizeOf(const char* path) {
 void LogFile(const char* payload, bool toDebug) {
   if (toDebug) DebugTln(payload);
   if (!FSmounted) return;
-  // File LogFile = LittleFS.open("/P1.log", "r"); // open for read  - bugfix sdk 3.3.1 
   size_t size = fileSizeOf("/littlefs/P1.log");
-  // Debug("filesizeof: ");Debugln(size); 
 
   //log rotate
   if (size > 12000){ 

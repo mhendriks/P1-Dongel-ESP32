@@ -47,6 +47,11 @@ void handleButtonPressed(){
   if (btn != BTN_NONE) {
     if ( btn == BTN_SHORT_PRESS ) {
 #ifdef ESPNOW
+	  if ( netw_state == NW_NONE && !skipNetwork ) { 
+	  	skipNetwork = true; 
+	  	LogFile( "SKIP NETWORK ENABLED",true );
+	  	return; 
+	  }
       DebugT(F("\n\nSHORT Press : PARING MODE - "));
       if ( Pref.peers ) {
         Debugln(" already PAIRED -> rePAIR"); 
@@ -93,7 +98,7 @@ void fAuxProc(void *pvParameters) {
 }
 
 void SetupButton() {
-  if( xTaskCreatePinnedToCore( fAuxProc, "Aux", 1024*5, NULL, 4, NULL, 0) == pdPASS ) DebugTln(F("Task Aux succesfully created"));
+  if( xTaskCreatePinnedToCore( fAuxProc, "Aux", 1024*5, NULL, 6, NULL, 0) == pdPASS ) DebugTln(F("Task Aux succesfully created"));
   // gpio_dump_io_configuration(stdout, 1ULL << 0);
 }
 

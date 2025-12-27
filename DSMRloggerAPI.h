@@ -10,23 +10,30 @@
 #ifndef _DSMRAPI_H
 #define _DSMRAPI_H
 
-//SDK 3.x.x
+// SDK 3.x.x
 #if ARDUINO_USB_CDC_ON_BOOT
   #define USBSerial HWCDCSerial
 #else
   HWCDC USBSerial;
 #endif
 
-#include "version.h"
 #include "Config.h"
 
 // water sensor
-volatile byte        WtrFactor      = 1;
+volatile float       WtrFactor      = 1;
 volatile time_t      WtrTimeBetween = 0;
 volatile byte        debounces      = 0;
 volatile time_t      WtrPrevReading = 0;
 bool                 WtrMtr         = false;
 #define              DEBOUNCETIMER 1700
+
+struct {
+  // uint8_t map = 0; = SelMap TODO
+  uint8_t id = 1;
+  uint16_t baud = 9600;
+  uint32_t parity = SERIAL_8E1;
+  uint16_t port = 502;
+} mb_config;
 
 #include <WiFi.h>        
 #include "Insights.h"
@@ -35,6 +42,7 @@ bool                 WtrMtr         = false;
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
+#include "version.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <dsmr2.h>               // https://github.com/mhendriks/dsmr2Lib
@@ -63,8 +71,8 @@ void EID_RESTART_IDLE_TIMER();
 WebServer httpServer(80);
 NetServer ws_raw(82);
 
-time_t tWifiLost        = 0;
-byte  WifiReconnect     = 0;
+// time_t tWifiLost        = 0;
+// byte  WifiReconnect     = 0;
 IPAddress staticIP, gateway, subnet, dns;
 bool bFixedIP = false;
 
@@ -95,7 +103,7 @@ TaskHandle_t tP1Reader; //  own proces for P1 reading
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS, RINGVOLTAGE};
-enum  SolarSource { ENPHASE, SOLAR_EDGE };
+enum  SolarSource { ENPHASE, SOLAR_EDGE, SMA };
 
 //test
 struct RingRecord {
@@ -147,7 +155,7 @@ uint8_t     Vcount = 0;
 
 const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, (14+1)*(DATA_RECLEN)+DATA_CLOSE+JSON_HEADER_LEN-1 },{"/RNGmonths.json",24+1,0,2474}}; //+1 voor de vergelijking, laatste record wordt niet getoond 
 
-#include "Debug.h"
+// #include "Debug.h"
 
   /**
   * Define the DSMRdata we're interested in, as well as the DSMRdatastructure to
@@ -296,7 +304,7 @@ void SetConfig();
 //config + button
 int8_t IOWater = -1;
 bool UseRGB = false; 
-volatile uint32_t  Tpressed = 0;
+volatile unsigned long      Tpressed = 0;
 volatile bool bButtonPressed = false;
 uint8_t SelMap = 0;
 uint32_t currentDay = 0;
@@ -317,6 +325,9 @@ struct stats{
   uint32_t U1piek = 0;
   uint32_t U2piek = 0;
   uint32_t U3piek = 0;
+  uint32_t U1min = 0xFFFFFFFF;
+  uint32_t U2min = 0xFFFFFFFF;
+  uint32_t U3min = 0xFFFFFFFF;  
   uint32_t TU1over = 0;
   uint32_t TU2over = 0;
   uint32_t TU3over = 0;
@@ -327,6 +338,9 @@ struct stats{
   uint32_t P1max  = 0;
   uint32_t P2max  = 0;
   uint32_t P3max  = 0;
+  int32_t P1min   = 0xFFFFFFFF;
+  int32_t P2min   = 0xFFFFFFFF;
+  int32_t P3min   = 0xFFFFFFFF; 
 } P1Stats;
 
 MyData      DSMRdata;
@@ -351,9 +365,15 @@ bool        bRawPort = false;
 bool        bLED_PRT = true;
 bool        P1Out = false;
 bool        bNewTelegramPostPower = false;
-bool        bV5meter = false;
+bool        bV5meter = true;
+bool        bP1offline = true;
+time_t      last_telegram_t = 0;
+uint32_t    P1error_cnt_sequence = 0;
 byte        RxP1 = RXP1;
 byte        TxO1 = TXO1;
+byte        DTR_out = O1_DTR_IO;
+byte        LED_out = P1_LED;
+
 //bool        bWriteFiles = false;
 
 //vitals
@@ -377,9 +397,10 @@ char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 enum tNetwState { NW_NONE, NW_WIFI, NW_ETH, NW_ETH_LINK };
 uint8_t netw_state = NW_NONE;
 bool      FSmounted = false;
+bool      skipNetwork = false;
 //MQTT
 #ifndef MQTTKB
-  uint32_t   settingMQTTinterval = 0;
+  uint32_t   settingMQTTinterval = 10;
   char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
 #else
   #include "_mqtt_kb.h"
@@ -408,6 +429,11 @@ bool      StaticInfoSend = false;
 bool      bSendMQTT = false;
 bool      bMQTToverTLS = false;
 
+bool      hideMQTTsettings = false;
+bool      RemoveIndexAfterUpdate = true;
+bool      MacIDinToptopic = false;
+char      MQTopTopic[50+14] = "";
+
 //update
 char      BaseOTAurl[45] = OTAURL OTAURL_PREFIX;
 char      UpdateVersion[25] = "";
@@ -427,7 +453,9 @@ int8_t mb_rx  = -1;
 int8_t mb_tx  = -1;
 int8_t mb_rts = -1;
 
+#include "Debug.h"
 #include <ESPmDNS.h>
+#include "ShellyEmu.h"
 #include <Update.h>
 #include <WiFiManager.h>        // https://github.com/tzapu/WiFiManager
 #include <HTTPClient.h>

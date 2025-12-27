@@ -14,9 +14,33 @@
 
 String MQTTclientId;
 
+
+void fMqtt( void * pvParameters ){
+#ifndef MQTT_DISABLE    
+  DebugTln(F("Start MQTT Thread"));
+  MQTTSetBaseInfo();
+  MQTTsetServer();
+  esp_task_wdt_add(nullptr);
+  while(true) {
+    PrintHWMark(1);
+    handleMQTT();
+    esp_task_wdt_reset();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+#endif
+  LogFile("Mqtt: unexpected task exit", true);
+  vTaskDelete(NULL);
+}
+
+void StartMqttTask(){
+  if ( skipNetwork ) return;
+  if( xTaskCreate( fMqtt, "mqtt", 1024*6, NULL, 6, NULL) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
+}
+
 void handleMQTT(){
   MQTTclient.loop();
   if ( bSendMQTT ) sendMQTTData();
+  MQTTConnect();
 }
 
 String AddPayload(const char* key, const char* value ){
@@ -32,7 +56,7 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
   msg_payload += AddPayload( "uniq_id"        , dev_name);
   msg_payload += AddPayload( "dev_cla"        , dev_class);
   msg_payload += AddPayload( "name"           , dev_title);
-  msg_payload += AddPayload( "stat_t"         , String((String)settingMQTTtopTopic + (String)dev_name).c_str() );
+  msg_payload += AddPayload( "stat_t"         , String((String)MQTopTopic + (String)dev_name).c_str() );
   msg_payload += AddPayload( "unit_of_meas"   , dev_unit);
   msg_payload += AddPayload( "val_tpl"        , dev_payload);
   msg_payload += AddPayload( "stat_cla"       , state_class);
@@ -94,24 +118,24 @@ void AutoDiscoverHA(){
 
 }
 
-// #include "_mqtt_kb.h" //duplicate
-
 void MQTTSetBaseInfo(){
 #ifdef MQTTKB
-  sprintf( settingMQTTtopTopic,"%s/%s/", _DEFAULT_HOSTNAME, macID );
+  sprintf( MQTopTopic,"%s/%s/", _DEFAULT_HOSTNAME, macID );
 #endif  
 }
 
 void MQTTDisconnect(){
-  sprintf(cMsg,"%sLWT",settingMQTTtopTopic);
+  if ( skipNetwork) return;
+  sprintf(cMsg,"%sLWT",MQTopTopic);
   MQTTclient.publish(cMsg,"Offline", true); //LWT status update
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
 }
 
 void MQTTsetServer(){
 #ifndef MQTT_DISABLE 
+  MQTTDisconnect(); //close active connection
   if ((settingMQTTbrokerPort == 0) || (strlen(settingMQTTbroker) < 4) ) return;
-  MQTTDisconnect();
+  // MQTTDisconnect();
   if (bMQTToverTLS) {
     wifiClientTLS.setInsecure();
     MQTTclient.setClient(wifiClientTLS);
@@ -120,6 +144,7 @@ void MQTTsetServer(){
     MQTTclient.setClient(wifiClient);
   }
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
+  MQTTclient.setKeepAlive(60);
   DebugTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
   MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
 
@@ -203,13 +228,13 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
   if ( StrTopic.indexOf("reconfig") >= 0) {
     MqttReconfig(StrPayload);
   }
-//   if ( StrTopic.indexOf("toptopic") >= 0) {
-//       strncpy( settingMQTTtopTopic, StrPayload, sizeof(settingMQTTtopTopic) );
-//       if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
-//       snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
-//       if ( MQTTclient.connected() ) MQTTclient.disconnect();
-//       writeSettings();
-//   }
+  if ( StrTopic.indexOf("toptopic") >= 0) {
+      strncpy( settingMQTTtopTopic, StrPayload, sizeof(settingMQTTtopTopic) );
+      if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+      snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
+      if ( MQTTclient.connected() ) MQTTclient.disconnect();
+      writeSettings();
+  }
   if ( StrTopic.indexOf("ota-url") >= 0) {
       strncpy( BaseOTAurl, StrPayload, sizeof(BaseOTAurl) );
       if (BaseOTAurl[strlen(BaseOTAurl)-1] != '/') strcat(BaseOTAurl,"/");
@@ -220,19 +245,21 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
 
 //===========================================================================================
 void MQTTConnect() {
-#ifndef ETHERNET
-  if ( DUE( reconnectMQTTtimer) && (WiFi.status() == WL_CONNECTED)) {
-#else
-  if ( DUE( reconnectMQTTtimer) ) {    
-#endif    
+// #ifndef ETHERNET
+//   if ( DUE( reconnectMQTTtimer) && (WiFi.status() == WL_CONNECTED)) {
+// #else
+  if ( MQTTclient.connected() || !strlen(settingMQTTbroker) || settingMQTTbrokerPort == 0 ) return; //interval 0 will connect to the broker
+  if ( DUE( reconnectMQTTtimer) && ( netw_state == NW_ETH || netw_state == NW_WIFI) ) {    
+// #endif    
+    LogFile("MQTT: RECONNECT to broker...", true);
     char MqttID[30+13];
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
-    snprintf( cMsg, 150, "%sLWT", settingMQTTtopTopic );
+    snprintf( cMsg, 150, "%sLWT", MQTopTopic );
     DebugTf("connect %s %s %s %s\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
     
     // if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
     if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd ) ) {
-      LogFile("MQTT: Connection to broker: CONNECTED", true);
+      LogFile("MQTT: CONNECTED to broker", true);
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
@@ -248,7 +275,7 @@ void MQTTConnect() {
 
       // subscribe on all topics
       for (auto& t : topics) {
-        snprintf(cMsg, sizeof(cMsg), "%s%s", settingMQTTtopTopic, t);
+        snprintf(cMsg, sizeof(cMsg), "%s%s", MQTopTopic, t);
         MQTTclient.subscribe(cMsg);
       }
 
@@ -280,9 +307,8 @@ struct buildJsonMQTT {
     if ( isInFieldsArray(Name) && i.present() ) {
           // add value to '/all' topic
           if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
-          // Send normal MQTT message when not sending '/all' topic, except when HA auto discovery is on
-          if ( !bActJsonMQTT || EnableHAdiscovery) {
-            sprintf(cMsg,"%s%s",settingMQTTtopTopic,Name);
+          if ( MQTTclient.connected() && (!bActJsonMQTT || EnableHAdiscovery) ) {
+            sprintf(cMsg,"%s%s",MQTopTopic,Name);
             MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
           }
     } // if isInFieldsArray && present
@@ -320,7 +346,7 @@ struct buildJsonMQTT {
 
 void MQTTSend(const char* item, String value, bool ret){
   if ( value.length()==0 || !MQTTclient.connected() ) return;
-  sprintf(cMsg,"%s%s", settingMQTTtopTopic,item);
+  sprintf(cMsg,"%s%s", MQTopTopic,item);
   if (!MQTTclient.publish(cMsg, value.c_str(), ret )) {
     DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, value.c_str(), (strlen(cMsg) + value.length()));
     StaticInfoSend = false; //probeer het later nog een keer
@@ -331,13 +357,17 @@ void MQTTSend(const char* item, String value, bool ret){
 //===========================================================================================
 
 void MQTTSend(const char* item, float value){
+  // prevent invalid negatives for total_increasing sensors
+  if (strstr(item, "gas_delivered") || strstr(item, "water")) if (value < 0) value = 0.0;
+
   char temp[10];
   sprintf(temp,"%.3f",value);
-  MQTTSend( item, temp, true );
+  MQTTSend(item, temp, true);
 }
 
 //===========================================================================================
 void MQTTSentStaticInfo(){
+  if ( skipNetwork ) return;
   if ((settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   StaticInfoSend = true;
   MQTTSend( "identification",DSMRdata.identification, true );
@@ -407,7 +437,7 @@ void sendMQTTData() {
   if ( WiFi.status() != WL_CONNECTED ) return;
 #endif  
   if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
-  if (!MQTTclient.connected()) MQTTConnect();
+  MQTTConnect();
   if ( MQTTclient.connected() ) {   
     
   DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
@@ -436,10 +466,10 @@ if ( mbusWater ){
 
   if ( bActJsonMQTT ) {
     String buffer;
-    if ( gasDelivered ) {
-      jsonDoc["gas"] = gasDelivered;
-      jsonDoc["gas_ts"] = gasDeliveredTimestamp;
-    }
+      jsonDoc["water"]    = waterDelivered;
+      jsonDoc["water_ts"] = waterDeliveredTimestamp;
+      jsonDoc["gas"]      = gasDelivered;
+      jsonDoc["gas_ts"]   = gasDeliveredTimestamp;
     serializeJson(jsonDoc,buffer);
     MQTTSend("all", buffer, false);
   }
@@ -455,7 +485,7 @@ if ( mbusWater ){
   }
 }
 
-#else
+#else //MQTT disabled
 
 void MQTTSentStaticInfo(){}
 void MQTTSend(const char* item, String value, bool ret){}

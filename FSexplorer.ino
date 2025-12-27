@@ -37,6 +37,7 @@ void serveStaticWithAuth(const char* uri, const char* fileName) {
     if (auth()) {
       File file = LittleFS.open(fileName, "r");
       if (file) {
+        httpServer.sendHeader("Access-Control-Allow-Origin", "*");
         httpServer.streamFile(file, "application/json");
         file.close();
       } else {
@@ -46,20 +47,9 @@ void serveStaticWithAuth(const char* uri, const char* fileName) {
   });
 }
 
-// #include <AsyncTCP.h>
-// #include <ESPAsyncWebServer.h>
-
-// AsyncWebServer server(81);
-// AsyncWebSocket ws("/ws");
-
-// void serveStaticWithAuth2( const char* uri, const char* filename) {
-//   server.serveStatic(uri, LittleFS, filename)
-//     .setAuthentication("admin", "password"); // Pas dit aan aan jouw auth-systeem
-// }
-
 //=====================================================================================
-void setupFSexplorer()
-{ 
+void setupFSexplorer() { 
+
   if (FSNotPopulated) return;
   DebugTln(F("FS correct populated -> normal operation!\r"));
 
@@ -90,8 +80,7 @@ void setupFSexplorer()
 
   httpServer.on("/api/listfiles", HTTP_GET, [](){ auth(); APIlistFiles(); });
   httpServer.on("/api/v2/gen", HTTP_GET, [](){ auth(); SendSolarJson(); });
-  httpServer.on("/api/v2/accu", HTTP_GET, [](){ auth(); httpServer.send(200, "application/json", "{\"active\":false}"); });
-
+  httpServer.on("/api/v2/accu", HTTP_GET, [](){ auth(); SendAccuJson(); });
   httpServer.on("/FSformat", [](){ auth();formatFS; });
   httpServer.on("/upload", HTTP_POST, []() { auth(); }, handleFileUpload );
   httpServer.on("/ReBoot", [](){ auth();reBootESP(); });
@@ -108,13 +97,11 @@ void setupFSexplorer()
     
     bool handle = handleFile(filename.c_str());
     if ( filename == "/" && !handle ) {
-      // httpServer.sendContent(Header);
       httpServer.sendHeader("Location", "/#DashTab", true);
       httpServer.send ( 303, "text/plain", "");
     }
     if ( !handle ) httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
-    // if ( !handleFile(filename.c_str()) ) httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
-    
+
   });
   httpServer.begin();
   // server.begin();
@@ -223,6 +210,7 @@ void handleFileUpload()
     httpServer.sendContent(Header);
     if (upload.filename == "DSMRsettings.json") readSettings(false);
     if (upload.filename == "enphase.json" || upload.filename == "solaredge.json") ReadSolarConfigs();
+    if (upload.filename == "se_accu.json") ReadAccuConfig();
 #ifdef NETSWITCH
     if (upload.filename == "netswitch.json") readtriggers();
 #endif    
@@ -309,6 +297,7 @@ void doRedirect(String msg, int wait, const char* URL, bool reboot, bool resetWi
        WiFiManager manageWiFi;
        manageWiFi.resetSettings();
    }
+    LogFile("reboot: doRedirect", false);
     P1Reboot();
   }
   

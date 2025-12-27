@@ -2,21 +2,17 @@
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
 **  Copyright (c) 2025 Smartstuff / based on DSMR Api Willem Aandewiel
-**
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 
-WENSEN
+BACKLOG
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
 - auto switch 3 - 1 fase max fuse
 - temperatuur ook opnemen in grafieken (A van Dijken)
 - SSE of websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
-- Roberto: P1 H2O watersensor gegevens apart versturen (MQTT) van P1 
-- optie in settings om te blijven proberen om de connectie met de router te maken (geen hotspot) (Wim Zwart)
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
-- #18 water en gas ook in de enkele json string (mqtt)
 - grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
 - Consistentie tijd-assen, links oud, rechts nieuw
   - in Actueel staat de laatste meting rechts en de oudste meting links
@@ -28,11 +24,19 @@ WENSEN
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 - RNGhours files vergroten (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
-- localisation frontend (resource files) https://phrase.com/blog/posts/step-step-guide-javascript-localization/
 - RNGDays 31 days
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
 - HA auto update ala : https://www.zigbee2mqtt.io/guide/usage/ota_updates.html#automatic-checking-for-available-updates
+- Daily Insights: Inzichten vanaf opstarten dongle / 00:00 reset
+    - loadbalancing over de fases heen
+    - detail P per fase afgelopen uur (sample eens per 10s)
+- kwartierpiek historie opnemen (wanneer nieuwe piek ontstaat)
+- dynamische prijzen inl
+- improvement: modbus in own process = non-blocking 
+- check and repair rng files on startup
+- hostname aanpassen met laatste 3 segmenten mac-adres
+- Huawei FusionSolar integratie ( Francis )
 
 Default checks
 - wifi
@@ -44,9 +48,12 @@ Default checks
 - ethernet
 - 4h test on 151
 
-- Daily Insights: Inzichten vanaf opstarten dongle / 00:00 reset
-    - loadbalancing over de fases heen
-    - detail P per fase afgelopen uur (sample eens per 10s)
+- default mqtt : mqtt://core-mosquitto:1883 en addons als user
+- change: solar support for 3 inverters
+- Shelly EM udp emulation
+- issue cost gas 4.16/5.2 (Karel)
+- ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
+- bug HW api water meter id
 
 Planner display checks
 √ niet aanwezig
@@ -77,15 +84,28 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - CPU Frequency: "160MHz"
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
+
+
+5.3.0
+- merge 4.17.1 into 5.2.9
+- add: network connection information
+
+- add: auto detect P1 version
+- 
+
 */
+
+
+
+
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
-// #define ULTRA         //ultra (mini) dongle
+#define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE   
@@ -105,6 +125,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define MQTTKB
 // #define MB_RTU
 #define ESPNOW
+// #define SHELLY_EMU
+// #define USB_CONFIG
 // #define POST_POWERCH
 
 #include "DSMRloggerAPI.h"
@@ -112,10 +134,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 void setup() 
 {
-  // make_version();
+  DebugBegin(115200);
   uint16_t Freq = getCpuFrequencyMhz();
   setCpuFrequencyMhz(80); //lower power mode
-  DebugBegin(115200);
   USBPrintf( "\n\n------> BOOTING %s %s ( %s %s ) <------\n\n", _DEFAULT_HOSTNAME, _VERSION_ONLY, __DATE__, __TIME__ ); 
   Debugf("Original cpu speed: %d\n",Freq);
   SetupWDT();
@@ -134,10 +155,7 @@ void setup()
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
   P1StatusWrite();
   LogFile("",false); // write reboot status to file
-  if (!LittleFS.exists(SETTINGS_FILE)){ 
-    // setHostname();
-    writeSettings(); 
-  } //otherwise the dongle crashes some times on the first boot
+  if (!LittleFS.exists(SETTINGS_FILE)) writeSettings(); //otherwise the dongle crashes some times on the first boot
   else readSettings(true);
 
 //=============scan, repair and convert RNG files ==================
@@ -150,7 +168,7 @@ void setup()
   // patchJsonFile_Add7thValue(RINGHOURS);
   // convertRingfileWithSlotExpansion(RINGDAYS,32);
 //=============start Networkstuff ==================================
-  
+  USBconfigBegin();
   startNetwork();
   PostMacIP(); //post mac en ip
   delay(100);
@@ -162,25 +180,8 @@ void setup()
   startNTP();
 
 //================ Check necessary files ============================
-  // if (!DSMRfileExist(settingIndexPage, false) ) {
-  //   DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
-  //   GetFile(settingIndexPage); //download file from cdn
-  //   if (!DSMRfileExist(settingIndexPage, false) ) { //check again
-  //     DebugTln(F("Index file still not pressent!\r"));
-  //     FSNotPopulated = true;
-  //     }
-  // }
-  // if (!FSNotPopulated) {
-  //   DebugTln(F("FS correct populated -> normal operation!\r"));
-  //   httpServer.serveStatic("/", LittleFS, settingIndexPage);
-  // }
- 
-  // if (!DSMRfileExist("/Frontend.json", false) ) {
-  //   DebugTln(F("Frontend.json not pressent, try to download it!"));
-  //   GetFile("/Frontend.json");
-  // }
-
- if (!DSMRfileExist(settingIndexPage, false) ) {
+  if ( !skipNetwork ) {
+  if (!DSMRfileExist(settingIndexPage, false) ) {
     DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
     GetFile(settingIndexPage, PATH_DATA_FILES); //download file from cdn
     if (!DSMRfileExist(settingIndexPage, false) ) {
@@ -197,9 +198,10 @@ void setup()
     DebugTln(F("Frontend.json not pressent, try to download it!"));
     GetFile("/Frontend.json", PATH_DATA_FILES);
   }
-
+  
   setupFSexplorer();
- 
+  } //! skipNetwork
+
   esp_register_shutdown_handler(ShutDownHandler);
 
   setupWater();
@@ -214,52 +216,20 @@ void setup()
   SetupMB_RTU();
 #endif  
   ReadSolarConfigs();
+  ReadAccuConfig();
   delay(500);
   setCpuFrequencyMhz(Freq); //restore original clockspeed
 
-  //create a task that will be executed in the fP1Reader() function, with priority 1
-  //p1 task runs always on core 0. On the dual core models Arduino runs on core 1. It isn't possible that the process runs on both cores.
-  if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 10, &tP1Reader, /*core*/ 0 ) == pdPASS ) DebugTln(F("Task tP1Reader succesfully created"));
-  if( xTaskCreatePinnedToCore( fMqtt    , "mqtt"     , 1024*6, NULL, 6, NULL      , /*core*/ 0 ) == pdPASS ) DebugTln(F("Task MQTT succesfully created"));
+  StartP1Task();
+  StartMqttTask();
+  EIDStart();
+  ShellyEmuBegin();
+  // setupWS();
+  
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
   StartESPNOW();
   StartPowerCH();
 } // setup()
-
-//P1 reader task
-void fP1Reader( void * pvParameters ){
-  DebugTln(F("Enable slimme meter..."));
-  esp_task_wdt_add(nullptr);
-  SetupP1In();
-  SetupP1Out();
-  slimmeMeter.enable(false);
-#ifdef ULTRA
-  digitalWrite(DTR_IO, LOW); //default on
-#endif   
-  while(true) {
-    PrintHWMark(0);
-    handleSlimmemeter();
-    P1OutBridge();
-    esp_task_wdt_reset();
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-}
-
-void fMqtt( void * pvParameters ){
-#ifndef MQTT_DISABLE    
-  DebugTln(F("Start MQTT Thread"));
-  MQTTSetBaseInfo();
-  MQTTsetServer();
-  esp_task_wdt_add(nullptr);
-  while(true) {
-    PrintHWMark(1);
-    PostPowerCh();
-    handleMQTT();
-    esp_task_wdt_reset();
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
-#endif      
-}
 
 void loop () { 
   esp_task_wdt_reset();
@@ -279,27 +249,3 @@ void loop () {
   PrintHWMark(2);
   handleP2P();
 } // loop()
-
-
-/***************************************************************************
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to permit
-* persons to whom the Software is furnished to do so, subject to the
-* following conditions:
-*
-* The above copyright notice and this permission notice shall be included
-* in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
-* THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-* 
-***************************************************************************/

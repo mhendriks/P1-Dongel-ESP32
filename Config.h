@@ -25,13 +25,6 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
 
 //PROFILES
 #ifdef ULTRA
-  // #ifndef ETHERNET 
-  //     #define ETHERNET
-  // #endif    
-  // #define VIRTUAL_P1
-  // #define NETSWITCH
-  // #define MBUS //default
-  // #define DEV_PAIRING //default
   #include "hw_profile_ultra.h"
   #undef DEV_PAIRING // 5.1 feature is ESPNOW
 #else
@@ -73,9 +66,10 @@ struct mod_conf {
     mod_io io_conf[2];
 };
 
-mod_conf module_config[2] = {
+mod_conf module_config[3] = {
  { 1, {{  4, 21,  5,  7,  6,  6, -1, -1 }, { -1, -1, -1, -1, -1, -1, -1, -1 }} }, /* NRGD     */
- { 2, {{ 42, 45, 41, 44, 43, 43, -1, -1 }, { 37, 40, 36, 39, 38, 38, -1, -1 }} }  /* ULTRA V2 */
+ { 2, {{ 42, 45, 41, 44, 43, 43, -1, -1 }, { 37, 40, 36, 39, 38, 38, -1, -1 }} }, /* ULTRA V2 */
+ { 2, {{ 37, 40, 36, 39, 38, 38, -1, -1 }, { 42, 45, 41, 44, 43, 43, -1, -1 }} }  /* ULTRA X2 */
 };
 
 int8_t modType[2] = {-1,-1};

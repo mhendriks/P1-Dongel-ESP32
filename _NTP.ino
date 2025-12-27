@@ -53,12 +53,12 @@ void cbSyncTime(struct timeval *tv)  // callback function to show when NTP was s
 
 //=======================================================================
 void startNTP() {
+  if ( skipNetwork ) return;
   DebugTln(F("Starting NTP"));
 
   sntp_set_time_sync_notification_cb(cbSyncTime);  // set a Callback function for time synchronization notification
   sntp_set_sync_interval( NTP_SYNC_INTERVAL * 1000UL ); //sync 
-  configTime(0, 0, "europe.pool.ntp.org");    // First connect to NTP server, with 0 TZ offset
-  setTimezone("CET-1CEST,M3.5.0,M10.5.0/3");
+  configTzTime("CET-1CEST,M3.5.0,M10.5.0/3", "nl.pool.ntp.org", "be.pool.ntp.org", "de.pool.ntp.org");
   if(!getLocalTime(&tm)){
     DebugTln(F("Failed to obtain time"));
     return;

@@ -15,20 +15,35 @@
 #include "esp_efuse_table.h"
 
 // ------------------ ENUMS & CONSTANTS ------------------ //
-enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S };
-const char HWTypeNames[][5] = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S" };
+enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2 };
+const char HWTypeNames[][6] = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S", "P1UX2" };
+const char ModTypeNames[][6] = { "N/A", "IO+", "H2O", "RS485" };
 
 // ------------------ GLOBAL VARIABLES ------------------ //
-uint16_t HardwareType = UNDETECTED; 
+uint16_t HardwareType = UNDETECTED;
 uint16_t HardwareVersion = 0; 
 byte     rgbled_io = RGBLED_PIN;
 
 #define _getChipId() (uint64_t)ESP.getEfuseMac()
 
-const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unknown","Software reset digital core", "Legacy watch dog reset digital core", 
-"Deep Sleep reset digital core", "Reset by SLC module, reset digital core","Timer Group0 Watch dog reset digital core","Timer Group1 Watch dog reset digital core",
-"RTC Watch dog Reset digital core","Instrusion tested to reset CPU","Time Group reset CPU","Software reset CPU","RTC Watch dog Reset CPU","for APP CPU, reseted by PRO CPU",
-"Reset when the vdd voltage is not stable","RTC Watch dog reset digital core and rtc module"};
+const char *resetReasonsIDF[] PROGMEM = {
+    [0]  = "0 - ESP_RST_UNKNOWN - Cannot be determined",
+    [1]  = "1 - ESP_RST_POWERON - Power-on reset",
+    [2]  = "2 - ESP_RST_EXT - External pin reset",
+    [3]  = "3 - ESP_RST_SW - Software reset (esp_restart)",
+    [4]  = "4 - ESP_RST_PANIC - Exception/Panic",
+    [5]  = "5 - ESP_RST_INT_WDT - Interrupt watchdog",
+    [6]  = "6 - ESP_RST_TASK_WDT - Task watchdog",
+    [7]  = "7 - ESP_RST_WDT - Other watchdog",
+    [8]  = "8 - ESP_RST_DEEPSLEEP - Wake from deep sleep",
+    [9]  = "9 - ESP_RST_BROWNOUT - Brownout",
+    [10] = "10 - ESP_RST_SDIO - SDIO reset",
+    [11] = "11 - ESP_RST_USB - USB peripheral reset",
+    [12] = "12 - ESP_RST_JTAG - JTAG reset",
+    [13] = "13 - ESP_RST_EFUSE - eFuse error",
+    [14] = "14 - ESP_RST_PWR_GLITCH - Power glitch detected",
+    [15] = "15 - ESP_RST_CPU_LOCKUP - CPU lock-up"
+};
 
 /* WD timers 
 - idle = off
@@ -37,7 +52,7 @@ const PROGMEM char *resetReasons[]  { "Unknown", "Vbat power on reset", "2-unkno
 void SetupWDT(){
   esp_task_wdt_deinit();
   esp_task_wdt_config_t cfg = {
-    .timeout_ms = 20000, //in 20sec default 
+    .timeout_ms = 22000, //in 15sec default 
     // .idle_core_mask = (1<<0) | (1<<1), //S3 watch idle core 0 & 1
     // .idle_core_mask = (1<<0), //C3 watch idle core 0 
     .idle_core_mask = 0, //idle core watch dog OFF
@@ -118,8 +133,30 @@ void DetectModule() {
 #endif   
 
 #ifdef ULTRA
-  if ( HardwareType == P1U ) {
-    rgbled_io =  9; //Ultra V2
+  if ( HardwareType == P1UX2 ) {
+    if ( HardwareVersion >= 101) { 
+      //disable W5500 RESET only 1.1+ hardware
+      pinMode(17, OUTPUT); 
+      digitalWrite(17,HIGH);
+    }
+    rgbled_io =  9;
+    RxP1      = 12;
+    TxO1      = 21; //same as others
+    DTR_out   = 10;
+    LED_out   = 11;
+    
+    active_mod_conf = &module_config[2];
+    DetectModule(0);
+    ActivateModule(0);
+    DetectModule(1);
+    ActivateModule(1);
+  }
+  else if ( HardwareType == P1U ) {
+    //old hardware versions with DTR P1 IN -> forced to read.
+    pinMode(17, OUTPUT); 
+    digitalWrite(17,LOW);
+
+    rgbled_io       =  9; //Ultra V2
     active_mod_conf = &module_config[1];
     DetectModule(0); 
     ActivateModule(0);
@@ -176,12 +213,11 @@ void SetConfig(){
   }
 #endif
   //pin modes
-  pinMode(DTR_IO, OUTPUT);
+  // pinMode(DTR_IO, OUTPUT);
   if ( LED !=-1  ) pinMode(LED, OUTPUT);
-  if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP);   
+  if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP);
   
-  Debugf("Config set UseRGB [%s] IOWater [%d]\n", UseRGB ? "true" : "false", IOWater);
-  // if ( UseRGB ) rgb.begin();
+  Debugf("---> Config set UseRGB [%s] IOWater [%d]\n\n", UseRGB ? "true" : "false", IOWater);
   
   // sign of life = ON during setup or change config
   SwitchLED( LED_ON, LED_BLUE );
@@ -231,11 +267,23 @@ if ( UseRGB ) {
    }
 }
 
-
 //===========================================================================================
 
-const char* getResetReason(){
-    return resetReasons[rtc_get_reset_reason(0)];
+// const char* getResetReason(){
+//     return String(String(rtc_get_reset_reason(0)) + resetReasons[ rtc_get_reset_reason(0) > 15? 0 : rtc_get_reset_reason(0) ]).c_str();
+//   // esp_reset_reason_t r = esp_reset_reason();
+//   // DebugTf("Last Reset reason: %d = %s\n", r, RESET_REASON(r));
+//   // return RESET_REASON(r);
+// }
+
+const char* getResetReason() {
+    static char buf[64];
+    esp_reset_reason_t r = esp_reset_reason();
+    if (r < 0 || r > 15 || resetReasonsIDF[r] == nullptr) {
+        snprintf(buf, sizeof(buf), "Unknown reset reason (%d)", (int)r);
+        return buf;
+    }
+    return resetReasonsIDF[r];
 }
 
 //===========================================================================================
@@ -262,6 +310,7 @@ bool bailout () // to prevent firmware from crashing!
   if (ESP.getFreeHeap() > 5500) return false; //do nothing
   
   DebugT(F("Bailout due to low heap --> reboot in 3 seconds")); Debugln(ESP.getFreeHeap());
+  LogFile("reboot due to low heap", false);
   P1Reboot();
   return true; // komt hier als het goed is niet
   

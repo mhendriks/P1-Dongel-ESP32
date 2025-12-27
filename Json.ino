@@ -20,6 +20,17 @@ const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff"
 
 JsonDocument jsonDoc;  // generic doc to return, clear() before use!
 
+void JsonGas(){
+  if (!gasDelivered) return;
+  jsonDoc["gas_delivered"]["value"] =  (int)(gasDelivered*1000)/1000.0;
+  jsonDoc["gas_delivered"]["unit"]  = "m3";
+  jsonDoc["gas_delivered_timestamp"]["value"] = gasDeliveredTimestamp;
+}
+
+void JsonPP(){
+  if ( DSMRdata.highest_peak_pwr_present ) jsonDoc["highest_peak_pwr_timestamp"]["value"] = DSMRdata.highest_peak_pwr.timestamp;
+}
+
 int signalToEnum(const char* signal) {
   if (strcmp(signal, "--") == 0) return 0;
   if (strcmp(signal, "-") == 0)  return 1;
@@ -51,13 +62,6 @@ void JsonEIDplanner(){
   sendJsonBuffer( data.c_str() );
 }
 
-void JsonGas(){
-  if (!gasDelivered) return;
-  jsonDoc["gas_delivered"]["value"] =  (int)(gasDelivered*1000)/1000.0;
-  jsonDoc["gas_delivered"]["unit"]  = "m3";
-  jsonDoc["gas_delivered_timestamp"]["value"] = gasDeliveredTimestamp;
-}
-
 void JsonWater(){
 
   if ( !WtrMtr && !mbusWater ) return;  
@@ -73,21 +77,29 @@ void JsonWater(){
 void StatsApi(){
   JsonDocument doc; // Pas de grootte aan indien nodig
  
-  doc["I1piek"]  = P1Stats.I1piek;
-  doc["I2piek"]  = P1Stats.I2piek;
-  doc["I3piek"]  = P1Stats.I3piek;
+  if ( DSMRdata.current_l1_present ) doc["I1piek"]  = P1Stats.I1piek;
+  if ( DSMRdata.current_l2_present ) doc["I2piek"]  = P1Stats.I2piek;
+  if ( DSMRdata.current_l3_present ) doc["I3piek"]  = P1Stats.I3piek;
   
-  doc["P1max"]   = P1Stats.P1max;
-  doc["P2max"]   = P1Stats.P2max;
-  doc["P3max"]   = P1Stats.P3max;
+  if ( DSMRdata.power_delivered_l1_present ) doc["P1max"]   = P1Stats.P1max;
+  if ( DSMRdata.power_delivered_l2_present ) doc["P2max"]   = P1Stats.P2max;
+  if ( DSMRdata.power_delivered_l3_present ) doc["P3max"]   = P1Stats.P3max;
   
-  doc["U1piek"]  = P1Stats.U1piek;
-  doc["U2piek"]  = P1Stats.U2piek;
-  doc["U3piek"]  = P1Stats.U3piek;
+  if ( DSMRdata.power_delivered_l1_present ) doc["P1min"]   = P1Stats.P1min;
+  if ( DSMRdata.power_delivered_l2_present ) doc["P2min"]   = P1Stats.P2min;
+  if ( DSMRdata.power_delivered_l3_present ) doc["P3min"]   = P1Stats.P3min;
 
-  doc["TU1over"] = P1Stats.TU1over;
-  doc["TU2over"] = P1Stats.TU2over;
-  doc["TU3over"] = P1Stats.TU3over;
+  if ( DSMRdata.voltage_l1_present ) doc["U1piek"]  = P1Stats.U1piek;
+  if ( DSMRdata.voltage_l2_present ) doc["U2piek"]  = P1Stats.U2piek;
+  if ( DSMRdata.voltage_l3_present ) doc["U3piek"]  = P1Stats.U3piek;
+
+  if ( DSMRdata.voltage_l1_present )doc["U1min"]  = P1Stats.U1min;
+  if ( DSMRdata.voltage_l2_present )doc["U2min"]  = P1Stats.U2min;
+  if ( DSMRdata.voltage_l3_present )doc["U3min"]  = P1Stats.U3min;
+
+  if ( DSMRdata.voltage_l1_present )doc["TU1over"] = P1Stats.TU1over;
+  if ( DSMRdata.voltage_l2_present )doc["TU2over"] = P1Stats.TU2over;
+  if ( DSMRdata.voltage_l3_present )doc["TU3over"] = P1Stats.TU3over;
   
   doc["Psluip"]  = P1Stats.Psluip;
   doc["start_time"] = P1Stats.StartTime;
@@ -112,7 +124,9 @@ void HWapi() {
     JsonDocument jsonDoc;
     #define F3DEC(...) serialized(String(__VA_ARGS__,3))
     
-    jsonDoc["wifi_ssid"] = WiFi.SSID();  
+    if ( WiFi.SSID().length() ) jsonDoc["wifi_ssid"] = WiFi.SSID();
+    else jsonDoc["wifi_ssid"] = "NO-WIFI";
+
     jsonDoc["wifi_strength"] = WiFi.RSSI();
     jsonDoc["smr_version"] = DSMRdata.p1_version;
     jsonDoc["meter_model"] = DSMRdata.identification;
@@ -151,20 +165,45 @@ void HWapi() {
     // jsonDoc["voltage_swell_l2_count"] = DSMRdata.electricity_swells_l2;
     // jsonDoc["voltage_swell_l3_count"] = DSMRdata.electricity_swells_l3;
 
-    // Gasverbruik via M-Bus
-    // jsonDoc["gas_unique_id"] = ;
-    jsonDoc["total_gas_m3"] = F3DEC(gasDelivered);
-    jsonDoc["gas_timestamp"] = gasDeliveredTimestamp;
-
     // Externe apparaten (zoals gasmeter)
-    // JsonArray external = jsonDoc.createNestedArray("external");
-    // JsonObject gasMeter = external.createNestedObject();
-    // gasMeter["unique_id"] = DSMRdata.mbus1_equipment_id_tc;
-    // gasMeter["type"] = "gas_meter";
-    // gasMeter["timestamp"] = DSMRdata.mbus1_timestamp;
-    // gasMeter["value"] = DSMRdata.mbus1_delivered;
-    // gasMeter["unit"] = "m3";
+    JsonArray external;
+    if ( mbusGas || WtrMtr ) external = jsonDoc.createNestedArray("external");
+    // Gasverbruik via M-Bus  
+    if ( mbusGas ) {
+      jsonDoc["total_gas_m3"] = F3DEC(gasDelivered);
+      jsonDoc["gas_timestamp"] = strtoull( gasDeliveredTimestamp.substring(0, gasDeliveredTimestamp.length() - 1).c_str(), nullptr, 10);
+      
+     jsonDoc["gas_unique_id"] = 
+        mbusGas == 1 ? DSMRdata.mbus1_equipment_id_tc :
+        mbusGas == 2 ? DSMRdata.mbus2_equipment_id_tc :
+        mbusGas == 3 ? DSMRdata.mbus3_equipment_id_tc :
+        mbusGas == 4 ? DSMRdata.mbus4_equipment_id_tc :
+        "";
+      JsonObject gasMeter = external.createNestedObject();
+      gasMeter["unique_id"] = jsonDoc["gas_unique_id"];
+      gasMeter["type"] = "gas_meter";
+      gasMeter["timestamp"] =  strtoull( gasDeliveredTimestamp.substring(0, gasDeliveredTimestamp.length() - 1).c_str(), nullptr, 10);
+      gasMeter["value"] = F3DEC(gasDelivered);
+      gasMeter["unit"] = "m3";
+    }
 
+    if ( WtrMtr ) {
+      JsonObject waterMeter = external.createNestedObject();
+
+        waterMeter["unique_id"] = 
+        mbusWater == 1 ? DSMRdata.mbus1_equipment_id_tc :
+        mbusWater == 2 ? DSMRdata.mbus2_equipment_id_tc :
+        mbusWater == 3 ? DSMRdata.mbus3_equipment_id_tc :
+        mbusWater == 4 ? DSMRdata.mbus4_equipment_id_tc :
+        "8369788379824579787689"; //SENSOR-ONLY
+
+      // waterMeter["unique_id"] = mbusGas ? DSMRdata.mbus1_equipment_id_tc;
+      waterMeter["type"] = "water_meter";
+      String Timestamp = actTimestamp;
+      waterMeter["timestamp"] =  strtoull( mbusWater ? waterDeliveredTimestamp.substring(0, waterDeliveredTimestamp.length() - 1).c_str(): Timestamp.substring(0, Timestamp.length() - 1).c_str(), nullptr, 10);
+      waterMeter["value"] = mbusWater ? F3DEC(waterDelivered) : F3DEC(P1Status.wtr_m3+P1Status.wtr_l/1000.0) ;
+      waterMeter["unit"] = "m3";
+    }
     String jsonString;
     serializeJson(jsonDoc, jsonString);
     sendJsonBuffer(  jsonString.c_str() );
@@ -241,6 +280,15 @@ void sendDeviceTime()
   
 } // sendDeviceTime()
 
+String network_state () {
+  switch ( netw_state ){
+    case NW_NONE: return "None";
+    case NW_ETH: return "Ethernet";
+    case NW_ETH_LINK: return "Ethernet Link (NC)";
+    default: return "None";
+  }
+}
+
 void sendDeviceInfo() 
 {
   JsonDocument doc;
@@ -251,7 +299,7 @@ void sendDeviceInfo()
   doc["macaddress"] = macStr;
   doc["freeheap"] ["value"] = ESP.getFreeHeap();
   doc["freeheap"]["unit"] = "bytes";
- 
+  doc["hardware"]= HWTypeNames[HardwareType];
   esp_chip_info_t chip_info;
   esp_chip_info(&chip_info);
 
@@ -263,6 +311,7 @@ void sendDeviceInfo()
   doc["cpufreq"]["unit"] = "MHz";
   doc["sketchsize"] ["value"] = (uint32_t)(ESP.getSketchSize() / 1024.0);
   doc["sketchsize"]["unit"] = "kB";
+  
   doc["freesketchspace"] ["value"] = (uint32_t)(ESP.getFreeSketchSpace() / 1024.0);
   doc["freesketchspace"]["unit"] = "kB";
   doc["flashchipsize"] ["value"] = (uint32_t)(ESP.getFlashChipSize() / 1024 / 1024 );
@@ -275,12 +324,13 @@ void sendDeviceInfo()
   doc["ssid"] = WiFi.SSID();
   doc["wifirssi"] = WiFi.RSSI();
 #endif
+  doc["network"] = network_state();
   doc["uptime"] = upTime();
 
   if ( !bWarmteLink ) { // IF NO HEATLINK
       doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
   }
-  
+
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
 
@@ -288,8 +338,7 @@ void sendDeviceInfo()
   snprintf(cMsg, sizeof(cMsg), "%s:%04d", settingMQTTbroker, settingMQTTbrokerPort);
   doc["mqttbroker"] = cMsg;
   doc["mqttinterval"] = settingMQTTinterval;
-  if (MQTTclient.connected()) doc["mqttbroker_connected"] = "yes";
-  else  doc["mqttbroker_connected"] = "no";
+  doc["mqttbroker_connected"] = MQTTclient.connected() ? "yes" : "no";
 #endif
   
   doc["paired"] = Pref.peers;
@@ -333,7 +382,9 @@ void sendDeviceSettings() {
   ADD_SETTING("IndexPage", "s", 0, sizeof(settingIndexPage) - 1, settingIndexPage);
 
 #ifndef MQTT_DISABLE
+if ( !hideMQTTsettings) {
 #ifndef MQTTKB
+
   ADD_SETTING("mqtt_broker", "s", 0, sizeof(settingMQTTbroker) - 1, settingMQTTbroker);
   ADD_SETTING("mqtt_broker_port", "i", 1, 9999, settingMQTTbrokerPort);
   doc["mqtt_tls"] = bMQTToverTLS;
@@ -342,6 +393,7 @@ void sendDeviceSettings() {
 #endif
   ADD_SETTING("mqtt_toptopic", "s", 0, sizeof(settingMQTTtopTopic) - 1, settingMQTTtopTopic);
   ADD_SETTING("mqtt_interval", "i", 0, 600, settingMQTTinterval);
+}
 #endif
 
   if (WtrMtr) {
@@ -361,6 +413,14 @@ void sendDeviceSettings() {
   ADD_SETTING("b_auth_user", "s", 0, sizeof(bAuthUser) - 1, bAuthUser);
   ADD_SETTING("b_auth_pw", "s", 0, sizeof(bAuthPW) - 1, bAuthPW);
 
+  //MODBUS TCP settings
+  ADD_SETTING("mb_map", "i", 0, 7, SelMap); //RTU+TCP
+  ADD_SETTING("mb_id", "i", 1, 255, mb_config.id); //RTU+TCP
+  ADD_SETTING("mb_port", "i", 0, 65535, mb_config.port); //TCP
+  if ( mb_rx != -1 ){ //check if modbus rtu hardware is available
+    ADD_SETTING("mb_baud", "i", 300, 115200, mb_config.baud); //RTU
+    ADD_SETTING("mb_parity", "i", 134217744, 134217791, mb_config.parity); //RTU
+  }
   //booleans
   doc["hist"] = EnableHistory;
   doc["water_enabl"] = WtrMtr;
@@ -373,7 +433,7 @@ void sendDeviceSettings() {
 #endif
 
   doc["ha_disc_enabl"] = EnableHAdiscovery;
-if ( P1Status.dev_type == PRO_BRIDGE ) doc["led-prt"] = bLED_PRT;
+  if ( P1Status.dev_type == PRO_BRIDGE ) doc["led-prt"] = bLED_PRT;
 
   if ( bWarmteLink ) { // IF HEATLINK
     doc["conf"] = "p1-q";
@@ -402,12 +462,17 @@ void sendApiNoContent() {
 
 //====================================================
 void handleSmApiField(){
+  jsonDoc.clear();
+  if ( httpServer.pathArg(0) == "gas_delivered" ) JsonGas();
+  else if ( httpServer.pathArg(0) == "water") JsonWater();
+  else {
+    //other fields
     onlyIfPresent = false;
     strCopy(Onefield, 24, httpServer.pathArg(0).c_str());
     fieldsElements = FIELDELEMENTS;
-    jsonDoc.clear();
     DSMRdata.applyEach(buildJson());
-    sendJson(jsonDoc);
+  }
+  sendJson(jsonDoc);
 }
 
 void handleSmApi()
@@ -446,6 +511,7 @@ void handleSmApi()
     DSMRdata.applyEach(buildJson());
     JsonGas();
     JsonWater();
+    JsonPP();
     sendJson(jsonDoc);
     
 } // handleSmApi()

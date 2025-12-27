@@ -61,7 +61,6 @@ void displayBoardInfo()
 
   Debugln(F("\r\n==================================================================\r"));
   Debug(F("]\r\n      Firmware Version ["));  Debug( _VERSION_ONLY " - " __TIMESTAMP__ );
-  // Debug(F("]\r\n              Compiled ["));  Debug( __DATE__ "  "  __TIME__ );
   Debug(F("]\r\n              #defines "));   Debug(F(ALL_OPTIONS));
   Debug(F(" \r\n   Telegrams Processed ["));  Debug( telegramCount );
   Debug(F("]\r\n           With Errors ["));  Debug( telegramErrors );
@@ -75,8 +74,6 @@ void displayBoardInfo()
   Debug(F("]\r\nFree Sketch Space (kB) ["));  Debug( ESP.getFreeSketchSpace() / 1024.0 );
   Debug(F("]\r\n  Flash Chip Size (kB) ["));  Debug( ESP.getFlashChipSize() / 1024 );
   Debug(F("]\r\n          FS Size (kB) ["));  Debug( LittleFS.totalBytes() / 1024 );
-  
-  FlashMode_t ideMode = ESP.getFlashChipMode();
   Debugln(F("==================================================================\r"));
   Debug(F("]\r\n                  SSID ["));  Debug( WiFi.SSID() );
   Debug(F("]\r\n               PSK key [**********"));
@@ -158,7 +155,9 @@ void handleKeyInput()
                         while (TelnetStream.available() > 0) {(char)TelnetStream.read();} //verwijder extra input
                       } //while
                       break; }
-      case 'E':     eraseFile();
+      case 'E':     bHideP1Log = true;
+                    eraseFile();
+                    bHideP1Log = false;
                     break;
       case 'f':
       case 'F':     listFS();
@@ -175,6 +174,7 @@ void handleKeyInput()
                     break;                      
                     
       case 'R':     DebugFlush();
+                    LogFile("reboot: telnet R",true);
                     P1Reboot();
                     break;
                     

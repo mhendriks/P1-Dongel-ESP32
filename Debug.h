@@ -17,9 +17,9 @@ uint64_t uptime();
 #ifdef DEBUG
   //DEBUG MODE
   #define DebugBegin(...)({ USBSerial.begin(__VA_ARGS__); while (!USBSerial); })
-  #define Debug(...)      ({ USBSerial.print(__VA_ARGS__); TelnetStream.print(__VA_ARGS__); })
-  #define Debugln(...)    ({ USBSerial.println(__VA_ARGS__); TelnetStream.println(__VA_ARGS__); })
-  #define Debugf(...)     ({ USBSerial.printf(__VA_ARGS__); TelnetStream.printf(__VA_ARGS__); })
+  #define Debug(...)      ({ USBSerial.print(__VA_ARGS__); if (!bHideP1Log ) TelnetStream.print(__VA_ARGS__); })
+  #define Debugln(...)    ({ USBSerial.println(__VA_ARGS__); if (!bHideP1Log ) TelnetStream.println(__VA_ARGS__); })
+  #define Debugf(...)     ({ USBSerial.printf(__VA_ARGS__); if (!bHideP1Log ) TelnetStream.printf(__VA_ARGS__); })
   #define DebugFlush()    ({ USBSerial.flush(); TelnetStream.flush(); })
   #define USBPrint(...)   ({ Debug(__VA_ARGS__);})
   #define USBPrintf(...)  ({ Debugf(__VA_ARGS__);})
@@ -28,9 +28,9 @@ uint64_t uptime();
 #else
   //NORMAL MODE
   #define DebugBegin(...)({ USBSerial.begin(__VA_ARGS__); })
-  #define Debug(...)      ({ TelnetStream.print(__VA_ARGS__); })
-  #define Debugln(...)    ({ TelnetStream.println(__VA_ARGS__); })
-  #define Debugf(...)     ({ TelnetStream.printf(__VA_ARGS__); })
+  #define Debug(...)      ({ if (!bHideP1Log ) TelnetStream.print(__VA_ARGS__); })
+  #define Debugln(...)    ({ if (!bHideP1Log ) TelnetStream.println(__VA_ARGS__); })
+  #define Debugf(...)     ({ if (!bHideP1Log ) TelnetStream.printf(__VA_ARGS__); })
   #define DebugFlush()    ({ TelnetStream.flush(); })
   #define USBPrint(...)   ({ if (USBSerial.isConnected() && USBSerial.isPlugged() ) USBSerial.print(__VA_ARGS__);})
   #define USBPrintf(...)  ({ if (USBSerial.isConnected() && USBSerial.isPlugged() ) USBSerial.printf(__VA_ARGS__);})
@@ -63,7 +63,7 @@ void _debugBOL(const char *fn, int line)
 #ifdef DEBUG
   USBSerial.print (_bol);
 #endif  
-  TelnetStream.print (_bol);
+  if ( !bHideP1Log ) TelnetStream.print (_bol);
 }
 
 bool HWMarks[3] = { 0,0,0 };

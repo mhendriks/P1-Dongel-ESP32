@@ -11,6 +11,33 @@
 
 volatile bool dtr1         = false;
 bool          Out1Avail    = false;
+// portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+
+//P1 reader task
+void fP1Reader( void * pvParameters ){
+  DebugTln(F("Enable slimme meter..."));
+  esp_task_wdt_add(nullptr);
+  SetupP1In();
+  SetupP1Out();
+  slimmeMeter.enable(false);
+#ifdef ULTRA
+  // digitalWrite(17, LOW); //default on
+#endif   
+  while(true) {
+    PrintHWMark(0);
+    handleSlimmemeter();
+    P1OutBridge();
+    esp_task_wdt_reset();
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+  LogFile("P1 reader: unexpected task exit", true);
+  vTaskDelete(NULL);
+}
+
+void StartP1Task(){
+    if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 10, &tP1Reader, /*core*/ 0 ) == pdPASS ) 
+    DebugTln(F("Task tP1Reader succesfully created"));
+}
 
 void SetupP1In(){
   Serial1.end();
@@ -59,20 +86,20 @@ void IRAM_ATTR dtr_out_int() {
 void SetupP1Out(){
   if ( !P1Out ) return; 
   //setup ports
-  pinMode(O1_DTR_IO, INPUT);
-  if ( P1_LED != -1 ) {
-    pinMode(P1_LED, OUTPUT);
+  pinMode(DTR_out, INPUT);
+  if ( LED_out != -1 ) {
+    pinMode(LED_out, OUTPUT);
   
     //hello world lights
-    digitalWrite(P1_LED, HIGH); //inverse
+    digitalWrite(LED_out, HIGH); //inverse
     delay(500);
-    digitalWrite(P1_LED, LOW); //inverse
+    digitalWrite(LED_out, LOW); //inverse
   }
     //detect DTR changes
-  attachInterrupt( O1_DTR_IO , dtr_out_int, RISING);
+  attachInterrupt( DTR_out , dtr_out_int, RISING);
       
   //initial host dtr when p1 device is connected before power up the bridge
-  if ( digitalRead(O1_DTR_IO) == HIGH ) SetDTR(true);
+  if ( digitalRead(DTR_out) == HIGH ) SetDTR(true);
 
   // Serial.begin(115200, SERIAL_8N1, -1, TXO1, false);
 
@@ -83,12 +110,12 @@ void SetupP1Out(){
 void P1OutBridge(){
   if ( P1Out && dtr1 && Out1Avail ) {
 
-    if ( P1_LED >= 0 ) digitalWrite(P1_LED, HIGH);
+    if ( LED_out >= 0 ) digitalWrite(LED_out, HIGH);
     Serial1.println(CapTelegram);
     Serial1.flush();
     Out1Avail = false; 
-    if ( digitalRead(O1_DTR_IO) == LOW ) SetDTR(false);
-    if ( P1_LED >= 0 ) digitalWrite(P1_LED, LOW);
+    if ( digitalRead(DTR_out) == LOW ) SetDTR(false);
+    if ( LED_out >= 0 ) digitalWrite(LED_out, LOW);
   }
 } 
 
@@ -105,6 +132,7 @@ void virtSetLastData(){
 }
 
 void handleVirtualP1(){
+  if ( skipNetwork ) return;
   if (strlen(virtual_p1_ip) == 0) {
     if (vp1_client.connected()) {
       bVirt_connected = false;
@@ -144,7 +172,7 @@ void handleSlimmemeter()
       CapTelegram = slimmeMeter.CompleteRaw();
       Out1Avail = true;
       if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
-
+  
 #ifdef VIRTUAL_P1
   virtSetLastData();
 #endif
@@ -155,23 +183,22 @@ void handleSlimmemeter()
       } else processSlimmemeter();
       ToggleLED(LED_OFF);
     } //available
+    if (millis() - last_telegram_t > (bV5meter ? 3500 : 35000)) bP1offline = true;
 } // handleSlimmemeter()
 
 //==================================================================================
 void SMCheckOnce(){
   DebugTln(F("first time check"));
+  DebugFlush();
   if (DSMRdata.identification_present) {
     //--- this is a hack! The identification can have a backslash in it
     //--- that will ruin javascript processing :-(
     for(int i=0; i<DSMRdata.identification.length(); i++)
     {
       if (DSMRdata.identification[i] == '\\') DSMRdata.identification[i] = '=';
-      yield();
     }
     smID = DSMRdata.identification;
   } // check id 
-
-  if ( DSMRdata.p1_version == "50" /*|| !DSMR_NL */ || DSMRdata.p1_version_be_present) bV5meter = true;
 
   if ( DSMRdata.energy_delivered_total_present && !DSMRdata.energy_delivered_tariff1_present ) bUseEtotals = true;
   if (DSMRdata.p1_version_be_present) {
@@ -183,10 +210,18 @@ void SMCheckOnce(){
   if ( ! DSMRdata.energy_delivered_tariff1_present && !DSMRdata.energy_delivered_total_present ) bWarmteLink = true;
   mbusWater = MbusTypeAvailable(7);  
   if (mbusWater) WtrMtr = true;
+  else if ( WtrMtr ) {
+      waterDeliveredTimestamp = DSMRdata.timestamp;
+      waterDelivered = P1Status.wtr_m3 + (P1Status.wtr_l / 1000.0);
+  }
   mbusGas = MbusTypeAvailable(3);  
   DebugTf("mbusWater: %d\r\n",mbusWater);
   DebugTf("mbusGas: %d\r\n",mbusGas);
   ResetStats();
+  bV5meter = DSMRdata.voltage_l1_present || DSMRdata.voltage_l2_present || DSMRdata.voltage_l3_present;
+  DebugTf("bV5meter: %d\r\n",bV5meter);
+  DebugTf("bUseEtotals: %d\r\n",bUseEtotals);
+  DebugTf("bWarmteLink: %d\r\n",bWarmteLink);
 }
 //==================================================================================
 void processSlimmemeter() {
@@ -203,7 +238,10 @@ void processSlimmemeter() {
         
     if (slimmeMeter.parse(&DSMRdataNew, &DSMRerror))   // Parse succesful
     {
+      bP1offline = false;
+      P1error_cnt_sequence = 0;
       DSMRdata = DSMRdataNew;
+      last_telegram_t = millis();
       if ( (telegramCount - telegramErrors) == 1) SMCheckOnce(); //only the first succesfull telegram
       else {
         //use the keys from the initial check; saves processing power
@@ -230,7 +268,7 @@ void processSlimmemeter() {
         gasDeliveredTimestamp = mbusDeliveredTimestamp;
 
       } else  {
-        if (!DSMRdata.timestamp_present) { 
+        if (!DSMRdata.timestamp_present && !skipNetwork ) { 
           if (Verbose2) DebugTln(F("NTP Time set"));
         if ( getLocalTime(&tm) ) {
             DSTactive = tm.tm_isdst;
@@ -260,6 +298,7 @@ void processSlimmemeter() {
     else // Parser error, print error
     {
       telegramErrors++;
+      if ( P1error_cnt_sequence++ > 3 ) bP1offline = true;
       DebugTf("Parse error\r\n%s\r\n\r\n", DSMRerror.c_str());
       DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
       slimmeMeter.clear(); //on errors clear buffer
@@ -326,20 +365,20 @@ void processTelegram(){
   }
 #endif
   
-  //handle mqtt
-#ifndef MQTT_DISABLE
-  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1) bSendMQTT = true; //handled in main flow
-#endif  
+  if ( !skipNetwork ) {
+	#ifndef MQTT_DISABLE
+	  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1) bSendMQTT = true; //handled in main flow
+	#endif  
 
-#ifdef ESPNOW  
-    // if ( telegramCount % 3 == 1 ) SendActualData();
-    P2PSendActualData();
-#endif
+	#ifdef ESPNOW  
+		// if ( telegramCount % 3 == 1 ) SendActualData();
+		P2PSendActualData();
+	#endif
 
-  ProcessStats();
-  ProcessMaxVoltage();
-  NetSwitchStateMngr();
-
+	  ProcessStats();
+	  ProcessMaxVoltage();
+	  NetSwitchStateMngr();
+  }
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
   actT = newT;
@@ -373,25 +412,27 @@ void modifySmFaseInfo()
 } //  modifySmFaseInfo()
 
 void ResetStats(){
-  P1Stats.I1piek = 0;
-  P1Stats.I2piek = 0;
-  P1Stats.I3piek = 0;
-  P1Stats.U1piek = 0;
-  P1Stats.U2piek = 0;
-  P1Stats.U3piek = 0;
-  P1Stats.P1max = 0;
-  P1Stats.P2max = 0;
-  P1Stats.P3max = 0;
-  P1Stats.Psluip = 0xFFFFFFFF;
+  P1Stats.I1piek  = 0;
+  P1Stats.I2piek  = 0;
+  P1Stats.I3piek  = 0;
+  P1Stats.U1piek  = 0;
+  P1Stats.U2piek  = 0;
+  P1Stats.U3piek  = 0;
+  P1Stats.U1min   = 0xFFFFFFFF;
+  P1Stats.U2min   = 0xFFFFFFFF;
+  P1Stats.U3min   = 0xFFFFFFFF;
+  P1Stats.P1max   = 0;
+  P1Stats.P2max   = 0;
+  P1Stats.P3max   = 0;
+  P1Stats.P1min   = 0xFFFFFFFF;
+  P1Stats.P2min   = 0xFFFFFFFF;
+  P1Stats.P3min   = 0xFFFFFFFF;  
+  P1Stats.Psluip  = 0xFFFFFFFF;
   P1Stats.TU1over = 0;
   P1Stats.TU2over = 0;
   P1Stats.TU3over = 0;
   P1Stats.StartTime = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), false);
 }
-
-// unsigned long overspanningL1 = 0;
-// unsigned long overspanningL2 = 0;
-// unsigned long overspanningL3 = 0;
 
 unsigned long startTijdL1 = 0;
 unsigned long startTijdL2 = 0;

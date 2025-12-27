@@ -3,8 +3,30 @@
 
 #include "DSMRloggerAPI.h"
 #include "esp_timer.h"
-#include "esp_mac.h"
 
+#ifdef ETHERNET
+  #include <ETH.h>
+  #include <SPI.h>
+  #include "esp_mac.h"
+
+  #define ETH_TYPE            ETH_PHY_W5500
+  #define ETH_RST            -1
+  #define ETH_ADDR            1
+
+  //workaround to use the ESP_MAC_ETH mac address instead of local mac address
+  class EthernetClass {
+  public:
+    bool myBeginSPI(ETHClass& eth, eth_phy_type_t type, int32_t phy_addr, uint8_t *mac_addr, int cs, int irq, int rst, SPIClass *spi, int sck, int miso, int mosi, spi_host_device_t spi_host, uint8_t spi_freq_mhz);
+  };
+
+  bool EthernetClass::myBeginSPI(ETHClass& eth, eth_phy_type_t type, int32_t phy_addr, uint8_t *mac_addr, int cs, int irq, int rst, SPIClass *spi, int sck, int miso, int mosi, spi_host_device_t spi_host, uint8_t spi_freq_mhz) {
+    return eth.beginSPI(type, phy_addr, mac_addr, cs, irq, rst, spi, sck, miso, mosi, spi_host, spi_freq_mhz);
+  }
+
+  EthernetClass myEthernet;
+#endif
+
+//int WifiDisconnect = 0;
 bool bNoNetworkConn = false;
 bool bEthUsage = false;
 static esp_timer_handle_t s_reconnTimer = nullptr;
@@ -59,8 +81,8 @@ static inline bool isAuthFatal(uint8_t r){
 static void kickOnce(){
   uint32_t now = millis();
   if (now - s_lastKickMs < KICK_DEBOUNCE_MS) return;
-  esp_wifi_start();                 // idempotent; start STA als die gestopt is
-  esp_wifi_connect();               // als driver al bezig is → ESP_ERR_WIFI_CONN
+  esp_wifi_start();                 //  start STA if stopped
+  esp_wifi_connect();               // driver allready in action → ESP_ERR_WIFI_CONN
   s_lastKickMs = now;
 }
 
@@ -84,6 +106,7 @@ void GetMacAddress(){
     http://g2pc1.bu.edu/~qzpeng/manual/MySQL%20Commands.htm
 **/
 void PostMacIP() {
+  if ( skipNetwork ) return;
   HTTPClient http;
   http.begin(wifiClient, APIURL);
   http.setConnectTimeout(4000);
@@ -114,7 +137,7 @@ void WifiOff() {
 #ifndef ESPNOW 
   if ( WiFi.isConnected() ) WiFi.disconnect(true,true);
   WiFi.mode(WIFI_OFF);
-  // esp_wifi_stop();
+  esp_wifi_stop();
   // esp_wifi_deinit();
   WiFi.setSleep(true);
 #endif
@@ -149,10 +172,10 @@ static inline bool isAuthError(uint8_t reason)
 static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
   switch (event) {
 #ifdef ETHERNET  
-  //ETH    
+  //****** ETH    
     case ARDUINO_EVENT_ETH_START: //1
       DebugTln("ETH Started");
-      // ETH.setHostname(_HOSTNAME); SDK 3.0 feature
+      ETH.setHostname(settingHostname);
       break;
     case ARDUINO_EVENT_ETH_CONNECTED: //3
       DebugTln("\nETH Connected");
@@ -162,7 +185,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       break;
     case ARDUINO_EVENT_ETH_GOT_IP6: //7
       LogFile("ETH GOT IP V6", true);
-      break;
+      [[fallthrough]];
     case ARDUINO_EVENT_ETH_GOT_IP: //5
       {
         netw_state = NW_ETH;
@@ -171,48 +194,41 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
         bEthUsage = true; //set only once 
         SwitchLED( LED_ON, LED_BLUE ); //Ethernet available = RGB LED Blue
         // tLastConnect = 0;
-        bNoNetworkConn = false;
         break;
       } 
     case ARDUINO_EVENT_ETH_STOP: //2
       DebugTln("!!! ETH Stopped");
       [[fallthrough]];
     case ARDUINO_EVENT_ETH_DISCONNECTED: //4
-      // if ( Update.isRunning() ) Update.abort();
       if ( netw_state != NW_WIFI ) netw_state = NW_NONE;
       SwitchLED( LED_ON , LED_RED );
       LogFile("ETH Disconnected", true);
-      bNoNetworkConn = true;
       break;
 #endif //ETHERNET
-//WIFI
+    //****** WIFI
     case ARDUINO_EVENT_WIFI_STA_START: //110
       // initial nudge (soms is begin() traag met eerste connect)
-//       if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
+      // if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
+      // Debugln("--- WIFI START ----");
       break;
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
         LogFile(cMsg, true);
-      //  tWifiLost = 0;
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: //7
         LogFile("Wifi Connected",true);
         SwitchLED( LED_ON, LED_BLUE );
         Debug (F("IP address: " ));  Debug (WiFi.localIP());Debug(" )\n\n");
 
-        if ( bEthUsage ) WifiOff();        
-        else {
-//           enterPowerDownMode(); //disable ETH
-          netw_state = NW_WIFI;
-        }
+        if ( bEthUsage ) WifiOff(); else netw_state = NW_WIFI;
         s_authBlocked = false;
         s_lastKickMs = 0;               // reset voor snelle roam
         bNoNetworkConn = false;
         break;
     case ARDUINO_EVENT_WIFI_STA_STOP: //8
       // Voor de zekerheid: driver soms stopt STA → start ’m weer
-      LogFile("Wifi STA stopped-> restart",true);
-      esp_wifi_start(); // idempotent als al gestart
+      // LogFile("Wifi STA stopped-> restart",true);
+      // esp_wifi_start(); // idempotent als al gestart
       break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP: //117
         if ( netw_state != NW_ETH ) netw_state = NW_NONE;
@@ -235,7 +251,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
         if (isAuthFatal(reason)) {
         s_authBlocked = true;
         // hier evt: WiFi.disconnect(true,true); startPortal();
-        return;                       // niets forceren
+        return;
       }
       s_authBlocked = false;
 
@@ -270,9 +286,8 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
 
 //gets called when WiFiManager enters configuration mode
 //===========================================================================================
-void configModeCallback (WiFiManager *myWiFiManager) 
-{
-  DebugTln(F("Entered config mode\r"));
+void configModeCallback (WiFiManager *myWiFiManager) {
+  DebugTln(F("Wifi Connection Failed -> Entered config mode\r"));
   DebugTln(WiFi.softAPIP().toString());
   DebugTln(myWiFiManager->getConfigPortalSSID());
   esp_task_wdt_reset();
@@ -282,10 +297,10 @@ void configModeCallback (WiFiManager *myWiFiManager)
 #include <esp_wifi.h>
 
 void startWiFi(const char* hostname, int timeOut) {  
-
+if ( skipNetwork ) return;
 #if not defined ETHERNET || defined ULTRA
 #ifdef ULTRA
-  //lets wait on ethernet first for 3.5sec and consume some time to charge the capacitors
+  //lets wait on ethernet first for 6.5sec and consume some time to charge the capacitors
   uint8_t timeout = 0;
   while ( (netw_state == NW_NONE) && (timeout++ < 65) ) {
     delay(100); 
@@ -298,7 +313,7 @@ void startWiFi(const char* hostname, int timeOut) {
 #endif 
   
   if ( netw_state != NW_NONE ) return;
-  
+
   esp_wifi_set_ps(WIFI_PS_MAX_MODEM); //lower calibration power
 
   WiFi.setAutoReconnect(true);
@@ -334,7 +349,7 @@ void startWiFi(const char* hostname, int timeOut) {
 
   //handle wifi webinterface timeout and connection (timeOut in sec) timeout in 30 sec
   uint16_t i = 0;
-  while ( (i++ < 3000) && (netw_state == NW_NONE) && !bEthUsage ) {
+  while ( (i++ < 3000) && (netw_state == NW_NONE) && !bEthUsage && !skipNetwork ) {
     Debug("*");
     delay(100);
     manageWiFi.process();
@@ -343,7 +358,7 @@ void startWiFi(const char* hostname, int timeOut) {
   }
   Debugln();
   manageWiFi.stopWebPortal();
-
+  if ( skipNetwork ) return; 
   if ( netw_state == NW_NONE && !bEthUsage ) {
     LogFile("reboot: Wifi failed to connect and hit timeout",true);
     P1Reboot(); //timeout 
@@ -361,6 +376,14 @@ void startWiFi(const char* hostname, int timeOut) {
 //===========================================================================================
 void WaitOnNetwork()
 {
+  if ( skipNetwork ) { 
+    enterPowerDownMode();   //ethernet power down
+    WifiOff();              //wifi power down
+    EnableHistory = false;  //not usefull to store data
+    writeSettings();        //make persistant
+    SwitchLED(LED_OFF,LED_BLUE); //erase led status 
+    return; 
+    }
   while ( netw_state != NW_ETH && netw_state != NW_WIFI ) { //endless wait for network connection
     Debug(".");
     delay(200);
@@ -416,22 +439,24 @@ void startNetwork()
   startETH();
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   WaitOnNetwork();
+  GetMacAddress();
+  snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" ); //set proper MQTTtoptopic
   USBPrint("Ip-addr: ");USBPrintln(IP_Address());
 }
 
 //===========================================================================================
 void startTelnet() 
 {
+  if ( skipNetwork ) return;
   TelnetStream.begin();
   ws_raw.begin();
   TelnetStream.flush();
   DebugTln(F("Telnet server started .."));
 } // startTelnet()
 
-
 //=======================================================================
-void startMDNS(const char *Hostname) 
-{
+void startMDNS(const char *Hostname) {
+  if ( skipNetwork ) return;
   DebugTf("[1] mDNS setup as [%s.local]\r\n", Hostname);
   if ( !MDNS.begin(Hostname) ) DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
   else {
@@ -446,53 +471,44 @@ void startMDNS(const char *Hostname)
     MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1P" );    
 #endif
   }
-  
 } // startMDNS()
 
 #endif
 
 #ifdef ETHERNET
-
-#include <ETH.h>
-#include <SPI.h>
-
-
-#define ETH_TYPE            ETH_PHY_W5500
-#define ETH_RST            -1
-#define ETH_ADDR            1
-
-//workaround to use the ESP_MAC_ETH mac address instead of local mac address
-class EthernetClass {
-public:
-  bool myBeginSPI(ETHClass& eth, eth_phy_type_t type, int32_t phy_addr, uint8_t *mac_addr, int cs, int irq, int rst, SPIClass *spi, int sck, int miso, int mosi, spi_host_device_t spi_host, uint8_t spi_freq_mhz);
-};
-
-bool EthernetClass::myBeginSPI(ETHClass& eth, eth_phy_type_t type, int32_t phy_addr, uint8_t *mac_addr, int cs, int irq, int rst, SPIClass *spi, int sck, int miso, int mosi, spi_host_device_t spi_host, uint8_t spi_freq_mhz) {
-  return eth.beginSPI(type, phy_addr, mac_addr, cs, irq, rst, spi, sck, miso, mosi, spi_host, spi_freq_mhz);
-}
-
-EthernetClass myEthernet;
-
+  uint8_t cs = CS_GPIO;
+  uint8_t miso  = MISO_GPIO;
+  uint8_t mosi  = MOSI_GPIO;
+  uint8_t sck   = SCK_GPIO;
+  
 void startETH(){
-  
-  //derive ETH mac address
+  uint8_t _int  = INT_GPIO;
+
   uint8_t mac_eth[6];
-  esp_read_mac(mac_eth, ESP_MAC_ETH);
-  
-  // ETH.enableIPv6();
-  myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, CS_GPIO, INT_GPIO, ETH_RST, NULL, SCK_GPIO, MISO_GPIO, MOSI_GPIO, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
+  esp_read_mac(mac_eth, ESP_MAC_ETH); //derive ETH mac address
+
+  if ( HardwareType == P1UX2 ) {
+    cs    = 13;
+    miso  = 15;
+    mosi  = 16;
+    sck   = 14;
+    _int  = 18;
+    }
+
+  myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, cs, _int, ETH_RST, NULL, sck, miso, mosi, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
+
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
 
 }
 
 void W5500_Read_PHYCFGR() {
-    digitalWrite(CS_GPIO, LOW);
+  digitalWrite(cs, LOW);
 
-	SPI.transfer16(0x002E);     // MSB, LSB
-	SPI.transfer(0x01);       // control: BSB=0 (common), OM=VDM, RWB=1(read)
-	uint8_t phycfgr = SPI.transfer(0x00);
+  SPI.transfer16(0x002E);     // MSB, LSB
+  SPI.transfer(0x01);       // control: BSB=0 (common), OM=VDM, RWB=1(read)
+  uint8_t phycfgr = SPI.transfer(0x00);
   
-    digitalWrite(CS_GPIO, HIGH);
+  digitalWrite(cs, HIGH);
 
 #ifdef DEBUG
     // Print registerwaarde en status
@@ -511,19 +527,28 @@ void W5500_Read_PHYCFGR() {
 void enterPowerDownMode() {
   LogFile("ETH powered down, switching to WiFi", true);
   ETH.end();
-  pinMode(CS_GPIO, OUTPUT);
-  SPI.begin(SCK_GPIO, MISO_GPIO, MOSI_GPIO);
+  
+  //powerdown W5500 when RST is connected to the ESP32
+  if ( HardwareType == P1UX2 && HardwareVersion >= 101 ) { digitalWrite(17,LOW); return;}
+
+  pinMode(cs, OUTPUT);
+  SPI.begin(sck, miso, mosi);
   
   W5500_Read_PHYCFGR();
 
+  // NOTE:
+  // We gebruiken control byte 0x04 (FDM write mode) i.p.v. 0x00 (VDM write).
+  // Op dit board reageert de W5500 na ETH.end() niet op 0x00,
+  // maar 0x04 + 0x70 zet 'm wél betrouwbaar in low-power.
+  // Niet veranderen naar 0x00 tenzij je TEST dat powerdown nog steeds werkt.
   SPI.beginTransaction(SPISettings(8000000UL, MSBFIRST, SPI_MODE0));
-  digitalWrite(CS_GPIO, LOW);
+  digitalWrite(cs, LOW);
   SPI.transfer16(0x002E);
   SPI.transfer(0x04);               // Control byte (W5500 write)
   SPI.transfer(0x70);              // Data to write
-  digitalWrite(CS_GPIO, HIGH);
+  digitalWrite(cs, HIGH);
   SPI.endTransaction();
-  
+
   delay(500);
   W5500_Read_PHYCFGR();
 }
@@ -544,44 +569,10 @@ String IP_Address(){
 }
 
 String MAC_Address(){
-  uint8_t efuseMac[6];
-  char macAddressString[13];
-
-  // esp_read_mac( efuseMac, ESP_MAC_BASE );
-  // sprintf(macAddressString, "%02X%02X%02X%02X%02X%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
-  // Debug("ESP_MAC_BASE: ");Debugln(macAddressString);
-
-  // esp_read_mac( efuseMac, ESP_MAC_ETH );
-  // sprintf(macAddressString, "%02X%02X%02X%02X%02X%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
-  // Debug("ESP_MAC_ETH: ");Debugln(macAddressString);
-
-#ifdef ETHERNET 
-  esp_read_mac( efuseMac, ESP_MAC_ETH );
+#ifdef ETHERNET
+  if ( netw_state == NW_ETH ) return ETH.macAddress();
+  else return WiFi.macAddress();
 #else
-  esp_read_mac( efuseMac, ESP_MAC_BASE );
+  return WiFi.macAddress();
 #endif
-  sprintf(macAddressString, "%02X%02X%02X%02X%02X%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
-  return String(macAddressString);
 }
-/***************************************************************************
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to permit
-* persons to whom the Software is furnished to do so, subject to the
-* following conditions:
-*
-* The above copyright notice and this permission notice shall be included
-* in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
-* THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-* 
-***************************************************************************/
