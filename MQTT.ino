@@ -14,6 +14,12 @@
 
 String MQTTclientId;
 
+void CreateMacIDTopic() {
+  snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
+#ifdef DEBUG
+  DebugT("MQTopTopic: ");Debugln(MQTopTopic);
+#endif
+}
 
 void fMqtt( void * pvParameters ){
 #ifndef MQTT_DISABLE    
@@ -231,7 +237,7 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
   if ( StrTopic.indexOf("toptopic") >= 0) {
       strncpy( settingMQTTtopTopic, StrPayload, sizeof(settingMQTTtopTopic) );
       if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
-      snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
+      CreateMacIDTopic();
       if ( MQTTclient.connected() ) MQTTclient.disconnect();
       writeSettings();
   }

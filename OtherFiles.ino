@@ -176,7 +176,7 @@ void readSettings(bool show)
     }
   } // try T times ..
   
-  DebugT(F("Reading settings:.."));
+  DebugTln(F("Reading settings:.."));
   
   JsonDocument doc; 
   DeserializationError error = deserializeJson(doc, SettingsFile);
@@ -217,7 +217,7 @@ void readSettings(bool show)
   settingMQTTinterval = doc["MQTTinterval"];
   strcpy(settingMQTTtopTopic, doc["MQTTtopTopic"]);
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
-  snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
+  CreateMacIDTopic();
   if (doc["mqtt_tls"].is<bool>()) bMQTToverTLS = doc["mqtt_tls"];
   
   CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
@@ -228,7 +228,7 @@ void readSettings(bool show)
 #else
   if (doc["enableHistory"].is<bool>()) EnableHistory = doc["enableHistory"];
 #endif
-  if (doc["watermeter"].is<bool>() && (P1Status.dev_type != PRO_H20_2) ) WtrMtr = doc["watermeter"];
+  if (doc["watermeter"].is<bool>() ) WtrMtr = doc["watermeter"];
   if (doc["waterfactor"].is<float>()) WtrFactor = doc["waterfactor"];
 
   if (doc["HAdiscovery"].is<bool>()) EnableHAdiscovery = doc["HAdiscovery"];
@@ -271,7 +271,6 @@ void readSettings(bool show)
 
     mdns_hostname_set(settingHostname);
     mdns_instance_name_set(_DEFAULT_HOSTNAME);
-if ( P1Status.dev_type == PRO_BRIDGE ) digitalWrite(PRT_LED, bLED_PRT);
 
 //  Debug(F(".. done\r"));
 
@@ -372,7 +371,7 @@ void updateSetting(const char *field, const char *newValue)
     strCopy(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), newValue);  
   }
   if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
-  snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
+  CreateMacIDTopic();
 #endif
   
   if (!stricmp(field, "b_auth_user")) strCopy(bAuthUser,25, newValue);  
@@ -391,12 +390,6 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "hist")) EnableHistory = (stricmp(newValue, "true") == 0?true:false); 
   if (!stricmp(field, "water_enabl")) WtrMtr = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "ha_disc_enabl")) EnableHAdiscovery = (stricmp(newValue, "true") == 0?true:false);  
-  if ( P1Status.dev_type == PRO_BRIDGE ) {
-    if (!stricmp(field, "led-prt")) {
-      bLED_PRT = (stricmp(newValue, "true") == 0?true:false);  
-      digitalWrite(PRT_LED, bLED_PRT);
-    }
-   }
   if (!stricmp(field, "pre40")) {
     bPre40 = (stricmp(newValue, "true") == 0?true:false);    
     SetupP1In();

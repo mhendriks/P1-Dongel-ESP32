@@ -7,14 +7,9 @@ void P1StatusBegin(){
     preferences.begin("P1Status", false);
     P1StatusRead();
     P1Status.reboots++;
-    preferences.putUInt("reboots", P1Status.reboots);
+    preferences.putUInt("reboots", P1Status.reboots);                  
 
-#ifdef DEVTYPE_H2OV2
-    P1Status.dev_type = PRO_H20_2;    
-    P1SetDevType();  
-#endif                      
-
-    P1StatusPrint(); //print nieuwe data
+    P1StatusPrint();
 }
 
 void P1StatusEnd(){
@@ -35,20 +30,7 @@ void P1StatusRead(){
     P1Status.reboots = preferences.getUInt("reboots", 0);
     preferences.getString("timestamp",P1Status.timestamp,14);
     P1Status.wtr_m3 = preferences.getShort("wtr_m3", 0);
-    P1Status.wtr_l = preferences.getUInt("wtr_l", 0);
-#ifdef ETHERNET
-  #ifdef ETH_P1EP
-      P1Status.dev_type = _P1EP;
-  #else
-      P1Status.dev_type = PRO_ETH;
-  #endif    
-#else
-    #ifdef NRG_DONGLE
-      P1Status.dev_type = P1NRG;
-    #else 
-      P1Status.dev_type = preferences.getUShort("dev_type", PRO);
-    #endif
-#endif    
+    P1Status.wtr_l = preferences.getUInt("wtr_l", 0); 
     P1Status.FirstUse = preferences.getBool("first_use", false);
     if (strlen(P1Status.timestamp)!=13) strcpy(P1Status.timestamp,"010101010101X"); 
     strcpy(actTimestamp, P1Status.timestamp);

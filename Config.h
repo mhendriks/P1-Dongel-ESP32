@@ -1,12 +1,4 @@
 // Device Types
-#define PRO         0
-#define PRO_BRIDGE  1
-#define PRO_ETH     2
-#define PRO_H20_B   3
-#define PRO_H20_2   4
-#define _P1EP       5
-#define P1NRG       6
-
 #define APIURL              "http://api.smart-stuff.nl/v1/register.php"
 #define LED_ON              LOW
 #define LED_OFF             HIGH
@@ -56,6 +48,8 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
   #endif
 #endif
 
+#define WDT_FEED() do { esp_task_wdt_reset(); delay(0); } while(0)
+
 // config MODULES
 struct mod_io {
     int8_t sense1, sense2, mb_rx, mb_tx, mb_rts, wtr_s0, in, out;
@@ -67,9 +61,66 @@ struct mod_conf {
 };
 
 mod_conf module_config[3] = {
+//       S1  S2  RX  TX  RTS WTR IN OUT      S1  S2  RX  TX  RTS WTR IN OUT
  { 1, {{  4, 21,  5,  7,  6,  6, -1, -1 }, { -1, -1, -1, -1, -1, -1, -1, -1 }} }, /* NRGD     */
  { 2, {{ 42, 45, 41, 44, 43, 43, -1, -1 }, { 37, 40, 36, 39, 38, 38, -1, -1 }} }, /* ULTRA V2 */
  { 2, {{ 37, 40, 36, 39, 38, 38, -1, -1 }, { 42, 45, 41, 44, 43, 43, -1, -1 }} }  /* ULTRA X2 */
+};
+
+struct dev_conf {
+    int8_t button;
+    int8_t rgb;
+    int8_t led;
+    int8_t water;
+
+    int8_t p1_in_rx;
+    int8_t p1_in_dtr;
+    int8_t p1_out_tx;
+    int8_t p1_out_dtr;
+    int8_t p1_out_led;
+
+    int8_t eth_int;
+    int8_t eth_miso;
+    int8_t eth_mosi;
+    int8_t eth_sck;
+    int8_t eth_cs;
+    int8_t eth_rst;
+};
+
+// enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2 };
+
+dev_conf device_config[] = {
+
+  // UNDETECTED
+  // -- GENERAL --  -------- P1 ---------  -------- ETH ---------
+  { -1, -1, -1, -1,  -1, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 },
+
+  // P1P (ESP32C3 - P1 Dongle Pro)
+  {  9,  8,  7,  5,  10,  6,  -1,  1,  0,  -1, -1, -1, -1, -1, -1 },
+
+  // NRGD (ESP32C3 - NRG Dongle Pro)
+  {  9, -1,  3, -1,  20, -1,  10,  1,  0,  -1, -1, -1, -1, -1, -1 },
+
+  // P1E (ETH)
+  {  9,  8,  3, -1,   7,  0,  -1, -1, -1,   1,  5,  6,  4, 10, -1 },
+
+  // P1EP (ETH)
+  {  9, -1,  8, -1,   0, -1,   7,  3, -1,   6,  4,  5, 10,  1, -1 },
+
+  // P1UM (Ultra V1 and Mini)
+  {  0, 42, -1, 46,  18, -1,  21, 15, 16,  14, 13, 11, 12, 10, -1 },
+
+  // P1U V2 (Ultra V2)
+  {  0,  9, -1, -1,  18, 17,  21, 15, 16,  14, 13, 11, 12, 10, -1 },
+
+  // NRGM (onbekend in jouw snippets → alles -1)
+  { -1, -1, -1, -1,  -1, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 },
+
+  // P1S (Splitter Pro)
+  { -1, -1, -1, -1,  -1, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 },
+
+  // P1UX2 (Ultra X2 – aangepaste ETH pinout)
+  {  0, 9, -1, -1,  12, -1,  21, 10, 11, 18, 15, 16, 14, 13, 17 },
 };
 
 int8_t modType[2] = {-1,-1};

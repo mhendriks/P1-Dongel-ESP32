@@ -283,6 +283,7 @@ void sendDeviceTime()
 String network_state () {
   switch ( netw_state ){
     case NW_NONE: return "None";
+    case NW_WIFI: return "WiFi";
     case NW_ETH: return "Ethernet";
     case NW_ETH_LINK: return "Ethernet Link (NC)";
     default: return "None";
@@ -433,7 +434,6 @@ if ( !hideMQTTsettings) {
 #endif
 
   doc["ha_disc_enabl"] = EnableHAdiscovery;
-  if ( P1Status.dev_type == PRO_BRIDGE ) doc["led-prt"] = bLED_PRT;
 
   if ( bWarmteLink ) { // IF HEATLINK
     doc["conf"] = "p1-q";

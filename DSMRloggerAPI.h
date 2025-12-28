@@ -17,6 +17,7 @@
   HWCDC USBSerial;
 #endif
 
+#include "version.h" //first of all
 #include "Config.h"
 
 // water sensor
@@ -35,14 +36,13 @@ struct {
   uint16_t port = 502;
 } mb_config;
 
-#include <WiFi.h>        
+#include <WiFi.h>  
 #include "Insights.h"
 #include <WiFiClientSecure.h>        
 #include <WebServer.h>
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
-#include "version.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <dsmr2.h>               // https://github.com/mhendriks/dsmr2Lib
@@ -286,7 +286,7 @@ P1DataRec P1_Month[49]; //1.274 bytes
 */
 //P1DataRec P1_Profile[288]; //7.488
 
-const PROGMEM char *flashMode[]    { "QIO", "QOUT", "DIO", "DOUT", "Unknown" };
+// const PROGMEM char *flashMode[]    { "QIO", "QOUT", "DIO", "DOUT", "Unknown" };
 
 //===========================prototype's=======================================
 int strcicmp(const char *a, const char *b);
@@ -369,10 +369,11 @@ bool        bV5meter = true;
 bool        bP1offline = true;
 time_t      last_telegram_t = 0;
 uint32_t    P1error_cnt_sequence = 0;
-byte        RxP1 = RXP1;
-byte        TxO1 = TXO1;
-byte        DTR_out = O1_DTR_IO;
-byte        LED_out = P1_LED;
+int8_t      RxP1 = RXP1;
+int8_t      TxO1 = TXO1;
+int8_t      DTR_out = O1_DTR_IO;
+int8_t      LED_out = P1_LED;
+int8_t      statusled = LED;
 
 //bool        bWriteFiles = false;
 
@@ -471,25 +472,3 @@ DECLARE_TIMER_MS(WaterTimer,          DEBOUNCETIMER);
 DECLARE_TIMER_SEC(StatusTimer,        10); //first time = 10 sec usual 30min (see loop)
 
 #endif
-/***************************************************************************
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to permit
-* persons to whom the Software is furnished to do so, subject to the
-* following conditions:
-*
-* The above copyright notice and this permission notice shall be included
-* in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
-* THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-* 
-***************************************************************************/

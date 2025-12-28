@@ -234,7 +234,7 @@ void setModbusMapping(int mappingChoice) {
 ModbusMessage MBusHandleRequest(ModbusMessage request) {
     uint16_t address;
     uint16_t words;
-    digitalWrite(LED, LOW);
+    digitalWrite(statusled, LOW);
 
     ModbusMessage response;
     request.get(2, address);
@@ -308,7 +308,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
         }
     }
 
-    digitalWrite(LED, HIGH);
+    digitalWrite(statusled, HIGH);
     return response;
 }
 

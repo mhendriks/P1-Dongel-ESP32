@@ -16,17 +16,18 @@
 
 // ------------------ ENUMS & CONSTANTS ------------------ //
 enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2 };
-const char HWTypeNames[][6] = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S", "P1UX2" };
-const char ModTypeNames[][6] = { "N/A", "IO+", "H2O", "RS485" };
+const char* const HWTypeNames[]  = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S", "P1UX2" };
+const char* const ModTypeNames[] = { "N/A", "IO+", "H2O", "RS485" };
 
 // ------------------ GLOBAL VARIABLES ------------------ //
-uint16_t HardwareType = UNDETECTED;
+HWtype HardwareType = UNDETECTED;
 uint16_t HardwareVersion = 0; 
-byte     rgbled_io = RGBLED_PIN;
+int8_t   rgbled_io = RGBLED_PIN;
 
+static inline const dev_conf& DEVCONF() { return device_config[(int)HardwareType]; }
 #define _getChipId() (uint64_t)ESP.getEfuseMac()
 
-const char *resetReasonsIDF[] PROGMEM = {
+static const char* const resetReasonsIDF[] = {
     [0]  = "0 - ESP_RST_UNKNOWN - Cannot be determined",
     [1]  = "1 - ESP_RST_POWERON - Power-on reset",
     [2]  = "2 - ESP_RST_EXT - External pin reset",
@@ -67,41 +68,62 @@ void SetupWDT(){
 }
 
 // ------------------ HARDWARE DETECTIE ------------------ //
+static inline const char* hwTypeNameSafe(uint16_t t) {
+  if (t < (sizeof(HWTypeNames) / sizeof(HWTypeNames[0])) && HWTypeNames[t]) return HWTypeNames[t];
+  return "UNKNOWN";
+}
+
 //detect hardware type if burned in efuse
 void DetectHW() {
-    uint32_t waarde = 0;
-    if (esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA, &waarde, 32) != ESP_OK) {
-        Debugln("!Fout bij uitlezen van eFuse!");
-        return;
-    }
+  uint32_t raw = 0;
+  esp_err_t err = esp_efuse_read_field_blob(ESP_EFUSE_USER_DATA, &raw, 32);
+  if (err != ESP_OK) {
+    HardwareType    = UNDETECTED;
+    HardwareVersion = 0;
+    Debugf("!Error reading eFuse: %s\n", esp_err_to_name(err));
+    return;
+  }
 
-    HardwareType = (waarde >> 16) & 0xFFFF;
-    HardwareVersion = waarde & 0xFFFF;
-    
-    Debugf("Hardwaretype: %s\n", HWTypeNames[HardwareType]);
-    Debugf("Versienummer: %d\n", HardwareVersion);
+  // HardwareType    = (uint16_t)((raw >> 16) & 0xFFFF);
+  HardwareType    = (HWtype)((raw >> 16) & 0xFFFF);
+  HardwareVersion = (uint16_t)(raw & 0xFFFF);
+
+  Debugf("HW type   : %s (%u)\n", hwTypeNameSafe(HardwareType), HardwareType);
+  Debugf("HW version: %u\n", HardwareVersion);
+}
+
+enum ModuleType : int8_t { MOD_UNKNOWN=-1, MOD_NONE=0, MOD_IOP=1, MOD_H20=2, MOD_RS485=3 };
+
+static inline const char* modName(int8_t t){
+  switch(t){
+    case MOD_NONE: return "NONE";
+    case MOD_IOP:  return "IO+";
+    case MOD_H20:  return "H20";
+    case MOD_RS485:return "RS485";
+    default:       return "UNKNOWN";
+  }
 }
 
 void DetectModule(int8_t slot){
   /* check slot module
   S1 S2
    0  0 -> NONE
-   0  1 -> n/a
+   0  1 -> IO+
    1  0 -> H20
    1  1 -> RS485
   */
-  
+  if (!active_mod_conf) return;
+  if (slot < 0 || slot >= 2) return;
+
   pinMode(active_mod_conf->io_conf[slot].sense1, INPUT);
   pinMode(active_mod_conf->io_conf[slot].sense2, INPUT);
-  modType[slot] = digitalRead(active_mod_conf->io_conf[slot].sense1) * 2 + digitalRead(active_mod_conf->io_conf[slot].sense2);
+
+  int s1 = digitalRead(active_mod_conf->io_conf[slot].sense1) ? 1 : 0;
+  int s2 = digitalRead(active_mod_conf->io_conf[slot].sense2) ? 1 : 0;
+  modType[slot] = (s1 << 1) | s2;
+
 #ifdef DEBUG  
-  Debugf("\n-- MODULE: type = %d\n",modType[slot]);
-  switch ( modType[slot] ) {
-    case 0: Debugln("-- MODULE: No board\n");break;
-    case 1: Debugln("-- MODULE: IO+\n"); break;
-    case 2: Debugln("-- MODULE: H20\n"); break;
-    case 3: Debugln("-- MODULE: RS485\n"); break;
-  }
+  Debugf("\n-- MODULE slot %d: S1=%d S2=%d -> type=%s (%d)\n", slot, s1, s2, modName(modType[slot]), modType[slot]);
 #endif  
 }
 
@@ -125,97 +147,108 @@ void ActivateModule( int8_t slot ){
   }
 }
 
-//detect hardware type if burned in efuse
+// helper: zet pin als output en schrijf waarde, alleen als pin >= 0
+static inline void pinWriteIfValid(int8_t pin, uint8_t level) {
+  if (pin >= 0) {
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, level);
+  }
+}
+
+//detect module and activate + Ultra V1 module assignment
 void DetectModule() {
-#ifdef NRG_DONGLE
-  DetectModule(0); 
-  ActivateModule(0);
-#endif   
+  switch ( HardwareType ){
+    case NRGD:
+            active_mod_conf = &module_config[0];
+            DetectModule(0); ActivateModule(0);
+            break;
+#ifdef ULTRA
+    case P1UX2:
+            // if (HardwareVersion >= 101) pinWriteIfValid(dc.eth_rst, HIGH);   // disable W5500 RESET only 1.1+ hardware
+            active_mod_conf = &module_config[2];
+            DetectModule(0);  ActivateModule(0);
+            DetectModule(1);  ActivateModule(1);
+            break;
+    case P1U:
+            active_mod_conf = &module_config[1];
+            DetectModule(0);  ActivateModule(0);
+            DetectModule(1);  ActivateModule(1);
+            break;
+    case P1UM:
+            // Ultra V1 fallback and P1UM / P1U none efused
+            mb_rx   = RXPIN;
+            mb_tx   = TXPIN;
+            mb_rts  = RTSPIN;
+            break;
+#endif            
+  } //switch
+}
+
+// old device mapping = depricated
+void DevTypeMapping(){ 
 
 #ifdef ULTRA
-  if ( HardwareType == P1UX2 ) {
-    if ( HardwareVersion >= 101) { 
-      //disable W5500 RESET only 1.1+ hardware
-      pinMode(17, OUTPUT); 
-      digitalWrite(17,HIGH);
-    }
-    rgbled_io =  9;
-    RxP1      = 12;
-    TxO1      = 21; //same as others
-    DTR_out   = 10;
-    LED_out   = 11;
-    
-    active_mod_conf = &module_config[2];
-    DetectModule(0);
-    ActivateModule(0);
-    DetectModule(1);
-    ActivateModule(1);
+  if ( HardwareType == UNDETECTED ) HardwareType = P1UM;
+#else
+  //none Ultra dongles only
+  if ( HardwareType == UNDETECTED ) {
+  #ifdef ETHERNET
+    #ifdef ETH_P1EP
+        HardwareType = P1EP;
+    #else
+        HardwareType = P1E;
+    #endif    
+  #else
+      #ifdef NRG_DONGLE
+        HardwareType = NRGD;
+      #else 
+        //PRO
+        HardwareType = PRO;
+      #endif
+  #endif 
   }
-  else if ( HardwareType == P1U ) {
-    //old hardware versions with DTR P1 IN -> forced to read.
-    pinMode(17, OUTPUT); 
-    digitalWrite(17,LOW);
 
-    rgbled_io       =  9; //Ultra V2
-    active_mod_conf = &module_config[1];
-    DetectModule(0); 
-    ActivateModule(0);
-    DetectModule(1); 
-    ActivateModule(1);
-  } else {
-    IOWater = IO_WATER; //Ultra V1
-    mb_rx   = RXPIN;
-    mb_tx   = TXPIN;
-    mb_rts  = RTSPIN;
-  }
-  UseRGB = true; 
-  P1Out = true;
-  
 #endif
+
+  //Hardware type is set... load the config
+  const dev_conf& dc = DEVCONF();
+  
+  rgbled_io = dc.rgb;
+  RxP1      = dc.p1_in_rx;
+  // DTR?      = dc.p1_in_dtr;
+  statusled = dc.led;
+  TxO1      = dc.p1_out_tx;
+  DTR_out   = dc.p1_out_dtr;
+  LED_out   = dc.p1_out_led;
+  P1Out     = dc.p1_out_tx;
+  UseRGB    = (dc.rgb >= 0);
+  IOWater   = dc.water;
+
+  DebugTf(
+    "Pins: RGB=%d statusLED=%d Rx=%d Tx=%d DTR=%d LED_out=%d P1Out=%d Water=%d UseRGB=%d\n",
+    rgbled_io, statusled, RxP1, TxO1, DTR_out, LED_out, P1Out, IOWater, UseRGB
+  );
+
+  // W5500 RESET handling = ENABLE ETH
+  if ( HardwareType == P1UX2 && HardwareVersion >= 101 ) pinWriteIfValid(dc.eth_rst, HIGH);   // disable W5500 RESET only 1.1+ hardware
 
 }
 
 void SetConfig(){
   DetectHW();
+  DevTypeMapping();
   DetectModule();
-#ifndef ULTRA
-  switch ( P1Status.dev_type ) {
-    case PRO       : UseRGB = false; 
-                     IOWater = 5;
-                     break;
-    case PRO_BRIDGE: UseRGB = true; 
-                     IOWater = -1;
-                     pinMode(PRT_LED, OUTPUT);
-                     digitalWrite(PRT_LED, true); //default on
-                     break;
-    case PRO_ETH:    UseRGB = true; 
-                     IOWater = -1;
-                     break;
-    case PRO_H20_B:  UseRGB = true; 
-                     IOWater = 0;
-                     WtrMtr = true;
-                     break;
-    case PRO_H20_2:  UseRGB = false; 
-                     IOWater = 3;
-                     RxP1 = 4;
-                     TxO1 = 10;
-                     P1Out = true;
-                     WtrMtr = true;
-                     break;    
-    case _P1EP:      UseRGB = false; 
-                     IOWater = -1;
-                     P1Out = true;
-                     WtrMtr = false;
-                     break;       
-    case P1NRG:      UseRGB = false; 
-                     P1Out = true;
-                     break;                                          
-  }
-#endif
+
   //pin modes
   // pinMode(DTR_IO, OUTPUT);
-  if ( LED !=-1  ) pinMode(LED, OUTPUT);
+  if ( statusled !=-1  ) pinMode(statusled, OUTPUT);
   if ( IOWater != -1 ) pinMode(IOWater, INPUT_PULLUP);
+  
+  //old hardware versions with DTR P1 IN -> forced to read.
+  if ( DTR_out >= 0 ) {
+    pinMode(DTR_out, OUTPUT); 
+    digitalWrite(DTR_out,LOW);
+  }
   
   Debugf("---> Config set UseRGB [%s] IOWater [%d]\n\n", UseRGB ? "true" : "false", IOWater);
   
@@ -223,7 +256,6 @@ void SetConfig(){
   SwitchLED( LED_ON, LED_BLUE );
   delay(1300);
   SwitchLED( LED_OFF, LED_BLUE );
-  
 }
 
 void FacReset() {
@@ -239,8 +271,8 @@ void ToggleLED(byte mode) {
   if ( UseRGB ) { 
     if ( LEDenabled ) SwitchLED( mode, LED_GREEN ); 
     else { rgbLedWrite(rgbled_io,0,0,0); /*rgb.setPixel(LED_BLACK);*/ }; 
-  } // PRO_BRIDGE
-  else if ( LEDenabled ) digitalWrite(LED, !digitalRead(LED)); else digitalWrite(LED, LED_OFF);
+  } 
+  else if ( LEDenabled ) digitalWrite(statusled, !digitalRead(statusled)); else digitalWrite(statusled, LED_OFF);
 }
 
 void ClearRGB(){
@@ -263,7 +295,7 @@ if ( UseRGB ) {
     } else ClearRGB();
     rgbLedWrite(rgbled_io,R_value,G_value,B_value); //sdk 3.0
    } else {
-      digitalWrite(LED, color==LED_RED?LED_OFF:mode);
+      digitalWrite(statusled, color==LED_RED?LED_OFF:mode);
    }
 }
 
@@ -299,9 +331,9 @@ void ShutDownHandler(){
 //===========================================================================================
 
 void P1Reboot(){
-    delay(500);
+    delay(200);
     ESP.restart();
-    delay(2000);  
+    delay(500);  
 }
 
 //===========================================================================================
@@ -545,11 +577,10 @@ void strCopy(char *dest, int maxLen, const char *src, uint8_t frm, uint8_t to)
 // the end of dest if src >= maxLen!
 void strCopy(char *dest, int maxLen, const char *src)
 {
-  dest[0] = '\0';
-  strcat(dest, src);
-    
-} // strCopy()
-
+  if (maxLen <= 0) return;
+  strncpy(dest, src, maxLen - 1);
+  dest[maxLen - 1] = '\0';
+}
 
 //===========================================================================================
 int stricmp(const char *a, const char *b)
@@ -573,18 +604,10 @@ int stricmp(const char *a, const char *b)
 //===========================================================================================
 float strToFloat(const char *s, int dec)
 {
-  float r =  0.0;
-  int   p =  0;
-  int   d = -1;
-  
-  r = strtof(s, NULL);
-  p = (int)(r*pow(10, dec));
-  r = p / pow(10, dec);
-  //DebugTf("[%s][%d] => p[%d] -> r[%f]\r\n", s, dec, p, r);
-  return r; 
-
-} //  strToFloat()
-
+  float r = strtof(s, NULL);
+  float m = powf(10.0f, dec);
+  return ((int)(r * m)) / m;
+}
 
 //=======================================================================        
 template<typename Item>
@@ -606,25 +629,3 @@ float typecastValue(FixedValue i)
 }
 
 #endif
-/***************************************************************************
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to permit
-* persons to whom the Software is furnished to do so, subject to the
-* following conditions:
-*
-* The above copyright notice and this permission notice shall be included
-* in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
-* THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-* 
-***************************************************************************/

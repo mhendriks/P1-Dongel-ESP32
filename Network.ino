@@ -3,11 +3,12 @@
 
 #include "DSMRloggerAPI.h"
 #include "esp_timer.h"
+#include "esp_mac.h"
 
 #ifdef ETHERNET
   #include <ETH.h>
   #include <SPI.h>
-  #include "esp_mac.h"
+  
 
   #define ETH_TYPE            ETH_PHY_W5500
   #define ETH_RST            -1
@@ -439,8 +440,6 @@ void startNetwork()
   startETH();
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   WaitOnNetwork();
-  GetMacAddress();
-  snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" ); //set proper MQTTtoptopic
   USBPrint("Ip-addr: ");USBPrintln(IP_Address());
 }
 
@@ -476,25 +475,28 @@ void startMDNS(const char *Hostname) {
 #endif
 
 #ifdef ETHERNET
-  uint8_t cs = CS_GPIO;
-  uint8_t miso  = MISO_GPIO;
-  uint8_t mosi  = MOSI_GPIO;
-  uint8_t sck   = SCK_GPIO;
+  int8_t cs, miso, mosi, sck, rst;
   
 void startETH(){
-  uint8_t _int  = INT_GPIO;
-
+  
   uint8_t mac_eth[6];
-  esp_read_mac(mac_eth, ESP_MAC_ETH); //derive ETH mac address
+  esp_read_mac(mac_eth, ESP_MAC_ETH); // ETH mac address 
+  
+  // if ( HardwareType == P1UX2 ) { 
+    const dev_conf& dc = DEVCONF();
+    cs    = dc.eth_cs;
+    miso  = dc.eth_miso;
+    mosi  = dc.eth_mosi;
+    sck   = dc.eth_sck;
+    uint8_t _int  = dc.eth_int;
+    rst   = dc.eth_rst;
+    // }
 
-  if ( HardwareType == P1UX2 ) {
-    cs    = 13;
-    miso  = 15;
-    mosi  = 16;
-    sck   = 14;
-    _int  = 18;
-    }
-
+  #ifdef DEBUG
+    DebugTf("ETH pins: cs=%d int=%d rst=%d sck=%d miso=%d mosi=%d\n",cs, _int, rst, sck, miso, mosi);
+  #endif
+  
+  //ETH_RST not via the driver otherwise it couldnt be reset manually
   myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, cs, _int, ETH_RST, NULL, sck, miso, mosi, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
 
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
@@ -511,7 +513,7 @@ void W5500_Read_PHYCFGR() {
   digitalWrite(cs, HIGH);
 
 #ifdef DEBUG
-    // Print registerwaarde en status
+    // Print register value and status
     Debug("PHYCFGR Register: 0x");
     Debugln(phycfgr, HEX);
 
@@ -529,7 +531,11 @@ void enterPowerDownMode() {
   ETH.end();
   
   //powerdown W5500 when RST is connected to the ESP32
-  if ( HardwareType == P1UX2 && HardwareVersion >= 101 ) { digitalWrite(17,LOW); return;}
+  if ( HardwareType == P1UX2 && HardwareVersion >= 101 ) { 
+    digitalWrite(rst,LOW); 
+    DebugTln("P1UX2: W5500 RESET LOW");
+    return;
+  }
 
   pinMode(cs, OUTPUT);
   SPI.begin(sck, miso, mosi);
@@ -569,10 +575,14 @@ String IP_Address(){
 }
 
 String MAC_Address(){
-#ifdef ETHERNET
-  if ( netw_state == NW_ETH ) return ETH.macAddress();
-  else return WiFi.macAddress();
+  uint8_t efuseMac[6];
+  char macAddressString[13];
+
+#ifdef ETHERNET 
+  esp_read_mac( efuseMac, ESP_MAC_ETH );
 #else
-  return WiFi.macAddress();
+  esp_read_mac( efuseMac, ESP_MAC_EFUSE_FACTORY );
 #endif
+  sprintf(macAddressString, "%02X%02X%02X%02X%02X%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
+  return String(macAddressString);
 }

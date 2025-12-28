@@ -87,12 +87,19 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 
 5.3.0
+!!! V5 supports only for P1 Pro/Pro+, Ethernet Pro/Pro+ and Ultra dongles
 √ merge 4.17.1 into 5.2.9
 √ add: network connection information
-√ SDK 3.3.5
+√ update: SDK 3.3.5
+√ change: mac/macid/MQTT macid in topic /etc detemined on startup
+√ refactor: type and module config
 
+
+5.3.1
 - add: auto detect P1 meter (v5/v4 or v2)
-
+- add: indication detected smart meter
+- remove: SMR 2/3 settings
+- refactor: asyncwebserver
 
 */
 
@@ -143,19 +150,21 @@ void setup()
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   SetConfig();
+  WDT_FEED();
   lastReset = getResetReason();
   DebugT(F("Last reset reason: ")); Debugln(lastReset);
   DebugFlush();
 //================ File System =====================================
   if ( LittleFS.begin(true) ) { DebugTln(F("FS Mount OK\r")); FSmounted = true;  } 
   else DebugTln(F("!!!! FS Mount ERROR\r"));   // Serious problem with File System 
+  WDT_FEED();
 //================ Status update ===================================
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
   P1StatusWrite();
   LogFile("",false); // write reboot status to file
   if (!LittleFS.exists(SETTINGS_FILE)) writeSettings(); //otherwise the dongle crashes some times on the first boot
   else readSettings(true);
-
+  WDT_FEED();
 //=============scan, repair and convert RNG files ==================
   // CheckRingFile(RINGDAYS);
   // loadRingfile(RINGDAYS);
@@ -168,15 +177,17 @@ void setup()
 //=============start Networkstuff ==================================
   USBconfigBegin();
   startNetwork();
+  WDT_FEED();
   PostMacIP(); //post mac en ip
-  delay(100);
+  yield();
 #ifdef INSIGHTS  
   if ( Insights.begin(INSIGHTS_KEY) ) Debugf("ESP Insights enabled Node ID %s\n", Insights.nodeID());
 #endif  
+  WDT_FEED();
   startTelnet();
   startMDNS(settingHostname);
   startNTP();
-
+  WDT_FEED();
 //================ Check necessary files ============================
   if ( !skipNetwork ) {
   if (!DSMRfileExist(settingIndexPage, false) ) {
@@ -191,7 +202,7 @@ void setup()
       FSNotPopulated = true;
       }
   }
- 
+  WDT_FEED();
   if (!DSMRfileExist("/Frontend.json", false) ) {
     DebugTln(F("Frontend.json not pressent, try to download it!"));
     GetFile("/Frontend.json", PATH_DATA_FILES);
@@ -199,11 +210,11 @@ void setup()
   
   setupFSexplorer();
   } //! skipNetwork
-
+  WDT_FEED();
   esp_register_shutdown_handler(ShutDownHandler);
 
   setupWater();
-
+  WDT_FEED();
   if (EnableHistory) CheckRingExists();
   SetupNetSwitch();
 
