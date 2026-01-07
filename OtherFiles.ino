@@ -128,6 +128,7 @@ void writeSettings() {
   docw["remove-index"] = RemoveIndexAfterUpdate;
   docw["macid-topic"] = MacIDinToptopic;
   docw["skip-network"] = skipNetwork;
+  docw["try_calc_i"] = try_calc_i;
 
 #ifdef VOLTAGE_MON
   docw["max-volt"] = MaxVoltage;
@@ -236,6 +237,7 @@ void readSettings(bool show)
   if (doc["pre40"].is<bool>()) bPre40 = doc["pre40"];
   if (doc["raw-port"].is<bool>()) bRawPort = doc["raw-port"];
   if (doc["led-prt"].is<bool>()) bLED_PRT = doc["led-prt"];
+  if (doc["try_calc_i"].is<bool>()) try_calc_i = doc["try_calc_i"];
 
   if (doc["eid-enabled"].is<bool>()) bEID_enabled = doc["eid-enabled"];
 #ifdef VOLTAGE_MON

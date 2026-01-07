@@ -297,7 +297,7 @@ void sendDeviceInfo()
   doc["hostname"] = settingHostname;
   doc["ipaddress"] = IP_Address();
   doc["indexfile"] = settingIndexPage;
-  doc["macaddress"] = macStr;
+  doc["macaddress"] = macStr; 
   doc["freeheap"] ["value"] = ESP.getFreeHeap();
   doc["freeheap"]["unit"] = "bytes";
   doc["hardware"]= HWTypeNames[HardwareType];

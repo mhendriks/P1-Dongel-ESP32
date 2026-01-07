@@ -399,6 +399,7 @@ enum tNetwState { NW_NONE, NW_WIFI, NW_ETH, NW_ETH_LINK };
 uint8_t netw_state = NW_NONE;
 bool      FSmounted = false;
 bool      skipNetwork = false;
+bool      try_calc_i = true;
 //MQTT
 #ifndef MQTTKB
   uint32_t   settingMQTTinterval = 10;

@@ -56,22 +56,17 @@ Default checks
 - bug HW api water meter id
 
 Planner display checks
-√ niet aanwezig
-√ updaten 5.2 en de 3.0.0
+- niet aanwezig
+- updaten 5.2 en de 3.0.0
 - eid stond aan maar is uitgezet
-√ uur overgang
+- uur overgang
 
 task wtd
 - https://forum.arduino.cc/t/watchdog-reset-esp32-if-stuck-more-than-120-seconds/1266565/2
 - https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/wdts.html
 - https://esp32.com/viewtopic.php?t=31155
 
-- winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
---> oplossing : 
 
-bool isDSTTransition(int lastHour, int currentHour) {
-    return (lastHour == 1 && currentHour == 3); // Detecteer de sprong
-}
 - inlezen van solar config in frontend
 
 ************************************************************************************
@@ -88,17 +83,28 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 5.3.0
 !!! V5 supports only for P1 Pro/Pro+, Ethernet Pro/Pro+ and Ultra dongles
-√ merge 4.17.1 into 5.2.9
+√ merge 4.17.1 with 5.2.9
 √ add: network connection information
 √ update: SDK 3.3.5
 √ change: mac/macid/MQTT macid in topic /etc detemined on startup
 √ refactor: type and module config
-
+√ change: wifi power management optimised (Low Power when starting)
+√ refactor: mac address functions
+√ add: settings try_calc_i = true; > (don't) calculate current based on P and U
 
 5.3.1
-- add: auto detect P1 meter (v5/v4 or v2)
-- add: indication detected smart meter
-- remove: SMR 2/3 settings
+√ add: auto detect P1 meter (v5/v4 or v2)
+- add: indication detected smart meter to Information overview
+- change: dongle type to postIP
+- modify: split the settings page into main/mqtt/modbus
+- winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
+--> oplossing : 
+
+bool isDSTTransition(int lastHour, int currentHour) {
+    return (lastHour == 1 && currentHour == 3); // Detecteer de sprong
+}
+
+5.4.0
 - refactor: asyncwebserver
 
 */
@@ -113,7 +119,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
-// #define NRG_DONGLE   
+// #define NRG_DONGLE 
 // #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
 
 //SPECIAL

@@ -203,7 +203,7 @@ void DevTypeMapping(){
         HardwareType = NRGD;
       #else 
         //PRO
-        HardwareType = PRO;
+        HardwareType = P1P;
       #endif
   #endif 
   }

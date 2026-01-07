@@ -89,11 +89,25 @@ static void kickOnce(){
 
 void GetMacAddress(){
 
-  String _mac = MAC_Address();
-  strcpy( macStr, _mac.c_str() );
-  _mac.replace( ":","" );
-  strcpy( macID, _mac.c_str() );
-  USBPrint( "MacStr   : " );USBPrintln( macStr ); //only at setup
+  // String _mac = MAC_Address();
+
+  uint8_t efuseMac[6];
+  char macAddressString[18];
+
+#ifdef ETHERNET 
+  esp_read_mac( efuseMac, ESP_MAC_ETH );
+#else
+  esp_read_mac( efuseMac, ESP_MAC_EFUSE_FACTORY );
+#endif
+  sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
+  sprintf(macID, "%02X%02X%02X%02X%02X%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
+  // return String(macAddressString);
+
+
+  // strcpy( macStr, _mac.c_str() );
+  // _mac.replace( ":","" );
+  // strcpy( macID, _mac.c_str() );
+  USBPrint( "MacStr   : " ); USBPrintln( macStr ); //only at setup
 
   strncpy(DongleID, macID + 6, 6);
   DongleID[6] = '\0';
@@ -314,18 +328,22 @@ if ( skipNetwork ) return;
 #endif 
   
   if ( netw_state != NW_NONE ) return;
-
+  
+  //switch to lowpower wifi mode
   esp_wifi_set_ps(WIFI_PS_MAX_MODEM); //lower calibration power
+  esp_wifi_set_max_tx_power(8);   // 8 = ±8.5 dBm
+  
+  WiFi.setSleep(true);  //sleep when possible
 
+#ifdef CONFIG_BT_ENABLED
+  btStop();
+#endif
   WiFi.setAutoReconnect(true);
-  WiFi.setSleep(false);  
-  esp_wifi_set_ps(WIFI_PS_NONE); // IDF: forced NO modem-sleep
 
   WiFi.setHostname(hostname);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
-  
   WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);  //to solve mesh issues 
-  WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);      //to solve mesh issues 
+  // WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);      //to solve mesh issues 
   if ( bFixedIP ) WiFi.config(staticIP, gateway, subnet, dns);
   LogFile("Wifi Starting",true);
   SwitchLED( LED_OFF, LED_BLUE );  
@@ -337,8 +355,6 @@ if ( skipNetwork ) return;
   manageWiFi.setShowDnsFields(true);    // force show dns field always  
   manageWiFi.setRemoveDuplicateAPs(false);
   manageWiFi.setScanDispPerc(true); // display percentages instead of graphs for RSSI
-  //  manageWiFi.setWiFiAutoReconnect(true); //buggy
-
   manageWiFi.setClass("invert"); //dark theme
   
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
@@ -368,6 +384,11 @@ if ( skipNetwork ) return;
     WifiOff();
     delay(500);
   }
+  
+  //switch to normale wifi mode
+  esp_wifi_set_ps(WIFI_PS_NONE);
+  esp_wifi_set_max_tx_power(78);  // max (~20.5 dBm)
+  
   SwitchLED( LED_ON, LED_BLUE );
 #else 
   Debugln(F("NO WIFI SUPPORT"));
@@ -572,17 +593,4 @@ String IP_Address(){
 #else
   return WiFi.localIP().toString();
 #endif
-}
-
-String MAC_Address(){
-  uint8_t efuseMac[6];
-  char macAddressString[13];
-
-#ifdef ETHERNET 
-  esp_read_mac( efuseMac, ESP_MAC_ETH );
-#else
-  esp_read_mac( efuseMac, ESP_MAC_EFUSE_FACTORY );
-#endif
-  sprintf(macAddressString, "%02X%02X%02X%02X%02X%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
-  return String(macAddressString);
 }
