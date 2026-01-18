@@ -11,20 +11,23 @@
 
 volatile bool dtr1         = false;
 bool          Out1Avail    = false;
+uint32_t      SerialLastChecked = 0;
+
 // portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 //P1 reader task
 void fP1Reader( void * pvParameters ){
   DebugTln(F("Enable slimme meter..."));
-  esp_task_wdt_add(nullptr);
   SetupP1In();
   SetupP1Out();
+  esp_task_wdt_add(nullptr);
   slimmeMeter.enable(false);
-#ifdef ULTRA
-  // digitalWrite(17, LOW); //default on
-#endif   
+// #ifdef ULTRA
+//   // digitalWrite(17, LOW); //default on
+// #endif   
   while(true) {
     PrintHWMark(0);
+    CheckP1Signal();
     handleSlimmemeter();
     P1OutBridge();
     esp_task_wdt_reset();
@@ -36,25 +39,41 @@ void fP1Reader( void * pvParameters ){
 
 void StartP1Task(){
     if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 10, &tP1Reader, /*core*/ 0 ) == pdPASS ) 
+
     DebugTln(F("Task tP1Reader succesfully created"));
+}
+
+//===========================================================================================
+void CheckP1Signal(){
+  if ( telegramCount - telegramErrors >= 1 ) return; //only checking at start
+  if ( ( esp_log_timestamp() - SerialLastChecked) > 11500 ) {
+    bPre40 = !bPre40;
+    SetupP1In();
+    Debugln(F("P1 Serial Port settings changed"));
+  }
 }
 
 void SetupP1In(){
   Serial1.end();
-  delay(100); //give it some time
+  vTaskDelay(50 / portTICK_PERIOD_MS);
   DebugT(F("P1 serial set to ")); 
-  if(bPre40){
-    Serial1.begin(9600, SERIAL_7E1, RxP1, TxO1); //p1 serial input
-    slimmeMeter.doChecksum(false);
-    Debugln(F("9600 baud / 7E1"));
-  } else {
-    Serial1.begin(115200, SERIAL_8N1, RxP1, TxO1); //p1 serial INPUT
-    slimmeMeter.doChecksum(true);
-    Debugln(F("115200 baud / 8N1"));
-  }
-  Serial1.setRxInvert(true); //only Rx
-  delay(100); //give it some time
+  Serial1.begin(bPre40 ? 9600 : 115200,
+                bPre40 ? SERIAL_7E1 : SERIAL_8N1,
+                RxP1, TxO1);
+
+  Debugf("%u baud\n", (unsigned)(bPre40 ? 9600 : 115200));
+  Serial1.setRxInvert(true); //only Rx  
+  slimmeMeter.doChecksum(!bPre40);
+
+  // Drain: clear the last bytes / ISR-race
+  while (Serial1.available()) {(void)Serial1.read();vTaskDelay(1);}
+  slimmeMeter.clearAll(); //on errors clear buffer
+  telegramCount = 0;
+  telegramErrors = 0;
+  
+  SerialLastChecked = esp_log_timestamp();
 }
+
 //==================================================================================
 struct showValues {
   template<typename Item>
@@ -333,18 +352,20 @@ void processTelegram(){
   newT = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), true); // update system time
   
   //cal current more accurate; only works with SMR 5 meters
-  if ( DSMRdata.voltage_l1_present && DSMRdata.voltage_l1 && DSMRdata.power_delivered_l1.int_val() ){
-    DSMRdata.current_l1._value = (uint32_t)((DSMRdata.power_delivered_l1.int_val() + DSMRdata.power_returned_l1.int_val())/DSMRdata.voltage_l1*1000);
-    DSMRdata.current_l1_present = true;
-  }
-  if ( DSMRdata.voltage_l2_present && DSMRdata.voltage_l2 && DSMRdata.power_delivered_l2.int_val() ){
-    DSMRdata.current_l2._value = (uint32_t)((DSMRdata.power_delivered_l2.int_val() + DSMRdata.power_returned_l2.int_val())/DSMRdata.voltage_l2*1000);
-    DSMRdata.current_l2_present = true;
-  }
-  if ( DSMRdata.voltage_l3_present && DSMRdata.voltage_l3 && DSMRdata.power_delivered_l3.int_val()){
-    DSMRdata.current_l3._value = (uint32_t)((DSMRdata.power_delivered_l3.int_val() + DSMRdata.power_returned_l3.int_val())/DSMRdata.voltage_l3*1000);
-    DSMRdata.current_l3_present = true;
-  }
+  if ( try_calc_i ) {
+    if ( DSMRdata.voltage_l1_present && DSMRdata.voltage_l1 && DSMRdata.power_delivered_l1.int_val() ){
+      DSMRdata.current_l1._value = (uint32_t)((DSMRdata.power_delivered_l1.int_val() + DSMRdata.power_returned_l1.int_val())/DSMRdata.voltage_l1*1000);
+      DSMRdata.current_l1_present = true;
+    }
+    if ( DSMRdata.voltage_l2_present && DSMRdata.voltage_l2 && DSMRdata.power_delivered_l2.int_val() ){
+      DSMRdata.current_l2._value = (uint32_t)((DSMRdata.power_delivered_l2.int_val() + DSMRdata.power_returned_l2.int_val())/DSMRdata.voltage_l2*1000);
+      DSMRdata.current_l2_present = true;
+    }
+    if ( DSMRdata.voltage_l3_present && DSMRdata.voltage_l3 && DSMRdata.power_delivered_l3.int_val()){
+      DSMRdata.current_l3._value = (uint32_t)((DSMRdata.power_delivered_l3.int_val() + DSMRdata.power_returned_l3.int_val())/DSMRdata.voltage_l3*1000);
+      DSMRdata.current_l3_present = true;
+    }
+  }//try calc i
   // has the hour changed write ringfiles
 #ifdef DEBUG
   DebugTf("actMin[%02d] -- newMin[%02d]\r\n", minute(actT), minute(newT));  
@@ -356,6 +377,12 @@ void processTelegram(){
   DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
   if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse || !dataYesterday.lastUpdDay) {
     writeRingFiles(); //bWriteFiles = true; //handled in main flow
+    if ( hour(actT) == 1 && hour(newT) == 3 ){
+      uint8_t slot = CalcSlot(RINGHOURS, false); //based on actT
+      slot = ( slot + 1 ) % RingFiles[RINGHOURS].slots; //increase slot 1h to next slot = 2h
+      writeRingFileAtSlot(RINGHOURS, slot, nullptr, true); //todo winter -> summer time issue actT = 1h so next slot should be written too
+      DebugTln(F("DST gap fix"));
+    }
     UpdateYesterday();
     //check dag overgang
     if ( currentDay != (newT/(uint32_t)(3600*24)) ) {
@@ -391,8 +418,6 @@ void processTelegram(){
 //==================================================================================
 void modifySmFaseInfo()
 {
-  if (!settingSmHasFaseInfo)
-  {
         if (DSMRdata.power_delivered_present && !DSMRdata.power_delivered_l1_present)
         {
           DSMRdata.power_delivered_l1 = DSMRdata.power_delivered;
@@ -407,7 +432,6 @@ void modifySmFaseInfo()
           DSMRdata.power_returned_l2_present = true;
           DSMRdata.power_returned_l3_present = true;
         }
-  } // No Fase Info
   
 } //  modifySmFaseInfo()
 

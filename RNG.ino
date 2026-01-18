@@ -463,89 +463,123 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, const char* Timestamp)
 
 //===========================================================================================
 
-void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec, bool bPrev) {
+void writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *JsonRec, bool bWinterSummer) {
 #ifdef NO_STORAGE
   return;
-#else  
-  if ( !EnableHistory || !FSmounted ) return; //do nothing
-  time_t start = millis();
+#else
+  if (!EnableHistory || !FSmounted) return;
+  if (slot >= RingFiles[ringfiletype].slots) return;
+
+  // time_t start = millis();
   char key[9] = "";
-  byte slot = 0;
-  uint8_t actSlot = CalcSlot(ringfiletype, bPrev);
-
   JsonDocument rec;
-
   char buffer[DATA_RECLEN];
-  if (strlen(JsonRec) > 1) {
+
+  // Parse optioneel JsonRec (alleen als meegegeven)
+  bool hasJsonRec = (JsonRec && strlen(JsonRec) > 1);
+  if (hasJsonRec) {
     DebugTln(JsonRec);
     DeserializationError error = deserializeJson(rec, JsonRec);
     if (error) {
-      DebugT(F("convert:Failed to deserialize RECORD: "));Debugln(error.c_str());
+      DebugT(F("convert:Failed to deserialize RECORD: ")); Debugln(error.c_str());
       httpServer.send(500, "application/json", httpServer.arg(0));
-      #ifdef XTRA_LOG  
-      LogFile("RNG: 118 convert:Failed to deserialize RECORD:",true); //log only once
-      #endif 
+      #ifdef XTRA_LOG
+      LogFile("RNG: convert:Failed to deserialize RECORD", true);
+      #endif
       return;
-    } 
+    }
   }
 
-  //json openen
+  // Open ringfile
   DebugT(F("read(): Ring file ")); Debugln(RingFiles[ringfiletype].filename);
-  
-  File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "r+"); // open for reading  
+
+  File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "r+");
   if (!RingFile || (RingFile.size() != RingFiles[ringfiletype].f_len)) {
     DebugT(F("open ring file FAILED!!! --> Bailout\r\n"));
     Debugln(RingFiles[ringfiletype].filename);
-    #ifdef XTRA_LOG  
-    LogFile("RNG: 129 open ring file FAILED!!! --> Bailout",true); //log only once
-    #endif  
+    #ifdef XTRA_LOG
+    LogFile("RNG: open ring file FAILED!!! --> Bailout", true);
+    #endif
     RingFile.close();
     return;
   }
 
-  // add/replace new actslot to json object
+  // Update header actSlot
+  // (actSlot in header = toon in UI waar 'nu' is; laat dit bestaan zoals jij het doet)
+  uint8_t actSlot = CalcSlot(ringfiletype, /*bPrev*/ false);
   snprintf(buffer, sizeof(buffer), "{\"actSlot\":%2d,\"data\":[\n", actSlot);
   RingFile.print(buffer);
-  
-  if (strlen(JsonRec) > 1) {
-    //write data from onerecord
-    strncpy(key, rec["recid"], 8); 
-    slot = CalcSlot(ringfiletype, key);
-//    DebugTln("slot from rec: "+slot);
-//    DebugT(F("update date: "));Debugln(key);
 
-    //create record
-    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)rec["edt1"], (float)rec["edt2"], (float)rec["ert1"], (float)rec["ert2"], (float)rec["gdt"], (float)rec["wtr"]);
+  // Bouw record payload
+  if (hasJsonRec) {
+    // Record uit JsonRec
+    strncpy(key, rec["recid"] | "", 8);
+    key[8] = '\0';
+
+    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT,
+             key,
+             (float)(rec["edt1"] | 0.0f), (float)(rec["edt2"] | 0.0f),
+             (float)(rec["ert1"] | 0.0f), (float)(rec["ert2"] | 0.0f),
+             (float)(rec["gdt"]  | 0.0f), (float)(rec["wtr"]  | 0.0f));
+
     httpServer.send(200, "application/json", httpServer.arg(0));
   } else {
-    //write actual data
-    strncpy(key, actTimestamp, 8);  
-    slot = actSlot;
-//    DebugTln("actslot: "+actSlot);
-//    DebugT(F("update date: "));Debugln(key);
-    
-  snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT, key , (float)DSMRdata.energy_delivered_tariff1, (float)DSMRdata.energy_delivered_tariff2, (float)DSMRdata.energy_returned_tariff1, (float)DSMRdata.energy_returned_tariff2, (float)gasDelivered, mbusWater?(float)waterDelivered : (float)P1Status.wtr_m3+(float)P1Status.wtr_l/1000.0);
-  
+    // Actuele data (zoals je al deed)
+    strncpy(key, actTimestamp, 8);
+    key[8] = '\0';
+    if (bWinterSummer) { key[6] = '0'; key[7] = '2'; }
+    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT,
+             key,
+             (float)DSMRdata.energy_delivered_tariff1,
+             (float)DSMRdata.energy_delivered_tariff2,
+             (float)DSMRdata.energy_returned_tariff1,
+             (float)DSMRdata.energy_returned_tariff2,
+             (float)gasDelivered,
+             mbusWater ? (float)waterDelivered
+                       : (float)P1Status.wtr_m3 + (float)P1Status.wtr_l / 1000.0f);
   }
-  //DebugT("update timeslot: ");Debugln(slot);
-  //goto writing starting point  
-  uint16_t offset = (slot * DATA_RECLEN) + JSON_HEADER_LEN;
-  RingFile.seek(offset, SeekSet);   
- 
-  //overwrite record in file
-  int32_t bytesWritten = RingFile.print(buffer);
-  if (bytesWritten != (DATA_RECLEN - 2)) DebugTf("ERROR! slot[%02d]: written [%d] bytes but should have been [%d]\r\n", slot, bytesWritten, DATA_RECLEN);
-  if ( slot < (RingFiles[ringfiletype].slots -1)) RingFile.print(",\n");
-  else RingFile.print("\n"); // no comma at last record
-  
-  RingFile.close();
-//    String log_temp = "Ringfile " + String(RingFiles[ringfiletype].filename) + " writen. actT:[" + String(actT) + "] newT:[" + String(newT) +"] ActSlot:[" + String(slot) + "]";
-//    LogFile(log_temp.c_str(),true);
-  Debugf( "Time consumed writing RNGFile %s : %d\n", RingFiles[ringfiletype].filename, millis()-start);
-  
-#endif //NO_STORAGE
 
-} // writeRingFile()
+  // Seek naar slot-offset en overschrijf record
+  uint16_t offset = (slot * DATA_RECLEN) + JSON_HEADER_LEN;
+  RingFile.seek(offset, SeekSet);
+
+  int32_t bytesWritten = RingFile.print(buffer);
+  if (bytesWritten != (DATA_RECLEN - 2)) {
+    DebugTf("ERROR! slot[%02d]: written [%d] bytes but should have been [%d]\r\n",
+            slot, bytesWritten, DATA_RECLEN);
+  }
+
+  if (slot < (RingFiles[ringfiletype].slots - 1)) RingFile.print(",\n");
+  else RingFile.print("\n");
+
+  RingFile.close();
+  // Debugf("Time consumed writing RNGFile %s : %d\n", RingFiles[ringfiletype].filename, millis() - start);
+#endif
+}
+
+
+void writeRingFile(E_ringfiletype ringfiletype, const char *JsonRec, bool bPrev) {
+#ifdef NO_STORAGE
+  return;
+#else
+  if (JsonRec && strlen(JsonRec) > 1) {
+    JsonDocument rec;
+    if (deserializeJson(rec, JsonRec)) return;
+
+    char key[9] = "";
+    strncpy(key, rec["recid"] | "", 8);
+    key[8] = '\0';
+
+    uint8_t slot = CalcSlot(ringfiletype, key);
+    writeRingFileAtSlot(ringfiletype, slot, JsonRec, false);
+    return;
+  }
+
+  uint8_t slot = CalcSlot(ringfiletype, bPrev);
+  writeRingFileAtSlot(ringfiletype, slot, /*JsonRec*/ nullptr, false);
+#endif
+}
+
 
 /*
 

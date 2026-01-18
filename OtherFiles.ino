@@ -95,7 +95,7 @@ void writeSettings() {
   docw["EnergyVasteKosten"] = settingENBK;
   docw["GasVasteKosten"] = settingGNBK;
   docw["WaterVasteKosten"] = settingWNBK;
-  docw["SmHasFaseInfo"] = settingSmHasFaseInfo;
+  // docw["SmHasFaseInfo"] = settingSmHasFaseInfo;
   docw["IndexPage"] = settingIndexPage;
   yield();
   docw["MQTTbroker"] = settingMQTTbroker;
@@ -201,7 +201,7 @@ void readSettings(bool show)
   settingENBK = doc["EnergyVasteKosten"];
   settingGNBK = doc["GasVasteKosten"];
   if (doc["WaterVasteKosten"].is<float>()) settingWNBK = doc["WaterVasteKosten"];
-  settingSmHasFaseInfo = doc["SmHasFaseInfo"];
+  // settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
   if (doc["mqtt-hide"].is<bool>()) hideMQTTsettings = doc["mqtt-hide"];
   if (doc["remove-index"].is<bool>()) RemoveIndexAfterUpdate = doc["remove-index"];
@@ -326,12 +326,12 @@ void updateSetting(const char *field, const char *newValue)
     CHANGE_INTERVAL_MS(StatusTimer, 100);
   }
 
-  if (!stricmp(field, "sm_has_fase_info")) 
-  {
-    settingSmHasFaseInfo = String(newValue).toInt(); 
-    if (settingSmHasFaseInfo != 0)  settingSmHasFaseInfo = 1;
-    else                            settingSmHasFaseInfo = 0;  
-  }
+  // if (!stricmp(field, "sm_has_fase_info")) 
+  // {
+  //   settingSmHasFaseInfo = String(newValue).toInt(); 
+  //   if (settingSmHasFaseInfo != 0)  settingSmHasFaseInfo = 1;
+  //   else                            settingSmHasFaseInfo = 0;  
+  // }
 
   if (!stricmp(field, "IndexPage"))        strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), newValue);  
 

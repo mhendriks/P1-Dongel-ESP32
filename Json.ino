@@ -328,9 +328,9 @@ void sendDeviceInfo()
   doc["network"] = network_state();
   doc["uptime"] = upTime();
 
-  if ( !bWarmteLink ) { // IF NO HEATLINK
-      doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
-  }
+  // if ( !bWarmteLink ) { // IF NO HEATLINK
+  //     doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
+  // }
 
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
@@ -377,31 +377,28 @@ void sendDeviceSettings() {
     ADD_SETTING("water_netw_costs", "f", 0, 100, settingWNBK);
   }
   ADD_SETTING("gas_netw_costs", "f", 0, 100, settingGNBK);
-  if ( ! bWarmteLink ) { // IF NO HEATLINK
-    ADD_SETTING("sm_has_fase_info", "i", 0, 1, settingSmHasFaseInfo);
-  }
+  // if ( ! bWarmteLink ) { // IF NO HEATLINK
+  //   ADD_SETTING("sm_has_fase_info", "i", 0, 1, settingSmHasFaseInfo);
+  // }
   ADD_SETTING("IndexPage", "s", 0, sizeof(settingIndexPage) - 1, settingIndexPage);
 
 #ifndef MQTT_DISABLE
 if ( !hideMQTTsettings) {
 #ifndef MQTTKB
 
+  doc["mqtt_tls"] = bMQTToverTLS;
   ADD_SETTING("mqtt_broker", "s", 0, sizeof(settingMQTTbroker) - 1, settingMQTTbroker);
   ADD_SETTING("mqtt_broker_port", "i", 1, 9999, settingMQTTbrokerPort);
-  doc["mqtt_tls"] = bMQTToverTLS;
   ADD_SETTING("mqtt_user", "s", 0, sizeof(settingMQTTuser) - 1, settingMQTTuser);
   ADD_SETTING("mqtt_passwd", "s", 0, sizeof(settingMQTTpasswd) - 1, settingMQTTpasswd);
 #endif
   ADD_SETTING("mqtt_toptopic", "s", 0, sizeof(settingMQTTtopTopic) - 1, settingMQTTtopTopic);
   ADD_SETTING("mqtt_interval", "i", 0, 600, settingMQTTinterval);
+  doc["act-json-mqtt"] = bActJsonMQTT;
+  doc["macid-topic"] = MacIDinToptopic;
+  doc["ha_disc_enabl"] = EnableHAdiscovery;
 }
 #endif
-
-  if (WtrMtr) {
-    ADD_SETTING("water_m3", "i", 0, 99999, P1Status.wtr_m3);
-    ADD_SETTING("water_l", "i", 0, 999, P1Status.wtr_l);
-    ADD_SETTING("water_fact", "f", 0, 10, WtrFactor);
-  }
 
   if (strncmp(BaseOTAurl, "http://", 7) == 0) {
     char ota_url[sizeof(BaseOTAurl)];
@@ -424,7 +421,6 @@ if ( !hideMQTTsettings) {
   }
   //booleans
   doc["hist"] = EnableHistory;
-  doc["water_enabl"] = WtrMtr;
   doc["led"] = LEDenabled;
   doc["raw-port"] = bRawPort;
   doc["eid-enabled"] = bEID_enabled;
@@ -433,13 +429,18 @@ if ( !hideMQTTsettings) {
   doc["dev-pairing"] = true;
 #endif
 
-  doc["ha_disc_enabl"] = EnableHAdiscovery;
-
   if ( bWarmteLink ) { // IF HEATLINK
     doc["conf"] = "p1-q";
   } else {
     doc["pre40"] = bPre40;
     doc["conf"] = "p1-p";
+  }
+
+  doc["water_enabl"] = WtrMtr;
+  if (WtrMtr) {
+    ADD_SETTING("water_m3", "i", 0, 99999, P1Status.wtr_m3);
+    ADD_SETTING("water_l", "i", 0, 999, P1Status.wtr_l);
+    ADD_SETTING("water_fact", "f", 0, 10, WtrFactor);
   }
 
   // doc["auto_update"] = bAutoUpdate;  TO DO ...

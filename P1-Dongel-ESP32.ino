@@ -80,32 +80,24 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
 
-
-5.3.0
-!!! V5 supports only for P1 Pro/Pro+, Ethernet Pro/Pro+ and Ultra dongles
-√ merge 4.17.1 with 5.2.9
-√ add: network connection information
-√ update: SDK 3.3.5
-√ change: mac/macid/MQTT macid in topic /etc detemined on startup
-√ refactor: type and module config
-√ change: wifi power management optimised (Low Power when starting)
-√ refactor: mac address functions
-√ add: settings try_calc_i = true; > (don't) calculate current based on P and U
-
 5.3.1
-√ add: auto detect P1 meter (v5/v4 or v2)
-- add: indication detected smart meter to Information overview
-- change: dongle type to postIP
-- modify: split the settings page into main/mqtt/modbus
-- winter -> zomertijd issue. 2e uur mist en data van 2 dagen geleden staat er dan.
---> oplossing : 
+√ add: auto select P1 meter (v5/v4 or v2)
+√ change: dongle type to postIP
+√ winter -> summer time issue. 2nd hour is missing and will cause data issue because old value is visable.
+√ removed: Has phase info default 1
+√ modify: split the settings page into main/mqtt/modbus
+√ update url wrong path
+√ update dsmr2lib TimestampedFixedValue order issue BE meters
+√ fix: update url to v5 none Ultra dongles
+x refactor frontend settings
+- add settings hidden features to settings
+- MQTT on/off toggle
+- Virtual P1 feature in settings
 
-bool isDSTTransition(int lastHour, int currentHour) {
-    return (lastHour == 1 && currentHour == 3); // Detecteer de sprong
-}
 
 5.4.0
 - refactor: asyncwebserver
+- update button in HA to trigger the update (mqtt based)
 
 */
 

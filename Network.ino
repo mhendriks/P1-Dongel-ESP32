@@ -128,7 +128,7 @@ void PostMacIP() {
   http.setTimeout(5000);
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
   
-  String httpRequestData = "mac=" + String(macStr) + "&ip=" + IP_Address() + "&version=" + _VERSION_ONLY;           
+  String httpRequestData = "mac=" + String(macStr) + "&ip=" + IP_Address() + "&version=" + _VERSION_ONLY+ "&hw=" + HardwareType;
   
   int httpResponseCode = http.POST(httpRequestData);
 

@@ -103,7 +103,7 @@ TaskHandle_t tP1Reader; //  own proces for P1 reading
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS, RINGVOLTAGE};
-enum  SolarSource { ENPHASE, SOLAR_EDGE, SMA };
+enum  SolarSource { ENPHASE, SOLAR_EDGE, SMA, OMNIKSOL };
 
 //test
 struct RingRecord {
@@ -392,7 +392,7 @@ uint32_t    unixTimestamp;
 IPAddress ipDNS, ipGateWay, ipSubnet;
 float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5, settingWDT = 1.04;
 float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
-uint8_t   settingSmHasFaseInfo = 1;
+// uint8_t   settingSmHasFaseInfo = 1;
 char      settingHostname[32] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 enum tNetwState { NW_NONE, NW_WIFI, NW_ETH, NW_ETH_LINK };
