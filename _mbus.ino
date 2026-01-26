@@ -149,7 +149,8 @@ std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
     {74,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff2 + DSMRdata.energy_returned_tariff1 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
     {200, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l1_present && DSMRdata.voltage_l2_present) ? calculateLineVoltage(DSMRdata.voltage_l1, DSMRdata.voltage_l2) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
     {202, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l2_present && DSMRdata.voltage_l3_present) ? calculateLineVoltage(DSMRdata.voltage_l2, DSMRdata.voltage_l3) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {204, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}}
+    {204, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
+    {0xfc00, {ModbusDataType::UINT32, []() { return 22085951; /*todo make uniqe*/ }}}
 };
 
 // https://www.socomec.it/sites/default/files/2021-05/COUNTIS-E27-MODBUS_COMMUNICATION-TABLE_2017-08_CMT_EN.html
@@ -205,7 +206,7 @@ std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[8] = { 48, 204+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2, 54 };
+uint16_t MaxReg[8] = { 48, 0xfc00+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2, 54 };
 
 // Change active mapping
 void setModbusMapping(int mappingChoice) {

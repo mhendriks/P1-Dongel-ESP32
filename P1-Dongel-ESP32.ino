@@ -95,9 +95,10 @@ x refactor frontend settings
 - Virtual P1 feature in settings
 
 
+
 5.4.0
 - refactor: asyncwebserver
-- update button in HA to trigger the update (mqtt based)
+- update button in HA to trigger the update (mqtt based #70)
 
 */
 

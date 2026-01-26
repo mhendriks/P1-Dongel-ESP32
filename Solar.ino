@@ -85,9 +85,10 @@ static bool smaGetPacAndDay(const String& baseUrl, long& pac_W, long& day_Wh) {
 
 void ReadSolarConfig(SolarSource src) {
   SolarPwrSystems* solarSystem =
-      (src == ENPHASE)   ? &Enphase
-    : (src == SOLAR_EDGE)? &SolarEdge
-    :                      &SMAinv;
+    (src == ENPHASE)    ? &Enphase
+  : (src == SOLAR_EDGE) ? &SolarEdge
+  : (src == SMA)        ? &SMAinv
+  :                      &Omniksol;
 
   if (!FSmounted || !LittleFS.exists(solarSystem->file_name)) return;
   DebugT("ReadSolarConfig: "); Debugln(solarSystem->file_name);
@@ -104,7 +105,13 @@ void ReadSolarConfig(SolarSource src) {
   solarSystem->Wp    = doc["wp"].as<uint32_t>();
   solarSystem->SiteID= doc["siteid"].as<uint32_t>(); // SMA: onbenut
   uint32_t ri        = doc["refresh-interval"].as<uint32_t>();
-  if (ri > (src==ENPHASE?60:(src==SOLAR_EDGE?300:15))) solarSystem->Interval = ri;
+  uint32_t def =
+    (src == ENPHASE)    ? 60
+  : (src == SOLAR_EDGE) ? 300
+  : (src == SMA)        ? 15
+  :                      15;
+
+if (ri > def) solarSystem->Interval = ri;
 
 #ifdef DEBUG
   Debug("url > "); Debugln(solarSystem->Url);
@@ -122,13 +129,15 @@ void ReadSolarConfigs() {
   ReadSolarConfig(ENPHASE);
   ReadSolarConfig(SOLAR_EDGE);
   ReadSolarConfig(SMA);
+  ReadSolarConfig(OMNIKSOL);
 }
 
 void GetSolarData(SolarSource src, bool forceUpdate) {
   SolarPwrSystems* solarSystem =
-      (src == ENPHASE)    ? &Enphase
-    : (src == SOLAR_EDGE) ? &SolarEdge
-    :                       &SMAinv;
+    (src == ENPHASE)    ? &Enphase
+  : (src == SOLAR_EDGE) ? &SolarEdge
+  : (src == SMA)        ? &SMAinv
+  :                      &Omniksol;
 
   if (!solarSystem->Available) return;
   if (!forceUpdate && ((uptime() - solarSystem->LastRefresh) < solarSystem->Interval)) return;
@@ -147,6 +156,21 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
     }
     return;
   }
+
+// ===== Omniksol route (TCP 8899) =====
+//   if (src == OMNIKSOL) {
+//     uint32_t pac, dayWh;
+//     // Omnik: Url = "ip[:port]" of "tcp://ip[:port]" ; SiteID = wifi/logger serial
+//     if (omnikGetPacAndTodayWh(solarSystem->Url, solarSystem->SiteID, pac, dayWh)) {
+//       solarSystem->Actual = pac;
+//       solarSystem->Daily  = dayWh;
+// #ifdef DEBUG
+//       Debug("OMNIK Daily > ");  Debugln(solarSystem->Daily);
+//       Debug("OMNIK Actual > "); Debugln(solarSystem->Actual);
+// #endif
+//     }
+//     return;
+//   }
 
   // ===== Enphase / SolarEdge / Solis (bestaande GET flow) =====
   HTTPClient http;
@@ -209,18 +233,19 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
 
 void GetSolarDataN() {
   if ( skipNetwork ) return;
-  GetSolarData(ENPHASE,   false);
-  GetSolarData(SOLAR_EDGE,false);
-  GetSolarData(SMA,       false);
+  GetSolarData(ENPHASE,    false);
+  GetSolarData(SOLAR_EDGE, false);
+  GetSolarData(SMA,        false);
+  GetSolarData(OMNIKSOL,   false);
 }
 
 void SendSolarJson() {
-  bool any = Enphase.Available || SolarEdge.Available || SMAinv.Available;
+  bool any = Enphase.Available || SolarEdge.Available || SMAinv.Available || Omniksol.Available;
   if (!any) { httpServer.send(200, "application/json", "{\"active\":false}"); return; }
 
-  uint32_t totalDaily  = Enphase.Daily + SolarEdge.Daily + SMAinv.Daily;
-  uint32_t totalActual = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual;
-  uint32_t totalWp     = Enphase.Wp + SolarEdge.Wp + SMAinv.Wp;
+  uint32_t totalDaily  = Enphase.Daily  + SolarEdge.Daily  + SMAinv.Daily  + Omniksol.Daily;
+  uint32_t totalActual = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual + Omniksol.Actual;
+  uint32_t totalWp     = Enphase.Wp     + SolarEdge.Wp     + SMAinv.Wp     + Omniksol.Wp;
 
   String Json = "{\"active\":true,\"total\":{\"daily\":";
   Json += String(totalDaily);

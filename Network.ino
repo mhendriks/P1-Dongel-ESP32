@@ -89,8 +89,6 @@ static void kickOnce(){
 
 void GetMacAddress(){
 
-  // String _mac = MAC_Address();
-
   uint8_t efuseMac[6];
   char macAddressString[18];
 
