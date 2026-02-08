@@ -93,6 +93,7 @@ x refactor frontend settings
 - add settings hidden features to settings
 - MQTT on/off toggle
 - Virtual P1 feature in settings
+-
 
 
 
@@ -104,7 +105,7 @@ x refactor frontend settings
 
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 
@@ -129,6 +130,7 @@ x refactor frontend settings
 // #define MQTTKB
 // #define MB_RTU
 #define ESPNOW
+#define UDP
 // #define SHELLY_EMU
 // #define USB_CONFIG
 // #define POST_POWERCH
@@ -237,6 +239,7 @@ void setup()
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
   StartESPNOW();
   StartPowerCH();
+  UdpBegin();
 } // setup()
 
 void loop () { 

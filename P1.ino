@@ -405,6 +405,7 @@ void processTelegram(){
 	  ProcessStats();
 	  ProcessMaxVoltage();
 	  NetSwitchStateMngr();
+    udpSendP1Json();
   }
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 

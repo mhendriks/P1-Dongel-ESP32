@@ -67,7 +67,12 @@ void setupFSexplorer() {
   httpServer.on("/api/v1/data", HTTP_GET, []() { auth(); HWapi(); });
   httpServer.on("/api", HTTP_GET, []() { auth(); HWapi_root(); });
 
-  httpServer.on("/api/v2/stats", HTTP_GET, []() { auth(); StatsApi(); });
+  httpServer.on("/api/v2/stats", HTTP_GET, []() { 
+    if ( !auth() ) return; 
+    // StatsApi(); 
+    httpServer.send(200, "application/json", apiStatsJson());
+  });
+  
   httpServer.on(UriBraces("/api/v2/dev/{}"),[]() { auth(); handleDevApi(); });
   httpServer.on(UriBraces("/api/v2/sm/{}"),[](){ auth(); handleSmApi(); });
   httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){ auth(); handleSmApiField(); });

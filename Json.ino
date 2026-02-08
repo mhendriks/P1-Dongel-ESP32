@@ -20,6 +20,89 @@ const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff"
 
 JsonDocument jsonDoc;  // generic doc to return, clear() before use!
 
+static String jsonResponse(std::function<void(JsonDocument& doc)> fill) {
+  JsonDocument doc;
+  fill(doc);
+  String out;
+  serializeJson(doc, out);
+  return out;
+}
+
+
+// void StatsApi(){
+//   JsonDocument doc; // Pas de grootte aan indien nodig
+ 
+//   if ( DSMRdata.current_l1_present ) doc["I1piek"]  = P1Stats.I1piek;
+//   if ( DSMRdata.current_l2_present ) doc["I2piek"]  = P1Stats.I2piek;
+//   if ( DSMRdata.current_l3_present ) doc["I3piek"]  = P1Stats.I3piek;
+  
+//   if ( DSMRdata.power_delivered_l1_present ) doc["P1max"]   = P1Stats.P1max;
+//   if ( DSMRdata.power_delivered_l2_present ) doc["P2max"]   = P1Stats.P2max;
+//   if ( DSMRdata.power_delivered_l3_present ) doc["P3max"]   = P1Stats.P3max;
+  
+//   if ( DSMRdata.power_delivered_l1_present ) doc["P1min"]   = P1Stats.P1min;
+//   if ( DSMRdata.power_delivered_l2_present ) doc["P2min"]   = P1Stats.P2min;
+//   if ( DSMRdata.power_delivered_l3_present ) doc["P3min"]   = P1Stats.P3min;
+
+//   if ( DSMRdata.voltage_l1_present ) doc["U1piek"]  = P1Stats.U1piek;
+//   if ( DSMRdata.voltage_l2_present ) doc["U2piek"]  = P1Stats.U2piek;
+//   if ( DSMRdata.voltage_l3_present ) doc["U3piek"]  = P1Stats.U3piek;
+
+//   if ( DSMRdata.voltage_l1_present )doc["U1min"]  = P1Stats.U1min;
+//   if ( DSMRdata.voltage_l2_present )doc["U2min"]  = P1Stats.U2min;
+//   if ( DSMRdata.voltage_l3_present )doc["U3min"]  = P1Stats.U3min;
+
+//   if ( DSMRdata.voltage_l1_present )doc["TU1over"] = P1Stats.TU1over;
+//   if ( DSMRdata.voltage_l2_present )doc["TU2over"] = P1Stats.TU2over;
+//   if ( DSMRdata.voltage_l3_present )doc["TU3over"] = P1Stats.TU3over;
+  
+//   doc["Psluip"]  = P1Stats.Psluip;
+//   doc["start_time"] = P1Stats.StartTime;
+
+//   String json;
+//   serializeJson(doc, json);
+//   sendJsonBuffer( json.c_str() );
+
+// }
+
+String apiStatsJson() {
+  return jsonResponse([&](JsonDocument& doc){
+    // doc["ts"] = (uint32_t)time(nullptr);
+
+    // JsonObject stats = doc["stats"].to<JsonObject>();
+    // stats["uptime"] = (uint32_t)millis()/1000;
+    // stats["heap"]   = (uint32_t)ESP.getFreeHeap();
+
+    if ( DSMRdata.current_l1_present ) doc["I1piek"]  = P1Stats.I1piek;
+    if ( DSMRdata.current_l2_present ) doc["I2piek"]  = P1Stats.I2piek;
+    if ( DSMRdata.current_l3_present ) doc["I3piek"]  = P1Stats.I3piek;
+    
+    if ( DSMRdata.power_delivered_l1_present ) doc["P1max"]   = P1Stats.P1max;
+    if ( DSMRdata.power_delivered_l2_present ) doc["P2max"]   = P1Stats.P2max;
+    if ( DSMRdata.power_delivered_l3_present ) doc["P3max"]   = P1Stats.P3max;
+    
+    if ( DSMRdata.power_delivered_l1_present ) doc["P1min"]   = P1Stats.P1min;
+    if ( DSMRdata.power_delivered_l2_present ) doc["P2min"]   = P1Stats.P2min;
+    if ( DSMRdata.power_delivered_l3_present ) doc["P3min"]   = P1Stats.P3min;
+
+    if ( DSMRdata.voltage_l1_present ) doc["U1piek"]  = P1Stats.U1piek;
+    if ( DSMRdata.voltage_l2_present ) doc["U2piek"]  = P1Stats.U2piek;
+    if ( DSMRdata.voltage_l3_present ) doc["U3piek"]  = P1Stats.U3piek;
+
+    if ( DSMRdata.voltage_l1_present )doc["U1min"]  = P1Stats.U1min;
+    if ( DSMRdata.voltage_l2_present )doc["U2min"]  = P1Stats.U2min;
+    if ( DSMRdata.voltage_l3_present )doc["U3min"]  = P1Stats.U3min;
+
+    if ( DSMRdata.voltage_l1_present )doc["TU1over"] = P1Stats.TU1over;
+    if ( DSMRdata.voltage_l2_present )doc["TU2over"] = P1Stats.TU2over;
+    if ( DSMRdata.voltage_l3_present )doc["TU3over"] = P1Stats.TU3over;
+    
+    doc["Psluip"]  = P1Stats.Psluip;
+    doc["start_time"] = P1Stats.StartTime;
+
+  } );
+}
+
 void JsonGas(){
   if (!gasDelivered) return;
   jsonDoc["gas_delivered"]["value"] =  (int)(gasDelivered*1000)/1000.0;
