@@ -338,9 +338,9 @@ struct stats{
   uint32_t P1max  = 0;
   uint32_t P2max  = 0;
   uint32_t P3max  = 0;
-  int32_t P1min   = 0xFFFFFFFF;
-  int32_t P2min   = 0xFFFFFFFF;
-  int32_t P3min   = 0xFFFFFFFF; 
+  int32_t P1min   = 23121212;
+  int32_t P2min   = 0x7FFFFFFF;
+  int32_t P3min   = 0x7FFFFFFF; 
 } P1Stats;
 
 MyData      DSMRdata;

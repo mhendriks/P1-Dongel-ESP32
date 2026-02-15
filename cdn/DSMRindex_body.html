@@ -425,10 +425,29 @@
   <section id="Settings" class="tabName">
       <!-- START Tabbladen -->
   <h2 data-i18n-key="tle-settings">Instellingen</h2>
-  <div id="tabEditSettings" class="outer-div"">
-    <!-- START settingsTab Settings -->
-      <div id="settings_table" class="inner-div"></div>          
-  </div>  <!-- END tabSettings -->
+  
+  <div id="tabEditSettings" class="outer-div" style="display:block;">
+	  <div class="inner-div">
+	
+		<div id="settings_subtabs" class="settings-subtabs">
+		  <button type="button" class="subtab-btn active" data-target="settings_general" data-i18n-key="setting-general">Algemeen</button>
+		  <button type="button" class="subtab-btn" data-target="settings_tariff" data-i18n-key="setting-tariff">Tarieven</button>
+		  <button type="button" class="subtab-btn" data-target="settings_mqtt" data-i18n-key="setting-mqtt">MQTT</button>
+		  <button type="button" class="subtab-btn" data-target="settings_modbus" data-i18n-key="setting-modbus">Modbus</button>
+		</div>
+	
+		<!-- staging: hier bouwt refreshSettings() de rows -->
+		<div id="settings_table" class="inner-div" style="display:none"></div>
+	
+		<!-- panes -->
+		<div id="settings_general" class="settings-pane active"></div>
+		<div id="settings_tariff" class="settings-pane"></div>
+		<div id="settings_mqtt" class="settings-pane"></div>
+		<div id="settings_modbus" class="settings-pane"></div>
+	
+	  </div>
+   </div>
+  
   <div id="settings_btns">
       <a id='bUndo'   class='btn' onclick="undoReload()" data-i18n-key="btn-undo">Undo</a>
       <a id='bSave'   class='btn' onclick="saveData()" data-i18n-key="btn-save">Opslaan</a>

@@ -64,8 +64,10 @@ void ReadManifest( const char* link ) {
 
   if ( deserializeJson(doc, payload) ) return;
 
-  strcpy(client_ota_data.update_url, doc["url"]);
-  strcpy(client_ota_data.version, doc["version"]);
+  const char* url = doc["url"] | "";
+  const char* ver = doc["version"] | "";
+  strlcpy(client_ota_data.update_url, url, sizeof(client_ota_data.update_url));
+  strlcpy(client_ota_data.version, ver, sizeof(client_ota_data.version));
 
   Debugln(client_ota_data.update_url);
   Debugln(client_ota_data.version);
@@ -89,10 +91,22 @@ void procesACK(const uint8_t *incomingData){
 }
 
 void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len) {
-  Debug("msgTyp: ");Debugln( incomingData[0] );
-  switch ( incomingData[0] ){
+  if (!incomingData || len <= 0) return;
+  uint8_t typ = incomingData[0];
+
+  auto need = [&](size_t n) {
+    if ((size_t)len < n) { 
+      Debugf("ESPNOW: drop typ=%u len=%d need=%u\n", typ, len, (unsigned)n);
+      return false;
+    }
+    return true;
+  };
+
+  Debug("msgTyp: ");Debugln( typ );
+  switch ( typ ){
     case COMMAND:
-      memcpy(&Command, incomingData, sizeof(Command));
+      if (!need(sizeof(command_t))) return;
+      memcpy(&Command, incomingData, sizeof(command_t));
       Debugf("COMMAND RECEIVED type [%i], state [%i]\n", Command.action,bPairingmode);
       switch (Command.action) {
         case CONN_REQUEST:
@@ -116,15 +130,17 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
           break;
         case ASK_TARIF:
           Debugln("ASK_TARIFS");
-          SendTariffData();
+          // SendTariffData();
+          P2PType = OFFSET_ACTION + ASK_TARIF;
           break;  
         case ASK_STATIC:
           Debugln("ASK_STATIC");
-          sendStatic();
+          P2PType = OFFSET_ACTION + ASK_STATIC;
+          // sendStatic();
           break; 
         case ASK_PLANNER:
           Debugln("ASK_PLANNER");
-          P2PType = STROOMPLANNER;
+          P2PType = OFFSET_ACTION + ASK_PLANNER;
           break;                    
         case PAIRING:
           Debugln("PAIRING");
@@ -146,29 +162,30 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
             }
           } else Debugln("NOT IN PAIRING MODE");
           break;
-      }
+      } //COMMAND
       break;
     case UPD_VER_REQ:
+      if (!need(sizeof(client_ota_data))) return;
       Debugln("UPD_VER_REQ");
       memcpy(&client_ota_data, incomingData, sizeof(client_ota_data));
       P2PType = UPD_VER_REQ;
       break;
     case UPD_GO_UPDATE:
+      if (!need(sizeof(client_ota_data))) return;
       Debug("Size UPD data frame: ");Debugln(sizeof(esp_now_update_data_t));
       memcpy(&client_ota_data, incomingData, sizeof(client_ota_data));
       P2PType = UPD_GO_UPDATE;
       break;
     case UPD_ACK:
-      if (len != sizeof(esp_now_ack_data_t)) {
-        Debugln("Received data with incorrect length, ignoring.");
-        return;
-      }
+      if (!need(sizeof(esp_now_ack_data_t))) return;
       procesACK(incomingData);
       break;
     case NRGTARIFS:
+      if (!need(sizeof(tariff_t))) return;
       DebugTln("NRGTARIFS");
       memcpy(&TariffData, incomingData, sizeof(TariffData));
-      ReceiveTariffData();
+      P2PType = NRGTARIFS;
+      // ReceiveTariffData();
       break;
   } //switch 
 }
@@ -491,18 +508,24 @@ void handleP2P(){
       break;}
     case UPD_GO_UPDATE:
       Debugln("handleP2P -> UPD_GO_UPDATE");
-      sprintf(updateFile,client_ota_data.file,client_ota_data.version);
+      snprintf(updateFile, sizeof(updateFile), client_ota_data.file, client_ota_data.version);
       Debugln(updateFile);
-      sprintf(updateURL, "http://%s%s",client_ota_data.update_url,updateFile);
+      snprintf(updateURL, sizeof(updateURL),"http://%s%s",client_ota_data.update_url,updateFile);
       Debugln(updateURL);
       if ( !sendUpdateViaESPNOWFromHTTP(updateURL) ) Debugln("Error in p2p update proces");
       break;
-    case STROOMPLANNER:
+    case OFFSET_ACTION + ASK_PLANNER:
       sendStroomPlanner();
       break;
-    // case NRGTARIFS:
-    //   SendTariffData();
-    //   break;
+    case NRGTARIFS:
+      ReceiveTariffData();
+      break;
+    case OFFSET_ACTION + ASK_STATIC:
+      sendStatic();
+      break;
+    case OFFSET_ACTION + ASK_TARIF:
+      SendTariffData();
+      break;
   }
   P2PType = 0;
 }

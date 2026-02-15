@@ -37,6 +37,7 @@ BACKLOG
 - check and repair rng files on startup
 - hostname aanpassen met laatste 3 segmenten mac-adres
 - Huawei FusionSolar integratie ( Francis )
+- mqtt push setting json to the dongle
 
 Default checks
 - wifi
@@ -80,26 +81,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
 
-5.3.1
-√ add: auto select P1 meter (v5/v4 or v2)
-√ change: dongle type to postIP
-√ winter -> summer time issue. 2nd hour is missing and will cause data issue because old value is visable.
-√ removed: Has phase info default 1
-√ modify: split the settings page into main/mqtt/modbus
-√ update url wrong path
-√ update dsmr2lib TimestampedFixedValue order issue BE meters
-√ fix: update url to v5 none Ultra dongles
-x refactor frontend settings
-- add settings hidden features to settings
-- MQTT on/off toggle
-- Virtual P1 feature in settings
--
-
-
+5.3.2
+- issue Karel met verbergen van de gas op dash en tabellen
 
 5.4.0
 - refactor: asyncwebserver
 - update button in HA to trigger the update (mqtt based #70)
+- MQTT on/off toggle
+- Virtual P1 feature in settings
 
 */
 
@@ -110,7 +99,7 @@ x refactor frontend settings
 // #define XTRA_LOG
 
 //PROFILES -> NO PROFILE = WiFi Dongle 
-#define ULTRA         //ultra (mini) dongle
+// #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET      //ethernet dongle
 // #define ETH_P1EP          //ethernet pro+ dongle
 // #define NRG_DONGLE 
@@ -130,7 +119,7 @@ x refactor frontend settings
 // #define MQTTKB
 // #define MB_RTU
 #define ESPNOW
-#define UDP
+// #define UDP
 // #define SHELLY_EMU
 // #define USB_CONFIG
 // #define POST_POWERCH

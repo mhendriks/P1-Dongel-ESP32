@@ -90,9 +90,9 @@ struct showValues {
 };
 
 void SetDTR(bool val){
-   portENTER_CRITICAL_ISR(&mux);
+  //  portENTER_CRITICAL_ISR(&mux);
    dtr1 = val;
-   portEXIT_CRITICAL_ISR(&mux);  
+  //  portEXIT_CRITICAL_ISR(&mux);  
 }
 
 //==================================================================================
@@ -131,7 +131,7 @@ void P1OutBridge(){
 
     if ( LED_out >= 0 ) digitalWrite(LED_out, HIGH);
     Serial1.println(CapTelegram);
-    Serial1.flush();
+    // Serial1.flush();
     Out1Avail = false; 
     if ( digitalRead(DTR_out) == LOW ) SetDTR(false);
     if ( LED_out >= 0 ) digitalWrite(LED_out, LOW);
@@ -449,9 +449,9 @@ void ResetStats(){
   P1Stats.P1max   = 0;
   P1Stats.P2max   = 0;
   P1Stats.P3max   = 0;
-  P1Stats.P1min   = 0xFFFFFFFF;
-  P1Stats.P2min   = 0xFFFFFFFF;
-  P1Stats.P3min   = 0xFFFFFFFF;  
+  P1Stats.P1min   = 0x7FFFFFFF;
+  P1Stats.P2min   = 0x7FFFFFFF;
+  P1Stats.P3min   = 0x7FFFFFFF;  
   P1Stats.Psluip  = 0xFFFFFFFF;
   P1Stats.TU1over = 0;
   P1Stats.TU2over = 0;
@@ -487,20 +487,34 @@ void ProcessStats(){
   if ( DSMRdata.current_l2_present && DSMRdata.current_l2.int_val() > P1Stats.I2piek ) P1Stats.I2piek = DSMRdata.current_l2.int_val();
   if ( DSMRdata.current_l3_present && DSMRdata.current_l3.int_val() > P1Stats.I3piek ) P1Stats.I3piek = DSMRdata.current_l3.int_val();
   
-  if ( DSMRdata.power_delivered_l1_present && DSMRdata.power_delivered_l1.int_val() > P1Stats.P1max ) P1Stats.P1max = DSMRdata.power_delivered_l1.int_val();
-  if ( DSMRdata.power_delivered_l2_present && DSMRdata.power_delivered_l2.int_val() > P1Stats.P2max ) P1Stats.P2max = DSMRdata.power_delivered_l2.int_val();
-  if ( DSMRdata.power_delivered_l3_present && DSMRdata.power_delivered_l3.int_val() > P1Stats.P3max ) P1Stats.P3max = DSMRdata.power_delivered_l3.int_val();
+  if ( DSMRdata.power_delivered_l1_present) {
+    if ( DSMRdata.power_delivered_l1.int_val() > P1Stats.P1max ) P1Stats.P1max = DSMRdata.power_delivered_l1.int_val();
+    else if ( (int32_t)(DSMRdata.power_delivered_l1.int_val() - DSMRdata.power_returned_l1.int_val()) < P1Stats.P1min ) P1Stats.P1min = (int32_t)(DSMRdata.power_delivered_l1.int_val() - DSMRdata.power_returned_l1.int_val());
+  } 
+
+  if ( DSMRdata.power_delivered_l2_present ) {
+      if ( DSMRdata.power_delivered_l2.int_val() > P1Stats.P2max ) P1Stats.P2max = DSMRdata.power_delivered_l2.int_val();
+      else if ( (int32_t)(DSMRdata.power_delivered_l2.int_val() - DSMRdata.power_returned_l2.int_val()) < P1Stats.P2min ) P1Stats.P2min = (int32_t)(DSMRdata.power_delivered_l2.int_val() - DSMRdata.power_returned_l2.int_val());
+  }
+  
+  if ( DSMRdata.power_delivered_l3_present ){
+    if ( DSMRdata.power_delivered_l3.int_val() > P1Stats.P3max ) P1Stats.P3max = DSMRdata.power_delivered_l3.int_val();
+    else if ( (int32_t)(DSMRdata.power_delivered_l3.int_val() - DSMRdata.power_returned_l3.int_val()) < P1Stats.P3min ) P1Stats.P3min = (int32_t)(DSMRdata.power_delivered_l3.int_val() - DSMRdata.power_returned_l3.int_val());
+  } 
 
   if ( DSMRdata.voltage_l1_present ) {
-    if ( DSMRdata.voltage_l1.int_val() > P1Stats.U1piek ) P1Stats.U1piek = DSMRdata.voltage_l1.int_val(); 
+    if ( DSMRdata.voltage_l1.int_val() > P1Stats.U1piek ) P1Stats.U1piek = DSMRdata.voltage_l1.int_val();
+    else if ( DSMRdata.voltage_l1.int_val() < P1Stats.U1min ) P1Stats.U1min = DSMRdata.voltage_l1.int_val(); 
     controleerOverspanning(DSMRdata.voltage_l1, P1Stats.TU1over, startTijdL1, overspanningActiefL1);
   }
   if ( DSMRdata.voltage_l2_present ) {
     if ( DSMRdata.voltage_l2.int_val() > P1Stats.U2piek ) P1Stats.U2piek = DSMRdata.voltage_l2.int_val(); 
+    else if ( DSMRdata.voltage_l2.int_val() < P1Stats.U2min ) P1Stats.U2min = DSMRdata.voltage_l2.int_val(); 
     controleerOverspanning(DSMRdata.voltage_l2, P1Stats.TU2over, startTijdL2, overspanningActiefL2);
   }
   if ( DSMRdata.voltage_l3_present ) {
     if ( DSMRdata.voltage_l3.int_val() > P1Stats.U3piek ) P1Stats.U3piek = DSMRdata.voltage_l3.int_val();
+    else if ( DSMRdata.voltage_l3.int_val() < P1Stats.U3min ) P1Stats.U3min = DSMRdata.voltage_l3.int_val(); 
     controleerOverspanning(DSMRdata.voltage_l3, P1Stats.TU3over, startTijdL3, overspanningActiefL3);
   }  
   if ( (hour() < 5) && (DSMRdata.power_delivered.int_val() < P1Stats.Psluip) && DSMRdata.power_delivered.int_val() ) P1Stats.Psluip = DSMRdata.power_delivered.int_val();
@@ -563,26 +577,3 @@ float MbusDelivered(byte mbusPort){
             break;
   }
 }
-
-/***************************************************************************
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to permit
-* persons to whom the Software is furnished to do so, subject to the
-* following conditions:
-*
-* The above copyright notice and this permission notice shall be included
-* in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
-* THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-* 
-***************************************************************************/

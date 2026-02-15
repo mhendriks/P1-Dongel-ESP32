@@ -28,43 +28,6 @@ static String jsonResponse(std::function<void(JsonDocument& doc)> fill) {
   return out;
 }
 
-
-// void StatsApi(){
-//   JsonDocument doc; // Pas de grootte aan indien nodig
- 
-//   if ( DSMRdata.current_l1_present ) doc["I1piek"]  = P1Stats.I1piek;
-//   if ( DSMRdata.current_l2_present ) doc["I2piek"]  = P1Stats.I2piek;
-//   if ( DSMRdata.current_l3_present ) doc["I3piek"]  = P1Stats.I3piek;
-  
-//   if ( DSMRdata.power_delivered_l1_present ) doc["P1max"]   = P1Stats.P1max;
-//   if ( DSMRdata.power_delivered_l2_present ) doc["P2max"]   = P1Stats.P2max;
-//   if ( DSMRdata.power_delivered_l3_present ) doc["P3max"]   = P1Stats.P3max;
-  
-//   if ( DSMRdata.power_delivered_l1_present ) doc["P1min"]   = P1Stats.P1min;
-//   if ( DSMRdata.power_delivered_l2_present ) doc["P2min"]   = P1Stats.P2min;
-//   if ( DSMRdata.power_delivered_l3_present ) doc["P3min"]   = P1Stats.P3min;
-
-//   if ( DSMRdata.voltage_l1_present ) doc["U1piek"]  = P1Stats.U1piek;
-//   if ( DSMRdata.voltage_l2_present ) doc["U2piek"]  = P1Stats.U2piek;
-//   if ( DSMRdata.voltage_l3_present ) doc["U3piek"]  = P1Stats.U3piek;
-
-//   if ( DSMRdata.voltage_l1_present )doc["U1min"]  = P1Stats.U1min;
-//   if ( DSMRdata.voltage_l2_present )doc["U2min"]  = P1Stats.U2min;
-//   if ( DSMRdata.voltage_l3_present )doc["U3min"]  = P1Stats.U3min;
-
-//   if ( DSMRdata.voltage_l1_present )doc["TU1over"] = P1Stats.TU1over;
-//   if ( DSMRdata.voltage_l2_present )doc["TU2over"] = P1Stats.TU2over;
-//   if ( DSMRdata.voltage_l3_present )doc["TU3over"] = P1Stats.TU3over;
-  
-//   doc["Psluip"]  = P1Stats.Psluip;
-//   doc["start_time"] = P1Stats.StartTime;
-
-//   String json;
-//   serializeJson(doc, json);
-//   sendJsonBuffer( json.c_str() );
-
-// }
-
 String apiStatsJson() {
   return jsonResponse([&](JsonDocument& doc){
     // doc["ts"] = (uint32_t)time(nullptr);
@@ -157,51 +120,25 @@ void JsonWater(){
   jsonDoc["water"]["unit"]  = "m3";
 }
 
-void StatsApi(){
-  JsonDocument doc; // Pas de grootte aan indien nodig
- 
-  if ( DSMRdata.current_l1_present ) doc["I1piek"]  = P1Stats.I1piek;
-  if ( DSMRdata.current_l2_present ) doc["I2piek"]  = P1Stats.I2piek;
-  if ( DSMRdata.current_l3_present ) doc["I3piek"]  = P1Stats.I3piek;
-  
-  if ( DSMRdata.power_delivered_l1_present ) doc["P1max"]   = P1Stats.P1max;
-  if ( DSMRdata.power_delivered_l2_present ) doc["P2max"]   = P1Stats.P2max;
-  if ( DSMRdata.power_delivered_l3_present ) doc["P3max"]   = P1Stats.P3max;
-  
-  if ( DSMRdata.power_delivered_l1_present ) doc["P1min"]   = P1Stats.P1min;
-  if ( DSMRdata.power_delivered_l2_present ) doc["P2min"]   = P1Stats.P2min;
-  if ( DSMRdata.power_delivered_l3_present ) doc["P3min"]   = P1Stats.P3min;
+// void HWapi_root() {
+//   String MACID = macID;
+//   MACID.toLowerCase();
+//   String jsonString = "{\"product_name\":\"P1 Dongle\",\"product_type\":\"HWE-P1\",\"serial\":\"";  
+//   jsonString += MACID;
+//   jsonString += "\",\"firmware_version\":\"" _VERSION_ONLY "\",\"api_version\":\"v1\"}";
 
-  if ( DSMRdata.voltage_l1_present ) doc["U1piek"]  = P1Stats.U1piek;
-  if ( DSMRdata.voltage_l2_present ) doc["U2piek"]  = P1Stats.U2piek;
-  if ( DSMRdata.voltage_l3_present ) doc["U3piek"]  = P1Stats.U3piek;
+//   sendJsonBuffer(  jsonString.c_str() );
+// }
 
-  if ( DSMRdata.voltage_l1_present )doc["U1min"]  = P1Stats.U1min;
-  if ( DSMRdata.voltage_l2_present )doc["U2min"]  = P1Stats.U2min;
-  if ( DSMRdata.voltage_l3_present )doc["U3min"]  = P1Stats.U3min;
+String apiHWjson() {
 
-  if ( DSMRdata.voltage_l1_present )doc["TU1over"] = P1Stats.TU1over;
-  if ( DSMRdata.voltage_l2_present )doc["TU2over"] = P1Stats.TU2over;
-  if ( DSMRdata.voltage_l3_present )doc["TU3over"] = P1Stats.TU3over;
-  
-  doc["Psluip"]  = P1Stats.Psluip;
-  doc["start_time"] = P1Stats.StartTime;
-
-  String json;
-  serializeJson(doc, json);
-  sendJsonBuffer( json.c_str() );
-
-}
-
-void HWapi_root() {
   String MACID = macID;
   MACID.toLowerCase();
   String jsonString = "{\"product_name\":\"P1 Dongle\",\"product_type\":\"HWE-P1\",\"serial\":\"";  
   jsonString += MACID;
   jsonString += "\",\"firmware_version\":\"" _VERSION_ONLY "\",\"api_version\":\"v1\"}";
-
-  sendJsonBuffer(  jsonString.c_str() );
-}
+  return jsonString;
+ }
 
 void HWapi() {
     JsonDocument jsonDoc;

@@ -270,9 +270,9 @@ function InsightData(data){
                 let waarde = data[key];
 				
                 if (key.startsWith("U")) {
-                    waarde = (waarde / 1000).toFixed(1); // mV → V
+					waarde = (waarde / 1000).toFixed(1); // mV → V
                 } else if (key.startsWith("I")) {
-                    waarde = (waarde / 1000).toFixed(3); // mA → A
+					 waarde = (waarde / 1000).toFixed(3); // mA → A
                 } else if (key === "start_time") {
 //                     const datum = new Date(waarde * 1000);
                     let uur  = Math.trunc(waarde/3600 % 24);
@@ -2339,7 +2339,112 @@ function CopyTelegram(){
     document.getElementById('lastMonthsTableCosts').getElementsByTagName('tbody').innerHTML = "";
       
   } // setMonthTableType()
-    
+
+
+let _settingsSubTabsInited = false;
+
+function initSettingsSubTabsOnce() {
+  if (_settingsSubTabsInited) return;
+  _settingsSubTabsInited = true;
+
+  const root = document.getElementById("Settings");
+  if (!root) return;
+
+  const btns = root.querySelectorAll("#settings_subtabs .subtab-btn");
+  const panes = root.querySelectorAll(".settings-pane");
+
+  btns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      btns.forEach(b => b.classList.remove("active"));
+      panes.forEach(p => p.classList.remove("active"));
+
+      btn.classList.add("active");
+      const targetId = btn.getAttribute("data-target");
+      const pane = document.getElementById(targetId);
+      if (pane) pane.classList.add("active");
+    });
+  });
+}
+
+function splitSettingsUI() {
+  const table   = document.getElementById("settings_table");
+  const general = document.getElementById("settings_general");
+  const tariff  = document.getElementById("settings_tariff");
+  const mqtt    = document.getElementById("settings_mqtt");
+  const modbus  = document.getElementById("settings_modbus");
+
+  if ( !table || !general || !mqtt || !modbus || !tariff ) return;
+
+  // velden op basis van "i" (dus zonder "settingR_")
+  const MQTT_KEYS = new Set([
+    "mqtt_tls",
+    "mqtt_broker",
+    "mqtt_broker_port",
+    "mqtt_user",
+    "mqtt_passwd",
+    "mqtt_toptopic",
+    "mqtt_interval",
+    "act-json-mqtt",
+	"ha_disc_enabl",
+	"act-json-mqtt",
+	"macid-topic"
+  ]);
+
+  const TARIFF_KEYS = new Set([
+	"ed_tariff1",
+	"ed_tariff2",
+	"er_tariff1",
+	"er_tariff2",
+	"w_tariff",
+	"gd_tariff",
+	"electr_netw_costs",
+	"water_netw_costs",
+	"gas_netw_costs"
+  ]);
+  
+  const MODBUS_KEYS = new Set([
+    "mb_map",
+    "mb_id",
+    "mb_port",
+    "mb_parity",
+    "mb_baud",
+    "mb_bits",
+    "mb_stop",
+    "modbus_mapping",
+    "modbus_dev_id",
+    "modbus_baud",
+    "modbus_parity",
+    "modbus_bits",
+    "modbus_stop"
+  ]);
+
+  // alle bestaande rows (waar ze ook al staan) opnieuw indelen
+  const rows = Array.from(document.querySelectorAll("#Settings .settingDiv"));
+
+  rows.forEach(row => {
+    const id = row.id || "";
+    // id is "settingR_<key>"
+    const key = id.startsWith("settingR_") ? id.substring("settingR_".length) : "";
+
+    if (MQTT_KEYS.has(key)) mqtt.appendChild(row);
+    else if (TARIFF_KEYS.has(key)) tariff.appendChild(row);
+    else if (MODBUS_KEYS.has(key)) modbus.appendChild(row);
+    else general.appendChild(row);
+  });
+}
+
+function markDirty(el) {
+  // Zet 'dirty' op de hele rij, dan kan CSS het type input bepalen
+  const row = el.closest('.settingDiv');
+  if (row) row.classList.add('is-dirty');
+}
+
+function clearDirtySettings(){
+  document
+    .querySelectorAll('#Settings .settingDiv.is-dirty')
+    .forEach(row => row.classList.remove('is-dirty'));
+}
+  
   //============================================================================  
   function refreshSettings()
   {
@@ -2365,45 +2470,81 @@ function CopyTelegram(){
 			  rowDiv.appendChild(fldDiv);
 		//--- input ---
 		  let inputDiv = document.createElement("div");
-			  inputDiv.setAttribute("class", "settings-right");
-
-				let sInput = document.createElement("INPUT");
-				sInput.setAttribute("id", "setFld_"+i);
-				if ( data[i].type === undefined ) {
-					sInput.setAttribute("type", "checkbox");
-					sInput.checked = data[i];
-					sInput.style.width = "auto";
-					if ( i == "dev-pairing") sInput.disabled = true;
-					if ( i == "eid-planner") sInput.disabled = true;
-				}
-				else {
-				switch(data[i].type){
-				case "s":
+			inputDiv.setAttribute("class", "settings-right");
+			
+			let sInput; // kan INPUT of SELECT worden
+			const fldId = "setFld_" + i;
+			
+			// --- mb_map als dropdown ---
+			if (i === "mb_map") {
+			  const MAPS = [
+				{ v: 0, t: "Default - uint32" },
+				{ v: 1, t: "SDM630" },
+				{ v: 2, t: "DTSU666" },
+				{ v: 3, t: "Alfen / Socomec" },
+				{ v: 4, t: "EM330" },
+				{ v: 5, t: "ABB B21" },
+				{ v: 6, t: "MX3xx" },
+				{ v: 7, t: "Default 2 - floats" },
+			  ];
+			
+			  const sel = document.createElement("select");
+			  sel.setAttribute("id", fldId);
+			
+			  // huidige waarde uit settings
+			  const cur = parseInt(data[i].value ?? "0", 10);
+			
+			  MAPS.forEach(o => {
+				const opt = document.createElement("option");
+				opt.value = String(o.v);
+				opt.textContent = `${o.v} – ${o.t}`;
+				if (o.v === cur) opt.selected = true;
+				sel.appendChild(opt);
+			  });
+			
+			  sInput = sel;
+			}
+			else {
+			  // --- standaard INPUT gedrag ---
+			  sInput = document.createElement("input");
+			  sInput.setAttribute("id", fldId);
+			
+			  if (data[i].type === undefined) {
+				sInput.setAttribute("type", "checkbox");
+				sInput.checked = data[i];
+				if (i === "dev-pairing") sInput.disabled = true;
+				if (i === "eid-planner") sInput.disabled = true;
+			  }
+			  else {
+				switch (data[i].type) {
+				  case "s":
 					sInput.setAttribute("type", "text");
 					sInput.setAttribute("maxlength", data[i].max);
-					sInput.setAttribute("placeholder", "<max " + data[i].max +">");
+					sInput.setAttribute("placeholder", "<max " + data[i].max + ">");
 					break;
-				case "f":
+				  case "f":
 					sInput.setAttribute("type", "number");
 					sInput.max = data[i].max;
 					sInput.min = data[i].min;
 					sInput.step = (data[i].min + data[i].max) / 1000;
 					break;
-				case "i":
+				  case "i":
 					sInput.setAttribute("type", "number");
 					sInput.max = data[i].max;
 					sInput.min = data[i].min;
-					sInput.step = (data[i].min + data[i].max) / 1000;
 					sInput.step = 1;
 					break;
 				}
 				sInput.setAttribute("value", data[i].value);
-				}
-				sInput.addEventListener('change',
-							function() { setBackGround("setFld_"+i, "lightgray"); },
-										false
-							);
-			  inputDiv.appendChild(sInput);
+			  }
+			}
+			
+			// bestaande dirty-detectie behouden
+			sInput.addEventListener("change", () => markDirty(sInput));
+			sInput.addEventListener("input",  () => markDirty(sInput));
+			
+			inputDiv.appendChild(sInput);
+
 			  
 	  if( EnableHist || !( ["ed_tariff1","ed_tariff2", "er_tariff1","er_tariff2" ,"gd_tariff","electr_netw_costs","gas_netw_costs"].includes(i) ) ) {
 			rowDiv.appendChild(inputDiv);
@@ -2412,12 +2553,14 @@ function CopyTelegram(){
 	  }
 	  else
 	  {
-		document.getElementById("setFld_"+i).style.background = "white";
+// 		document.getElementById("setFld_"+i).style.background = "white";
 		document.getElementById("setFld_"+i).value = data[i].value;
 	  }
 	}
 
-//       document.getElementById('message').innerHTML = newVersionMsg;
+  initSettingsSubTabsOnce();
+  splitSettingsUI();
+
       
   } // refreshSettings()
   
@@ -2624,6 +2767,7 @@ function CopyTelegram(){
 //       refreshSettings();
 		document.getElementById('settings_table').innerHTML = '';
 		objDAL.refreshDeviceInformation();
+		clearDirtySettings();
 
     } else {
       console.log("undoReload(): I don't knwo what to do ..");
@@ -2639,6 +2783,7 @@ function CopyTelegram(){
     switch(activeTab){
       case "bEditSettings":
         saveSettings();
+        clearDirtySettings();
         break;
       case "bEditMonths":
         saveMeterReadings();

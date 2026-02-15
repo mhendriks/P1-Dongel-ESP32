@@ -39,7 +39,7 @@ html {
 
 #settings_btns a{ 
     background-color: #555;
-    padding: 7px 20px;
+    padding: 10px 25px;
     border-radius: 20px;
     margin-right: 10px;
 }
@@ -121,9 +121,11 @@ input[type=number]{
 	display: inline-block;
 }
 
+/* 
 .settings-right{
 	text-align: left;	
 }
+ */
 
 #lastHoursTable, #lastDaysTable, #lastDaysTable th, #lastHoursTable th {
 	text-align: right;	
@@ -332,7 +334,6 @@ ul:after { clear: both; }
 #DashTab h1 span, #DashTab h1 svg.iconify , #DashTab h1 svg.iconify path  {
     background-color: transparent;
 	color: white!important;
-	margin-right:2px;
 	}
 	
 nav {
@@ -707,27 +708,218 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 
 #eid-powered a {display: contents;}
 
-/*
-***************************************************************************
-*
-* Permission is hereby granted, free of charge, to any person obtaining a
-* copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to permit
-* persons to whom the Software is furnished to do so, subject to the
-* following conditions:
-*
-* The above copyright notice and this permission notice shall be included
-* in all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
-* THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-* 
-***************************************************************************
-*/
+/* ================== SETTINGS (scoped) ================== */
+
+#Settings .settings-pane{ display:none; }
+#Settings .settings-pane.active{ display:block; }
+
+#settings_btns { text-align: center; }
+
+/* container width */
+#Settings #tabEditSettings .inner-div{
+  display: block;
+  max-width: 900px;
+  width: min(900px, calc(100vw - 24px));
+  text-align: center;
+}
+
+/* subtabs (pills) */
+#Settings .settings-subtabs{
+  background: #e9e9e9;
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 999px;
+  padding: 6px;
+  display: inline-flex;
+  gap: 6px;
+/*   margin: 0 auto 12px; */
+}
+
+/* buttons */
+#Settings .subtab-btn{
+  border: 1px solid transparent;    /* voorkomt “groei” bij active */
+  margin: 0 !important;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: #222;
+  opacity: .85;
+  line-height: 1;           /* voorkomt extra verticale ruimte */
+  box-shadow: none;
+}
+
+#Settings .subtab-btn:hover{
+  background: rgba(255,255,255,0.7);
+  opacity: 1;
+}
+
+/* active: subtiele oranje outline (zonder visueel breder te worden) */
+#Settings .subtab-btn.active{
+  background: rgba(255,255,255,0.85);
+  border-color: rgba(255, 120, 0, 0.55);
+  box-shadow: inset 0 0 0 2px rgba(255,120,0,0.18);
+  opacity: 1;
+  font-weight: 600;
+}
+
+/* card/pane */
+#Settings .settings-pane{
+  background: #c3c3c3; /* jouw keuze */
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 10px;
+  overflow: hidden; /* vangt 1px overflow af */
+  width: fit-content;
+  max-width: calc(100vw - 24px);
+  margin: 14px auto 0;
+  text-align: left;
+}
+
+/* rows */
+#Settings .settingDiv{
+  display: grid;
+/*   grid-template-columns: auto auto; */
+  grid-template-columns: 1fr max-content;
+  gap: 14px;
+  align-items: center;
+  padding: 9px 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  white-space: normal;
+}
+
+
+#Settings .settingDiv:last-child{ border-bottom: none; }
+
+/* label */
+#Settings .settingDiv > div:first-child{
+  color: #111;
+  font-size: 16px;
+    text-align: left;
+}
+
+
+/* input wrapper */
+/* 
+#Settings .settings-right{
+  min-width: 0;
+  text-align: right;
+}
+ */
+
+/* inputs: neem volledige kolombreedte (strakker) */
+#Settings input[type="text"],
+#Settings input[type="number"]{
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 280px;
+  padding: 8px 12px;
+  font-size: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: #fff;
+}
+
+/* mobiel */
+@media (max-width: 640px){
+  #Settings .settingDiv{ grid-template-columns: 1fr; }
+  #Settings .settings-right{ text-align: left; }
+}
+
+#Settings > h2{
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+/* ================== SETTINGS: checkbox -> switch ================== */
+
+#Settings .settings-right{
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  min-width: 0;
+}
+
+#Settings input[type="checkbox"]{
+  -webkit-appearance: none ;
+  appearance: none ;
+  transform: none ;
+  
+  align-self: center;
+  line-height: 0;
+  
+  width: 46px ;
+  height: 28px ;
+  border-radius: 999px ;
+
+  background: #d1d1d6 !important;
+  border: 1px solid rgba(0,0,0,0.12) ;
+
+  position: relative ;
+  cursor: pointer ;
+  outline: none ;
+  margin: 0 ;
+  padding: 0 ;
+  box-sizing: border-box ;
+
+  transition: background-color .18s ease, border-color .18s ease ;
+}
+
+#Settings input[type="checkbox"]::after{
+  content: "" ;
+  position: absolute ;
+  top: 2px ;
+  left: 2px ;
+
+  width: 22px ;
+  height: 22px ;
+  border-radius: 50% ;
+
+  background: #fff ;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.28) ;
+  transition: transform .18s ease ;
+}
+
+/* ON */
+#Settings input[type="checkbox"]:checked{
+  background: #34c759 !important;  /* #ff7800 */
+  border-color: rgba(0,0,0,0.08) !important;
+}
+
+#Settings input[type="checkbox"]:checked::after{
+  transform: translateX(18px);
+}
+
+/* disabled */
+#Settings input[type="checkbox"]:disabled{
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#Settings input[type="checkbox"]:active::after{
+  box-shadow:
+    0 1px 1px rgba(0,0,0,0.35),
+    0 0 0 0.5px rgba(0,0,0,0.15);
+}
+
+#Settings .settingDiv.is-dirty input[type="text"],
+#Settings .settingDiv.is-dirty input[type="number"],
+#Settings .settingDiv.is-dirty select,
+#Settings .settingDiv.is-dirty textarea{
+  border-color: rgba(255,120,0,0.70);
+  box-shadow: 0 0 0 3px rgba(255,120,0,0.18);
+}
+
+#Settings .settingDiv.is-dirty input[type="checkbox"]{
+  box-shadow: 0 0 0 3px rgba(255,120,0,0.22);
+}
+
+/* select dezelfde stijl als input/number */
+#Settings select{
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 280px;
+  padding: 8px 12px;
+  font-size: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.10);
+  background: #fff;
+}
