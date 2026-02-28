@@ -18,7 +18,6 @@ uint32_t R_value = 0, B_value = 0, G_value = 0;
 //PROFILES
 #ifdef ULTRA
   #include "hw_profile_ultra.h"
-  #undef DEV_PAIRING // 5.1 feature is ESPNOW
 #else
   #ifdef ETHERNET
     #ifdef __Az__
@@ -148,9 +147,9 @@ mod_conf *active_mod_conf = &module_config[0];
 #else
   #define OPT4  
 #endif
- 
-#ifdef DEV_PAIRING
-  #define OPT5  "[PAIR]"  
+
+#ifdef UDP_BCAST
+  #define OPT5  "[UDP]"
 #else
   #define OPT5  
 #endif
