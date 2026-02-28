@@ -72,6 +72,7 @@ void readtriggers(){
 }
 
 void NetSwitchStateMngr(){
+  if ( !bNETSWenabled ) return;
   if ( !bNetSwitchConfigRead ) return;
   //every time new p1 values are available
   int32_t Phouse = DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val();
@@ -94,6 +95,7 @@ void NetSwitchStateMngr(){
 }
 
 void handleNetSwitch(){
+  if ( !bNETSWenabled ) return;
   if ( bShellySwitch && bNetSwitchConfigRead ) {
     bShellySwitch = false;
     toggleNetSwitchSocket(lastToggleState);
@@ -102,15 +104,18 @@ void handleNetSwitch(){
 
 // / Functie om de Shelly Power Plug aan of uit te zetten
 void toggleNetSwitchSocket(bool turnOn) {
+  if ( !bNETSWenabled ) return;
   if ( docTriggers["device"]["dongle_io"].as<int>() > 0 ) {
     Debugf("IO changed to %s \n",turnOn?"True":"False");
     digitalWrite(docTriggers["device"]["dongle_io"].as<int>(), turnOn);
     return;
   }
   //no dongle io switching
-  if ( netw_state != NW_NONE && strlen(docTriggers["device"]["name"].as<const char*>()) ) {
+  const char* deviceName = docTriggers["device"]["name"].is<const char*>() ? docTriggers["device"]["name"].as<const char*>() : nullptr;
+  const char* relay = docTriggers["device"]["relay"] | "0";
+  if ( netw_state != NW_NONE && deviceName && deviceName[0] ) {
     HTTPClient http;
-    String url = String("http://") + docTriggers["device"]["name"].as<const char*>() + String("/relay/") + docTriggers["device"]["relay"].as<const char*>() + String("?turn=") + (turnOn ? "on" : "off");
+    String url = String("http://") + deviceName + String("/relay/") + relay + String("?turn=") + (turnOn ? "on" : "off");
     Debug("url: ");Debugln(url);
     
     // API-aanroep

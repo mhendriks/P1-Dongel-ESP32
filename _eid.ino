@@ -4,7 +4,20 @@
       - UI: check expire claimcode + url (frontend)
     */
 
-    #include "./../../_secrets/energyid.h"
+    #if __has_include("./../../_secrets/energyid.h")
+      #include "./../../_secrets/energyid.h"
+    #else
+      // Optional EnergyID provisioning secrets. Empty defaults keep compilation working.
+      #ifndef EID_PROV_URL
+        #define EID_PROV_URL ""
+      #endif
+      #ifndef EID_PROF_KEY
+        #define EID_PROF_KEY ""
+      #endif
+      #ifndef EID_PROF_SECR
+        #define EID_PROF_SECR ""
+      #endif
+    #endif
 
     String  eid_webhook;
     String  eid_header_auth;
@@ -40,7 +53,7 @@
   }
 
     void EIDStart(){
-      if ( bEID_enabled ) EIDPostHello();
+      if ( bEID_enabled ) EIDPostHello(false);
     }
 
     void handleEnergyID(){  
@@ -61,11 +74,11 @@
 
       switch ( P1Status.eid_state ) {
         case EID_ENROLLED:
-            if ( !eid_webhook.length() ) { if ( DUE(T_EID_HELLO_FAIL) ) EIDPostHello(); } //get the webhook url
+            if ( !eid_webhook.length() ) { if ( DUE(T_EID_HELLO_FAIL) ) EIDPostHello(false); } //get the webhook url
             else if ( DUE(T_EID) )  { //is enrolled and got webhook url
               PostEnergyID();
             }
-            if ( DUE(T_EID_REFRESH) ) EIDPostHello(); //refresh every 24h
+            if ( DUE(T_EID_REFRESH) ) EIDPostHello(false); //refresh every 24h
             if ( recordNumber != "" && apiAccessToken != "" && !bGotDirective ) EIDGetDirectives(); //4.16 feature
             if ( bGetPlannerDetails ) EIDGetDirectDetails();
             if ( DUE(T_EID_PLAN) ) bGetPlannerDetails = true;
@@ -73,7 +86,7 @@
         case EID_CLAIMING:
           if ( DUE(T_EID_CLAIM) ) {
             DebugTln("EID_CLAIMING");
-            EIDPostHello(); //refresh every 1m
+            EIDPostHello(false); //refresh every 1m
           }
           break;
         case EID_IDLE:
@@ -133,7 +146,7 @@
 
     // {"webhookUrl":"https://sbns-energyid-prod.servicebus.windows.net/sbq-smartstuff-p1/messages","headers":{"authorization":"<gone>","x-twin-id":"<>"},"recordNumber":"EA-14195189","recordName":"Mijn woning","webhookPolicy":{"allowedInterval":"PT5M","uploadInterval":300}}
 
-    void EIDPostHello() {
+    void EIDPostHello(bool fromHttpRequest) {
       /*
         States:
         0 - IDLE: Enabled maar nog niet in claiming fase
@@ -163,7 +176,7 @@
         DeserializationError error = deserializeJson(doc, payload);
         if (error) {
           DebugTln(F("JSON parsing failed in claim response"));
-          httpServer.send(400);
+          if (fromHttpRequest) httpServer.send(400);
         } else {
           const char* claimCode = doc["claimCode"];
 
@@ -197,13 +210,13 @@
             P1Status.eid_state = EID_ENROLLED;
           }
 
-          httpServer.send(200, "application/json", payload);
+          if (fromHttpRequest) httpServer.send(200, "application/json", payload);
         }
       } else {
         Debugln(F("HTTP request failed or invalid response"));
         eid_webhook = "";
         RESTART_TIMER(T_EID_HELLO_FAIL);
-        httpServer.send(400);
+        if (fromHttpRequest) httpServer.send(400);
       }
       
       static bool firstHelloDone = false;
@@ -227,15 +240,24 @@
       int httpResponseCode = http.GET();
       Debug(F("httpResponseCode: "));Debugln(httpResponseCode);
       String payload = http.getString();
-      Debug(F("response body: "));Debugln(payload); 
+      #ifdef DEBUG
+        Debug(F("response body: "));Debugln(payload); 
+      #endif
       if ( httpResponseCode == 200 ) { 
         JsonDocument doc;
         DeserializationError error = deserializeJson(doc, payload);
         if (error) DebugTln(F("JSON parsing failed in EIDGetDirectives"));
         else {
-          EIDDirectiveID = doc[0]["id"].as<const char*>();
-          DebugTf("Directive ID: %s", EIDDirectiveID);
-          bGetPlannerDetails = true;
+          const char* directiveId = doc[0]["id"].is<const char*>() ? doc[0]["id"].as<const char*>() : nullptr;
+          if (directiveId && directiveId[0] != '\0') {
+            EIDDirectiveID = directiveId;
+            DebugTf("Directive ID: %s", EIDDirectiveID.c_str());
+            bGetPlannerDetails = true;
+          } else {
+            EIDDirectiveID = "";
+            bGetPlannerDetails = false;
+            DebugTln(F("No directive id found in response"));
+          }
         }
       }  
       http.end();
@@ -257,23 +279,27 @@
       int httpResponseCode = http.GET();
       Debug(F("httpResponseCode: "));Debugln(httpResponseCode);
       String payload = http.getString();
-      Debug(F("response body: "));Debugln(payload); 
+      #ifdef DEBUG
+        Debug(F("response body: "));Debugln(payload); 
+      #endif
       if ( httpResponseCode == 200 ) {
         // EIDDirectiveID = "";
         bGetPlannerDetails = false;
-        JsonDocument filter;
-        filter["data"][0]["timestamp"] = true;
-        filter["data"][0]["signal"] = true;
         StroomPlanData.clear();
-        DeserializationError error = deserializeJson(StroomPlanData, payload, DeserializationOption::Filter(filter));
+        DeserializationError error = deserializeJson(StroomPlanData, payload);
     #ifdef DEBUG
         if (error) DebugTln(F("JSON parsing failed in EIDGetDirectDetails"));
         else {
-            for (int i = 0; i < 14; i++) {
-              Debugf("signal [%i] : ",i);Debugln(StroomPlanData["data"][i]["signal"].as<const char*>());
+            JsonArray dataArray = StroomPlanData["data"].as<JsonArray>();
+            Debugf("EID planner records parsed: %u\n", (unsigned)dataArray.size());
+            int maxRecords = dataArray.size() < 14 ? dataArray.size() : 14;
+            for (int i = 0; i < maxRecords; i++) {
+              const char* signal = dataArray[i]["signal"] | "<missing>";
+              Debugf("signal [%i] : ",i);Debugln(signal);
             }
         }
-        JsonEIDplanner();
+        ApiResponse planner = JsonEIDplanner();
+        Debugln(planner.body);
     #endif  
       }
       http.end();
@@ -285,7 +311,7 @@
       //get server parameters
     //  DebugT(F("server action: "));Debugln( httpServer.arg("action") );
       if ( httpServer.arg("action") == "reset" ) P1Status.eid_state = EID_IDLE;
-      EIDPostHello(); 
+      EIDPostHello(true); 
     }
 
     String IsoTS () {
