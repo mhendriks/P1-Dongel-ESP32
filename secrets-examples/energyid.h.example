@@ -1,0 +1,7 @@
+#pragma once
+
+// EnergyID provisioning endpoint and credentials
+#define EID_PROV_URL   "https://hooks.energyid.eu/hello"
+#define EID_PROF_KEY   "replace-with-your-key"
+#define EID_PROF_SECR  "replace-with-your-secret"
+

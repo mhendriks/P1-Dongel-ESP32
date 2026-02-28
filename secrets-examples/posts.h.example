@@ -1,0 +1,9 @@
+#pragma once
+
+// Optional suffix appended to OTAURL to form BaseOTAurl
+// Examples: "", "latest/", "beta/"
+#define OTAURL_PREFIX ""
+
+// Only used when POST_POWERCH is enabled
+#define URL_POWERCH "https://example.invalid/api/power"
+
