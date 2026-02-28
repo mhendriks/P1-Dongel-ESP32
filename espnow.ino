@@ -41,39 +41,6 @@ bool bESPNowInit = false;
 
 */
 
-void ReadManifest( const char* link ) {
-  HTTPClient http;
-  String ota_manifest = "http://ota.smart-stuff.nl/manifest/" + String(link) + "/manifest.json";
-  // ota_manifest += "version-manifest.json";
-  Debugln( ota_manifest );
-  http.begin( ota_manifest.c_str() );
-    
-  int httpResponseCode = http.GET();
-  if ( httpResponseCode <= 0 ) { 
-    Debug(F("Error code: "));Debugln(httpResponseCode);
-    return; //leave on error
-  }
-  
-  Debugln( F("Version Manifest") );
-  Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
-  String payload = http.getString();
-  Debugln(payload);
-  http.end();
-  
-  JsonDocument doc;
-
-  if ( deserializeJson(doc, payload) ) return;
-
-  const char* url = doc["url"] | "";
-  const char* ver = doc["version"] | "";
-  strlcpy(client_ota_data.update_url, url, sizeof(client_ota_data.update_url));
-  strlcpy(client_ota_data.version, ver, sizeof(client_ota_data.version));
-
-  Debugln(client_ota_data.update_url);
-  Debugln(client_ota_data.version);
-
-} //ReadManifest
-
 void procesACK(const uint8_t *incomingData){
   esp_now_ack_data_t ackData;
   memcpy(&ackData, incomingData, sizeof(ackData));
@@ -212,19 +179,29 @@ void StartESPNOW(){
 #ifdef ETHERNET
   WiFi.mode(WIFI_STA);
 #endif  
+  Debugf("StartESPNOW: peers=%u nrgm=%u\n", Pref.peers, bNRGMenabled ? 1 : 0);
   if (esp_now_init() != ESP_OK) {
-  Debugln("Error initializing ESP-NOW");
-  return;
+    Debugln("Error initializing ESP-NOW");
+    bESPNowInit = false;
+    return;
   } 
 
   // Register send callback function
   esp_now_register_send_cb(OnDataSent);
   esp_now_register_recv_cb(OnDataRecv);
 
-  AddPeer(broadcastAddress); //always add broadcast address 
-  if ( Pref.peers ) AddPeer(Pref.mac);
+  AddPeer(broadcastAddress); //always add broadcast address
+  Debugln("StartESPNOW: broadcast peer added");
+  if ( Pref.peers ) {
+    AddPeer(Pref.mac);
+    Debugf("StartESPNOW: stored peer added [%02X:%02X:%02X:%02X:%02X:%02X]\n",
+           Pref.mac[0], Pref.mac[1], Pref.mac[2], Pref.mac[3], Pref.mac[4], Pref.mac[5]);
+  } else {
+    Debugln("StartESPNOW: no stored peer");
+  }
 
   bESPNowInit = true;
+  Debugln("StartESPNOW: init OK");
 }
 
 void sendStroomPlanner(){
@@ -232,20 +209,33 @@ void sendStroomPlanner(){
   if ( StroomPlanData.size() == 0 ) return;
   
   planner_t PlannerData;
+  memset(&PlannerData, 0, sizeof(PlannerData));
+  PlannerData.msgType = STROOMPLANNER;
 
   if ( !bEID_enabled) {
     PlannerData.rec[0].hour = 99; //sent disabled state to display
   } else {
-    const char* timestamp = StroomPlanData["data"][0]["timestamp"];
-    if (timestamp && strlen(timestamp) < 13) {
+    JsonArray dataArray = StroomPlanData["data"].as<JsonArray>();
+    size_t plannerCount = dataArray.size();
+    if (plannerCount == 0) return;
+
+    const char* timestamp = dataArray[0]["timestamp"].is<const char*>() ? dataArray[0]["timestamp"].as<const char*>() : nullptr;
+    if (!timestamp || strlen(timestamp) < 13) {
       DebugTln(F("Ongeldige of ontbrekende timestamp"));
       return;
     }
-    
+
     for (int i = 0; i < 10; i++ ){
-      const char* ts = StroomPlanData["data"][i]["timestamp"];
+      PlannerData.rec[i].hour = 255;
+      PlannerData.rec[i].type = -1;
+
+      if (i >= (int)plannerCount) continue;
+      const char* ts = dataArray[i]["timestamp"].is<const char*>() ? dataArray[i]["timestamp"].as<const char*>() : nullptr;
+      if (!ts || strlen(ts) < 13) continue;
+
       PlannerData.rec[i].hour = (ts[11] - '0') * 10 + (ts[12] - '0');
-      PlannerData.rec[i].type = signalToEnum(StroomPlanData["data"][i]["signal"]);
+      const char* signal = dataArray[i]["signal"].is<const char*>() ? dataArray[i]["signal"].as<const char*>() : nullptr;
+      PlannerData.rec[i].type = signalToEnum(signal);
       Debugf("! PLANNER - hour: %i - type : %i\n", PlannerData.rec[i].hour, PlannerData.rec[i].type);
     }
   }
@@ -331,7 +321,11 @@ void SendTariffData(){
 }
 
 void P2PSendActualData(){
-  if ( ! Pref.peers || ! bESPNowInit ) return;
+  if ( ! Pref.peers || ! bESPNowInit || !bNRGMenabled ) {
+    // Debugln("P2P sending actual blocked");
+    return;
+  }
+  
   ActualData.epoch  = actT;
   ActualData.P      = DSMRdata.power_delivered.int_val();
   ActualData.Pr     = DSMRdata.power_returned.int_val() ;
@@ -349,7 +343,8 @@ void P2PSendActualData(){
   else ActualData.Psolar = Enphase.Actual + SolarEdge.Actual;
   
   // esp_err_t result = esp_now_send(NULL, (uint8_t *) &ActualData, sizeof(ActualData));
-  esp_now_send(NULL, (uint8_t *) &ActualData, sizeof(ActualData));
+  esp_err_t rs = esp_now_send(NULL, (uint8_t *) &ActualData, sizeof(ActualData));
+  if (rs != ESP_OK) Debugf("P2P actual send failed: %d\n", (int)rs);
 
   // Debug("Senddata Ptot: ");Debugln(ActualData.P+ActualData.Pr);
 }
@@ -499,7 +494,15 @@ void handleP2P(){
   switch ( P2PType ) {
     case UPD_VER_REQ: {
       client_ota_data.version[0] = '\0';
-      ReadManifest(client_ota_data.manifest);
+      JsonDocument manifest;
+      if (ReadManifest(manifest, client_ota_data.manifest)) {
+        const char* url = manifest["url"] | "";
+        const char* ver = manifest["version"] | "";
+        strlcpy(client_ota_data.update_url, url, sizeof(client_ota_data.update_url));
+        strlcpy(client_ota_data.version, ver, sizeof(client_ota_data.version));
+        Debugln(client_ota_data.update_url);
+        Debugln(client_ota_data.version);
+      }
       client_ota_data.type = UPD_VER_RSP;
       esp_err_t result = esp_now_send(NULL, (uint8_t *)&client_ota_data, sizeof(client_ota_data));
       Debugf("[OTA] Version request sent to master: %s -> %s\n",
@@ -508,7 +511,12 @@ void handleP2P(){
       break;}
     case UPD_GO_UPDATE:
       Debugln("handleP2P -> UPD_GO_UPDATE");
-      snprintf(updateFile, sizeof(updateFile), client_ota_data.file, client_ota_data.version);
+      {
+      String fileName = client_ota_data.file;
+      int fmtPos = fileName.indexOf("%s");
+      if (fmtPos >= 0) fileName.replace("%s", client_ota_data.version);
+      strlcpy(updateFile, fileName.c_str(), sizeof(updateFile));
+      }
       Debugln(updateFile);
       snprintf(updateURL, sizeof(updateURL),"http://%s%s",client_ota_data.update_url,updateFile);
       Debugln(updateURL);

@@ -9,9 +9,114 @@
 */
 #include <HTTPUpdate.h>
 bool bWebUpdate = false;
+bool autoUpdateBootCheckDone = false;
+uint32_t autoUpdateLastDailyCheckKey = 0;
+uint32_t autoUpdateNextCheckMs = 0;
 
 void handleRemoteUpdate(){
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
+}
+
+bool ReadManifest(JsonDocument &manifest, const char* link) {
+  HTTPClient http;
+  String manifestUrl;
+  if (link && strlen(link)) {
+    manifestUrl = "http://ota.smart-stuff.nl/manifest/" + String(link) + "/manifest.json";
+  } else {
+    manifestUrl = String(BaseOTAurl) + "version-manifest.json";
+  }
+
+  Debugln(manifestUrl);
+  http.begin(wifiClient, manifestUrl.c_str());
+  http.setConnectTimeout(4000);
+  http.setTimeout(5000);
+
+  int httpResponseCode = http.GET();
+  if (httpResponseCode != HTTP_CODE_OK) {
+    Debugf("Manifest fetch failed: HTTP %d\n\r", httpResponseCode);
+    http.end();
+    return false;
+  }
+
+  String payload = http.getString();
+  http.end();
+
+  if (deserializeJson(manifest, payload)) {
+    Debugln("Manifest parse failed");
+    return false;
+  }
+  return true;
+}
+
+void ReadManifest() {
+  JsonDocument manifest;
+  if (!ReadManifest(manifest, nullptr)) return;
+  Debugln(F("Version Manifest"));
+  String out;
+  serializeJson(manifest, out);
+  Debugln(out);
+}
+
+bool CheckNewVersion() {
+  bool bNewVersionAvailable = false;
+  char manifestVersion[15] = "";
+
+  JsonDocument manifest;
+  if (!ReadManifest(manifest, nullptr)) return false;
+
+  int maj = manifest["major"] | -1;
+  int min = manifest["minor"] | -1;
+  int fix = manifest["fix"] | -1;
+  if (maj < 0 || min < 0 || fix < 0) return false;
+
+  snprintf(manifestVersion, sizeof(manifestVersion), "%d.%d.%d", maj, min, fix);
+  Debugf("Manifest version : %s\n\r", manifestVersion);
+  Debugf("Current version: %d.%d.%d\n\r", _VERSION_MAJOR, _VERSION_MINOR, _VERSION_PATCH);
+
+  if (maj > _VERSION_MAJOR) bNewVersionAvailable = true;
+  else if ((maj == _VERSION_MAJOR) && (min > _VERSION_MINOR)) bNewVersionAvailable = true;
+  else if ((maj == _VERSION_MAJOR) && (min == _VERSION_MINOR) && (fix > _VERSION_PATCH)) bNewVersionAvailable = true;
+
+  if (bNewVersionAvailable) {
+    strlcpy(UpdateVersion, manifestVersion, sizeof(UpdateVersion));
+    LogFile("AutoUpdate: NEW stable version available", true);
+  } else {
+    LogFile("AutoUpdate: NO new stable version available", true);
+  }
+  return bNewVersionAvailable;
+}
+
+void handleAutoUpdate(bool runBootCheckNow) {
+  if (skipNetwork || netw_state == NW_NONE || UpdateRequested || bWebUpdate) return;
+
+  const uint32_t nowMs = millis();
+  if (!runBootCheckNow && nowMs < autoUpdateNextCheckMs) return;
+  autoUpdateNextCheckMs = nowMs + (5UL * 60UL * 1000UL); // check planning every 5 minutes
+
+  const bool doBootCheck = (!autoUpdateBootCheckDone);
+
+  bool doDailyCheck = false;
+  if (now() > 1700000000) { // only if clock is sane
+    const int h = hour();
+    const uint32_t dayKey = (uint32_t)year() * 10000UL + (uint32_t)month() * 100UL + (uint32_t)day();
+    if ((h >= 1 && h < 6) && (autoUpdateLastDailyCheckKey != dayKey)) {
+      doDailyCheck = true;
+      autoUpdateLastDailyCheckKey = dayKey;
+    }
+  }
+
+  if (!doBootCheck && !doDailyCheck) return;
+
+  if (doBootCheck) autoUpdateBootCheckDone = true;
+
+  if (!CheckNewVersion()) return;
+  if (!bAutoUpdate) {
+    LogFile("AutoUpdate: update available (auto mode disabled)", true);
+    return;
+  }
+
+  LogFile("AutoUpdate: starting OTA install", true);
+  RemoteUpdate(UpdateVersion, true);
 }
 
 void update_finished() {
@@ -143,32 +248,6 @@ void RemoteUpdate(const char* versie, bool sketch){
   esp_task_wdt_add(tP1Reader);
   vTaskResume(tP1Reader); //error -> start P1 proces 
 } //RemoteUpdate
-
-//---------------
-
-void ReadManifest() {
-  HTTPClient http;
-  String ota_manifest = BaseOTAurl;
-  ota_manifest += "version-manifest.json";
-  http.begin(wifiClient, ota_manifest.c_str() );
-    
-  int httpResponseCode = http.GET();
-  if ( httpResponseCode<=0 ) { 
-    Debug(F("Error code: "));Debugln(httpResponseCode);
-    return; //leave on error
-  }
-  
-  Debugln( F("Version Manifest") );
-  Debug(F("HTTP Response code: "));Debugln(httpResponseCode);
-  String payload = http.getString();
-  Debugln(payload);
-  http.end();
-    
-  // Parse JSON object in response
-  JsonDocument manifest;
-
-} //ReadManifest
-
 
 /***************************************************************************
 *

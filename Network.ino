@@ -142,8 +142,9 @@ void setHostname() {
   //only once at startup when settingsfile isnt available
   // char hostname[32]; // Max lengte hostname is 32 karakters
   // sprintf(settingHostname, "%s-%0X", settingHostname, DongleID);
-  strcat(settingHostname,"-");
-  strcat(settingHostname,DongleID);
+  char hostname[sizeof(settingHostname)];
+  snprintf(hostname, sizeof(hostname), "%s-%s", settingHostname, DongleID);
+  strlcpy(settingHostname, hostname, sizeof(settingHostname));
 }
 
 void WifiOff() {

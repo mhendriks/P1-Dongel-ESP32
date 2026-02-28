@@ -33,7 +33,7 @@ void listFS()
   while ( file && ( fileNr < 30 ) )  
   {
     dirMap[fileNr].Name[0] = '\0';
-    strncpy( dirMap[fileNr].Name, file.name(),30 );
+    strlcpy(dirMap[fileNr].Name, file.name(), sizeof(dirMap[fileNr].Name));
     dirMap[fileNr].Size = file.size();
     fileNr++;
     file = root.openNextFile();

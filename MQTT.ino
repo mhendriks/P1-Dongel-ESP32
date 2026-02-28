@@ -188,9 +188,9 @@ void MqttReconfig(String payload){
       //adapt the new settings
       DebugTln("MQTT config check succesfull");
       settingMQTTbrokerPort = doc["port"].as<uint16_t>();
-      strcpy(settingMQTTbroker, doc["broker"].as<const char*>());
-      strcpy(settingMQTTuser, doc["user"].as<const char*>());
-      strcpy(settingMQTTpasswd, doc["pass"].as<const char*>());
+      strlcpy(settingMQTTbroker, doc["broker"].as<const char*>(), sizeof(settingMQTTbroker));
+      strlcpy(settingMQTTuser, doc["user"].as<const char*>(), sizeof(settingMQTTuser));
+      strlcpy(settingMQTTpasswd, doc["pass"].as<const char*>(), sizeof(settingMQTTpasswd));
       writeSettings(); //save the settings
       MQTTsetServer();
     } else {
@@ -209,16 +209,22 @@ void MqttReconfig(String payload){
 
 static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
   String StrTopic = topic;
-  char StrPayload[len];
+  constexpr size_t MQTT_PAYLOAD_MAX = 1024;
+  char StrPayload[MQTT_PAYLOAD_MAX + 1];
 
   DebugTf("Message length: %d\n",len );
-  for (int i=0;i<len;i++) StrPayload[i] = (char)payload[i];
-  StrPayload[len] = '\0';
+  size_t copyLen = len;
+  if (copyLen > MQTT_PAYLOAD_MAX) {
+    DebugTf("MQTT payload truncated from %u to %u bytes\n", (unsigned)len, (unsigned)MQTT_PAYLOAD_MAX);
+    copyLen = MQTT_PAYLOAD_MAX;
+  }
+  memcpy(StrPayload, payload, copyLen);
+  StrPayload[copyLen] = '\0';
   DebugT("Message arrived [" + StrTopic + "] ");Debugln(StrPayload);
 
   if ( StrTopic.indexOf("update") >= 0) {
     bUpdateSketch = true;
-    strcpy( UpdateVersion, StrPayload );
+    strlcpy(UpdateVersion, StrPayload, sizeof(UpdateVersion));
     DebugT("Message arrived [" + StrTopic + "] ");Debugln(UpdateVersion);
     UpdateRequested = true;
   }
@@ -235,15 +241,17 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
     MqttReconfig(StrPayload);
   }
   if ( StrTopic.indexOf("toptopic") >= 0) {
-      strncpy( settingMQTTtopTopic, StrPayload, sizeof(settingMQTTtopTopic) );
-      if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+      strlcpy(settingMQTTtopTopic, StrPayload, sizeof(settingMQTTtopTopic));
+      size_t topLen = strlen(settingMQTTtopTopic);
+      if (topLen > 0 && settingMQTTtopTopic[topLen - 1] != '/') strlcat(settingMQTTtopTopic, "/", sizeof(settingMQTTtopTopic));
       CreateMacIDTopic();
       if ( MQTTclient.connected() ) MQTTclient.disconnect();
       writeSettings();
   }
   if ( StrTopic.indexOf("ota-url") >= 0) {
-      strncpy( BaseOTAurl, StrPayload, sizeof(BaseOTAurl) );
-      if (BaseOTAurl[strlen(BaseOTAurl)-1] != '/') strcat(BaseOTAurl,"/");
+      strlcpy(BaseOTAurl, StrPayload, sizeof(BaseOTAurl));
+      size_t otaLen = strlen(BaseOTAurl);
+      if (otaLen > 0 && BaseOTAurl[otaLen - 1] != '/') strlcat(BaseOTAurl, "/", sizeof(BaseOTAurl));
       writeSettings();
   }
 
