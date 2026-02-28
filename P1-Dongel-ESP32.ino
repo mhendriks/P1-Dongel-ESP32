@@ -34,21 +34,9 @@ BACKLOG
 - kwartierpiek historie opnemen (wanneer nieuwe piek ontstaat)
 - dynamische prijzen inl
 - improvement: modbus in own process = non-blocking 
-- check and repair rng files on startup
-- hostname aanpassen met laatste 3 segmenten mac-adres
 - Huawei FusionSolar integratie ( Francis )
 - mqtt push setting json to the dongle
-
-Default checks
-- wifi
-- port 82
-- MQTT
-- webserver
-- EID
-- dev_pairing
-- ethernet
-- 4h test on 151
-
+- inlezen van solar config in frontend
 - default mqtt : mqtt://core-mosquitto:1883 en addons als user
 - change: solar support for 3 inverters
 - Shelly EM udp emulation
@@ -56,19 +44,20 @@ Default checks
 - ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
 - bug HW api water meter id
 
+Default checks
+- wifi
+- port 82
+- MQTT
+- webserver
+- EID
+- ethernet
+- 4h test on 151
+
 Planner display checks
 - niet aanwezig
 - updaten 5.2 en de 3.0.0
 - eid stond aan maar is uitgezet
 - uur overgang
-
-task wtd
-- https://forum.arduino.cc/t/watchdog-reset-esp32-if-stuck-more-than-120-seconds/1266565/2
-- https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/system/wdts.html
-- https://esp32.com/viewtopic.php?t=31155
-
-
-- inlezen van solar config in frontend
 
 ************************************************************************************
 Arduino-IDE settings for P1 Dongle hardware ESP32:
@@ -80,11 +69,32 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - CPU Frequency: "160MHz"
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
+  - De daily insights kunnen downloaden zoals RNGhours (Harrie)
+  - De waarden in daily insights labelen met het datum/tijdstip waarop gemeten (Harrie)
 
 5.3.2
-- issue Karel met verbergen van de gas op dash en tabellen
+√ refactoring EnergyID code
+√ delete DEV_PAIRING code
+√ first draft UDP option (available in 5.4)
+√ lang update: missing elements
+√ SDK update 3.3.7
+√ when virtual P1 is configured > no P1 V2 check (only Ethernet/Ultra dongles)
+√ add NRG Monitor connection toggle
+√ netswitch toggle (only Ethernet/Ultra dongles)
+√ fix Insights Over Voltage reset
+√ Dashboard Net Cons -> red if net consumption, green if return
+√ fix: Gas dashboard issue = refactoring ( Karel )
+√ fix http:// issue in frontend to dongle
+√ cleanup old unused features
+√ split webserver and data layer (5.4)
+
 
 5.4.0
+- UDP option
+- auto update feature
+- check opstarten en vullen dagstand gisteren ivm NRG Monitor (4.17 / 5.2)
+
+5.5.0
 - refactor: asyncwebserver
 - update button in HA to trigger the update (mqtt based #70)
 - MQTT on/off toggle
@@ -98,28 +108,26 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define INSIGHTS
 // #define XTRA_LOG
 
-//PROFILES -> NO PROFILE = WiFi Dongle 
+//--- PROFILES -> NO PROFILE = WiFi Dongle  ---
 // #define ULTRA         //ultra (mini) dongle
-// #define ETHERNET      //ethernet dongle
-// #define ETH_P1EP          //ethernet pro+ dongle
-// #define NRG_DONGLE 
-// #define DEVTYPE_H2OV2 // P1 Dongle Pro with h2o and p1 out
+#define ETHERNET         //ethernet dongle
+#define ETH_P1EP         //ethernet pro+ dongle
+// #define NRG_DONGLE
+// #define P1P 
 
 //SPECIAL
 // #define __Az__
 
 //FEATURES
-// #define DEV_PAIRING
 #define MBUS
 //#define MQTT_DISABLE
 //#define NO_STORAGE
-//#define VOLTAGE_MON
 // #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
 // #define MQTTKB
 // #define MB_RTU
 #define ESPNOW
-// #define UDP
+#define UDP_BCAST
 // #define SHELLY_EMU
 // #define USB_CONFIG
 // #define POST_POWERCH
@@ -155,28 +163,18 @@ void setup()
   if (!LittleFS.exists(SETTINGS_FILE)) writeSettings(); //otherwise the dongle crashes some times on the first boot
   else readSettings(true);
   WDT_FEED();
-//=============scan, repair and convert RNG files ==================
-  // CheckRingFile(RINGDAYS);
-  // loadRingfile(RINGDAYS);
-  // printRecordArray(RNGDayRec, RingFiles[RINGDAYS].slots, "RINGDAYS");
-  // saveRingfile(RINGDAYS);
-
-  // patchJsonFile_Add7thValue(RINGMONTHS);
-  // patchJsonFile_Add7thValue(RINGHOURS);
-  // convertRingfileWithSlotExpansion(RINGDAYS,32);
 //=============start Networkstuff ==================================
   USBconfigBegin();
   startNetwork();
   WDT_FEED();
   PostMacIP(); //post mac en ip
-  yield();
 #ifdef INSIGHTS  
   if ( Insights.begin(INSIGHTS_KEY) ) Debugf("ESP Insights enabled Node ID %s\n", Insights.nodeID());
 #endif  
-  WDT_FEED();
   startTelnet();
   startMDNS(settingHostname);
   startNTP();
+  handleAutoUpdate(true); // startup check right after network and time init
   WDT_FEED();
 //================ Check necessary files ============================
   if ( !skipNetwork ) {
@@ -240,6 +238,7 @@ void loop () {
     CHANGE_INTERVAL_MIN(StatusTimer, 30);
   }
   handleKeyInput();
+  handleAutoUpdate(false);
   handleRemoteUpdate();
   handleWater();
   handleEnergyID();  
@@ -248,4 +247,5 @@ void loop () {
   handleVirtualP1();
   PrintHWMark(2);
   handleP2P();
+  handleUDP();
 } // loop()

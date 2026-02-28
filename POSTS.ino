@@ -1,4 +1,14 @@
-#include "./../../_secrets/posts.h"
+#if __has_include("./../../_secrets/posts.h")
+  #include "./../../_secrets/posts.h"
+#else
+  // Optional local overrides (PowerCH URL, OTAURL_PREFIX, etc.)
+  #ifndef URL_POWERCH
+    #define URL_POWERCH ""
+  #endif
+  #ifndef OTAURL_PREFIX
+    #define OTAURL_PREFIX ""
+  #endif
+#endif
 
 void PostTelegram() {
 #ifdef POST_TELEGRAM

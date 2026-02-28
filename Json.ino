@@ -28,14 +28,33 @@ static String jsonResponse(std::function<void(JsonDocument& doc)> fill) {
   return out;
 }
 
+static ApiResponse jsonOkResponse(const String& body) {
+  return {200, "application/json", body};
+}
+
+static ApiResponse jsonNoContentResponse() {
+  return {204, "application/json", ""};
+}
+
+static ApiResponse jsonNotFoundResponse() {
+  JsonDocument doc;
+  JsonObject error = doc["error"].to<JsonObject>();
+  error["url"] = httpServer.uri();
+  error["message"] = "url not valid";
+  String body;
+  serializeJson(doc, body);
+  return {404, "application/json", body};
+}
+
+static ApiResponse jsonDocResponse(const JsonDocument& doc) {
+  String body;
+  serializeJson(doc, body);
+  return jsonOkResponse(body);
+}
+
 String apiStatsJson() {
   return jsonResponse([&](JsonDocument& doc){
-    // doc["ts"] = (uint32_t)time(nullptr);
-
-    // JsonObject stats = doc["stats"].to<JsonObject>();
-    // stats["uptime"] = (uint32_t)millis()/1000;
-    // stats["heap"]   = (uint32_t)ESP.getFreeHeap();
-
+    
     if ( DSMRdata.current_l1_present ) doc["I1piek"]  = P1Stats.I1piek;
     if ( DSMRdata.current_l2_present ) doc["I2piek"]  = P1Stats.I2piek;
     if ( DSMRdata.current_l3_present ) doc["I3piek"]  = P1Stats.I3piek;
@@ -78,6 +97,7 @@ void JsonPP(){
 }
 
 int signalToEnum(const char* signal) {
+  if (!signal) return -1;
   if (strcmp(signal, "--") == 0) return 0;
   if (strcmp(signal, "-") == 0)  return 1;
   if (strcmp(signal, "0") == 0)  return 2;
@@ -86,26 +106,29 @@ int signalToEnum(const char* signal) {
   return -1; // ongeldige waarde
 }
 
-void JsonEIDplanner(){
+ApiResponse JsonEIDplanner(){
   
-  if ( StroomPlanData.size() == 0 ) { sendApiNoContent(); return;}
+  if ( StroomPlanData.size() == 0 ) return jsonNoContentResponse();
 
-  const char* timestamp = StroomPlanData["data"][0]["timestamp"];
-  if (timestamp && strlen(timestamp) < 13) {
+  JsonArray dataArray = StroomPlanData["data"].as<JsonArray>();
+  size_t plannerCount = dataArray.size();
+  if (plannerCount == 0) return jsonNoContentResponse();
+
+  const char* timestamp = dataArray[0]["timestamp"].is<const char*>() ? dataArray[0]["timestamp"].as<const char*>() : nullptr;
+  if (!timestamp || strlen(timestamp) < 13) {
     DebugTln(F("Ongeldige of ontbrekende timestamp"));
-    sendApiNoContent();
-    return;
+    return jsonNoContentResponse();
   }
 
-  String data = "{\"h_start\":";
-  data += String((timestamp[11] - '0') * 10 + (timestamp[12] - '0')) + ",\"data\":[";
+  JsonDocument doc;
+  doc["h_start"] = (timestamp[11] - '0') * 10 + (timestamp[12] - '0');
+  JsonArray outputSignals = doc["data"].to<JsonArray>();
   for (int i = 0; i < 14; i++ ){
-    if ( i > 0 ) data += ",";
-    data += String(signalToEnum(StroomPlanData["data"][i]["signal"]));
+    const char* signal = nullptr;
+    if (i < (int)plannerCount && dataArray[i]["signal"].is<const char*>()) signal = dataArray[i]["signal"].as<const char*>();
+    outputSignals.add(signalToEnum(signal));
   }
-  data += "]}";
-  DebugTf( "EIDPlanner json: %s\n", data.c_str() );
-  sendJsonBuffer( data.c_str() );
+  return jsonDocResponse(doc);
 }
 
 void JsonWater(){
@@ -120,28 +143,23 @@ void JsonWater(){
   jsonDoc["water"]["unit"]  = "m3";
 }
 
-// void HWapi_root() {
-//   String MACID = macID;
-//   MACID.toLowerCase();
-//   String jsonString = "{\"product_name\":\"P1 Dongle\",\"product_type\":\"HWE-P1\",\"serial\":\"";  
-//   jsonString += MACID;
-//   jsonString += "\",\"firmware_version\":\"" _VERSION_ONLY "\",\"api_version\":\"v1\"}";
+String HWrootJson() {
 
-//   sendJsonBuffer(  jsonString.c_str() );
-// }
-
-String apiHWjson() {
-
-  String MACID = macID;
-  MACID.toLowerCase();
-  String jsonString = "{\"product_name\":\"P1 Dongle\",\"product_type\":\"HWE-P1\",\"serial\":\"";  
-  jsonString += MACID;
-  jsonString += "\",\"firmware_version\":\"" _VERSION_ONLY "\",\"api_version\":\"v1\"}";
-  return jsonString;
+  return jsonResponse([&](JsonDocument& doc){
+    String MACID = macID;
+    MACID.toLowerCase();
+    doc["product_name"] = "P1 Dongle";
+    doc["product_type"] = "HWE-P1";
+    doc["serial"] = MACID;
+    doc["firmware_version"] = _VERSION_ONLY;
+    doc["api_version"] = "v1";
+  });
  }
 
-void HWapi() {
-    JsonDocument jsonDoc;
+String HWapiJson(){
+
+  return jsonResponse([&](JsonDocument& jsonDoc){
+
     #define F3DEC(...) serialized(String(__VA_ARGS__,3))
     
     if ( WiFi.SSID().length() ) jsonDoc["wifi_ssid"] = WiFi.SSID();
@@ -174,16 +192,6 @@ void HWapi() {
     jsonDoc["active_current_l1_a"] = F3DEC((DSMRdata.voltage_l1_present&&DSMRdata.voltage_l1.val())?jsonDoc["active_power_l1_w"].as<float>()/DSMRdata.voltage_l1.val():0);
     jsonDoc["active_current_l2_a"] = F3DEC((DSMRdata.voltage_l2_present&&DSMRdata.voltage_l2.val())?jsonDoc["active_power_l2_w"].as<float>()/DSMRdata.voltage_l2.val():0);
     jsonDoc["active_current_l3_a"] = F3DEC((DSMRdata.voltage_l3_present&&DSMRdata.voltage_l3.val())?jsonDoc["active_power_l3_w"].as<float>()/DSMRdata.voltage_l3.val():0);
-
-    // Fouten en storingen  
-    // jsonDoc["any_power_fail_count"] = DSMRdata.electricity_failures;
-    // jsonDoc["long_power_fail_count"] = DSMRdata.electricity_long_failures;
-    // jsonDoc["voltage_sag_l1_count"] = DSMRdata.electricity_sags_l1;
-    // jsonDoc["voltage_sag_l2_count"] = DSMRdata.electricity_sags_l2;
-    // jsonDoc["voltage_sag_l3_count"] = DSMRdata.electricity_sags_l3;
-    // jsonDoc["voltage_swell_l1_count"] = DSMRdata.electricity_swells_l1;
-    // jsonDoc["voltage_swell_l2_count"] = DSMRdata.electricity_swells_l2;
-    // jsonDoc["voltage_swell_l3_count"] = DSMRdata.electricity_swells_l3;
 
     // Externe apparaten (zoals gasmeter)
     JsonArray external;
@@ -224,13 +232,8 @@ void HWapi() {
       waterMeter["value"] = mbusWater ? F3DEC(waterDelivered) : F3DEC(P1Status.wtr_m3+P1Status.wtr_l/1000.0) ;
       waterMeter["unit"] = "m3";
     }
-    String jsonString;
-    serializeJson(jsonDoc, jsonString);
-    sendJsonBuffer(  jsonString.c_str() );
-
-    // return jsonString;
+  });
 }
-//--------------------------
 
 struct buildJson {
     
@@ -263,42 +266,14 @@ struct buildJson {
 
 }; // buildjson{} 
  
-template <typename TSource>
-void sendJson(const TSource &doc) 
-{  
-  //const size_t strsize = measureJson(doc)+1;
-  if (doc.isNull()) {
-//    DebugT(F("sendjson isNull"));
-    sendJsonBuffer("{}");
-    return;
-  }
-//  char buffer[strsize];
-  String buffer;
-  
-//  if (Verbose1) serializeJsonPretty(doc,buffer); 
-//  else 
-  serializeJson(doc,buffer);
-//  DebugT(F("Sending json: ")); Debugln(buffer);
-//  DebugT("strsize:"); Debugln(strsize);
-  sendJsonBuffer(buffer.c_str());
-//  if (Verbose1) DebugTln(F("sendJson: json sent .."));
-    
-}
-
-void sendJsonBuffer(const char* buffer){
-  httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-  httpServer.setContentLength(strlen(buffer));
-  httpServer.send(200, "application/json", buffer);
-} //sendJsonBuffer
-
-void sendDeviceTime() 
+String deviceTimeJson() 
 {
-   char buffer[80];
-  //  {"timestamp":"201201074021S","time":"2020-12-01 07:40:21","epoch":1606808619}
-  sprintf_P(buffer,PSTR("{\"timestamp\":\"%s\",\"time\":\"%s\",\"epoch\":%d}"), actTimestamp, buildDateTimeString(actTimestamp, sizeof(actTimestamp)).c_str() , now() );
-  sendJsonBuffer(buffer);
-  
-} // sendDeviceTime()
+  return jsonResponse([&](JsonDocument& doc){
+    doc["timestamp"] = actTimestamp;
+    doc["time"] = buildDateTimeString(actTimestamp, sizeof(actTimestamp));
+    doc["epoch"] = now();
+  });
+} // deviceTimeJson()
 
 String network_state () {
   switch ( netw_state ){
@@ -310,7 +285,7 @@ String network_state () {
   }
 }
 
-void sendDeviceInfo() 
+String deviceInfoJson() 
 {
   JsonDocument doc;
   doc["fwversion"] = _VERSION_ONLY " ( " __DATE__ " " __TIME__ " )";
@@ -341,16 +316,12 @@ void sendDeviceInfo()
   doc["FSsize"]["unit"] = "kB";
   doc["compileoptions"] = ALL_OPTIONS;
 
-#ifndef ETHERNET
-  doc["ssid"] = WiFi.SSID();
-  doc["wifirssi"] = WiFi.RSSI();
-#endif
+  if ( netw_state == NW_WIFI ) {
+    doc["ssid"] = WiFi.SSID();
+    doc["wifirssi"] = WiFi.RSSI();
+  }
   doc["network"] = network_state();
   doc["uptime"] = upTime();
-
-  // if ( !bWarmteLink ) { // IF NO HEATLINK
-  //     doc["smhasfaseinfo"] = (int)settingSmHasFaseInfo;
-  // }
 
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
@@ -367,12 +338,14 @@ void sendDeviceInfo()
   doc["reboots"] = (int)P1Status.reboots;
   doc["lastreset"] = lastReset;  
 
-  sendJson(doc);
+  String out;
+  serializeJson(doc, out);
+  return out;
  
-} // sendDeviceInfo()
+} // deviceInfoJson()
 
 //=======================================================================
-void sendDeviceSettings() {
+String deviceSettingsJson() {
   DebugTln(F("sending device settings ...\r"));
   JsonDocument doc;
 
@@ -441,13 +414,19 @@ if ( !hideMQTTsettings) {
   }
   //booleans
   doc["hist"] = EnableHistory;
+  doc["auto_update"] = bAutoUpdate;
   doc["led"] = LEDenabled;
   doc["raw-port"] = bRawPort;
   doc["eid-enabled"] = bEID_enabled;
   doc["eid-planner"] = StroomPlanData.size() > 0 ? true : false;
-#ifdef DEV_PAIRING
-  doc["dev-pairing"] = true;
-#endif
+  doc["nrgm-enabled"] = bNRGMenabled;
+  #ifdef NETSWITCH
+  doc["netsw-enabled"] = bNETSWenabled;
+  #endif
+
+  #ifdef UDP_BCAST
+  doc["udp"] = bUDPenabled;
+  #endif
 
   if ( bWarmteLink ) { // IF HEATLINK
     doc["conf"] = "p1-q";
@@ -463,26 +442,13 @@ if ( !hideMQTTsettings) {
     ADD_SETTING("water_fact", "f", 0, 10, WtrFactor);
   }
 
-  // doc["auto_update"] = bAutoUpdate;  TO DO ...
-
-  sendJson(doc);
+  String out;
+  serializeJson(doc, out);
+  return out;
 }
 
 //====================================================
-void sendApiNotFound() {
-  
-  httpServer.send(404, "application/json", "{\"error\":{\"url\":\"" + httpServer.uri() + "\",\"message\":\"url not valid\"}}");  
-
-} // sendApiNotFound()
-
-void sendApiNoContent() {
-  
-  httpServer.send(204, "application/json");  
-
-} // sendApiNoContent()
-
-//====================================================
-void handleSmApiField(){
+ApiResponse handleSmApiField(){
   jsonDoc.clear();
   if ( httpServer.pathArg(0) == "gas_delivered" ) JsonGas();
   else if ( httpServer.pathArg(0) == "water") JsonWater();
@@ -493,10 +459,10 @@ void handleSmApiField(){
     fieldsElements = FIELDELEMENTS;
     DSMRdata.applyEach(buildJson());
   }
-  sendJson(jsonDoc);
+  return jsonDocResponse(jsonDoc);
 }
 
-void handleSmApi()
+ApiResponse handleSmApi()
 {
   switch ( httpServer.pathArg(0)[0]) {
     
@@ -516,15 +482,10 @@ void handleSmApi()
     break;  
     
   case 't': //telegram
-    if ( CapTelegram.length() ) {
-        sendJsonBuffer( CapTelegram.c_str() );
-    }
-    else sendJsonBuffer( "no telegram available" );
-    return;
+    return {200, "text/plain", CapTelegram};
     
   default:
-    sendApiNotFound();
-    return;
+    return jsonNotFoundResponse();
     
   } //switch
 
@@ -533,60 +494,75 @@ void handleSmApi()
     JsonGas();
     JsonWater();
     JsonPP();
-    sendJson(jsonDoc);
+    return jsonDocResponse(jsonDoc);
     
 } // handleSmApi()
 //====================================================
 
-void handleDevApi()
+ApiResponse handleDevApi()
 {
    if ( httpServer.pathArg(0) == "info" )
   {
-    sendDeviceInfo();
+    return jsonOkResponse(deviceInfoJson());
   }
   else if ( httpServer.pathArg(0) == "time")
   {
-    sendDeviceTime();
+    return jsonOkResponse(deviceTimeJson());
   }
   else if (httpServer.pathArg(0) == "settings")
   {
     if (httpServer.method() == HTTP_PUT || httpServer.method() == HTTP_POST)
     {
-      //------------------------------------------------------------ 
-      // json string: {"name":"settingInterval","value":9}  
-      // json string: {"name":"settingTelegramInterval","value":123.45}  
-      // json string: {"name":"settingTelegramInterval","value":"abc"}  
-      //------------------------------------------------------------ 
-      // so, why not use ArduinoJSON library?
-      // I say: try it yourself ;-) It won't be easy
-      String wOut[5];
-      String wPair[5];
       String jsonIn  = httpServer.arg(0).c_str();
       DebugT("json in :");Debugln(jsonIn);
       char field[25] = "";
       char newValue[101]="";
-      jsonIn.replace("{", "");
-      jsonIn.replace("}", "");
-      jsonIn.replace("\"", "");
-      int8_t wp = splitString(jsonIn.c_str(), ',',  wPair, 5) ;
-      for (int i=0; i<wp; i++)
+
+      JsonDocument doc;
+      DeserializationError error = deserializeJson(doc, jsonIn);
+      if (!error)
       {
-        //DebugTf("[%d] -> pair[%s]\r\n", i, wPair[i].c_str());
-        int8_t wc = splitString(wPair[i].c_str(), ':',  wOut, 5) ;
-        //DebugTf("==> [%s] -> field[%s]->val[%s]\r\n", wPair[i].c_str(), wOut[0].c_str(), wOut[1].c_str());
-        if (wOut[0].equalsIgnoreCase("name"))  strCopy(field, sizeof(field), wOut[1].c_str());
-        if (wOut[0].equalsIgnoreCase("value")) strCopy(newValue, sizeof(newValue), wOut[1].c_str());
+        const char* fieldIn = doc["name"] | "";
+        strCopy(field, sizeof(field), fieldIn);
+
+        JsonVariantConst value = doc["value"];
+        if (value.is<const char*>()) {
+          strCopy(newValue, sizeof(newValue), value.as<const char*>());
+        } else if (value.is<bool>()) {
+          strCopy(newValue, sizeof(newValue), value.as<bool>() ? "true" : "false");
+        } else {
+          String valueAsString = value.as<String>();
+          strCopy(newValue, sizeof(newValue), valueAsString.c_str());
+        }
       }
+      else
+      {
+        // Backward compatible fallback for malformed payloads.
+        String wOut[5];
+        String wPair[5];
+        jsonIn.replace("{", "");
+        jsonIn.replace("}", "");
+        jsonIn.replace("\"", "");
+        int8_t wp = splitString(jsonIn.c_str(), ',',  wPair, 5) ;
+        for (int i=0; i<wp; i++)
+        {
+          int8_t wc = splitString(wPair[i].c_str(), ':',  wOut, 5) ;
+          (void)wc;
+          if (wOut[0].equalsIgnoreCase("name"))  strCopy(field, sizeof(field), wOut[1].c_str());
+          if (wOut[0].equalsIgnoreCase("value")) strCopy(newValue, sizeof(newValue), wOut[1].c_str());
+        }
+      }
+
       //DebugTf("--> field[%s] => newValue[%s]\r\n", field, newValue);
       updateSetting(field, newValue);
-      httpServer.send(200, "application/json", httpServer.arg(0));
+      return jsonOkResponse(httpServer.arg(0));
     }
     else
     {
-      sendDeviceSettings();
+      return jsonOkResponse(deviceSettingsJson());
     }
   }
-  else sendApiNotFound();
+  else return jsonNotFoundResponse();
   
 } // handleDevApi()
 

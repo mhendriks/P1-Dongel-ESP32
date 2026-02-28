@@ -52,6 +52,12 @@ struct {
 
 JsonDocument StroomPlanData;
 
+struct ApiResponse {
+  int status;
+  const char* contentType;
+  String body;
+};
+
 #ifdef MBUS
   #include "ModbusServerWiFi.h"
 #endif
@@ -102,7 +108,7 @@ struct {
 TaskHandle_t tP1Reader; //  own proces for P1 reading
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
-enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS, RINGVOLTAGE};
+enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS};
 enum  SolarSource { ENPHASE, SOLAR_EDGE, SMA, OMNIKSOL };
 
 //test
@@ -123,30 +129,6 @@ typedef struct {
     int f_len;
   } S_ringfile;
 
-
-#ifdef VOLTAGE_MON
-//Store over Voltage situations
-#define     VmaxSlots 100
-//                       ts       ,L1 ,L2 ,L3 ,MaxV, Overß
-#define DATA_FORMAT_V    "%-12.12s,%4d,%4d,%4d,%3d,%c"
-#define DATA_RECLEN_V    34  //total length incl comma and new line
-
-//sMaxV consist of 12 + 3x2 + 2 = 20 bytes
-struct sMaxV {
-  char      ts[12];
-  uint16_t     L1;
-  uint16_t     L2;
-  uint16_t     L3;
-  uint16_t     MaxV;
-  char         Over;
-  } MaxVarr[VmaxSlots]; //50 x 20 = 1.000 bytes 
-
-//Voltage
-uint16_t    MaxVoltage = 253;
-bool        bMaxV = false;
-uint8_t     Vcount = 0;
-
-#endif
 
 #define JSON_HEADER_LEN   23  //total length incl new line
 #define DATA_CLOSE        2   //length last row of datafile
@@ -374,6 +356,14 @@ int8_t      TxO1 = TXO1;
 int8_t      DTR_out = O1_DTR_IO;
 int8_t      LED_out = P1_LED;
 int8_t      statusled = LED;
+bool        bNRGMenabled = true;
+#ifdef NETSWITCH
+bool        bNETSWenabled = true;
+#endif
+
+#ifdef UDP_BCAST
+bool        bUDPenabled = false;
+#endif
 
 //bool        bWriteFiles = false;
 
@@ -437,6 +427,9 @@ bool      MacIDinToptopic = false;
 char      MQTopTopic[50+14] = "";
 
 //update
+#ifndef OTAURL_PREFIX
+  #define OTAURL_PREFIX ""
+#endif
 char      BaseOTAurl[45] = OTAURL OTAURL_PREFIX;
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
@@ -449,6 +442,9 @@ bool      bAutoUpdate = false;
   uint16_t pt_interval = 60;
   char pt_end_point[60];
 #endif
+
+//udp
+bool New_P1_UDP = false;
 
 //modbus
 int8_t mb_rx  = -1;
@@ -463,6 +459,7 @@ int8_t mb_rts = -1;
 #include <HTTPClient.h>
 #include "NetTypes.h"        //included in #include "ESPTelnet.h"
 #include "_Button.h"
+#include "_udp.h"
 
 //===========================================================================================
 // setup timers 

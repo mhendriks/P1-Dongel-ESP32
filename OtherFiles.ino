@@ -130,12 +130,17 @@ void writeSettings() {
   docw["skip-network"] = skipNetwork;
   docw["try_calc_i"] = try_calc_i;
 
-#ifdef VOLTAGE_MON
-  docw["max-volt"] = MaxVoltage;
-#endif
 
   docw["eid-enabled"] = bEID_enabled;
   if ( bEID_enabled ) EID_RESTART_IDLE_TIMER();
+
+  #ifdef UDP_BCAST
+  docw["udp"] = bUDPenabled;
+  #endif
+  docw["nrgm-enabled"] = bNRGMenabled;
+  #ifdef NETSWITCH
+  docw["netsw-enabled"] = bNETSWenabled;
+  #endif
 
 #ifdef POST_TELEGRAM
   docw["pt_port"] = pt_port;
@@ -144,7 +149,7 @@ void writeSettings() {
 #endif
 
 #ifdef VIRTUAL_P1
-  if ( strlen(virtual_p1_ip) )  docw["virtual_p1_ip"] = virtual_p1_ip;
+  if ( strlen(virtual_p1_ip) ) docw["virtual_p1_ip"] = virtual_p1_ip;
 #endif  
 
   writeToJsonFile(docw, SettingsFile);
@@ -190,8 +195,8 @@ void readSettings(bool show)
   }
   
   //strcpy(LittleFSTimestamp, doc["Timestamp"]);
-  strcpy(settingHostname, doc["Hostname"] | _DEFAULT_HOSTNAME );
-  strcpy(settingIndexPage, doc["IndexPage"] | _DEFAULT_HOMEPAGE);
+  strlcpy(settingHostname, doc["Hostname"] | _DEFAULT_HOSTNAME, sizeof(settingHostname));
+  strlcpy(settingIndexPage, doc["IndexPage"] | _DEFAULT_HOMEPAGE, sizeof(settingIndexPage));
   settingEDT1 = doc["EnergyDeliveredT1"];
   settingEDT2 = doc["EnergyDeliveredT2"];
   settingERT1 = doc["EnergyReturnedT1"];
@@ -211,19 +216,19 @@ void readSettings(bool show)
 //  CHANGE_INTERVAL_SEC(nextTelegram, settingTelegramInterval);
 // 
   //sprintf(settingMQTTbroker, "%s:%d", MQTTbroker, MQTTbrokerPort);
-  strcpy(settingMQTTbroker, doc["MQTTbroker"]);
+  strlcpy(settingMQTTbroker, doc["MQTTbroker"] | "", sizeof(settingMQTTbroker));
   settingMQTTbrokerPort = doc["MQTTbrokerPort"];
-  strcpy(settingMQTTuser, doc["MQTTUser"]);
-  strcpy(settingMQTTpasswd, doc["MQTTpasswd"]);
+  strlcpy(settingMQTTuser, doc["MQTTUser"] | "", sizeof(settingMQTTuser));
+  strlcpy(settingMQTTpasswd, doc["MQTTpasswd"] | "", sizeof(settingMQTTpasswd));
   settingMQTTinterval = doc["MQTTinterval"];
-  strcpy(settingMQTTtopTopic, doc["MQTTtopTopic"]);
-  if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+  strlcpy(settingMQTTtopTopic, doc["MQTTtopTopic"] | "", sizeof(settingMQTTtopTopic));
+  if (settingMQTTtopTopic[0] && settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strlcat(settingMQTTtopTopic, "/", sizeof(settingMQTTtopTopic));
   CreateMacIDTopic();
   if (doc["mqtt_tls"].is<bool>()) bMQTToverTLS = doc["mqtt_tls"];
   
   CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
   LEDenabled = doc["LED"];
-  if (doc["ota"].is<const char*>()) strcpy(BaseOTAurl, doc["ota"]);
+  if (doc["ota"].is<const char*>()) strlcpy(BaseOTAurl, doc["ota"].as<const char*>(), sizeof(BaseOTAurl));
 #ifdef NO_STORAGE
   EnableHistory = false;
 #else
@@ -240,33 +245,37 @@ void readSettings(bool show)
   if (doc["try_calc_i"].is<bool>()) try_calc_i = doc["try_calc_i"];
 
   if (doc["eid-enabled"].is<bool>()) bEID_enabled = doc["eid-enabled"];
-#ifdef VOLTAGE_MON
-  if (doc["max-volt"].is<bool>()) MaxVoltage = doc["max-volt"];
-#endif  
-
 #ifdef POST_TELEGRAM
   if (doc["pt_port"].is<int>()) pt_port = doc["pt_port"];
   if (doc["pt_interval"].is<int>()) pt_interval = doc["pt_interval"];
-  if (doc["pt_end_point"].is<const char*>()) strcpy(pt_end_point, doc["pt_end_point"]);
+  if (doc["pt_end_point"].is<const char*>()) strlcpy(pt_end_point, doc["pt_end_point"].as<const char*>(), sizeof(pt_end_point));
 #endif
 
 #ifdef VIRTUAL_P1
-  if (doc["virtual_p1_ip"].is<const char*>()) strcpy(virtual_p1_ip, doc["virtual_p1_ip"]);  
+  if (doc["virtual_p1_ip"].is<const char*>()) strlcpy(virtual_p1_ip, doc["virtual_p1_ip"].as<const char*>(), sizeof(virtual_p1_ip));  
 #endif  
 
   if (doc["act-json-mqtt"].is<bool>()) bActJsonMQTT = doc["act-json-mqtt"];
 
   const char* temp = doc["basic-auth"]["user"];
-  if (temp) strcpy(bAuthUser, temp);
+  if (temp) strlcpy(bAuthUser, temp, sizeof(bAuthUser));
   
   temp = doc["basic-auth"]["pass"];
-  if (temp) strcpy(bAuthPW, temp);
+  if (temp) strlcpy(bAuthPW, temp, sizeof(bAuthPW));
   if (doc["mb_map"].is<int>()) setModbusMapping(doc["mb_map"]);
   if (doc["mb_id"].is<int>()) mb_config.id = doc["mb_id"];
   if (doc["mb_port"].is<int>()) mb_config.port = doc["mb_port"];
   if (doc["mb_baud"].is<int>()) mb_config.baud = doc["mb_baud"];
   if (doc["mb_parity"].is<int>()) mb_config.parity = 134217700 + doc["mb_parity"].as<int>();
   if (doc["skip-network"].is<bool>()) skipNetwork = doc["skip-network"];
+
+  #ifdef UDP_BCAST
+  if (doc["udp"].is<bool>()) bUDPenabled = doc["udp"];
+  #endif
+  if (doc["nrgm-enabled"].is<bool>()) bNRGMenabled = doc["nrgm-enabled"];
+  #ifdef NETSWITCH
+  if (doc["netsw-enabled"].is<bool>()) bNETSWenabled = doc["netsw-enabled"];
+  #endif
 
   SettingsFile.close();
   //end json
@@ -372,7 +381,7 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "mqtt_toptopic")) {
     strCopy(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), newValue);  
   }
-  if (settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strcat(settingMQTTtopTopic,"/");
+  if (settingMQTTtopTopic[0] && settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strlcat(settingMQTTtopTopic, "/", sizeof(settingMQTTtopTopic));
   CreateMacIDTopic();
 #endif
   
@@ -382,14 +391,19 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "water_fact")) WtrFactor = String(newValue).toFloat(); 
   
   if (!stricmp(field, "ota_url")) {
-    char ota_url[sizeof(BaseOTAurl)] = "http://";
-    strcat(ota_url, newValue);
-    strCopy(BaseOTAurl,sizeof(ota_url), ota_url ); 
+    const char* cleanUrl = newValue;
+    if (strncasecmp(cleanUrl, "http://", 7) == 0) cleanUrl += 7;
+    else if (strncasecmp(cleanUrl, "https://", 8) == 0) cleanUrl += 8;
+
+    char ota_url[sizeof(BaseOTAurl)];
+    snprintf(ota_url, sizeof(ota_url), "http://%s", cleanUrl);
+    strlcpy(BaseOTAurl, ota_url, sizeof(BaseOTAurl));
   }
   
   //booleans
   if (!stricmp(field, "led")) LEDenabled = (stricmp(newValue, "true") == 0?true:false); 
   if (!stricmp(field, "hist")) EnableHistory = (stricmp(newValue, "true") == 0?true:false); 
+  if (!stricmp(field, "auto_update") || !stricmp(field, "auto-update")) bAutoUpdate = (stricmp(newValue, "true") == 0?true:false);
   if (!stricmp(field, "water_enabl")) WtrMtr = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "ha_disc_enabl")) EnableHAdiscovery = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "pre40")) {
@@ -400,6 +414,14 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "act-json-mqtt")) bActJsonMQTT = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "eid-enabled")) bEID_enabled = (stricmp(newValue, "true") == 0?true:false);  
   
+  #ifdef UDP_BCAST
+  if (!stricmp(field, "udp")) bUDPenabled = (stricmp(newValue, "true") == 0?true:false);  
+  #endif
+  if (!stricmp(field, "nrgm-enabled")) bNRGMenabled = (stricmp(newValue, "true") == 0?true:false);  
+  #ifdef NETSWITCH
+  if (!stricmp(field, "netsw-enabled")) bNETSWenabled = (stricmp(newValue, "true") == 0?true:false);
+  #endif
+
   if (!stricmp(field, "mb_map")) setModbusMapping(String(newValue).toInt());  
   if (!stricmp(field, "mb_id")) mb_config.id = String(newValue).toInt();  
   if (!stricmp(field, "mb_port")) mb_config.port = String(newValue).toInt();  

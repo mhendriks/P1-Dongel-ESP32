@@ -45,6 +45,10 @@ void StartP1Task(){
 
 //===========================================================================================
 void CheckP1Signal(){
+#ifdef VIRTUAL_P1
+  // Virtual P1 input is selected via network stream; skip physical P1 auto baud/signal probing.
+  if (strlen(virtual_p1_ip) > 0) return;
+#endif
   if ( telegramCount - telegramErrors >= 1 ) return; //only checking at start
   if ( ( esp_log_timestamp() - SerialLastChecked) > 11500 ) {
     bPre40 = !bPre40;
@@ -76,7 +80,7 @@ void SetupP1In(){
 
 //==================================================================================
 struct showValues {
-  template<typename Item>
+    template<typename Item>
   void apply(Item &i) {
     if (i.present()) 
     {
@@ -312,6 +316,7 @@ void processSlimmemeter() {
       } //no warmte link
         
       processTelegram();
+     
       if (Verbose2) DSMRdata.applyEach(showValues());
     } 
     else // Parser error, print error
@@ -403,9 +408,7 @@ void processTelegram(){
 	#endif
 
 	  ProcessStats();
-	  ProcessMaxVoltage();
 	  NetSwitchStateMngr();
-    udpSendP1Json();
   }
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
@@ -413,7 +416,9 @@ void processTelegram(){
   
   // PostHomey();
   if ( (bV5meter && telegramCount % 3 == 0 ) || !bV5meter ) bNewTelegramPostPower = true;
-
+  #ifdef UDP_BCAST
+    New_P1_UDP = true;
+  #endif 
 } // processTelegram()
 
 //==================================================================================
@@ -436,6 +441,13 @@ void modifySmFaseInfo()
   
 } //  modifySmFaseInfo()
 
+extern unsigned long startTijdL1;
+extern unsigned long startTijdL2;
+extern unsigned long startTijdL3;
+extern bool overspanningActiefL1;
+extern bool overspanningActiefL2;
+extern bool overspanningActiefL3;
+
 void ResetStats(){
   P1Stats.I1piek  = 0;
   P1Stats.I2piek  = 0;
@@ -456,6 +468,12 @@ void ResetStats(){
   P1Stats.TU1over = 0;
   P1Stats.TU2over = 0;
   P1Stats.TU3over = 0;
+  startTijdL1 = 0;
+  startTijdL2 = 0;
+  startTijdL3 = 0;
+  overspanningActiefL1 = false;
+  overspanningActiefL2 = false;
+  overspanningActiefL3 = false;
   P1Stats.StartTime = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), false);
 }
 

@@ -34,7 +34,10 @@ void P1Update(bool sketch){
   TelnetStream.readBytesUntil('\n', versie, sizeof(versie)); 
   TelnetStream.setTimeout(1000);
   
-  versie[strlen(versie)-1] = '\0'; //remove enter
+  size_t versieLen = strlen(versie);
+  if (versieLen > 0 && (versie[versieLen-1] == '\n' || versie[versieLen-1] == '\r')) {
+    versie[versieLen-1] = '\0';
+  }
   
   if (strcmp(versie,"latest") == 0) RemoteUpdate("4-sketch-latest",sketch);
   else if (strlen(versie)>4) RemoteUpdate(versie,sketch); 
@@ -125,7 +128,6 @@ void handleKeyInput()
       case 'b':
       case 'B':     displayBoardInfo();
                     break;
-      case 'c':     PrintVarr(); break;              
       case 'T':     {        
                       char c;
                       while (TelnetStream.available() > 0) { 
