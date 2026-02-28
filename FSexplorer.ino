@@ -22,6 +22,15 @@
 #include <uri/UriBraces.h>
 const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FSExplorer\r\nCache-Control: no-cache\r\n";
 
+void sendApiResponse(const ApiResponse& response) {
+  httpServer.sendHeader("Access-Control-Allow-Origin", "*");
+  if (response.body.length() == 0) {
+    httpServer.send(response.status);
+    return;
+  }
+  httpServer.send(response.status, response.contentType, response.body);
+}
+
 // Function to check authentication
 bool auth() {
   if (strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW)) {
@@ -34,15 +43,14 @@ bool auth() {
 // Function to handle static file serving with authentication
 void serveStaticWithAuth(const char* uri, const char* fileName) {
   httpServer.on(uri, HTTP_GET, [fileName]() {
-    if (auth()) {
-      File file = LittleFS.open(fileName, "r");
-      if (file) {
-        httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-        httpServer.streamFile(file, "application/json");
-        file.close();
-      } else {
-        httpServer.send(404, "text/plain", "File Not Found");
-      }
+    if (!auth()) return;
+    File file = LittleFS.open(fileName, "r");
+    if (file) {
+      httpServer.sendHeader("Access-Control-Allow-Origin", "*");
+      httpServer.streamFile(file, "application/json");
+      file.close();
+    } else {
+      httpServer.send(404, "text/plain", "File Not Found");
     }
   });
 }
@@ -60,15 +68,24 @@ void setupFSexplorer() {
   serveStaticWithAuth("/api/v2/hist/days", RingFiles[RINGDAYS].filename);
   serveStaticWithAuth("/api/v2/hist/months", RingFiles[RINGMONTHS].filename);
 
-  httpServer.on("/api/v2/hist/months", HTTP_POST, [](){ writeRingFile(RINGMONTHS, httpServer.arg(0).c_str(), false); });
+  httpServer.on("/api/v2/hist/months", HTTP_POST, [](){
+    if (!auth()) return;
+    writeRingFile(RINGMONTHS, httpServer.arg(0).c_str(), false);
+  });
 
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
   httpServer.on("/login", HTTP_GET, []() { auth(); });
-  httpServer.on("/api/v1/data", HTTP_GET, []() { auth(); HWapi(); });
+  
+  httpServer.on("/api/v1/data", HTTP_GET, []() { 
+    if ( !auth() ) return; 
+    // HWapi();
+    httpServer.send( 200, "application/json", HWapiJson() );
+  });
+  
   httpServer.on("/api", HTTP_GET, []() { 
     if ( !auth() ) return; 
     // HWapi_root(); 
-    httpServer.send( 200, "application/json", apiHWjson() );
+    httpServer.send( 200, "application/json", HWrootJson() );
   });
 
   httpServer.on("/api/v2/stats", HTTP_GET, []() { 
@@ -77,27 +94,62 @@ void setupFSexplorer() {
     httpServer.send(200, "application/json", apiStatsJson());
   });
   
-  httpServer.on(UriBraces("/api/v2/dev/{}"),[]() { auth(); handleDevApi(); });
-  httpServer.on(UriBraces("/api/v2/sm/{}"),[](){ auth(); handleSmApi(); });
-  httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){ auth(); handleSmApiField(); });
+  httpServer.on(UriBraces("/api/v2/dev/{}"),[]() {
+    if (!auth()) return;
+    sendApiResponse(handleDevApi());
+  });
+  httpServer.on(UriBraces("/api/v2/sm/{}"),[](){
+    if (!auth()) return;
+    sendApiResponse(handleSmApi());
+  });
+  httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){
+    if (!auth()) return;
+    sendApiResponse(handleSmApiField());
+  });
 
-  httpServer.on("/eid/getclaim",[](){ auth(); EIDGetClaim(); });
-  httpServer.on("/eid/planner",[](){ auth(); JsonEIDplanner(); });
-#ifdef DEV_PAIRING
-  httpServer.on("/pair",[](){ HandlePairing(); });
-#endif
+  httpServer.on("/eid/getclaim",[](){
+    if (!auth()) return;
+    EIDGetClaim();
+  });
+  httpServer.on("/eid/planner",[](){
+    if (!auth()) return;
+    sendApiResponse(JsonEIDplanner());
+  });
 
-  httpServer.on("/api/listfiles", HTTP_GET, [](){ auth(); APIlistFiles(); });
-  httpServer.on("/api/v2/gen", HTTP_GET, [](){ auth(); SendSolarJson(); });
-  httpServer.on("/api/v2/accu", HTTP_GET, [](){ auth(); SendAccuJson(); });
-  httpServer.on("/FSformat", [](){ auth();formatFS; });
-  httpServer.on("/upload", HTTP_POST, []() { auth(); }, handleFileUpload );
-  httpServer.on("/ReBoot", [](){ auth();reBootESP(); });
-  httpServer.on("/ResetWifi", [](){ auth(); resetWifi() ;});
-  httpServer.on("/remote-update", [](){ auth(); RemoteUpdate(); });
+  httpServer.on("/api/listfiles", HTTP_GET, [](){
+    if (!auth()) return;
+    APIlistFiles();
+  });
+  httpServer.on("/api/v2/gen", HTTP_GET, [](){
+    if (!auth()) return;
+    SendSolarJson();
+  });
+  httpServer.on("/api/v2/accu", HTTP_GET, [](){
+    if (!auth()) return;
+    SendAccuJson();
+  });
+  httpServer.on("/FSformat", [](){
+    if (!auth()) return;
+    formatFS();
+  });
+  httpServer.on("/upload", HTTP_POST, []() {
+    if (!auth()) return;
+  }, handleFileUpload );
+  httpServer.on("/ReBoot", [](){
+    if (!auth()) return;
+    reBootESP();
+  });
+  httpServer.on("/ResetWifi", [](){
+    if (!auth()) return;
+    resetWifi();
+  });
+  httpServer.on("/remote-update", [](){
+    if (!auth()) return;
+    RemoteUpdate();
+  });
   httpServer.onNotFound([]() 
   {
-    auth();
+    if (!auth()) return;
     
     if (Verbose2) DebugTf("in 'onNotFound()'!! [%s] => \r\n", String(httpServer.uri()).c_str());
     DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
@@ -133,7 +185,7 @@ void APIlistFiles()             // Senden aller Daten an den Client
   while ( file && ( fileNr < 30 ) )  
   {
     dirMap[fileNr].Name[0] = '\0';
-    strncpy( dirMap[fileNr].Name, file.name(), 30 );
+    strlcpy(dirMap[fileNr].Name, file.name(), sizeof(dirMap[fileNr].Name));
     dirMap[fileNr].Size = file.size();
     fileNr++;
     file = root.openNextFile();
@@ -160,18 +212,21 @@ void APIlistFiles()             // Senden aller Daten an den Client
     DebugTln(dirMap[x].Name);
   }
 
-  String temp = "[";
-  for (int f=0; f < fileNr; f++)  
+  JsonDocument doc;
+  JsonArray files = doc.to<JsonArray>();
+  for (int f = 0; f < fileNr; f++)
   {
-    if (temp != "[") temp += ",";
-    temp += R"({"name":")" + String(dirMap[f].Name) + R"(","size":")" + formatBytes(dirMap[f].Size) + R"("})";
+    JsonObject item = files.add<JsonObject>();
+    item["name"] = dirMap[f].Name;
+    item["size"] = formatBytes(dirMap[f].Size);
   }
-
- temp += R"(,{"usedBytes":")" + formatBytes(LittleFS.usedBytes() * 1.05) + R"(",)" +       // Berechnet den verwendeten Speicherplatz + 5% Sicherheitsaufschlag
-          R"("totalBytes":")" + formatBytes(LittleFS.totalBytes()) + R"(","freeBytes":")" + // Zeigt die Größe des Speichers
-          (LittleFS.totalBytes() - (LittleFS.usedBytes() * 1.05)) + R"("}])";               // Berechnet den freien Speicherplatz + 5% Sicherheitsaufschlag
-
-  httpServer.send(200, "application/json", temp);
+  JsonObject fsStats = files.add<JsonObject>();
+  fsStats["usedBytes"] = formatBytes(LittleFS.usedBytes() * 1.05); // +5% veiligheidsmarge
+  fsStats["totalBytes"] = formatBytes(LittleFS.totalBytes());
+  fsStats["freeBytes"] = formatBytes(LittleFS.totalBytes() - (LittleFS.usedBytes() * 1.05));
+  String body;
+  serializeJson(doc, body);
+  sendApiResponse({200, "application/json", body});
   
 } // APIlistFiles()
 
@@ -195,6 +250,7 @@ bool handleFile(String&& path)
 //=====================================================================================
 void handleFileUpload() 
 {
+  if (!auth()) return;
   static File fsUploadFile;
   HTTPUpload& upload = httpServer.upload();
   if (upload.status == UPLOAD_FILE_START) 

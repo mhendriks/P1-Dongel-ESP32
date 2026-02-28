@@ -12,6 +12,10 @@ struct SolarPwrSystems {
   char    file_name[20];
 };
 
+extern float SolarEdgeFlowPvPower;
+extern bool  SolarEdgeFlowPvValid;
+extern AccuPwrSystems SolarEdgeAccu;
+
 // SolarPwrSystems Enphase   = { false, "https://envoy/api/v1/production", "", 0, 0, 0, 0, 0,  60, 0, "/enphase.json"  }, SolarEdge = { false, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
 SolarPwrSystems Enphase   = { false, "https://envoy/ivp/pdm/energy", "", 0, 0, 0, 0, 0,  60, 0, "/enphase.json"  };
 SolarPwrSystems SolarEdge = { false, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
@@ -229,6 +233,24 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   Debug("Daily > ");  Debugln(solarSystem->Daily);
   Debug("Actual > "); Debugln(solarSystem->Actual);
 #endif
+
+  // Hybrid SolarEdge systems can report battery contribution in the cloud
+  // overview power. If local flow data is available via the battery endpoint,
+  // prefer PV.currentPower from that source.
+  if (src == SOLAR_EDGE && SolarEdgeFlowPvValid) {
+    float pv = SolarEdgeFlowPvPower;
+    if (SolarEdgeAccu.unit == "kW") {
+      solarSystem->Actual = (uint32_t)(pv * 1000.0f + 0.5f);
+    } else if (SolarEdgeAccu.unit == "W") {
+      solarSystem->Actual = (uint32_t)(pv + 0.5f);
+    } else {
+      // Default to W when unit is unknown to avoid large scaling errors.
+      solarSystem->Actual = (uint32_t)(pv + 0.5f);
+    }
+#ifdef DEBUG
+    Debug("SolarEdge PV(flow) Actual > "); Debugln(solarSystem->Actual);
+#endif
+  }
 }
 
 void GetSolarDataN() {
@@ -243,8 +265,20 @@ void SendSolarJson() {
   bool any = Enphase.Available || SolarEdge.Available || SMAinv.Available || Omniksol.Available;
   if (!any) { httpServer.send(200, "application/json", "{\"active\":false}"); return; }
 
+  uint32_t solarEdgeActual = SolarEdge.Actual;
+  if (SolarEdge.Available && SolarEdgeFlowPvValid) {
+    float pv = SolarEdgeFlowPvPower;
+    if (SolarEdgeAccu.unit == "kW") {
+      solarEdgeActual = (uint32_t)(pv * 1000.0f + 0.5f);
+    } else if (SolarEdgeAccu.unit == "W") {
+      solarEdgeActual = (uint32_t)(pv + 0.5f);
+    } else {
+      solarEdgeActual = (uint32_t)(pv + 0.5f);
+    }
+  }
+
   uint32_t totalDaily  = Enphase.Daily  + SolarEdge.Daily  + SMAinv.Daily  + Omniksol.Daily;
-  uint32_t totalActual = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual + Omniksol.Actual;
+  uint32_t totalActual = Enphase.Actual + solarEdgeActual + SMAinv.Actual + Omniksol.Actual;
   uint32_t totalWp     = Enphase.Wp     + SolarEdge.Wp     + SMAinv.Wp     + Omniksol.Wp;
 
   String Json = "{\"active\":true,\"total\":{\"daily\":";
