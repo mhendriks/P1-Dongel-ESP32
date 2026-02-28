@@ -11,6 +11,8 @@ struct AccuPwrSystems {
 };
 
 AccuPwrSystems SolarEdgeAccu = { false, "", "", "", 0.0, 0, 300, 0, "/se_accu.json"  };
+float SolarEdgeFlowPvPower = 0.0f;
+bool  SolarEdgeFlowPvValid = false;
  
 void ReadAccuConfig(){
   if ( skipNetwork ) return;
@@ -75,6 +77,7 @@ void GetAccuData( bool forceUpdate ){
   DebugT(F("HTTP Response code: "));Debugln(httpResponseCode);
   
   if ( httpResponseCode <= 0 ) { 
+    SolarEdgeFlowPvValid = false;
     return; //leave on error
   }
   
@@ -89,6 +92,7 @@ void GetAccuData( bool forceUpdate ){
   DeserializationError error = deserializeJson(solarDoc, payload);
   if (error) {
     Debugln("Error deserialisation solarDoc");
+    SolarEdgeFlowPvValid = false;
     return;
   }
   solarSystem->unit = solarDoc["siteCurrentPowerFlow"]["unit"].as<const char*>();
@@ -96,10 +100,21 @@ void GetAccuData( bool forceUpdate ){
   solarSystem->currentPower = solarDoc["siteCurrentPowerFlow"]["STORAGE"]["currentPower"].as<float>();
   solarSystem->chargeLevel = solarDoc["siteCurrentPowerFlow"]["STORAGE"]["chargeLevel"].as<int>();
 
+  // Reuse local SolarEdge flow data as a more accurate PV actual-power source
+  // than the cloud overview endpoint on hybrid systems.
+  if (!solarDoc["siteCurrentPowerFlow"]["PV"]["currentPower"].isNull()) {
+    SolarEdgeFlowPvPower = solarDoc["siteCurrentPowerFlow"]["PV"]["currentPower"].as<float>();
+    SolarEdgeFlowPvValid = true;
+  } else {
+    SolarEdgeFlowPvPower = 0.0f;
+    SolarEdgeFlowPvValid = false;
+  }
+
 #ifdef DEBUG
   Debug("status  > "); Debugln(solarSystem->status);
   Debug("currentPower > "); Debugln(solarSystem->currentPower); 
   Debug("chargeLevel > "); Debugln(solarSystem->chargeLevel);    
+  Debug("PV currentPower > "); Debugln(SolarEdgeFlowPvPower);
 #endif  
 }
 
