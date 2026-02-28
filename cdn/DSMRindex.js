@@ -427,11 +427,46 @@ function applyShowCols(condition, tablesAndCols) {
   });
 }
 
+//============================================================================
+// Normalize config values from Frontend.json (booleans can arrive as strings)
+function asBoolean(value, fallback = false) {
+	if (typeof value === "boolean") return value;
+	if (typeof value === "number") return value !== 0;
+	if (typeof value === "string") {
+		const normalized = value.trim().toLowerCase();
+		if (["true", "1", "yes", "on"].includes(normalized)) return true;
+		if (["false", "0", "no", "off", ""].includes(normalized)) return false;
+	}
+	return fallback;
+}
+
+function asNumber(value) {
+	if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
+	if (typeof value === "string") {
+		const normalized = value.trim().replace(",", ".");
+		const parsed = Number(normalized);
+		return Number.isFinite(parsed) ? parsed : NaN;
+	}
+	return NaN;
+}
+
+function hasValidMeterValue(field) {
+	if (!field || !Object.prototype.hasOwnProperty.call(field, "value")) return false;
+	return !Number.isNaN(asNumber(field.value));
+}
+
 //============================================================================  
   
 function SetOnSettings(json) {
 	// Initiele detectie: water, gas, teruglevering
-	if (!HeeftGas && !IgnoreGas) HeeftGas = "gas_delivered" in json ? !isNaN(json.gas_delivered.value) : false;
+	if (!HeeftGas && !IgnoreGas) {
+		const hasGasValue = hasValidMeterValue(json.gas_delivered);
+		const hasGasTimestamp =
+			typeof json.gas_delivered_timestamp?.value === "string" &&
+			json.gas_delivered_timestamp.value.trim() !== "" &&
+			json.gas_delivered_timestamp.value !== "-";
+		HeeftGas = hasGasValue || hasGasTimestamp;
+	}
 	if (!HeeftWater) HeeftWater = "water" in json ? !isNaN(json.water.value) : false;
 
 	if (!Injection) {
@@ -536,6 +571,15 @@ function UpdateSolar(){
 	"active" in json ? SolarActive=json.active : SolarActive = false;
 	console.log("SolarActive: "+ SolarActive);
 	if ( SolarActive ) {		
+		const hybridSolarEdge = !!AccuActive;
+		const solarTitleEl = document.getElementById('dash_solar_title');
+		const solarTodayLabelEl = document.getElementById('dash_solar_today_label');
+		if (solarTitleEl) {
+			solarTitleEl.innerHTML = hybridSolarEdge ? t("dsh-solar-system-energy") : t("dsh-solar-production");
+		}
+		if (solarTodayLabelEl) {
+			solarTodayLabelEl.innerHTML = hybridSolarEdge ? t("lbl-system-today-kwh") : t("lbl-today-kwh");
+		}
 		console.log("parsed response: "+ JSON.stringify(json));
 		console.log("json.total.daily: "+ json.total.daily);
 		console.log("json.total.actual: "+ json.total.actual);
@@ -832,7 +876,6 @@ function refreshDashboard(json){
     // stop here if there is no history enabled
 		if (!EnableHist) {Spinner(false);return;}
 		
-
     //-------VERBRUIK METER	
 		if (Dongle_Config != "p1-q") {
 
@@ -846,9 +889,13 @@ function refreshDashboard(json){
       //dataset berekenen voor Ptotaal      
       updateGaugeTrend(trend_p, Parr);
       document.getElementById("P").innerHTML = formatValue( Parr[0] );
+      const netUsageTitle = document.querySelector("#l3 h1");
+      if (netUsageTitle) {
+        netUsageTitle.style.backgroundColor = (Parr[0] < 0) ? "green" : "red";
+      }
       
-	  Pi_today = Parri[0];
-	  Pd_today = Parra[0];
+		  Pi_today = Parri[0];
+		  Pd_today = Parra[0];
 	        
       if (Injection) 
       {
@@ -1487,16 +1534,18 @@ function checkESPOnline() {
       .then(response => response.json())
       .then(json => {
 		  data = json;
-          AMPS=json.Fuse;
-          ShowVoltage=json.ShowVoltage;
-          UseCDN=json.cdn;
-          Injection=json.Injection;
-          Phases=json.Phases;   
-          HeeftGas=json.GasAvailable;
-		  "Act_Watt" in json ? Act_Watt = json.Act_Watt : Act_Watt = false;
-		  "AvoidSpikes" in json ? AvoidSpikes = json.AvoidSpikes : AvoidSpikes = false;
-          "IgnoreInjection" in json ? IgnoreInjection = json.IgnoreInjection : IgnoreInjection = false;
-          "IgnoreGas" in json ? IgnoreGas = json.IgnoreGas : IgnoreGas = false;
+          AMPS = asNumber(json.Fuse);
+          if (Number.isNaN(AMPS)) AMPS = 35;
+          ShowVoltage = asBoolean(json.ShowVoltage, true);
+          UseCDN = asBoolean(json.cdn, true);
+          Injection = asBoolean(json.Injection, false);
+          Phases = asNumber(json.Phases);
+          if (Number.isNaN(Phases)) Phases = 1;
+          HeeftGas = asBoolean(json.GasAvailable, false);
+		  Act_Watt = asBoolean(json.Act_Watt, false);
+		  AvoidSpikes = asBoolean(json.AvoidSpikes, false);
+          IgnoreInjection = asBoolean(json.IgnoreInjection, false);
+          IgnoreGas = asBoolean(json.IgnoreGas, false);
 // 		  "i18n" in json ? setLocale(json.i18n) : setLocale("nl");
 
           for (let item in data) 
