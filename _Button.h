@@ -10,6 +10,7 @@ enum btn_types { BTN_NONE, BTN_LONG_PRESS, BTN_SHORT_PRESS };
 volatile btn_states lastState = BTN_RELEASED;
 volatile btn_types ButtonPressed = BTN_NONE;
 volatile uint32_t lastEdgeMs = 0;
+static uint32_t s_buttonIgnoreUntilMs = 0;
 static const uint32_t DEBOUNCE_MS = 30;
 
 void IRAM_ATTR isrButton() {
@@ -44,10 +45,13 @@ void handleButtonPressed(){
   ButtonPressed = BTN_NONE;
   portEXIT_CRITICAL(&mux);
 
+  // Ignore spurious edges directly after enabling the ISR during boot.
+  if ((int32_t)(millis() - s_buttonIgnoreUntilMs) < 0) return;
+
   if (btn != BTN_NONE) {
     if ( btn == BTN_SHORT_PRESS ) {
 #ifdef ESPNOW
-	  if ( netw_state == NW_NONE && !skipNetwork ) { 
+	  if ( allowSkipNetworkByButton && netw_state == NW_NONE && !skipNetwork ) { 
 	  	skipNetwork = true; 
 	  	LogFile( "SKIP NETWORK ENABLED",true );
 	  	return; 
@@ -87,6 +91,7 @@ void fAuxProc(void *pvParameters) {
   // Init lastState op basis van huidige level
   lastState = (btn_states)digitalRead(IO_BUTTON);
   Tpressed  = 0; // <-- maak Tpressed ook 'volatile uint32_t' en init
+  s_buttonIgnoreUntilMs = millis() + 1500;
 
   attachInterrupt(digitalPinToInterrupt(IO_BUTTON), isrButton, CHANGE);
   DebugTln(F("BUTTON setup completed"));

@@ -72,27 +72,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - De daily insights kunnen downloaden zoals RNGhours (Harrie)
   - De waarden in daily insights labelen met het datum/tijdstip waarop gemeten (Harrie)
 
-5.3.2
-√ refactoring EnergyID code
-√ delete DEV_PAIRING code
-√ first draft UDP option (available in 5.4)
-√ lang update: missing elements
-√ SDK update 3.3.7
-√ when virtual P1 is configured > no P1 V2 check (only Ethernet/Ultra dongles)
-√ add NRG Monitor connection toggle
-√ netswitch toggle (only Ethernet/Ultra dongles)
-√ fix Insights Over Voltage reset
-√ Dashboard Net Cons -> red if net consumption, green if return
-√ fix: Gas dashboard issue = refactoring ( Karel )
-√ fix http:// issue in frontend to dongle
-√ cleanup old unused features
-√ split webserver and data layer (5.4)
-
-
 5.4.0
 - UDP option
 - auto update feature
-- check opstarten en vullen dagstand gisteren ivm NRG Monitor (4.17 / 5.2)
+- check startup + process day values based on yesterday - NRG Monitor (4.17 / 5.2)
 
 5.5.0
 - refactor: asyncwebserver
@@ -104,7 +87,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 
@@ -143,7 +126,6 @@ void setup()
   USBPrintf( "\n\n------> BOOTING %s %s ( %s %s ) <------\n\n", _DEFAULT_HOSTNAME, _VERSION_ONLY, __DATE__, __TIME__ ); 
   Debugf("Original cpu speed: %d\n",Freq);
   SetupWDT();
-  SetupButton();
   GetMacAddress();
 
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1

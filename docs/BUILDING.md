@@ -59,3 +59,40 @@ Use `build.sh` to compile all profiles. It injects profile-specific defines and 
 
 - `ULTRA` -> `ESP32S3`, `FlashSize=8M`, `PartitionScheme=default_8MB`
 
+## 5) Libraries used by this project
+
+The codebase uses a mix of libraries from the ESP32 Arduino core and a small set of external libraries that must be installed separately.
+
+### ESP32 Arduino core (installed via board package)
+
+These headers come from the ESP32 board support package rather than a separate Arduino library install:
+
+- `WiFi.h`, `WiFiClientSecure.h`, `WebServer.h`, `HTTPClient.h`, `HTTPUpdate.h`, `Update.h`, `Preferences.h`, `LittleFS.h`, `ESPmDNS.h`, `AsyncUDP.h`, `uri/UriBraces.h`
+- `esp_wifi.h`, `esp_now.h`, `esp_sntp.h`, `esp_timer.h`, `esp_mac.h`, `esp_task_wdt.h`, `esp_chip_info.h`, `esp_system.h`, `esp_efuse.h`, `esp_efuse_table.h`, `rom/rtc.h`
+- Repo: <https://github.com/espressif/arduino-esp32>
+
+### External libraries (install separately)
+
+- `ArduinoJson` (`ArduinoJson.h`)
+  Repo: <https://github.com/bblanchon/ArduinoJson>
+- `Time` (`TimeLib.h`)
+  Repo: <https://github.com/PaulStoffregen/Time>
+- `TelnetStream` (`TelnetStream.h`)
+  Repo: <https://github.com/jandrassy/TelnetStream>
+- `dsmr2Lib` (`dsmr2.h`)
+  Repo: <https://github.com/mhendriks/dsmr2Lib>
+- `WiFiManager` (`WiFiManager.h`)
+  Repo: <https://github.com/tzapu/WiFiManager>
+- `CRC32` (`CRC32.h`)
+  Repo: <https://github.com/bakercp/CRC32>
+- `eModbus` (`ModbusServerRTU.h`)
+  Repo: <https://github.com/eModbus/eModbus>
+- `micro-ecc` (`uECC.h`)
+  Repo: <https://github.com/kmackay/micro-ecc>
+
+### Local project headers
+
+These are included by the sketch but live in this repository, so they are not extra dependencies:
+
+- `safeTimers.h`
+- `espnow.h`

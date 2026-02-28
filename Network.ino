@@ -35,6 +35,27 @@ static bool     s_authBlocked = false;
 static uint32_t s_lastKickMs  = 0;
 static const uint32_t KICK_DEBOUNCE_MS = 1500;
 
+static bool isZeroMac(const uint8_t *mac){
+  for (uint8_t i = 0; i < 6; i++) {
+    if (mac[i] != 0x00) return false;
+  }
+  return true;
+}
+
+#ifdef ETHERNET
+static bool readPreferredEthMac(uint8_t *mac){
+  memset(mac, 0, 6);
+  if (esp_read_mac(mac, ESP_MAC_ETH) == ESP_OK && !isZeroMac(mac)) return true;
+
+  if (esp_read_mac(mac, ESP_MAC_EFUSE_FACTORY) == ESP_OK && !isZeroMac(mac)) {
+    DebugTln("ETH MAC fallback: using factory eFuse MAC");
+    return true;
+  }
+
+  return false;
+}
+#endif
+
 static inline bool isCoreReconnectable(uint8_t r){
   switch (r) {
     case WIFI_REASON_UNSPECIFIED:
@@ -89,11 +110,11 @@ static void kickOnce(){
 
 void GetMacAddress(){
 
-  uint8_t efuseMac[6];
+  uint8_t efuseMac[6] = {0};
   char macAddressString[18];
 
 #ifdef ETHERNET 
-  esp_read_mac( efuseMac, ESP_MAC_ETH );
+  readPreferredEthMac(efuseMac);
 #else
   esp_read_mac( efuseMac, ESP_MAC_EFUSE_FACTORY );
 #endif
@@ -313,18 +334,18 @@ void configModeCallback (WiFiManager *myWiFiManager) {
 void startWiFi(const char* hostname, int timeOut) {  
 if ( skipNetwork ) return;
 #if not defined ETHERNET || defined ULTRA
-#ifdef ULTRA
-  //lets wait on ethernet first for 6.5sec and consume some time to charge the capacitors
-  uint8_t timeout = 0;
-  while ( (netw_state == NW_NONE) && (timeout++ < 65) ) {
-    delay(100); 
-    Debug("e");
-    esp_task_wdt_reset();
-  } 
-  Debugln();
-  if ( netw_state != NW_NONE ) return;
-  enterPowerDownMode(); //disable ETH after 6.5 sec waiting ... lower power consumption
-#endif 
+  #ifdef ULTRA
+    //lets wait on ethernet first for 6.5sec and consume some time to charge the capacitors
+    uint8_t timeout = 0;
+    while ( (netw_state == NW_NONE) && (timeout++ < 65) ) {
+      delay(100); 
+      Debug("e");
+      esp_task_wdt_reset();
+    } 
+    Debugln();
+    if ( netw_state != NW_NONE ) return;
+    enterPowerDownMode(); //disable ETH after 6.5 sec waiting ... lower power consumption
+  #endif 
   
   if ( netw_state != NW_NONE ) return;
   
@@ -334,9 +355,9 @@ if ( skipNetwork ) return;
   
   WiFi.setSleep(true);  //sleep when possible
 
-#ifdef CONFIG_BT_ENABLED
-  btStop();
-#endif
+  #ifdef CONFIG_BT_ENABLED
+    btStop();
+  #endif
   WiFi.setAutoReconnect(true);
 
   WiFi.setHostname(hostname);
@@ -361,6 +382,7 @@ if ( skipNetwork ) return;
   manageWiFi.setConfigPortalTimeout(timeOut); //config portal timeout in seconds
   
   esp_task_wdt_reset();
+  allowSkipNetworkByButton = true;
   manageWiFi.autoConnect(_HOTSPOT);
 
   //handle wifi webinterface timeout and connection (timeOut in sec) timeout in 30 sec
@@ -373,6 +395,7 @@ if ( skipNetwork ) return;
     SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE); //fast blinking
   }
   Debugln();
+  allowSkipNetworkByButton = false;
   manageWiFi.stopWebPortal();
   if ( skipNetwork ) return; 
   if ( netw_state == NW_NONE && !bEthUsage ) {
@@ -458,6 +481,7 @@ void startNetwork()
   // Network.enableIPv6();
   if ( loadFixedIPConfig("/fixedip.json") ) bFixedIP = validateConfig();
   startETH();
+  SetupButton();
   startWiFi(settingHostname, 240);  // timeout 4 minuten
   WaitOnNetwork();
   USBPrint("Ip-addr: ");USBPrintln(IP_Address());
@@ -498,9 +522,8 @@ void startMDNS(const char *Hostname) {
   int8_t cs, miso, mosi, sck, rst;
   
 void startETH(){
-  
-  uint8_t mac_eth[6];
-  esp_read_mac(mac_eth, ESP_MAC_ETH); // ETH mac address 
+  uint8_t mac_eth[6] = {0};
+  readPreferredEthMac(mac_eth);
   
   // if ( HardwareType == P1UX2 ) { 
     const dev_conf& dc = DEVCONF();
