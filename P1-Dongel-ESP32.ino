@@ -87,14 +87,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 
 //--- PROFILES -> NO PROFILE = WiFi Dongle  ---
 // #define ULTRA         //ultra (mini) dongle
-#define ETHERNET         //ethernet dongle
-#define ETH_P1EP         //ethernet pro+ dongle
+// #define ETHERNET         //ethernet dongle
+// #define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE
 // #define P1P 
 
@@ -110,7 +110,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define MQTTKB
 // #define MB_RTU
 #define ESPNOW
-#define UDP_BCAST
+// #define UDP_BCAST
 // #define SHELLY_EMU
 // #define USB_CONFIG
 // #define POST_POWERCH
