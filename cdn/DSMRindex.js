@@ -571,15 +571,6 @@ function UpdateSolar(){
 	"active" in json ? SolarActive=json.active : SolarActive = false;
 	console.log("SolarActive: "+ SolarActive);
 	if ( SolarActive ) {		
-		const hybridSolarEdge = !!AccuActive;
-		const solarTitleEl = document.getElementById('dash_solar_title');
-		const solarTodayLabelEl = document.getElementById('dash_solar_today_label');
-		if (solarTitleEl) {
-			solarTitleEl.innerHTML = hybridSolarEdge ? t("dsh-solar-system-energy") : t("dsh-solar-production");
-		}
-		if (solarTodayLabelEl) {
-			solarTodayLabelEl.innerHTML = hybridSolarEdge ? t("lbl-system-today-kwh") : t("lbl-today-kwh");
-		}
 		console.log("parsed response: "+ JSON.stringify(json));
 		console.log("json.total.daily: "+ json.total.daily);
 		console.log("json.total.actual: "+ json.total.actual);
