@@ -402,14 +402,14 @@ void processTelegram(){
 	  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1) bSendMQTT = true; //handled in main flow
 	#endif  
 
-	#ifdef ESPNOW  
-		// if ( telegramCount % 3 == 1 ) SendActualData();
-		P2PSendActualData();
-	#endif
-
 	  ProcessStats();
 	  NetSwitchStateMngr();
   }
+
+  #ifdef ESPNOW  
+		// if ( telegramCount % 3 == 1 ) SendActualData();
+		P2PSendActualData();
+	#endif
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
   actT = newT;

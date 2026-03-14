@@ -307,7 +307,6 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
 }
 
 void mbusSetup(){
-  // const uint8_t MY_SERVER(mb_config.id);
   MBserver.registerWorker(mb_config.id, READ_HOLD_REGISTER, &MBusHandleRequest);//FC03
   MBserver.registerWorker(mb_config.id, READ_INPUT_REGISTER, &MBusHandleRequest);//FC04
   MBserver.start(mb_config.port, MBUS_CLIENTS, MBUS_TIMEOUT);
@@ -323,6 +322,12 @@ void mbusSetup(){
 #include "DSMRloggerAPI.h"
 
 ModbusServerRTU* MBserverRTU;
+
+//used by the D1MC : switchable 120 Ohm termination
+void MBSetTermination (bool value){
+  pinMode(3, OUTPUT);
+  digitalWrite(3,value);
+}
 
 void SetupMB_RTU(){
 
@@ -347,4 +352,5 @@ void SetupMB_RTU(){
 }
 #else
 void SetupMB_RTU(){}
+void MBSetTermination (bool value){}
 #endif

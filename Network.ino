@@ -377,6 +377,18 @@ if ( skipNetwork ) return;
   manageWiFi.setScanDispPerc(true); // display percentages instead of graphs for RSSI
   manageWiFi.setClass("invert"); //dark theme
   
+  // manageWiFi.setMinimumSignalQuality(-1);
+  // manageWiFi.setScanDispPerc(false);
+
+  // const char* wifiMenu[] = {
+  //   "wifinoscan",
+  //   "info",
+  //   "sep",
+  //   "restart",
+  //   "exit"
+  // };
+  // manageWiFi.setMenu(wifiMenu, 5);
+  
   //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
   manageWiFi.setAPCallback(configModeCallback);
   manageWiFi.setConfigPortalTimeout(timeOut); //config portal timeout in seconds

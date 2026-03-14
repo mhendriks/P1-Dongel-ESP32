@@ -108,19 +108,29 @@ int signalToEnum(const char* signal) {
 
 ApiResponse JsonEIDplanner(){
   
-  if ( StroomPlanData.size() == 0 ) return jsonNoContentResponse();
+  JsonDocument doc;
+  if ( StroomPlanData.size() == 0 ) {
+    doc["h_start"] = 99;
+    doc.createNestedArray("data");
+    return jsonDocResponse(doc);
+  }
 
   JsonArray dataArray = StroomPlanData["data"].as<JsonArray>();
   size_t plannerCount = dataArray.size();
-  if (plannerCount == 0) return jsonNoContentResponse();
+  if (plannerCount == 0) {
+    doc["h_start"] = 99;
+    doc.createNestedArray("data");
+    return jsonDocResponse(doc);
+  }
 
   const char* timestamp = dataArray[0]["timestamp"].is<const char*>() ? dataArray[0]["timestamp"].as<const char*>() : nullptr;
   if (!timestamp || strlen(timestamp) < 13) {
     DebugTln(F("Ongeldige of ontbrekende timestamp"));
-    return jsonNoContentResponse();
+    doc["h_start"] = 99;
+    doc.createNestedArray("data");
+    return jsonDocResponse(doc);
   }
 
-  JsonDocument doc;
   doc["h_start"] = (timestamp[11] - '0') * 10 + (timestamp[12] - '0');
   JsonArray outputSignals = doc["data"].to<JsonArray>();
   for (int i = 0; i < 14; i++ ){

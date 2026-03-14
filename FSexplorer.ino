@@ -275,7 +275,6 @@ void handleFileUpload()
     httpServer.sendContent(Header);
     if (upload.filename == "DSMRsettings.json") readSettings(false);
     if (upload.filename == "enphase.json" || upload.filename == "solaredge.json") ReadSolarConfigs();
-    if (upload.filename == "se_accu.json") ReadAccuConfig();
 #ifdef NETSWITCH
     if (upload.filename == "netswitch.json") readtriggers();
 #endif    

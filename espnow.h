@@ -12,9 +12,14 @@ const int ESP_NOW_CHUNK_SIZE = 1450; //from SDK 3.3.0
 
 #define OFFSET_ACTION 20
 volatile uint8_t P2PType = 0;
+bool en_connected = false;
+uint32_t en_error = 0;
+
+void PSPUpdatePlanner();
 
 enum MessageType  { COMMAND, CONFIRMED, NRGACTUALS, NRGTARIFS, NRGSTATIC, UPD_DATA, UPD_VER_RSP, UPD_VER_REQ, UPD_ACK, UPD_GO_UPDATE, STROOMPLANNER,} messageType;
 enum sAction      { CONN_REQUEST, CONN_RESPONSE, CONN_CLEAR, PAIRING, ASK_TARIF, ASK_STATIC, ASK_PLANNER }; 
+// enum ENstates     { EN_OFF, EN_WAIT, EN_PAIRING } en_state;
 
 typedef struct {
     uint8_t msgType = COMMAND;

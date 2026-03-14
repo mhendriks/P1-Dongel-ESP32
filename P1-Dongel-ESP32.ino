@@ -73,15 +73,19 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - De waarden in daily insights labelen met het datum/tijdstip waarop gemeten (Harrie)
 
 5.4.0
-- UDP option
+- show espnow paired and active 
+- Webasto Unite (Vestel mapping) - Frank
+- UDP option available as build feature
 - auto update feature
 - check startup + process day values based on yesterday - NRG Monitor (4.17 / 5.2)
+- MQTT on/off toggle
+- Virtual P1 feature in settings
+- overspanning waarde instelbaar maken
 
 5.5.0
 - refactor: asyncwebserver
 - update button in HA to trigger the update (mqtt based #70)
-- MQTT on/off toggle
-- Virtual P1 feature in settings
+
 
 */
 
@@ -95,7 +99,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE
+// #define NRG_DONGLE //+D1MC 
 // #define P1P 
 
 //SPECIAL
@@ -114,6 +118,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define SHELLY_EMU
 // #define USB_CONFIG
 // #define POST_POWERCH
+// #define VIRTUAL_P1
 
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>
@@ -125,9 +130,9 @@ void setup()
   setCpuFrequencyMhz(80); //lower power mode
   USBPrintf( "\n\n------> BOOTING %s %s ( %s %s ) <------\n\n", _DEFAULT_HOSTNAME, _VERSION_ONLY, __DATE__, __TIME__ ); 
   Debugf("Original cpu speed: %d\n",Freq);
+  
   SetupWDT();
   GetMacAddress();
-
   P1StatusBegin(); //leest laatste opgeslagen status & rebootcounter + 1
   SetConfig();
   WDT_FEED();
@@ -195,7 +200,6 @@ void setup()
   SetupMB_RTU();
 #endif  
   ReadSolarConfigs();
-  ReadAccuConfig();
   delay(500);
   setCpuFrequencyMhz(Freq); //restore original clockspeed
 
@@ -230,4 +234,5 @@ void loop () {
   PrintHWMark(2);
   handleP2P();
   handleUDP();
+  PostPowerCh();
 } // loop()

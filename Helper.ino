@@ -15,8 +15,8 @@
 #include "esp_efuse_table.h"
 
 // ------------------ ENUMS & CONSTANTS ------------------ //
-enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2 };
-const char* const HWTypeNames[]  = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S", "P1UX2" };
+enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2, NRGDH, D1MC };
+const char* const HWTypeNames[]  = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S", "P1UX2", "NRGDH", "D1MC" };
 const char* const ModTypeNames[] = { "N/A", "IO+", "H2O", "RS485" };
 
 // ------------------ GLOBAL VARIABLES ------------------ //
@@ -158,6 +158,17 @@ static inline void pinWriteIfValid(int8_t pin, uint8_t level) {
 //detect module and activate + Ultra V1 module assignment
 void DetectModule() {
   switch ( HardwareType ){
+    case NRGDH:
+            active_mod_conf = &module_config[0]; //NRGD
+            modType[0] = 3; //FIXED RS485
+            ActivateModule(0); //Activate rs485
+            break;
+    case D1MC:
+            MBSetTermination(LOW); //termination on = 120 Ohm
+            active_mod_conf = &module_config[3]; //D1MC
+            modType[0] = 3; //FIXED RS485
+            ActivateModule(0); //Activate rs485
+            break;
     case NRGD:
             active_mod_conf = &module_config[0];
             DetectModule(0); ActivateModule(0);

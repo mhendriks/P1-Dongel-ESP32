@@ -59,11 +59,12 @@ struct mod_conf {
     mod_io io_conf[2];
 };
 
-mod_conf module_config[3] = {
+mod_conf module_config[] = {
 //       S1  S2  RX  TX  RTS WTR IN OUT      S1  S2  RX  TX  RTS WTR IN OUT
  { 1, {{  4, 21,  5,  7,  6,  6, -1, -1 }, { -1, -1, -1, -1, -1, -1, -1, -1 }} }, /* NRGD     */
  { 2, {{ 42, 45, 41, 44, 43, 43, -1, -1 }, { 37, 40, 36, 39, 38, 38, -1, -1 }} }, /* ULTRA V2 */
- { 2, {{ 37, 40, 36, 39, 38, 38, -1, -1 }, { 42, 45, 41, 44, 43, 43, -1, -1 }} }  /* ULTRA X2 */
+ { 2, {{ 37, 40, 36, 39, 38, 38, -1, -1 }, { 42, 45, 41, 44, 43, 43, -1, -1 }} },  /* ULTRA X2 */
+ { 1, {{ -1, -1, 10,  0,  1,  4, -1, -1 }, { 42, 45, 41, 44, 43, 43, -1, -1 }} }  /* D1MC */
 };
 
 struct dev_conf {
@@ -86,7 +87,7 @@ struct dev_conf {
     int8_t eth_rst;
 };
 
-// enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2 };
+// enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2, NRGDH };
 
 dev_conf device_config[] = {
 
@@ -120,6 +121,12 @@ dev_conf device_config[] = {
 
   // P1UX2 (Ultra X2 – aangepaste ETH pinout)
   {  0, 9, -1, -1,  12, -1,  21, 10, 11, 18, 15, 16, 14, 13, 17 },
+  
+  //NRGDH
+  {  9, 8, -1, -1,  20, -1,  4,  1,  -1,  -1, -1, -1, -1, -1, -1 },
+
+    //D1MC
+  {  9, 8, -1, -1,  7, -1,  -1,  -1,  -1,  -1, -1, -1, -1, -1, -1 },
 };
 
 int8_t modType[2] = {-1,-1};

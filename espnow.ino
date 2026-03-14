@@ -40,6 +40,9 @@ bool bESPNowInit = false;
   todo: rssi check on pairing https://github.com/TenoTrash/ESP32_ESPNOW_RSSI/blob/main/Modulo_Receptor_OLED_SPI_RSSI.ino
 
 */
+void PSPUpdatePlanner() {
+  P2PType = OFFSET_ACTION + ASK_PLANNER; 
+}
 
 void procesACK(const uint8_t *incomingData){
   esp_now_ack_data_t ackData;
@@ -83,6 +86,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
             Command.action = CONN_RESPONSE;
             Command.channel = WiFi.channel(); //sent channel omdat een channel er naast soms ook werkt ... maar niet stabiel
             esp_now_send(NULL, (uint8_t *) &Command, sizeof(Command)); //ack to slave 
+            en_connected = true;
           } else {
             Debugln("CONN_REQUEST: NOT PAIRED");
             Command.action = CONN_CLEAR;
@@ -126,6 +130,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
               Command.action = PAIRING;
               Command.channel = WiFi.channel(); //sent channel omdat een channel er naast soms ook werkt ... maar niet stabiel ivm overlappende channels
               esp_now_send(NULL, (uint8_t *) &Command, sizeof(Command)); //ack to slave 
+              en_connected = true;
             }
           } else Debugln("NOT IN PAIRING MODE");
           break;
@@ -165,6 +170,7 @@ void OnDataSent(const esp_now_send_info_t *info, esp_now_send_status_t status) {
   // printMAC(mac_addr);
   // Debugln();
 #endif  
+  if ( status == ESP_NOW_SEND_SUCCESS ) en_error = 0; else en_error++;
 }
 
 void AddPeer( uint8_t * peer_mac ){
@@ -206,13 +212,14 @@ void StartESPNOW(){
 
 void sendStroomPlanner(){
   // check of available data and if EID is enabled
-  if ( StroomPlanData.size() == 0 ) return;
+  // if ( StroomPlanData.size() == 0 ) return; //todo: change to let peer know the eid isnt available any more
   
   planner_t PlannerData;
   memset(&PlannerData, 0, sizeof(PlannerData));
   PlannerData.msgType = STROOMPLANNER;
 
-  if ( !bEID_enabled) {
+  if ( !bEID_enabled || StroomPlanData.size() == 0 ) {
+    DebugTln(F("EID: planner data empty"));
     PlannerData.rec[0].hour = 99; //sent disabled state to display
   } else {
     JsonArray dataArray = StroomPlanData["data"].as<JsonArray>();
@@ -221,7 +228,7 @@ void sendStroomPlanner(){
 
     const char* timestamp = dataArray[0]["timestamp"].is<const char*>() ? dataArray[0]["timestamp"].as<const char*>() : nullptr;
     if (!timestamp || strlen(timestamp) < 13) {
-      DebugTln(F("Ongeldige of ontbrekende timestamp"));
+      DebugTln(F("EID: Ongeldige of ontbrekende timestamp"));
       return;
     }
 
@@ -321,7 +328,7 @@ void SendTariffData(){
 }
 
 void P2PSendActualData(){
-  if ( ! Pref.peers || ! bESPNowInit || !bNRGMenabled ) {
+  if ( ! Pref.peers || ! bESPNowInit || !bNRGMenabled || !en_connected ) {
     // Debugln("P2P sending actual blocked");
     return;
   }
@@ -335,7 +342,7 @@ void P2PSendActualData(){
   ActualData.e_t2r  = DSMRdata.energy_returned_tariff2.int_val() - dataYesterday.t2r;
   if ( mbusGas ) ActualData.Gas = gasDelivered * 1000 - dataYesterday.gas;
   else ActualData.Gas = UINT32_MAX; 
-  if ( WtrMtr ) ActualData.Water  = (P1Status.wtr_m3 * 1000.0 + P1Status.wtr_l + waterDelivered * 1000) - dataYesterday.water;
+  if ( WtrMtr ) ActualData.Water  = (waterDelivered * 1000) - dataYesterday.water;
   else ActualData.Water = UINT32_MAX;
   ActualData.Esolar = Enphase.Daily + SolarEdge.Daily;
   
@@ -490,6 +497,7 @@ void handleP2P(){
     bPairingmode = 0; 
     Debugln("-P- Timeout disable PAIRING mode");
   }
+  if ( en_error > 30 ) { en_connected = false; en_error = 0;} //prevent pushing data to a unconnected peer
   if ( !P2PType || bPairingmode ) return;
   switch ( P2PType ) {
     case UPD_VER_REQ: {

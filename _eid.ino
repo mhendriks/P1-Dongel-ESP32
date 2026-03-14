@@ -56,9 +56,19 @@
       if ( bEID_enabled ) EIDPostHello(false);
     }
 
+    void clearEIDPlannerData(bool forceupdate){
+      EIDDirectiveID = "";
+      bGetPlannerDetails = false;
+      bGotDirective = false;
+      if ( StroomPlanData.size() > 0 || forceupdate ) { StroomPlanData.clear();PSPUpdatePlanner();}
+    }
+
     void handleEnergyID(){  
 
-      if ( !bEID_enabled ) return;
+       if ( !bEID_enabled || skipNetwork ) {
+        clearEIDPlannerData(false);
+        return;
+      }
 
       //detect state change
       static uint8_t last_state = 255;
@@ -198,6 +208,9 @@
             if (doc["apiAccessToken"].is<const char*>()) {
               apiAccessToken = doc["apiAccessToken"].as<const char*>();
               bGotDirective = false;
+            } else {
+              apiAccessToken = "";
+              clearEIDPlannerData(true);
             }
 
             Debug(F("webhookUrl      : ")); Debugln(eid_webhook);
@@ -253,11 +266,8 @@
             EIDDirectiveID = directiveId;
             DebugTf("Directive ID: %s", EIDDirectiveID.c_str());
             bGetPlannerDetails = true;
-          } else {
-            EIDDirectiveID = "";
-            bGetPlannerDetails = false;
-            DebugTln(F("No directive id found in response"));
           }
+          else DebugTln(F("No directive id found in response"));
         }
       }  
       http.end();
@@ -287,21 +297,24 @@
         bGetPlannerDetails = false;
         StroomPlanData.clear();
         DeserializationError error = deserializeJson(StroomPlanData, payload);
-    #ifdef DEBUG
         if (error) DebugTln(F("JSON parsing failed in EIDGetDirectDetails"));
         else {
-            JsonArray dataArray = StroomPlanData["data"].as<JsonArray>();
-            Debugf("EID planner records parsed: %u\n", (unsigned)dataArray.size());
-            int maxRecords = dataArray.size() < 14 ? dataArray.size() : 14;
-            for (int i = 0; i < maxRecords; i++) {
-              const char* signal = dataArray[i]["signal"] | "<missing>";
-              Debugf("signal [%i] : ",i);Debugln(signal);
-            }
+          JsonArray dataArray = StroomPlanData["data"].as<JsonArray>();
+          size_t plannerCount = dataArray.size();
+          Debugf("EID planner records parsed: %u\n", (unsigned)plannerCount);
+          int maxRecords = plannerCount < 14 ? plannerCount : 14;
+          for (int i = 0; i < maxRecords; i++) {
+            const char* signal = dataArray[i]["signal"] | "<missing>";
+            Debugf("signal [%i] : ",i);Debugln(signal);
+          }
+          #ifdef DEBUG
+            ApiResponse planner = JsonEIDplanner();
+            Debugln(planner.body);
+          #endif
+          PSPUpdatePlanner(); //push update to display
         }
-        ApiResponse planner = JsonEIDplanner();
-        Debugln(planner.body);
-    #endif  
       }
+      else DebugTln(F("Failed to refresh EID planner data"));
       http.end();
     }
 

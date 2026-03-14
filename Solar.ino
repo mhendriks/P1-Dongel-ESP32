@@ -161,34 +161,120 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
     return;
   }
 
-// ===== Omniksol route (TCP 8899) =====
-//   if (src == OMNIKSOL) {
-//     uint32_t pac, dayWh;
-//     // Omnik: Url = "ip[:port]" of "tcp://ip[:port]" ; SiteID = wifi/logger serial
-//     if (omnikGetPacAndTodayWh(solarSystem->Url, solarSystem->SiteID, pac, dayWh)) {
-//       solarSystem->Actual = pac;
-//       solarSystem->Daily  = dayWh;
-// #ifdef DEBUG
-//       Debug("OMNIK Daily > ");  Debugln(solarSystem->Daily);
-//       Debug("OMNIK Actual > "); Debugln(solarSystem->Actual);
-// #endif
-//     }
-//     return;
-//   }
-
-  // ===== Enphase / SolarEdge / Solis (bestaande GET flow) =====
-  HTTPClient http;
-
   if (src == SOLAR_EDGE) {
-    solarSystem->Url = "https://monitoringapi.solaredge.com/site/" + String(SolarEdge.SiteID) + "/overview";
-    Debug("url > "); Debugln(solarSystem->Url);
+    String baseUrl = "https://monitoringapi.solaredge.com/site/" + String(SolarEdge.SiteID);
+    String token = solarSystem->Token;
+    token.trim();
+    String today;
+    if (strlen(actTimestamp) > 10) {
+      today = buildDateTimeString(actTimestamp, strlen(actTimestamp)).substring(0, 10);
+    } else {
+      today = "1970-01-01";
+    }
+    String timeFrameUrl = baseUrl + "/timeFrameEnergy?startDate=" + today + "&endDate=" + today;
+    String powerFlowUrl = baseUrl + "/currentPowerFlow.json";
+    if (token.length() > 0) {
+      timeFrameUrl += "&api_key=" + token;
+      powerFlowUrl += "?api_key=" + token;
+    }
+
+    HTTPClient http;
+    String payload;
+    JsonDocument solarDoc;
+    solarSystem->Actual = 0;
+    solarSystem->Daily = 0;
+    SolarEdgeAccu.Available = false;
+    SolarEdgeAccu.unit = "";
+    SolarEdgeAccu.status = "";
+    SolarEdgeAccu.currentPower = 0.0f;
+    SolarEdgeAccu.chargeLevel = 0;
+    SolarEdgeFlowPvPower = 0.0f;
+    SolarEdgeFlowPvValid = false;
+
+    auto fetchJson = [&](const String& url) -> bool {
+      http.begin(url.c_str());
+      http.addHeader("Accept", "application/json");
+      int rc = http.GET();
+      Debugf("Solaredge url: %s\n", url.c_str());
+      DebugT(F("HTTP Response code: ")); Debugln(rc);
+      if (rc != 200) {
+        payload = http.getString();
+        if (payload.length()) {
+          DebugT(F("Solaredge response body: ")); Debugln(payload);
+        }
+        http.end();
+        return false;
+      }
+      payload = http.getString();
+      http.end();
+      DeserializationError err = deserializeJson(solarDoc, payload);
+      return !err;
+    };
+
+    // timeFrameEnergy -> dagopwekking (huidige datum)
+    if (fetchJson(timeFrameUrl)) {
+      JsonObject timeFrame = solarDoc["timeFrameEnergy"];
+      if (!timeFrame.isNull()) {
+        JsonVariant energy;
+        if (!timeFrame["energy"].isNull()) energy = timeFrame["energy"];
+        if (energy.isNull() && !timeFrame["totalEnergy"].isNull()) energy = timeFrame["totalEnergy"];
+        if (energy.isNull() && timeFrame["meters"].is<JsonArray>()) {
+          JsonArray meters = timeFrame["meters"];
+          if (meters.size() > 0 && !meters[0]["energy"].isNull()) {
+            energy = meters[0]["energy"];
+          }
+        }
+        if (!energy.isNull()) {
+          solarSystem->Daily = (uint32_t)energy.as<float>();
+        }
+      }
+      solarDoc.clear();
+    }
+
+    // currentPowerFlow -> actuele PV + accu-velden
+    if (fetchJson(powerFlowUrl)) {
+      JsonObject flow = solarDoc["siteCurrentPowerFlow"];
+      if (!flow.isNull()) {
+        String flowUnit = flow["unit"].as<const char*>();
+        JsonObject pv = flow["PV"];
+        if (!pv.isNull()) {
+          float pvPower = pv["currentPower"].as<float>();
+          SolarEdgeFlowPvPower = pvPower;
+          SolarEdgeFlowPvValid = true;
+          if (flowUnit == "kW") {
+            solarSystem->Actual = (uint32_t)(pvPower * 1000.0f + 0.5f);
+          } else {
+            solarSystem->Actual = (uint32_t)(pvPower + 0.5f);
+          }
+        } else {
+          SolarEdgeFlowPvPower = 0.0f;
+          SolarEdgeFlowPvValid = false;
+        }
+
+        JsonObject storage = flow["STORAGE"];
+        if (!storage.isNull()) {
+          SolarEdgeAccu.Available = true;
+          SolarEdgeAccu.unit = flowUnit;
+          SolarEdgeAccu.status = storage["status"].as<const char*>();
+          SolarEdgeAccu.currentPower = storage["currentPower"].as<float>();
+          SolarEdgeAccu.chargeLevel = storage["chargeLevel"].as<uint8_t>();
+        }
+      } else {
+        SolarEdgeFlowPvValid = false;
+      }
+    } else {
+      SolarEdgeFlowPvValid = false;
+    }
+
+    return;
   }
 
+  // ===== Enphase / Solis (bestaande GET flow) =====
+  HTTPClient http;
   String urlcheck = solarSystem->Url;
   bool bSolis = (urlcheck.indexOf("CMD=inv_query") > 0);
   http.begin(solarSystem->Url.c_str());
   http.addHeader("Accept", "application/json");
-
   if (src == ENPHASE) {
     if (!bSolis) http.addHeader("Authorization", "Bearer " + solarSystem->Token);
   } else {
@@ -233,24 +319,6 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   Debug("Daily > ");  Debugln(solarSystem->Daily);
   Debug("Actual > "); Debugln(solarSystem->Actual);
 #endif
-
-  // Hybrid SolarEdge systems can report battery contribution in the cloud
-  // overview power. If local flow data is available via the battery endpoint,
-  // prefer PV.currentPower from that source.
-  if (src == SOLAR_EDGE && SolarEdgeFlowPvValid) {
-    float pv = SolarEdgeFlowPvPower;
-    if (SolarEdgeAccu.unit == "kW") {
-      solarSystem->Actual = (uint32_t)(pv * 1000.0f + 0.5f);
-    } else if (SolarEdgeAccu.unit == "W") {
-      solarSystem->Actual = (uint32_t)(pv + 0.5f);
-    } else {
-      // Default to W when unit is unknown to avoid large scaling errors.
-      solarSystem->Actual = (uint32_t)(pv + 0.5f);
-    }
-#ifdef DEBUG
-    Debug("SolarEdge PV(flow) Actual > "); Debugln(solarSystem->Actual);
-#endif
-  }
 }
 
 void GetSolarDataN() {
