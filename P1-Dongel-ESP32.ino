@@ -86,7 +86,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - refactor: asyncwebserver
 - update button in HA to trigger the update (mqtt based #70)
 
-
 */
 
 /******************** compiler options  ********************************************/
