@@ -27,48 +27,87 @@
   EthernetClass myEthernet;
 #endif
 
-//int WifiDisconnect = 0;
 bool bNoNetworkConn = false;
 bool bEthUsage = false;
 static uint32_t s_wifiLostMs = 0;
+static uint32_t s_wifiRetryMs = 0;
 static uint8_t  s_wifiReconnectCnt = 0;
 static const uint32_t WIFI_WATCHDOG_LOST_MS = 20000;
-static const uint8_t  WIFI_WATCHDOG_MAX_RETRIES = 3;
+#ifdef DEBUG
+  static const uint32_t WIFI_WATCHDOG_REBOOT_MS = 30*1000; // 30 sec
+#else
+  static const uint32_t WIFI_WATCHDOG_REBOOT_MS = 5*60*1000; // 5 minuten
+#endif
+
+static inline bool markWifiDisconnected(uint32_t nowMs);
+
+
+static void attemptWifiReconnect() {
+  WiFi.disconnect();
+  delay(100);
+  WiFi.reconnect();
+}
+
+// Event handlers only signal loss. Reconnect/retry decisions happen only in WifiWatchDog().
+static inline void signalWifiLoss(const String& reason) {
+  if ( !bNoNetworkConn ) LogFile(reason.c_str(), true); // only once
+  markWifiDisconnected(millis());
+}
 
 void WifiWatchDog() {
   if ( skipNetwork ) return;
   if ( bEthUsage || netw_state == NW_ETH || netw_state == NW_ETH_LINK ) return;
-  if ( WiFi.status() == WL_CONNECTED ) {
-    s_wifiLostMs = 0;
+  if ( WiFi.status() == WL_CONNECTED ) return;
+
+  uint32_t now = millis();
+
+  // Event can arrive late; make sure downtime detection starts even if event state is not yet updated.
+  if ( !bNoNetworkConn || (s_wifiLostMs == 0) ) {
+    s_wifiLostMs = now;
+    s_wifiRetryMs = now;
     s_wifiReconnectCnt = 0;
-    bNoNetworkConn = false;
+    bNoNetworkConn = true;
+    DebugT("WifiLost -> watchdog immediate reconnect attempt: ");
+    Debugln(s_wifiReconnectCnt + 1);
+    sprintf(cMsg, "Wifi reconnect attempt %d", s_wifiReconnectCnt + 1);
+    LogFile(cMsg, true);
+    attemptWifiReconnect();
+    s_wifiReconnectCnt++;
+    s_wifiRetryMs = now;
+    return;
+  }
+  
+  if ( (uint32_t)(now - s_wifiLostMs) >= WIFI_WATCHDOG_REBOOT_MS ) {
+    LogFile("Wifi no reconnect possible -> reboot", true);
+    P1Reboot();
     return;
   }
 
-  uint32_t now = millis();
-  if ( !bNoNetworkConn || (s_wifiLostMs == 0) ) {
-    s_wifiLostMs = now;
-    bNoNetworkConn = true;
-  }
-
-  if ( (uint32_t)(now - s_wifiLostMs) >= WIFI_WATCHDOG_LOST_MS ) {
-    if ( s_wifiReconnectCnt >= WIFI_WATCHDOG_MAX_RETRIES ) {
-      LogFile("Wifi no reconnect possible -> reboot", true);
-      P1Reboot();
-      return;
-    }
-
+  if ( (uint32_t)(now - s_wifiRetryMs) >= WIFI_WATCHDOG_LOST_MS ) {
     DebugT("WifiLost > ");
     Debug(WIFI_WATCHDOG_LOST_MS);
     Debugln(" ms, reconnect");
     Debug("WifiReconnect attempt: ");
     Debugln(s_wifiReconnectCnt + 1);
+    sprintf(cMsg, "Wifi reconnect attempt %d", s_wifiReconnectCnt + 1);
+    LogFile(cMsg, true);
     s_wifiReconnectCnt++;
-    s_wifiLostMs = now;
-    WiFi.disconnect(true);
-    delay(100);
-    WiFi.reconnect();
+    s_wifiRetryMs = now;
+    attemptWifiReconnect();
   }
+}
+
+static inline bool markWifiDisconnected(uint32_t nowMs) {
+  if ( netw_state != NW_ETH ) netw_state = NW_NONE;
+  if ( !bNoNetworkConn ) {
+    s_wifiLostMs = 0;
+    s_wifiRetryMs = nowMs;
+    s_wifiReconnectCnt = 0;
+    bNoNetworkConn = true;
+    return true;
+  }
+
+  return false;
 }
 
 static bool isZeroMac(const uint8_t *mac){
@@ -167,10 +206,6 @@ void WifiOff() {
 #endif
 }
 
-//int WifiDisconnect = 0;
-// bool bNoNetworkConn = false;
-// bool bEthUsage = false;
-
 // Network event -> Ethernet is dominant
 // https://github.com/espressif/arduino-esp32/blob/master/libraries/Network/src/NetworkEvents.h
 static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
@@ -209,7 +244,9 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       LogFile("ETH Disconnected", true);
       break;
 #endif //ETHERNET
-    //****** WIFI
+    
+    //****** WIFI ******//
+
     case ARDUINO_EVENT_WIFI_STA_START: //110
       // initial nudge (soms is begin() traag met eerste connect)
       // Debugln("--- WIFI START ----");
@@ -217,14 +254,19 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
         LogFile(cMsg, true);
+        // s_wifiKnownSsid = WiFi.SSID();
+        // s_wifiKnownPsk = WiFi.psk();
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: //7
         LogFile("Wifi Connected",true);
         SwitchLED( LED_ON, LED_BLUE );
         Debug (F("IP address: " ));  Debug (WiFi.localIP());Debug(" )\n\n");
+        // s_wifiKnownSsid = WiFi.SSID();
+        // s_wifiKnownPsk = WiFi.psk();
 
         if ( bEthUsage ) WifiOff(); else netw_state = NW_WIFI;
         s_wifiLostMs = 0;
+        s_wifiRetryMs = 0;
         s_wifiReconnectCnt = 0;
         bNoNetworkConn = false;
         break;
@@ -234,10 +276,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       // esp_wifi_start(); // idempotent als al gestart
       break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP: //117
-        if ( netw_state != NW_ETH ) netw_state = NW_NONE;
-        if ( !bNoNetworkConn ) LogFile("Wifi connection lost - LOST IP",true); //only once
-        s_wifiLostMs = millis();
-        bNoNetworkConn = true;
+        signalWifiLoss("Wifi connection lost - LOST IP");
         break;           
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: //5
       {
@@ -248,10 +287,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
         #endif      
         uint8_t reason = info.wifi_sta_disconnected.reason;
         String discon_res = "Wifi connection lost - DISCONNECTED | reason: " + String(reason);
-        if ( !bNoNetworkConn ) LogFile(discon_res.c_str(),true); //only once
-              
-        bNoNetworkConn = true;
-        if ( !s_wifiLostMs ) s_wifiLostMs = millis();
+        signalWifiLoss(discon_res);
         break;
         }
     default:{
