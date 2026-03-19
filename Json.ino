@@ -158,10 +158,10 @@ String HWrootJson() {
   return jsonResponse([&](JsonDocument& doc){
     String MACID = macID;
     MACID.toLowerCase();
-    doc["product_name"] = "P1 Dongle";
+    doc["product_name"] = "P1 Meter";
     doc["product_type"] = "HWE-P1";
     doc["serial"] = MACID;
-    doc["firmware_version"] = _VERSION_ONLY;
+    doc["firmware_version"] = 6.0304;
     doc["api_version"] = "v1";
   });
  }
@@ -175,8 +175,18 @@ String HWapiJson(){
     if ( WiFi.SSID().length() ) jsonDoc["wifi_ssid"] = WiFi.SSID();
     else jsonDoc["wifi_ssid"] = "NO-WIFI";
 
-    jsonDoc["wifi_strength"] = WiFi.RSSI();
-    jsonDoc["smr_version"] = DSMRdata.p1_version;
+    int smr = 50;  // default fallback
+
+    if ( DSMRdata.p1_version.length() > 0) {
+      int parsed = atoi(DSMRdata.p1_version.c_str());
+
+      if (parsed > 0) {
+        smr = parsed;
+      }
+    }
+
+    jsonDoc["wifi_strength"] = abs(WiFi.RSSI());
+    jsonDoc["smr_version"] = smr;
     jsonDoc["meter_model"] = DSMRdata.identification;
     jsonDoc["unique_id"] = DSMRdata.equipment_id;
 
@@ -199,11 +209,28 @@ String HWapiJson(){
     jsonDoc["active_voltage_l1_v"] = F3DEC(DSMRdata.voltage_l1.val());
     jsonDoc["active_voltage_l2_v"] = F3DEC(DSMRdata.voltage_l2.val());
     jsonDoc["active_voltage_l3_v"] = F3DEC(DSMRdata.voltage_l3.val());
-    jsonDoc["active_current_l1_a"] = F3DEC((DSMRdata.voltage_l1_present&&DSMRdata.voltage_l1.val())?jsonDoc["active_power_l1_w"].as<float>()/DSMRdata.voltage_l1.val():0);
-    jsonDoc["active_current_l2_a"] = F3DEC((DSMRdata.voltage_l2_present&&DSMRdata.voltage_l2.val())?jsonDoc["active_power_l2_w"].as<float>()/DSMRdata.voltage_l2.val():0);
-    jsonDoc["active_current_l3_a"] = F3DEC((DSMRdata.voltage_l3_present&&DSMRdata.voltage_l3.val())?jsonDoc["active_power_l3_w"].as<float>()/DSMRdata.voltage_l3.val():0);
 
-    // Externe apparaten (zoals gasmeter)
+    float i1 = (DSMRdata.voltage_l1_present&&DSMRdata.voltage_l1.val())?jsonDoc["active_power_l1_w"].as<float>()/DSMRdata.voltage_l1.val():0.0f;
+    float i2 = (DSMRdata.voltage_l2_present&&DSMRdata.voltage_l2.val())?jsonDoc["active_power_l2_w"].as<float>()/DSMRdata.voltage_l2.val():0.0f;
+    float i3 = (DSMRdata.voltage_l3_present&&DSMRdata.voltage_l3.val())?jsonDoc["active_power_l3_w"].as<float>()/DSMRdata.voltage_l3.val():0.0f;
+
+    jsonDoc["active_current_a"]    = F3DEC(i1 + i2 + i3);
+    jsonDoc["active_current_l1_a"] = F3DEC(i1);
+    jsonDoc["active_current_l2_a"] = F3DEC(i2);
+    jsonDoc["active_current_l3_a"] = F3DEC(i3);
+
+    jsonDoc["voltage_sag_l1_count"]   = 0;
+    jsonDoc["voltage_sag_l2_count"]   = 0;
+    jsonDoc["voltage_sag_l3_count"]   = 0;
+
+    jsonDoc["voltage_swell_l1_count"] = 0;
+    jsonDoc["voltage_swell_l2_count"] = 0;
+    jsonDoc["voltage_swell_l3_count"] = 0;
+
+    jsonDoc["any_power_fail_count"]   = 0;
+    jsonDoc["long_power_fail_count"]  = 0;
+    
+   // Externe apparaten (zoals gasmeter)
     JsonArray external;
     if ( mbusGas || WtrMtr ) external = jsonDoc.createNestedArray("external");
     // Gasverbruik via M-Bus  

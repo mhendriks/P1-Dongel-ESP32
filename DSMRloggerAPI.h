@@ -121,6 +121,7 @@ RingRecord RNGDayRec[15];
 
 void printRecordArray(const RingRecord* records, int slots, const char* label);
 bool loadRingfile(E_ringfiletype type);
+bool loadRNGDaysHistory();
 
 typedef struct {
     char filename[17];

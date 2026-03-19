@@ -73,11 +73,11 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - De waarden in daily insights labelen met het datum/tijdstip waarop gemeten (Harrie)
 
 5.4.0
+ - check startup + process day values based on yesterday - NRG Monitor (4.17 / 5.2)
 - show espnow paired and active 
 - Webasto Unite (Vestel mapping) - Frank
 - UDP option available as build feature
 - auto update feature
-- check startup + process day values based on yesterday - NRG Monitor (4.17 / 5.2)
 - MQTT on/off toggle
 - Virtual P1 feature in settings
 - overspanning waarde instelbaar maken
@@ -90,7 +90,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define INSIGHTS
 // #define XTRA_LOG
 
@@ -98,7 +98,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA         //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE //+D1MC 
+#define NRG_DONGLE //+D1MC 
 // #define P1P 
 
 //SPECIAL
@@ -118,6 +118,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define USB_CONFIG
 // #define POST_POWERCH
 // #define VIRTUAL_P1
+// #define MIMIC_HW
 
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>
@@ -224,6 +225,7 @@ void loop () {
   }
   handleKeyInput();
   handleAutoUpdate(false);
+  WifiWatchDog();
   handleRemoteUpdate();
   handleWater();
   handleEnergyID();  

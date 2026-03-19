@@ -30,10 +30,46 @@
 //int WifiDisconnect = 0;
 bool bNoNetworkConn = false;
 bool bEthUsage = false;
-static esp_timer_handle_t s_reconnTimer = nullptr;
-static bool     s_authBlocked = false;
-static uint32_t s_lastKickMs  = 0;
-static const uint32_t KICK_DEBOUNCE_MS = 1500;
+static uint32_t s_wifiLostMs = 0;
+static uint8_t  s_wifiReconnectCnt = 0;
+static const uint32_t WIFI_WATCHDOG_LOST_MS = 20000;
+static const uint8_t  WIFI_WATCHDOG_MAX_RETRIES = 3;
+
+void WifiWatchDog() {
+  if ( skipNetwork ) return;
+  if ( bEthUsage || netw_state == NW_ETH || netw_state == NW_ETH_LINK ) return;
+  if ( WiFi.status() == WL_CONNECTED ) {
+    s_wifiLostMs = 0;
+    s_wifiReconnectCnt = 0;
+    bNoNetworkConn = false;
+    return;
+  }
+
+  uint32_t now = millis();
+  if ( !bNoNetworkConn || (s_wifiLostMs == 0) ) {
+    s_wifiLostMs = now;
+    bNoNetworkConn = true;
+  }
+
+  if ( (uint32_t)(now - s_wifiLostMs) >= WIFI_WATCHDOG_LOST_MS ) {
+    if ( s_wifiReconnectCnt >= WIFI_WATCHDOG_MAX_RETRIES ) {
+      LogFile("Wifi no reconnect possible -> reboot", true);
+      P1Reboot();
+      return;
+    }
+
+    DebugT("WifiLost > ");
+    Debug(WIFI_WATCHDOG_LOST_MS);
+    Debugln(" ms, reconnect");
+    Debug("WifiReconnect attempt: ");
+    Debugln(s_wifiReconnectCnt + 1);
+    s_wifiReconnectCnt++;
+    s_wifiLostMs = now;
+    WiFi.disconnect(true);
+    delay(100);
+    WiFi.reconnect();
+  }
+}
 
 static bool isZeroMac(const uint8_t *mac){
   for (uint8_t i = 0; i < 6; i++) {
@@ -56,57 +92,7 @@ static bool readPreferredEthMac(uint8_t *mac){
 }
 #endif
 
-static inline bool isCoreReconnectable(uint8_t r){
-  switch (r) {
-    case WIFI_REASON_UNSPECIFIED:
-    // timeouts (retry)
-    case WIFI_REASON_AUTH_EXPIRE:
-    case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:
-    case WIFI_REASON_GROUP_KEY_UPDATE_TIMEOUT:
-    case WIFI_REASON_802_1X_AUTH_FAILED:     // enterprise: core probeert nog
-    case WIFI_REASON_HANDSHAKE_TIMEOUT:
-    // transient (reconnect)
-    case WIFI_REASON_AUTH_LEAVE:
-    case WIFI_REASON_ASSOC_EXPIRE:
-    case WIFI_REASON_ASSOC_TOOMANY:
-    case WIFI_REASON_NOT_AUTHED:
-    case WIFI_REASON_NOT_ASSOCED:
-    case WIFI_REASON_ASSOC_NOT_AUTHED:
-    case WIFI_REASON_MIC_FAILURE:
-    case WIFI_REASON_IE_IN_4WAY_DIFFERS:
-    case WIFI_REASON_INVALID_PMKID:
-    case WIFI_REASON_BEACON_TIMEOUT:         // 200
-    case WIFI_REASON_NO_AP_FOUND:            // 201
-    case WIFI_REASON_ASSOC_FAIL:
-    case WIFI_REASON_CONNECTION_FAIL:
-    case WIFI_REASON_AP_TSF_RESET:
-    case WIFI_REASON_ROAMING:
-      return true;
-    default:
-      return false;
-  }
-}
-
 WiFiManager manageWiFi;
-
-// Echte “fatal auth” (verkeerd wachtwoord) → blokkeer tot user ingrijpt
-static inline bool isAuthFatal(uint8_t r){
-  switch (r) {
-    case WIFI_REASON_AUTH_FAIL:            // 202 op veel targets
-    case WIFI_REASON_INVALID_PMKID:        // vaak ook definitief fout
-      return true;
-    default:
-      return false;
-  }
-}
-
-static void kickOnce(){
-  uint32_t now = millis();
-  if (now - s_lastKickMs < KICK_DEBOUNCE_MS) return;
-  esp_wifi_start();                 //  start STA if stopped
-  esp_wifi_connect();               // driver allready in action → ESP_ERR_WIFI_CONN
-  s_lastKickMs = now;
-}
 
 void GetMacAddress(){
 
@@ -181,23 +167,6 @@ void WifiOff() {
 #endif
 }
 
-static inline bool isAuthError(uint8_t reason)
-{
-  // Enum is wifi_err_reason_t (esp_wifi_types.h). Niet alle borden hebben dezelfde set,
-  // dus houd 'm iets breder:
-  switch (reason) {
-    case WIFI_REASON_AUTH_EXPIRE:             // 2
-    case WIFI_REASON_AUTH_FAIL:               // (ESP-IDF nieuwe naam, bij sommige cores is dit 202)
-    case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:  // 15
-    case WIFI_REASON_HANDSHAKE_TIMEOUT:       // alias op sommige targets
-    case WIFI_REASON_NOT_AUTHED:              // 6
-    case WIFI_REASON_ASSOC_FAIL:              // 18 (kan ook auth-gerelateerd zijn)
-      return true;
-    default:
-      return false;
-  }
-}
-
 //int WifiDisconnect = 0;
 // bool bNoNetworkConn = false;
 // bool bEthUsage = false;
@@ -243,7 +212,6 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     //****** WIFI
     case ARDUINO_EVENT_WIFI_STA_START: //110
       // initial nudge (soms is begin() traag met eerste connect)
-      // if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
       // Debugln("--- WIFI START ----");
       break;
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
@@ -256,8 +224,8 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
         Debug (F("IP address: " ));  Debug (WiFi.localIP());Debug(" )\n\n");
 
         if ( bEthUsage ) WifiOff(); else netw_state = NW_WIFI;
-        s_authBlocked = false;
-        s_lastKickMs = 0;               // reset voor snelle roam
+        s_wifiLostMs = 0;
+        s_wifiReconnectCnt = 0;
         bNoNetworkConn = false;
         break;
     case ARDUINO_EVENT_WIFI_STA_STOP: //8
@@ -268,6 +236,8 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     case ARDUINO_EVENT_WIFI_STA_LOST_IP: //117
         if ( netw_state != NW_ETH ) netw_state = NW_NONE;
         if ( !bNoNetworkConn ) LogFile("Wifi connection lost - LOST IP",true); //only once
+        s_wifiLostMs = millis();
+        bNoNetworkConn = true;
         break;           
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED: //5
       {
@@ -278,34 +248,10 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
         #endif      
         uint8_t reason = info.wifi_sta_disconnected.reason;
         String discon_res = "Wifi connection lost - DISCONNECTED | reason: " + String(reason);
-        // if ( !bNoNetworkConn ) LogFile("Wifi connection lost - DISCONNECTED",true); //only once
-        LogFile(discon_res.c_str(),true); //every time
+        if ( !bNoNetworkConn ) LogFile(discon_res.c_str(),true); //only once
               
         bNoNetworkConn = true;
-
-        if (isAuthFatal(reason)) {
-        s_authBlocked = true;
-        // hier evt: WiFi.disconnect(true,true); startPortal();
-        return;
-      }
-      s_authBlocked = false;
-
-      if (reason == WIFI_REASON_ASSOC_LEAVE /*8*/) {
-        // Bekende “stilte”-case: STA valt stil → start & één kick
-        esp_wifi_start();
-        kickOnce();
-        return;
-      }
-
-      if (isCoreReconnectable(reason)) {
-        // Laat de core z’n autoretry doen; niets extra’s om dubbelwerk te vermijden
-        return;
-      }
-
-      // Rest: core retryt niet → help een handje (rate-limited)
-      
-      if ( !manageWiFi.getConfigPortalActive() ) kickOnce();
-      else Debugln("config portal active - no kickonce");
+        if ( !s_wifiLostMs ) s_wifiLostMs = millis();
         break;
         }
     default:{
@@ -513,19 +459,46 @@ void startTelnet()
 void startMDNS(const char *Hostname) {
   if ( skipNetwork ) return;
   DebugTf("[1] mDNS setup as [%s.local]\r\n", Hostname);
-  if ( !MDNS.begin(Hostname) ) DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
-  else {
-    MDNS.addService( Hostname, "tcp", 80);
-    MDNS.addService( "p1dongle", "tcp", 80);
-    MDNS.addServiceTxt("p1dongle", "tcp", "id", String(macID).c_str() );
-#ifdef ULTRA    
-    MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1U" );    
-#elif defined (ETHERNET)
-    MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1E" );    
-#else
-    MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1P" );    
+  String mdnsName = Hostname;
+#ifdef MIMIC_HW
+  String MACID = macID;
+  String mimicHostname = "p1meter-" + MACID.substring(MACID.length() - 6);
+  mdnsName = mimicHostname;
+  DebugTf("[2] mDNS mimic as [%s.local]\r\n", mimicHostname.c_str());
 #endif
+
+  if ( !MDNS.begin(mdnsName.c_str()) ) {
+    DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
+    return;
   }
+
+#ifdef MIMIC_HW
+  MDNS.addService("hwenergy", "tcp", 80);
+  MDNS.addService("homewizard", "tcp", 80);
+
+  MDNS.addServiceTxt("hwenergy", "tcp", "serial", MACID.c_str());
+  MDNS.addServiceTxt("hwenergy", "tcp", "product_type", "HWE-P1");
+  MDNS.addServiceTxt("hwenergy", "tcp", "product_name", "P1 Meter");
+  MDNS.addServiceTxt("hwenergy", "tcp", "path", "/api/v1");
+  MDNS.addServiceTxt("hwenergy", "tcp", "api_enabled", "1");
+
+  MDNS.addServiceTxt("homewizard", "tcp", "serial", MACID.c_str());
+  MDNS.addServiceTxt("homewizard", "tcp", "product_type", "HWE-P1");
+  MDNS.addServiceTxt("homewizard", "tcp", "product_name", "P1 Meter");
+  MDNS.addServiceTxt("homewizard", "tcp", "path", "/api/v1");
+  MDNS.addServiceTxt("homewizard", "tcp", "api_enabled", "1");
+#else
+  MDNS.addService( Hostname, "tcp", 80);
+  MDNS.addService( "p1dongle", "tcp", 80);
+  MDNS.addServiceTxt("p1dongle", "tcp", "id", String(macID).c_str() );
+#ifdef ULTRA    
+  MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1U" );    
+#elif defined (ETHERNET)
+  MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1E" );    
+#else
+  MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1P" );    
+#endif
+#endif
 } // startMDNS()
 
 #endif

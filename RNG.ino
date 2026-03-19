@@ -191,6 +191,70 @@ bool loadRingfile(E_ringfiletype type) {
   return true;
 }
 
+bool loadRNGDaysHistory() {
+  if (!loadRingfile(RINGDAYS)) return false;
+
+  int selectedSlot = -1;
+  time_t now = time(NULL);
+  int ntpSlot = -1;
+  const uint16_t daySlots = RingFiles[RINGDAYS].slots;
+  const time_t maxSkewSec = 31LL * 24 * 3600; // accept one day margin beyond ring depth
+  bool hasNtpTime = (now > 1000000000); // rough sanity check
+
+  if (hasNtpTime) {
+    ntpSlot = (now / RingFiles[RINGDAYS].seconds) % daySlots;
+    for (int offset = 0; offset < daySlots; offset++) {
+      int slot = (ntpSlot - offset + daySlots) % daySlots;
+      if (strncmp(RNGDayRec[slot].date, "20000000", 8) == 0) continue;
+      time_t ts = date2epoch(RNGDayRec[slot].date);
+      if (ts == 0) continue;
+      if (ts > now) continue;
+      if ((now - ts) <= maxSkewSec) {
+        selectedSlot = slot;
+        break;
+      }
+    }
+  }
+
+  if (selectedSlot < 0) {
+    selectedSlot = actSlot;
+    if (selectedSlot < 0 || selectedSlot >= daySlots) return false;
+    if (strncmp(RNGDayRec[selectedSlot].date, "20000000", 8) == 0) {
+      selectedSlot = -1;
+      for (int slot = 0; slot < daySlots; slot++) {
+        if (strncmp(RNGDayRec[slot].date, "20000000", 8) == 0) continue;
+        selectedSlot = slot;
+        break;
+      }
+    }
+  }
+  if (selectedSlot < 0) return false;
+
+  time_t ts = date2epoch(RNGDayRec[selectedSlot].date);
+  if (ts == 0) return false;
+
+  dataYesterday.t1    = (uint32_t)(RNGDayRec[selectedSlot].values[0] * 1000.0f + 0.5f);
+  dataYesterday.t2    = (uint32_t)(RNGDayRec[selectedSlot].values[1] * 1000.0f + 0.5f);
+  dataYesterday.t1r   = (uint32_t)(RNGDayRec[selectedSlot].values[2] * 1000.0f + 0.5f);
+  dataYesterday.t2r   = (uint32_t)(RNGDayRec[selectedSlot].values[3] * 1000.0f + 0.5f);
+  dataYesterday.gas   = (uint32_t)(RNGDayRec[selectedSlot].values[4] * 1000.0f + 0.5f);
+  dataYesterday.water = (uint32_t)(RNGDayRec[selectedSlot].values[5] * 1000.0f + 0.5f);
+  dataYesterday.lastUpdDay = ts / (3600 * 24);
+
+  DebugT(F("RNGdays restored day: "));
+  Debugln(RNGDayRec[selectedSlot].date);
+  if (hasNtpTime) {
+    DebugT(F("NTP-slot "));
+    Debug(ntpSlot);
+    DebugT(F(" used, selected slot "));
+    Debugln(selectedSlot);
+  } else {
+    DebugT(F("Fallback slot "));
+    Debugln(selectedSlot);
+  }
+  return true;
+}
+
 bool saveRingfile(E_ringfiletype type) {
   const S_ringfile& file = RingFiles[type];
   File f = LittleFS.open("/testDays.json", "w");

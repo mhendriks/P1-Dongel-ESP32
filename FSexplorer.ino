@@ -75,7 +75,13 @@ void setupFSexplorer() {
 
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
   httpServer.on("/login", HTTP_GET, []() { auth(); });
-  
+
+  httpServer.on("/api/v1/telegram", HTTP_GET, []() { 
+    if ( !auth() ) return; 
+    // HWapi();
+    httpServer.send( 200, "text/plain", CapTelegram.c_str() );
+  });
+
   httpServer.on("/api/v1/data", HTTP_GET, []() { 
     if ( !auth() ) return; 
     // HWapi();
