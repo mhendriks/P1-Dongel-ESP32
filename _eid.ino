@@ -48,6 +48,12 @@
     DECLARE_TIMER_MIN(T_EID_PLAN, 60); //refresh planner evry hour
     DECLARE_TIMER_SEC(T_EID_HELLO_FAIL, 1);
 
+    static inline bool isEIDNetworkAvailable() {
+      return ( !skipNetwork
+            && ( (netw_state == NW_ETH)
+              || (netw_state == NW_WIFI && WiFi.status() == WL_CONNECTED && !bNoNetworkConn) ) );
+    }
+
   void EID_RESTART_IDLE_TIMER(){
     RESTART_TIMER(T_EID_IDLE);
   }
@@ -65,7 +71,7 @@
 
     void handleEnergyID(){  
 
-       if ( !bEID_enabled || skipNetwork ) {
+       if ( !bEID_enabled || !isEIDNetworkAvailable() ) {
         clearEIDPlannerData(false);
         return;
       }
@@ -157,6 +163,11 @@
     // {"webhookUrl":"https://sbns-energyid-prod.servicebus.windows.net/sbq-smartstuff-p1/messages","headers":{"authorization":"<gone>","x-twin-id":"<>"},"recordNumber":"EA-14195189","recordName":"Mijn woning","webhookPolicy":{"allowedInterval":"PT5M","uploadInterval":300}}
 
     void EIDPostHello(bool fromHttpRequest) {
+      if (!isEIDNetworkAvailable()) {
+        if (fromHttpRequest && httpServer.client()) httpServer.send(503);
+        return;
+      }
+
       /*
         States:
         0 - IDLE: Enabled maar nog niet in claiming fase
@@ -242,6 +253,7 @@
     }
 
     void EIDGetDirectives(){
+      if (!isEIDNetworkAvailable()) return;
 
       String ApiURL = "https://api.energyid.eu/api/v1/records/"+recordNumber+"/directives";
       DebugT(F("ApiURL:"));Debugln(ApiURL);
@@ -276,6 +288,7 @@
     }
 
     void EIDGetDirectDetails(){
+      if (!isEIDNetworkAvailable()) return;
       
       if ( EIDDirectiveID.length() == 0 )  { DebugTln("No ID present"); bGetPlannerDetails = false; return; }
 
@@ -387,7 +400,7 @@
     ]
 
     */
-      if ( eid_webhook.length() == 0 || !telegramCount ) return;
+      if ( !isEIDNetworkAvailable() || eid_webhook.length() == 0 || !telegramCount ) return;
       String payload;
       int httpResponseCode;
       String Json = "[{";
