@@ -242,9 +242,9 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
           SolarEdgeFlowPvPower = pvPower;
           SolarEdgeFlowPvValid = true;
           if (flowUnit == "kW") {
-            solarSystem->Actual = (uint32_t)(pvPower * 1000.0f + 0.5f);
+            solarSystem->Actual = (uint32_t)(pvPower * 1000.0f);
           } else {
-            solarSystem->Actual = (uint32_t)(pvPower + 0.5f);
+            solarSystem->Actual = (uint32_t)(pvPower);
           }
         } else {
           SolarEdgeFlowPvPower = 0.0f;
@@ -333,20 +333,8 @@ void SendSolarJson() {
   bool any = Enphase.Available || SolarEdge.Available || SMAinv.Available || Omniksol.Available;
   if (!any) { httpServer.send(200, "application/json", "{\"active\":false}"); return; }
 
-  uint32_t solarEdgeActual = SolarEdge.Actual;
-  if (SolarEdge.Available && SolarEdgeFlowPvValid) {
-    float pv = SolarEdgeFlowPvPower;
-    if (SolarEdgeAccu.unit == "kW") {
-      solarEdgeActual = (uint32_t)(pv * 1000.0f + 0.5f);
-    } else if (SolarEdgeAccu.unit == "W") {
-      solarEdgeActual = (uint32_t)(pv + 0.5f);
-    } else {
-      solarEdgeActual = (uint32_t)(pv + 0.5f);
-    }
-  }
-
   uint32_t totalDaily  = Enphase.Daily  + SolarEdge.Daily  + SMAinv.Daily  + Omniksol.Daily;
-  uint32_t totalActual = Enphase.Actual + solarEdgeActual + SMAinv.Actual + Omniksol.Actual;
+  uint32_t totalActual = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual + Omniksol.Actual;
   uint32_t totalWp     = Enphase.Wp     + SolarEdge.Wp     + SMAinv.Wp     + Omniksol.Wp;
 
   String Json = "{\"active\":true,\"total\":{\"daily\":";

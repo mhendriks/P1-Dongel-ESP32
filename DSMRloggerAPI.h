@@ -37,7 +37,7 @@ struct {
 } mb_config;
 
 #include <WiFi.h>  
-#include "Insights.h"
+// #include "Insights.h"
 #include <WiFiClientSecure.h>        
 #include <WebServer.h>
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
@@ -73,6 +73,8 @@ void LogFile(const char* payload, bool toDebug = false);
 void P1Reboot();
 void SendTariffData();
 void EID_RESTART_IDLE_TIMER();
+uint32_t actueleOverspanningSeconden(uint32_t overspanningTotaal, unsigned long startTijd, bool overspanning);
+void ResetOvervoltageStats();
 
 WebServer httpServer(80);
 NetServer ws_raw(82);
@@ -333,6 +335,12 @@ time_t      actT, newT;
 char        actTimestamp[20] = "";
 char        newTimestamp[20] = "";
 uint32_t    telegramCount = 0, telegramErrors = 0, mqttCount = 0;
+extern unsigned long startTijdL1;
+extern unsigned long startTijdL2;
+extern unsigned long startTijdL3;
+extern bool overspanningActiefL1;
+extern bool overspanningActiefL2;
+extern bool overspanningActiefL3;
 bool        showRaw = false;
 bool        LEDenabled    = true;
 // bool        DSMR_NL       = true;
@@ -357,7 +365,7 @@ int8_t      TxO1 = TXO1;
 int8_t      DTR_out = O1_DTR_IO;
 int8_t      LED_out = P1_LED;
 int8_t      statusled = LED;
-bool        bNRGMenabled = true;
+bool        bNRGMenabled = false;
 #ifdef NETSWITCH
 bool        bNETSWenabled = true;
 #endif
@@ -383,6 +391,7 @@ uint32_t    unixTimestamp;
 IPAddress ipDNS, ipGateWay, ipSubnet;
 float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5, settingWDT = 1.04;
 float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
+uint16_t  settingOvervoltageThreshold = 253;
 // uint8_t   settingSmHasFaseInfo = 1;
 char      settingHostname[32] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
@@ -452,6 +461,8 @@ bool New_P1_UDP = false;
 int8_t mb_rx  = -1;
 int8_t mb_tx  = -1;
 int8_t mb_rts = -1;
+
+bool en_connected = false;
 
 #include "Debug.h"
 #include <ESPmDNS.h>

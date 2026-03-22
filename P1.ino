@@ -448,6 +448,18 @@ extern bool overspanningActiefL1;
 extern bool overspanningActiefL2;
 extern bool overspanningActiefL3;
 
+void ResetOvervoltageStats() {
+  P1Stats.TU1over = 0;
+  P1Stats.TU2over = 0;
+  P1Stats.TU3over = 0;
+  startTijdL1 = 0;
+  startTijdL2 = 0;
+  startTijdL3 = 0;
+  overspanningActiefL1 = false;
+  overspanningActiefL2 = false;
+  overspanningActiefL3 = false;
+}
+
 void ResetStats(){
   P1Stats.I1piek  = 0;
   P1Stats.I2piek  = 0;
@@ -465,15 +477,7 @@ void ResetStats(){
   P1Stats.P2min   = 0x7FFFFFFF;
   P1Stats.P3min   = 0x7FFFFFFF;  
   P1Stats.Psluip  = 0xFFFFFFFF;
-  P1Stats.TU1over = 0;
-  P1Stats.TU2over = 0;
-  P1Stats.TU3over = 0;
-  startTijdL1 = 0;
-  startTijdL2 = 0;
-  startTijdL3 = 0;
-  overspanningActiefL1 = false;
-  overspanningActiefL2 = false;
-  overspanningActiefL3 = false;
+  ResetOvervoltageStats();
   P1Stats.StartTime = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), false);
 }
 
@@ -487,7 +491,7 @@ bool overspanningActiefL3 = false;
 
 
 void controleerOverspanning(int spanning, uint32_t &overspanningTotaal, unsigned long &startTijd, bool &overspanning) {
-  if (spanning >= 253) {
+  if (spanning >= settingOvervoltageThreshold) {
     if (!overspanning) {
       startTijd = millis();
       overspanning = true;
@@ -498,6 +502,11 @@ void controleerOverspanning(int spanning, uint32_t &overspanningTotaal, unsigned
       overspanning = false;
     }
   }
+}
+
+uint32_t actueleOverspanningSeconden(uint32_t overspanningTotaal, unsigned long startTijd, bool overspanning) {
+  if (!overspanning || startTijd == 0) return overspanningTotaal;
+  return overspanningTotaal + ((millis() - startTijd) / 1000);
 }
 
 void ProcessStats(){
@@ -536,7 +545,7 @@ void ProcessStats(){
     controleerOverspanning(DSMRdata.voltage_l3, P1Stats.TU3over, startTijdL3, overspanningActiefL3);
   }  
   if ( (hour() < 5) && (DSMRdata.power_delivered.int_val() < P1Stats.Psluip) && DSMRdata.power_delivered.int_val() ) P1Stats.Psluip = DSMRdata.power_delivered.int_val();
-  // overspannning bijhouden per etmaal; seconden tellen boven de 253V per fase
+  // overspannning bijhouden per etmaal; seconden tellen boven de ingestelde grens per fase
 }
 
 //==================================================================================

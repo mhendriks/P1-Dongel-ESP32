@@ -41,6 +41,7 @@ bool bESPNowInit = false;
 
 */
 void PSPUpdatePlanner() {
+  if ( !bNRGMenabled || !bESPNowInit ) return;
   P2PType = OFFSET_ACTION + ASK_PLANNER; 
 }
 
@@ -181,10 +182,32 @@ void AddPeer( uint8_t * peer_mac ){
   esp_now_add_peer(&peerInfo);
 }
 
+void StopESPNOW(){
+  if ( !bESPNowInit ) return;
+
+  esp_now_unregister_send_cb();
+  esp_now_unregister_recv_cb();
+  esp_now_deinit();
+  bESPNowInit = false;
+  en_connected = false;
+  en_error = 0;
+  P2PType = 0;
+  bPairingmode = 0;
+  Debugln("StartESPNOW: deinit OK");
+}
+
 void StartESPNOW(){
-#ifdef ETHERNET
-  WiFi.mode(WIFI_STA);
-#endif  
+  if ( !bNRGMenabled ) {
+    Debugln("StartESPNOW: skipped, NRG Monitor disabled");
+    return;
+  }
+  if ( bESPNowInit ) {
+    Debugln("StartESPNOW: already active");
+    return;
+  }
+  if ( skipNetwork || bEthUsage || netw_state == NW_ETH || netw_state == NW_ETH_LINK ) {
+    WiFi.mode(WIFI_STA);
+  }
   Debugf("StartESPNOW: peers=%u nrgm=%u\n", Pref.peers, bNRGMenabled ? 1 : 0);
   if (esp_now_init() != ESP_OK) {
     Debugln("Error initializing ESP-NOW");
@@ -210,7 +233,24 @@ void StartESPNOW(){
   Debugln("StartESPNOW: init OK");
 }
 
+void SyncESPNOW(){
+  if ( bNRGMenabled ) StartESPNOW();
+  else {
+    StopESPNOW();
+#ifdef ETHERNET
+    if ( (skipNetwork || bEthUsage || netw_state == NW_ETH || netw_state == NW_ETH_LINK)
+         && netw_state != NW_WIFI ) {
+      WifiOff();
+    }
+#endif
+  }
+}
+
 void sendStroomPlanner(){
+  if ( !bNRGMenabled || !bESPNowInit ) {
+    Debugln("Stroomplanner send skipped");
+    return;
+  }
   // check of available data and if EID is enabled
   // if ( StroomPlanData.size() == 0 ) return; //todo: change to let peer know the eid isnt available any more
   
@@ -549,5 +589,7 @@ void handleP2P(){
 #endif //_ESPNOW
 #else
   void StartESPNOW(){}
-  void handleP2P(){}
+  void StopESPNOW(){}
+  void SyncESPNOW(){}
+    void handleP2P(){}
 #endif //ESPNOW

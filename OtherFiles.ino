@@ -95,6 +95,7 @@ void writeSettings() {
   docw["EnergyVasteKosten"] = settingENBK;
   docw["GasVasteKosten"] = settingGNBK;
   docw["WaterVasteKosten"] = settingWNBK;
+  docw["OverVoltageThreshold"] = settingOvervoltageThreshold;
   // docw["SmHasFaseInfo"] = settingSmHasFaseInfo;
   docw["IndexPage"] = settingIndexPage;
   yield();
@@ -206,6 +207,9 @@ void readSettings(bool show)
   settingENBK = doc["EnergyVasteKosten"];
   settingGNBK = doc["GasVasteKosten"];
   if (doc["WaterVasteKosten"].is<float>()) settingWNBK = doc["WaterVasteKosten"];
+  if (doc["OverVoltageThreshold"].is<int>()) {
+    settingOvervoltageThreshold = constrain(doc["OverVoltageThreshold"].as<int>(), 200, 300);
+  }
   // settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
   if (doc["mqtt-hide"].is<bool>()) hideMQTTsettings = doc["mqtt-hide"];
@@ -322,6 +326,13 @@ void updateSetting(const char *field, const char *newValue)
 
   if (!stricmp(field, "gd_tariff"))         settingGDT          = String(newValue).toFloat();  
   if (!stricmp(field, "gas_netw_costs"))    settingGNBK         = String(newValue).toFloat();
+  if (!stricmp(field, "overvoltage_threshold")) {
+    uint16_t newThreshold = constrain(String(newValue).toInt(), 200, 300);
+    if (settingOvervoltageThreshold != newThreshold) {
+      settingOvervoltageThreshold = newThreshold;
+      ResetOvervoltageStats();
+    }
+  }
 
   if (!stricmp(field, "w_tariff"))          settingWDT          = String(newValue).toFloat();  
   if (!stricmp(field, "water_netw_costs"))  settingWNBK         = String(newValue).toFloat(); 
@@ -417,7 +428,13 @@ void updateSetting(const char *field, const char *newValue)
   #ifdef UDP_BCAST
   if (!stricmp(field, "udp")) bUDPenabled = (stricmp(newValue, "true") == 0?true:false);  
   #endif
-  if (!stricmp(field, "nrgm-enabled")) bNRGMenabled = (stricmp(newValue, "true") == 0?true:false);  
+  if (!stricmp(field, "nrgm-enabled")) {
+    bool newNrgmEnabled = (stricmp(newValue, "true") == 0?true:false);
+    if ( bNRGMenabled != newNrgmEnabled ) {
+      bNRGMenabled = newNrgmEnabled;
+      SyncESPNOW();
+    }
+  }
   #ifdef NETSWITCH
   if (!stricmp(field, "netsw-enabled")) bNETSWenabled = (stricmp(newValue, "true") == 0?true:false);
   #endif

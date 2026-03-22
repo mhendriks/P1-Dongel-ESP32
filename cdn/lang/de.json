@@ -276,6 +276,7 @@
   "dict_highest_peak_pwr_13mnd": "Piek Elektra über 13 Monate",
   "dict_water_delivered_ts": "Zeitcode Wasserzählerstand",
   "dict_mqtt_tls": "MQTT über TLS",
+  "dict_overvoltage_threshold": "Ueberspannungsgrenze [V]",
   "dict_dev-pairing": "Peer2Peer Kommunikation",
   "dict_eid-enabled": "EnergyID ein/aus",
   "dict_utilization": "CPU-Nutzung",

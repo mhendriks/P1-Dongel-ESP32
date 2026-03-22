@@ -194,41 +194,45 @@ bool loadRingfile(E_ringfiletype type) {
 bool loadRNGDaysHistory() {
   if (!loadRingfile(RINGDAYS)) return false;
 
-  int selectedSlot = -1;
-  time_t now = time(NULL);
-  int ntpSlot = -1;
   const uint16_t daySlots = RingFiles[RINGDAYS].slots;
-  const time_t maxSkewSec = 31LL * 24 * 3600; // accept one day margin beyond ring depth
-  bool hasNtpTime = (now > 1000000000); // rough sanity check
-
-  if (hasNtpTime) {
-    ntpSlot = (now / RingFiles[RINGDAYS].seconds) % daySlots;
-    for (int offset = 0; offset < daySlots; offset++) {
-      int slot = (ntpSlot - offset + daySlots) % daySlots;
-      if (strncmp(RNGDayRec[slot].date, "20000000", 8) == 0) continue;
-      time_t ts = date2epoch(RNGDayRec[slot].date);
-      if (ts == 0) continue;
-      if (ts > now) continue;
-      if ((now - ts) <= maxSkewSec) {
-        selectedSlot = slot;
-        break;
-      }
-    }
+  time_t now = time(NULL);
+  if (now <= 1000000000) {
+    DebugTln(F("No valid system time available for RNGdays restore"));
+    return false;
   }
 
+  time_t yesterday = now - 86400;
+  struct tm* tmYesterday = localtime(&yesterday);
+  if (!tmYesterday) return false;
+
+  char targetDay[7];
+  snprintf(targetDay, sizeof(targetDay), "%02d%02d%02d", (tmYesterday->tm_year % 100), tmYesterday->tm_mon + 1, tmYesterday->tm_mday);
+
+  int currentSlot = (now / RingFiles[RINGDAYS].seconds) % daySlots;
+  int firstSlot = (currentSlot - 1 + daySlots) % daySlots;
+  int selectedSlot = -1;
+
+  auto matchesYesterday = [&](int slot) -> bool {
+    if (slot < 0 || slot >= daySlots) return false;
+    if (strncmp(RNGDayRec[slot].date, "20000000", 8) == 0) return false;
+    return strncmp(RNGDayRec[slot].date, targetDay, 6) == 0;
+  };
+
+  if (matchesYesterday(firstSlot)) selectedSlot = firstSlot;
   if (selectedSlot < 0) {
-    selectedSlot = actSlot;
-    if (selectedSlot < 0 || selectedSlot >= daySlots) return false;
-    if (strncmp(RNGDayRec[selectedSlot].date, "20000000", 8) == 0) {
-      selectedSlot = -1;
-      for (int slot = 0; slot < daySlots; slot++) {
-        if (strncmp(RNGDayRec[slot].date, "20000000", 8) == 0) continue;
+    for (int offset = 0; offset < daySlots; offset++) {
+      int slot = (firstSlot - offset + daySlots) % daySlots;
+      if (matchesYesterday(slot)) {
         selectedSlot = slot;
         break;
       }
     }
   }
-  if (selectedSlot < 0) return false;
+  if (selectedSlot < 0) {
+    dataYesterday.lastUpdDay = 0;
+    DebugTln(F("No matching day slot found in RNGdays; start from current meter values"));
+    return false;
+  }
 
   time_t ts = date2epoch(RNGDayRec[selectedSlot].date);
   if (ts == 0) return false;
@@ -243,15 +247,10 @@ bool loadRNGDaysHistory() {
 
   DebugT(F("RNGdays restored day: "));
   Debugln(RNGDayRec[selectedSlot].date);
-  if (hasNtpTime) {
-    DebugT(F("NTP-slot "));
-    Debug(ntpSlot);
-    DebugT(F(" used, selected slot "));
-    Debugln(selectedSlot);
-  } else {
-    DebugT(F("Fallback slot "));
-    Debugln(selectedSlot);
-  }
+  DebugT(F("Slot used: "));
+  Debugln(selectedSlot);
+  DebugT(F("Matched yymmdd: "));
+  Debugln(targetDay);
   return true;
 }
 

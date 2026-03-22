@@ -12,7 +12,6 @@ const int ESP_NOW_CHUNK_SIZE = 1450; //from SDK 3.3.0
 
 #define OFFSET_ACTION 20
 volatile uint8_t P2PType = 0;
-bool en_connected = false;
 uint32_t en_error = 0;
 
 void PSPUpdatePlanner();

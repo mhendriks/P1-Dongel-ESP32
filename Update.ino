@@ -1,12 +1,3 @@
-/* 
-***************************************************************************  
-**  Program  : processTelegram, part of DSMRloggerAPI
-**
-**  Copyright (c) 2023 Martijn Hendriks
-**
-**  TERMS OF USE: MIT License. See bottom of file.                                                            
-***************************************************************************      
-*/
 #include <HTTPUpdate.h>
 bool bWebUpdate = false;
 bool autoUpdateBootCheckDone = false;
@@ -116,7 +107,7 @@ void handleAutoUpdate(bool runBootCheckNow) {
   }
 
   LogFile("AutoUpdate: starting OTA install", true);
-  RemoteUpdate(UpdateVersion, true);
+  UpdateRequested = true;
 }
 
 void update_finished() {
@@ -135,7 +126,7 @@ void update_started() {
       esp_task_wdt_reset();
       delay(100);
     }
-  }
+  } 
 }
 
 void update_progress(int cur, int total) {

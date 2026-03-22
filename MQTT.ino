@@ -321,7 +321,7 @@ struct buildJsonMQTT {
     if ( isInFieldsArray(Name) && i.present() ) {
           // add value to '/all' topic
           if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
-          if ( MQTTclient.connected() && (!bActJsonMQTT || EnableHAdiscovery) ) {
+          else if ( MQTTclient.connected() && (!bActJsonMQTT || EnableHAdiscovery) ) {
             sprintf(cMsg,"%s%s",MQTopTopic,Name);
             MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
           }
@@ -468,28 +468,24 @@ void sendMQTTData() {
   if ( bActJsonMQTT ) jsonDoc.clear();
 
   DSMRdata.applyEach(buildJsonMQTT());
-  
-
-if ( mbusWater ){
-    MQTTSend( "water", waterDelivered );
-    MQTTSend( "water_ts", waterDeliveredTimestamp, true );    
-  } else {
-    sprintf(cMsg,"%d.%3.3d",P1Status.wtr_m3,P1Status.wtr_l);
-    MQTTSend("water",cMsg, true);    
-  }
 
   if ( bActJsonMQTT ) {
     String buffer;
-      jsonDoc["water"]    = waterDelivered;
-      jsonDoc["water_ts"] = waterDeliveredTimestamp;
-      jsonDoc["gas"]      = gasDelivered;
-      jsonDoc["gas_ts"]   = gasDeliveredTimestamp;
+      if ( WtrMtr ) {
+        jsonDoc["water"]    = waterDelivered;
+        jsonDoc["water_ts"] = waterDeliveredTimestamp;
+      }
+      if ( mbusGas ) {
+        jsonDoc["gas"]      = gasDelivered;
+        jsonDoc["gas_ts"]   = gasDeliveredTimestamp;
+      }
     serializeJson(jsonDoc,buffer);
     MQTTSend("all", buffer, false);
+  } else {
+    MQTTsendGas();
+    MQTTsendWater();  
   }
   if ( DSMRdata.highest_peak_pwr_present ) MQTTSend( "highest_peak_pwr_ts", String(DSMRdata.highest_peak_pwr.timestamp), true);
-  MQTTsendGas();
-  MQTTsendWater();  
   MQTTSend( "uptime",String(uptime()), false);
 
 #ifdef VICTRON_GRID

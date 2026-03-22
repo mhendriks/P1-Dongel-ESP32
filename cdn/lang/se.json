@@ -335,6 +335,7 @@
   "dict_highest_peak_pwr_13mnd": "Toppförbrukning de senaste 13 månaderna",
   "dict_water_delivered_ts": "Tidsstämpel Vattenmätaravläsning",
   "dict_mqtt_tls": "MQTT över TLS",
+  "dict_overvoltage_threshold": "Overspanningsgrans [V]",
   "dict_dev-pairing": "Peer2Peer-kommunikation",
   "dict_eid-enabled": "EnergyID (1h setup timeout)",
   "dict_utilization": "CPU-användning",

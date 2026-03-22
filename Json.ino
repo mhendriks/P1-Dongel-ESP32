@@ -75,9 +75,9 @@ String apiStatsJson() {
     if ( DSMRdata.voltage_l2_present )doc["U2min"]  = P1Stats.U2min;
     if ( DSMRdata.voltage_l3_present )doc["U3min"]  = P1Stats.U3min;
 
-    if ( DSMRdata.voltage_l1_present )doc["TU1over"] = P1Stats.TU1over;
-    if ( DSMRdata.voltage_l2_present )doc["TU2over"] = P1Stats.TU2over;
-    if ( DSMRdata.voltage_l3_present )doc["TU3over"] = P1Stats.TU3over;
+    if ( DSMRdata.voltage_l1_present )doc["TU1over"] = actueleOverspanningSeconden(P1Stats.TU1over, startTijdL1, overspanningActiefL1);
+    if ( DSMRdata.voltage_l2_present )doc["TU2over"] = actueleOverspanningSeconden(P1Stats.TU2over, startTijdL2, overspanningActiefL2);
+    if ( DSMRdata.voltage_l3_present )doc["TU3over"] = actueleOverspanningSeconden(P1Stats.TU3over, startTijdL3, overspanningActiefL3);
     
     doc["Psluip"]  = P1Stats.Psluip;
     doc["start_time"] = P1Stats.StartTime;
@@ -369,8 +369,9 @@ String deviceInfoJson()
   doc["mqttinterval"] = settingMQTTinterval;
   doc["mqttbroker_connected"] = MQTTclient.connected() ? "yes" : "no";
 #endif
-  
-  doc["paired"] = Pref.peers;
+  char paired[18];
+    sprintf(paired,"%i - %s", Pref.peers, en_connected?"connected":"unconnected");
+  doc["paired"] = paired;
 
   doc["reboots"] = (int)P1Status.reboots;
   doc["lastreset"] = lastReset;  
@@ -407,9 +408,6 @@ String deviceSettingsJson() {
     ADD_SETTING("water_netw_costs", "f", 0, 100, settingWNBK);
   }
   ADD_SETTING("gas_netw_costs", "f", 0, 100, settingGNBK);
-  // if ( ! bWarmteLink ) { // IF NO HEATLINK
-  //   ADD_SETTING("sm_has_fase_info", "i", 0, 1, settingSmHasFaseInfo);
-  // }
   ADD_SETTING("IndexPage", "s", 0, sizeof(settingIndexPage) - 1, settingIndexPage);
 
 #ifndef MQTT_DISABLE
@@ -440,7 +438,8 @@ if ( !hideMQTTsettings) {
 
   ADD_SETTING("b_auth_user", "s", 0, sizeof(bAuthUser) - 1, bAuthUser);
   ADD_SETTING("b_auth_pw", "s", 0, sizeof(bAuthPW) - 1, bAuthPW);
-
+  // ADD_SETTING("overvoltage_threshold", "i", 200, 300, settingOvervoltageThreshold);
+  
   //MODBUS TCP settings
   ADD_SETTING("mb_map", "i", 0, 7, SelMap); //RTU+TCP
   ADD_SETTING("mb_id", "i", 1, 255, mb_config.id); //RTU+TCP

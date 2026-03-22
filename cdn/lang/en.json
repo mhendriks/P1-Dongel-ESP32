@@ -342,6 +342,7 @@
   "dict_highest_peak_pwr_13mnd": "Peak Electricity over 13 months",
   "dict_water_delivered_ts": "Timestamp Water Meter Reading",
   "dict_mqtt_tls": "MQTT over TLS",
+  "dict_overvoltage_threshold": "Overvoltage threshold [V]",
   "dict_dev-pairing": "Peer2Peer communication",
   "dict_eid-enabled": "EnergyID (1h setup timeout)",
   "dict_utilization": "CPU usage",
