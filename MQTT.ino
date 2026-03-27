@@ -132,14 +132,17 @@ void MQTTSetBaseInfo(){
 
 void MQTTDisconnect(){
   if ( skipNetwork) return;
-  sprintf(cMsg,"%sLWT",MQTopTopic);
-  MQTTclient.publish(cMsg,"Offline", true); //LWT status update
+  if (MQTTclient.connected()) {
+    sprintf(cMsg,"%sLWT",MQTopTopic);
+    MQTTclient.publish(cMsg,"Offline", true); //LWT status update
+  }
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
 }
 
 void MQTTsetServer(){
 #ifndef MQTT_DISABLE 
   MQTTDisconnect(); //close active connection
+  if (!bMQTTenabled) return;
   if ((settingMQTTbrokerPort == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   // MQTTDisconnect();
   if (bMQTToverTLS) {
@@ -262,6 +265,7 @@ void MQTTConnect() {
 // #ifndef ETHERNET
 //   if ( DUE( reconnectMQTTtimer) && (WiFi.status() == WL_CONNECTED)) {
 // #else
+  if (!bMQTTenabled) return;
   if ( MQTTclient.connected() || !strlen(settingMQTTbroker) || settingMQTTbrokerPort == 0 ) return; //interval 0 will connect to the broker
   if ( DUE( reconnectMQTTtimer) && ( netw_state == NW_ETH || netw_state == NW_WIFI) ) {    
 // #endif    
@@ -359,7 +363,7 @@ struct buildJsonMQTT {
 //===========================================================================================
 
 void MQTTSend(const char* item, String value, bool ret){
-  if ( value.length()==0 || !MQTTclient.connected() ) return;
+  if ( !bMQTTenabled || value.length()==0 || !MQTTclient.connected() ) return;
   sprintf(cMsg,"%s%s", MQTopTopic,item);
   if (!MQTTclient.publish(cMsg, value.c_str(), ret )) {
     DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, value.c_str(), (strlen(cMsg) + value.length()));
@@ -382,7 +386,7 @@ void MQTTSend(const char* item, float value){
 //===========================================================================================
 void MQTTSentStaticInfo(){
   if ( skipNetwork ) return;
-  if ((settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
+  if (!bMQTTenabled || (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   StaticInfoSend = true;
   MQTTSend( "identification",DSMRdata.identification, true );
   MQTTSend( "mac",macStr, true );
@@ -450,7 +454,7 @@ void sendMQTTData() {
 #ifndef ETHERNET
   if ( WiFi.status() != WL_CONNECTED ) return;
 #endif  
-  if ( (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
+  if ( !bMQTTenabled || (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   MQTTConnect();
   if ( MQTTclient.connected() ) {   
     

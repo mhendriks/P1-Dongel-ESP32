@@ -399,7 +399,7 @@ void processTelegram(){
   
   if ( !skipNetwork ) {
 	#ifndef MQTT_DISABLE
-	  if ( DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1) bSendMQTT = true; //handled in main flow
+	  if ( bMQTTenabled && (DUE(publishMQTTtimer) || settingMQTTinterval == 1 || telegramCount == 1)) bSendMQTT = true; //handled in main flow
 	#endif  
 
 	  ProcessStats();

@@ -199,6 +199,120 @@ std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
     {0x2018,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l3_present ? (-DSMRdata.power_returned_l3.val() + DSMRdata.power_delivered_l3.val()) * 100.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}} 
 };
 
+std::map<uint16_t, ModbusMapping> mapping_klefr = {
+    {0x4000, {ModbusDataType::UINT32, []() { return (uint32_t)18010365; }}},
+    {0x4005, {ModbusDataType::FLOAT, []() { return packF(1.18f); }}},
+    {0x4007, {ModbusDataType::FLOAT, []() { return packF(18.0f); }}},
+    {0x4009, {ModbusDataType::FLOAT, []() { return packF(1.0f); }}},
+
+    {0x5000, {ModbusDataType::FLOAT, []() { return packF(NAN); }}},
+    {0x5002, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.voltage_l1_present ? (float)DSMRdata.voltage_l1.val() : NAN); }}},
+    {0x5004, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.voltage_l2_present ? (float)DSMRdata.voltage_l2.val() : NAN); }}},
+    {0x5006, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.voltage_l3_present ? (float)DSMRdata.voltage_l3.val() : NAN); }}},
+    {0x5008, {ModbusDataType::FLOAT, []() { return packF(50.0f); }}},
+    {0x500A, {ModbusDataType::FLOAT, []() { return packF(NAN); }}},
+    {0x500C, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.current_l1_present ? (float)DSMRdata.current_l1.val() : NAN); }}},
+    {0x500E, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.current_l2_present ? (float)DSMRdata.current_l2.val() : NAN); }}},
+    {0x5010, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.current_l3_present ? (float)DSMRdata.current_l3.val() : NAN); }}},
+    {0x5012, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_delivered_present ? (float)(DSMRdata.power_delivered.val() - DSMRdata.power_returned.val()) : NAN); }}},
+    {0x5014, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_delivered_l1_present ? (float)(DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val()) : NAN); }}},
+    {0x5016, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_delivered_l2_present ? (float)(DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val()) : NAN); }}},
+    {0x5018, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_delivered_l3_present ? (float)(DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val()) : NAN); }}},
+    {0x501A, {ModbusDataType::FLOAT, []() { return packF(0); }}},
+    {0x501C, {ModbusDataType::FLOAT, []() { return packF(0); }}},
+    {0x501E, {ModbusDataType::FLOAT, []() { return packF(0); }}},
+    {0x5020, {ModbusDataType::FLOAT, []() { return packF(0); }}},
+    {0x5022, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x5012].valueGetter(); }}},
+    {0x5024, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x5014].valueGetter(); }}},
+    {0x5026, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x5016].valueGetter(); }}},
+    {0x5028, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x5018].valueGetter(); }}},
+    {0x502A, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_returned_present ? -1.0f : 1.0f); }}},
+    {0x502C, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_returned_l1_present ? (DSMRdata.power_returned_l1.val() > 0 ? -1.0f : 1.0f) : NAN); }}},
+    {0x502E, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_returned_l2_present ? (DSMRdata.power_returned_l2.val() > 0 ? -1.0f : 1.0f) : NAN); }}},
+    {0x5030, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_returned_l3_present ? (DSMRdata.power_returned_l3.val() > 0 ? -1.0f : 1.0f) : NAN); }}},
+
+    {0x6000, {ModbusDataType::FLOAT, []() { return packF(
+        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_returned_tariff1_present ||
+         DSMRdata.energy_delivered_tariff2_present || DSMRdata.energy_returned_tariff2_present) ?
+        (float)(
+          (DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) -
+          (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
+          (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f) -
+          (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)
+        ) : NAN
+    ); }}},
+    {0x6002, {ModbusDataType::FLOAT, []() { return packF(
+        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_returned_tariff1_present) ?
+        (float)(
+          (DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) -
+          (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f)
+        ) : NAN
+    ); }}},
+    {0x6004, {ModbusDataType::FLOAT, []() { return packF(
+        (DSMRdata.energy_delivered_tariff2_present || DSMRdata.energy_returned_tariff2_present) ?
+        (float)(
+          (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f) -
+          (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)
+        ) : NAN
+    ); }}},
+    {0x6006, {ModbusDataType::FLOAT, []() { return packF(
+        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_returned_tariff1_present ||
+         DSMRdata.energy_delivered_tariff2_present || DSMRdata.energy_returned_tariff2_present) ?
+        (float)(
+          ((DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) -
+           (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
+           (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f) -
+           (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)) / 3.0f
+        ) : NAN
+    ); }}},
+    {0x6008, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x6006].valueGetter(); }}},
+    {0x600A, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x6006].valueGetter(); }}},
+    {0x600C, {ModbusDataType::FLOAT, []() { return packF(
+        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_delivered_tariff2_present) ?
+        (float)(
+          (DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) +
+          (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f)
+        ) : NAN
+    ); }}},
+    {0x600E, {ModbusDataType::FLOAT, []() { return packF(
+        DSMRdata.energy_delivered_tariff1_present ? (float)DSMRdata.energy_delivered_tariff1.val() : NAN
+    ); }}},
+    {0x6010, {ModbusDataType::FLOAT, []() { return packF(
+        DSMRdata.energy_delivered_tariff2_present ? (float)DSMRdata.energy_delivered_tariff2.val() : NAN
+    ); }}},
+    {0x6012, {ModbusDataType::FLOAT, []() { return packF(
+        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_delivered_tariff2_present) ?
+        (float)(
+          ((DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) +
+           (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f)) / 3.0f
+        ) : NAN
+    ); }}},
+    {0x6014, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x6012].valueGetter(); }}},
+    {0x6016, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x6012].valueGetter(); }}},
+    {0x6018, {ModbusDataType::FLOAT, []() { return packF(
+        (DSMRdata.energy_returned_tariff1_present || DSMRdata.energy_returned_tariff2_present) ?
+        (float)(
+          (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
+          (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)
+        ) : NAN
+    ); }}},
+    {0x601A, {ModbusDataType::FLOAT, []() { return packF(
+        DSMRdata.energy_returned_tariff1_present ? (float)DSMRdata.energy_returned_tariff1.val() : NAN
+    ); }}},
+    {0x601C, {ModbusDataType::FLOAT, []() { return packF(
+        DSMRdata.energy_returned_tariff2_present ? (float)DSMRdata.energy_returned_tariff2.val() : NAN
+    ); }}},
+    {0x601E, {ModbusDataType::FLOAT, []() { return packF(
+        (DSMRdata.energy_returned_tariff1_present || DSMRdata.energy_returned_tariff2_present) ?
+        (float)(
+          ((DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
+           (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)) / 3.0f
+        ) : NAN
+    ); }}},
+    {0x6020, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x601E].valueGetter(); }}},
+    {0x6022, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x601E].valueGetter(); }}},
+};
+
 // uint16_t getMaxKey(const std::map<uint16_t, ModbusMapping>& mapping) {
 //     if (mapping.empty()) return 0; // Of een andere passende foutwaarde
 //     return mapping.rbegin()->first; // Laatste sleutel in gesorteerde map
@@ -206,7 +320,7 @@ std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
 
 // Pointer to the active mapping
 std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[8] = { 48, 0xfc00+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2, 54 };
+uint16_t MaxReg[9] = { 48, 0xfc00+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2, 54, 0x6022+2 };
 
 // Change active mapping
 void setModbusMapping(int mappingChoice) {
@@ -220,6 +334,7 @@ void setModbusMapping(int mappingChoice) {
         case 5: selectedMapping = &mapping_abb_b21; break;
         case 6: selectedMapping = &mapping_mx3xx; break;
         case 7: selectedMapping = &mapping_default_2; break;
+        case 8: selectedMapping = &mapping_klefr; break;
         default: selectedMapping = &mapping_default; break; // Fallback naar default
     }
 }
@@ -345,7 +460,6 @@ void SetupMB_RTU(){
   RTU_SERIAL.begin( mb_config.baud , mb_config.parity , mb_rx, mb_tx );
 
   MBserverRTU = new ModbusServerRTU(MBUS_RTU_TIMEOUT, mb_rts);
-
   MBserverRTU->registerWorker(mb_config.id , READ_HOLD_REGISTER, &MBusHandleRequest);//FC03
   MBserverRTU->registerWorker(mb_config.id, READ_INPUT_REGISTER, &MBusHandleRequest);//FC04
   MBserverRTU->begin(RTU_SERIAL);

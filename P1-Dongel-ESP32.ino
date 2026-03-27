@@ -73,32 +73,37 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - De waarden in daily insights labelen met het datum/tijdstip waarop gemeten (Harrie)
 
 5.4.0
-√- add: auto update feature (default off)
-√- UDP option available as build feature
-√- add: check startup + process day values based on yesterday - NRG Monitor (4.17 / 5.2)
-√- Over Voltage configurable via settings
-- Webasto Unite (Vestel mapping) - Frank
-- MQTT on/off toggle
-- Virtual P1 feature in settings
+√ add: auto update feature (default off)
+√ UDP option available as build feature
+√ add: check startup + process day values based on yesterday - NRG Monitor (4.17 / 5.2)
+√ Over Voltage configurable via settings
+√ added: Homey support based on the HW P1 dongle v1 api
+√ Webasto Unite (inepro / KLEFR ondersteuning) -> mapping: 8 - Frank
+√ Insight table view changed
+√ MQTT on/off toggle
+
+5.4.1
+- added: MEENT webhook
 
 5.5.0
 - add PV production to history files
 - refactor: asyncwebserver
 - update button in HA to trigger the update (mqtt based #70)
+- Virtual P1 feature in settings
 
 */
 
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define XTRA_LOG
 
 //--- PROFILES -> NO PROFILE = WiFi Dongle  ---
-// #define ULTRA           //ultra (mini) dongle
+#define ULTRA           //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE //+D1MC 
-// #define P1P ß
+// #define NRG_DONGLE       //+D1MC 
+// #define P1P
 
 //SPECIAL
 // #define __Az__
@@ -111,13 +116,12 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //#define POST_TELEGRAM
 // #define MQTTKB
 // #define MB_RTU
-#define ESPNOW
+#define ESPNOW  
 // #define UDP_BCAST
 // #define SHELLY_EMU
 // #define USB_CONFIG
 // #define POST_POWERCH
 // #define VIRTUAL_P1
-// #define MIMIC_HW
 
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>
@@ -157,7 +161,7 @@ void setup()
   startTelnet();
   startMDNS(settingHostname);
   startNTP();
-  // handleAutoUpdate(true); // startup check right after network and time init
+  handleAutoUpdate(true); // startup check right after network and time init
   WDT_FEED();
 //================ Check necessary files ============================
   if ( !skipNetwork ) {
@@ -223,7 +227,7 @@ void loop () {
     CHANGE_INTERVAL_MIN(StatusTimer, 30);
   }
   handleKeyInput();
-  // handleAutoUpdate(false);
+  handleAutoUpdate(false);
   WifiWatchDog();
   handleRemoteUpdate();
   handleWater();

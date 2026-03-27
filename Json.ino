@@ -161,7 +161,7 @@ String HWrootJson() {
     doc["product_name"] = "P1 Meter";
     doc["product_type"] = "HWE-P1";
     doc["serial"] = MACID;
-    doc["firmware_version"] = 6.0304;
+    doc["firmware_version"] = "6.0304";
     doc["api_version"] = "v1";
   });
  }
@@ -172,8 +172,14 @@ String HWapiJson(){
 
     #define F3DEC(...) serialized(String(__VA_ARGS__,3))
     
-    if ( WiFi.SSID().length() ) jsonDoc["wifi_ssid"] = WiFi.SSID();
-    else jsonDoc["wifi_ssid"] = "NO-WIFI";
+    if ( WiFi.SSID().length() ) {
+      jsonDoc["wifi_ssid"] = WiFi.SSID();
+      jsonDoc["wifi_strength"] = abs(WiFi.RSSI());
+    }
+    else {
+      jsonDoc["wifi_ssid"] = "NO-WIFI";
+      jsonDoc["wifi_strength"] = 50;
+    }
 
     int smr = 50;  // default fallback
 
@@ -185,7 +191,6 @@ String HWapiJson(){
       }
     }
 
-    jsonDoc["wifi_strength"] = abs(WiFi.RSSI());
     jsonDoc["smr_version"] = smr;
     jsonDoc["meter_model"] = DSMRdata.identification;
     jsonDoc["unique_id"] = DSMRdata.equipment_id;
@@ -214,7 +219,7 @@ String HWapiJson(){
     float i2 = (DSMRdata.voltage_l2_present&&DSMRdata.voltage_l2.val())?jsonDoc["active_power_l2_w"].as<float>()/DSMRdata.voltage_l2.val():0.0f;
     float i3 = (DSMRdata.voltage_l3_present&&DSMRdata.voltage_l3.val())?jsonDoc["active_power_l3_w"].as<float>()/DSMRdata.voltage_l3.val():0.0f;
 
-    jsonDoc["active_current_a"]    = F3DEC(i1 + i2 + i3);
+    jsonDoc["active_current_a"]    = F3DEC( abs(i1) + abs(i2) + abs(i3) );
     jsonDoc["active_current_l1_a"] = F3DEC(i1);
     jsonDoc["active_current_l2_a"] = F3DEC(i2);
     jsonDoc["active_current_l3_a"] = F3DEC(i3);
@@ -367,7 +372,7 @@ String deviceInfoJson()
   snprintf(cMsg, sizeof(cMsg), "%s:%04d", settingMQTTbroker, settingMQTTbrokerPort);
   doc["mqttbroker"] = cMsg;
   doc["mqttinterval"] = settingMQTTinterval;
-  doc["mqttbroker_connected"] = MQTTclient.connected() ? "yes" : "no";
+  doc["mqttbroker_connected"] = !bMQTTenabled ? "off" : (MQTTclient.connected() ? "yes" : "no");
 #endif
   char paired[18];
     sprintf(paired,"%i - %s", Pref.peers, en_connected?"connected":"unconnected");
@@ -412,6 +417,7 @@ String deviceSettingsJson() {
 
 #ifndef MQTT_DISABLE
 if ( !hideMQTTsettings) {
+  doc["mqtt_enabled"] = bMQTTenabled;
 #ifndef MQTTKB
 
   doc["mqtt_tls"] = bMQTToverTLS;
@@ -438,10 +444,10 @@ if ( !hideMQTTsettings) {
 
   ADD_SETTING("b_auth_user", "s", 0, sizeof(bAuthUser) - 1, bAuthUser);
   ADD_SETTING("b_auth_pw", "s", 0, sizeof(bAuthPW) - 1, bAuthPW);
-  // ADD_SETTING("overvoltage_threshold", "i", 200, 300, settingOvervoltageThreshold);
+  ADD_SETTING("overvoltage_threshold", "i", 200, 300, settingOvervoltageThreshold);
   
   //MODBUS TCP settings
-  ADD_SETTING("mb_map", "i", 0, 7, SelMap); //RTU+TCP
+  ADD_SETTING("mb_map", "i", 0, 8, SelMap); //RTU+TCP
   ADD_SETTING("mb_id", "i", 1, 255, mb_config.id); //RTU+TCP
   ADD_SETTING("mb_port", "i", 0, 65535, mb_config.port); //TCP
   if ( mb_rx != -1 ){ //check if modbus rtu hardware is available

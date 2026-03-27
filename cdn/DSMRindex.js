@@ -251,44 +251,75 @@ function InsightData(data){
                 "TU3over": "sec",
                 "start_time": "uu:mm"
             };
-			
-            const tbody = document.getElementById("InsightsTableBody");
-			tbody.innerHTML = '';
-			
-            for (const key in data) {
-//                 if (!(key in namen)) continue; 
 
-                const row = document.createElement("tr");
-                const naamCell = document.createElement("td");
-               	naamCell.textContent = key;
-            	naamCell.title = t("tip-"+key);
-                const waardeCell = document.createElement("td");
-                const eenheidCell = document.createElement("td");
+            const insightRows = [
+                { labelKey: "ins-current-peak", keys: ["I1piek", "I2piek", "I3piek"] },
+                { labelKey: "ins-power-peak", keys: ["P1max", "P2max", "P3max"] },
+                { labelKey: "ins-power-minimum", keys: ["P1min", "P2min", "P3min"] },
+                { labelKey: "ins-voltage-peak", keys: ["U1piek", "U2piek", "U3piek"] },
+                { labelKey: "ins-voltage-minimum", keys: ["U1min", "U2min", "U3min"] },
+                { labelKey: "ins-time-overvoltage", keys: ["TU1over", "TU2over", "TU3over"] },
+                { labelKey: "lbl-Psluip", keys: ["Psluip", null, null] },
+                { labelKey: "lbl-start_time", keys: ["start_time", null, null] }
+            ];
 
-                naamCell.textContent = t("lbl-"+key);
+            function formatInsightValue(key, value) {
+                if (value === undefined || value === null) return "";
 
-                let waarde = data[key];
-				
                 if (key.startsWith("U")) {
-					waarde = (waarde / 1000).toFixed(1); // mV → V
-                } else if (key.startsWith("I")) {
-					 waarde = (waarde / 1000).toFixed(3); // mA → A
-                } else if (key === "start_time") {
-//                     const datum = new Date(waarde * 1000);
-                    let uur  = Math.trunc(waarde/3600 % 24);
-                    let minuten  = Math.trunc(waarde/60 % 60);
-                    waarde = String(uur).padStart(2, '0') + ":" + String(minuten).padStart(2, '0');
-                    
-                } else if (key.startsWith("Psl")) {
-                	if ( waarde == 0xFFFFFFFF ) waarde = "-";
+                    return (value / 1000).toFixed(1);
                 }
 
-                waardeCell.textContent = waarde;
-                eenheidCell.textContent = eenheden[key] || "";
+                if (key.startsWith("I")) {
+                    return (value / 1000).toFixed(3);
+                }
+
+                if (key === "start_time") {
+                    const uur = Math.trunc(value / 3600 % 24);
+                    const minuten = Math.trunc(value / 60 % 60);
+                    return String(uur).padStart(2, '0') + ":" + String(minuten).padStart(2, '0');
+                }
+
+                if (key.startsWith("Psl") && value == 0xFFFFFFFF) {
+                    return "-";
+                }
+
+                return value;
+            }
+
+            function rowTitle(keys) {
+                return keys
+                    .filter(key => key)
+                    .map(key => t("tip-" + key))
+                    .filter(text => text && !text.startsWith("tip-"))
+                    .join("\n");
+            }
+
+            const tbody = document.getElementById("InsightsTableBody");
+			tbody.innerHTML = '';
+
+            for (const rowData of insightRows) {
+                const row = document.createElement("tr");
+                const naamCell = document.createElement("td");
+                const l1Cell = document.createElement("td");
+                const l2Cell = document.createElement("td");
+                const l3Cell = document.createElement("td");
+                const eenheidCell = document.createElement("td");
+
+                naamCell.textContent = t(rowData.labelKey);
+                naamCell.title = rowTitle(rowData.keys);
+
+                const [l1Key, l2Key, l3Key] = rowData.keys;
+                l1Cell.textContent = l1Key ? formatInsightValue(l1Key, data[l1Key]) : "";
+                l2Cell.textContent = l2Key ? formatInsightValue(l2Key, data[l2Key]) : "";
+                l3Cell.textContent = l3Key ? formatInsightValue(l3Key, data[l3Key]) : "";
+                eenheidCell.textContent = eenheden[l1Key] || "";
                 eenheidCell.style.textAlign = "center";
 
                 row.appendChild(naamCell);
-                row.appendChild(waardeCell);
+                row.appendChild(l1Cell);
+                row.appendChild(l2Cell);
+                row.appendChild(l3Cell);
                 row.appendChild(eenheidCell);
                 tbody.appendChild(row);
             }
@@ -2417,6 +2448,7 @@ function splitSettingsUI() {
 
   // velden op basis van "i" (dus zonder "settingR_")
   const MQTT_KEYS = new Set([
+    "mqtt_enabled",
     "mqtt_tls",
     "mqtt_broker",
     "mqtt_broker_port",
@@ -2470,6 +2502,22 @@ function splitSettingsUI() {
     else if (TARIFF_KEYS.has(key)) tariff.appendChild(row);
     else if (MODBUS_KEYS.has(key)) modbus.appendChild(row);
     else general.appendChild(row);
+  });
+
+  const mqttToggleRow = document.getElementById("settingR_mqtt_enabled");
+  if (mqttToggleRow) mqtt.prepend(mqttToggleRow);
+  updateMQTTSettingsVisibility();
+}
+
+function updateMQTTSettingsVisibility() {
+  const mqttEnabled = document.getElementById("setFld_mqtt_enabled");
+  const mqttPane = document.getElementById("settings_mqtt");
+  if (!mqttEnabled || !mqttPane) return;
+
+  const showMQTTFields = mqttEnabled.checked;
+  mqttPane.querySelectorAll(".settingDiv").forEach(row => {
+    if (row.id === "settingR_mqtt_enabled") return;
+    row.style.display = showMQTTFields ? "" : "none";
   });
 }
 
@@ -2526,6 +2574,7 @@ function clearDirtySettings(){
 				{ v: 5, t: "ABB B21" },
 				{ v: 6, t: "MX3xx" },
 				{ v: 7, t: "Default 2 - floats" },
+				{ v: 8, t: "KLEFR / INEPRO / Webasto Unite" },
 			  ];
 			
 			  const sel = document.createElement("select");
@@ -2582,6 +2631,9 @@ function clearDirtySettings(){
 			// bestaande dirty-detectie behouden
 			sInput.addEventListener("change", () => markDirty(sInput));
 			sInput.addEventListener("input",  () => markDirty(sInput));
+			if (i === "mqtt_enabled") {
+			  sInput.addEventListener("change", updateMQTTSettingsVisibility);
+			}
 			
 			inputDiv.appendChild(sInput);
 
@@ -2594,7 +2646,9 @@ function clearDirtySettings(){
 	  else
 	  {
 // 		document.getElementById("setFld_"+i).style.background = "white";
-		document.getElementById("setFld_"+i).value = data[i].value;
+		const existingField = document.getElementById("setFld_"+i);
+		if (data[i].value === undefined) existingField.checked = data[i];
+		else existingField.value = data[i].value;
 	  }
 	}
 

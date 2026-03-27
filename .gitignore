@@ -15,3 +15,4 @@ ap
 *.sh
 build
 *.zip
+.htaccess

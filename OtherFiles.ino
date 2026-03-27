@@ -105,6 +105,7 @@ void writeSettings() {
   docw["MQTTpasswd"] = settingMQTTpasswd;
   docw["MQTTinterval"] = settingMQTTinterval;
   docw["MQTTtopTopic"] = settingMQTTtopTopic;
+  docw["mqtt-enabled"] = bMQTTenabled;
   docw["mqtt_tls"] = bMQTToverTLS;
   
   docw["LED"] = LEDenabled;
@@ -228,6 +229,7 @@ void readSettings(bool show)
   strlcpy(settingMQTTtopTopic, doc["MQTTtopTopic"] | "", sizeof(settingMQTTtopTopic));
   if (settingMQTTtopTopic[0] && settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strlcat(settingMQTTtopTopic, "/", sizeof(settingMQTTtopTopic));
   CreateMacIDTopic();
+  if (doc["mqtt-enabled"].is<bool>()) bMQTTenabled = doc["mqtt-enabled"];
   if (doc["mqtt_tls"].is<bool>()) bMQTToverTLS = doc["mqtt_tls"];
   
   CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
@@ -356,6 +358,19 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "IndexPage"))        strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), newValue);  
 
 #ifndef MQTT_DISABLE 
+  if (!stricmp(field, "mqtt_enabled") || !stricmp(field, "mqtt-enabled")) {
+    bool newMQTTenabled = (stricmp(newValue, "true") == 0 ? true : false);
+    if (bMQTTenabled != newMQTTenabled) {
+      bMQTTenabled = newMQTTenabled;
+      if (!bMQTTenabled) {
+        bSendMQTT = false;
+        MQTTDisconnect();
+      } else {
+        MQTTsetServer();
+      }
+    }
+  }
+
   if (!stricmp(field, "mqtt_broker"))  {
     DebugT("settingMQTTbroker! to : ");
     memset(settingMQTTbroker, '\0', sizeof(settingMQTTbroker));

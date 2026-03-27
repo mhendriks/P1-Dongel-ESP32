@@ -175,6 +175,32 @@ section#APIdocTab div, #rawTelegram {
 	text-align: right;	
 }
 
+#insights {
+	max-width: 650px;
+	margin: 0 auto;
+}
+
+#InsightsTable {
+	table-layout: fixed;
+	width: 100%;
+}
+
+#InsightsTable th, #InsightsTable td {
+	text-align: center;
+}
+
+#InsightsTable th:first-child, #InsightsTable td:first-child {
+	text-align: left;
+	white-space: normal;
+	width: 32%;
+}
+
+#InsightsTable td:nth-child(2),
+#InsightsTable td:nth-child(3),
+#InsightsTable td:nth-child(4) {
+	text-align: right;
+}
+
 #lastMonthsTable th{
 	border-bottom: 2px solid #ddd;
 }

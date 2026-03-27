@@ -430,6 +430,7 @@ String    mbusDeliveredTimestamp;
 String    smID;
 bool      StaticInfoSend = false;
 bool      bSendMQTT = false;
+bool      bMQTTenabled = true;
 bool      bMQTToverTLS = false;
 
 bool      hideMQTTsettings = false;

@@ -495,45 +495,37 @@ void startTelnet()
 void startMDNS(const char *Hostname) {
   if ( skipNetwork ) return;
   DebugTf("[1] mDNS setup as [%s.local]\r\n", Hostname);
-  String mdnsName = Hostname;
-#ifdef MIMIC_HW
   String MACID = macID;
-  String mimicHostname = "p1meter-" + MACID.substring(MACID.length() - 6);
-  mdnsName = mimicHostname;
-  DebugTf("[2] mDNS mimic as [%s.local]\r\n", mimicHostname.c_str());
-#endif
 
-  if ( !MDNS.begin(mdnsName.c_str()) ) {
+  if ( !MDNS.begin(Hostname) ) {
     DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
     return;
   }
 
-#ifdef MIMIC_HW
   MDNS.addService("hwenergy", "tcp", 80);
   MDNS.addService("homewizard", "tcp", 80);
 
-  MDNS.addServiceTxt("hwenergy", "tcp", "serial", MACID.c_str());
+  MDNS.addServiceTxt("hwenergy", "tcp", "serial", MACID);
   MDNS.addServiceTxt("hwenergy", "tcp", "product_type", "HWE-P1");
   MDNS.addServiceTxt("hwenergy", "tcp", "product_name", "P1 Meter");
   MDNS.addServiceTxt("hwenergy", "tcp", "path", "/api/v1");
   MDNS.addServiceTxt("hwenergy", "tcp", "api_enabled", "1");
 
-  MDNS.addServiceTxt("homewizard", "tcp", "serial", MACID.c_str());
+  MDNS.addServiceTxt("homewizard", "tcp", "serial", MACID);
   MDNS.addServiceTxt("homewizard", "tcp", "product_type", "HWE-P1");
   MDNS.addServiceTxt("homewizard", "tcp", "product_name", "P1 Meter");
   MDNS.addServiceTxt("homewizard", "tcp", "path", "/api/v1");
   MDNS.addServiceTxt("homewizard", "tcp", "api_enabled", "1");
-#else
+// #else
   MDNS.addService( Hostname, "tcp", 80);
   MDNS.addService( "p1dongle", "tcp", 80);
-  MDNS.addServiceTxt("p1dongle", "tcp", "id", String(macID).c_str() );
+  MDNS.addServiceTxt("p1dongle", "tcp", "id", MACID );
 #ifdef ULTRA    
   MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1U" );    
 #elif defined (ETHERNET)
   MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1E" );    
 #else
   MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1P" );    
-#endif
 #endif
 } // startMDNS()
 
