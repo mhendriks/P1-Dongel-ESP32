@@ -1,0 +1,13 @@
+[
+  { "register": 8198, "source": "voltage_l1_v",      "scale": 10,   "type": "float" },
+  { "register": 8200, "source": "voltage_l2_v",      "scale": 10,   "type": "float" },
+  { "register": 8202, "source": "voltage_l3_v",      "scale": 10,   "type": "float" },
+  { "register": 8204, "source": "current_l1_a",      "scale": 1000, "type": "float" },
+  { "register": 8206, "source": "current_l2_a",      "scale": 1000, "type": "float" },
+  { "register": 8208, "source": "current_l3_a",      "scale": 1000, "type": "float" },
+  { "register": 8210, "source": "net_power_total_kw", "scale": 100,  "type": "float" },
+  { "register": 8212, "source": "net_power_l1_kw",    "scale": 100,  "type": "float" },
+  { "register": 8214, "source": "net_power_l2_kw",    "scale": 100,  "type": "float" },
+  { "register": 8216, "source": "net_power_l3_kw",    "scale": 100,  "type": "float" }
+
+]

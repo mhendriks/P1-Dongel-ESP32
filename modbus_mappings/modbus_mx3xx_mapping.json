@@ -1,0 +1,28 @@
+[
+  { "register": 32774, "source": "voltage_l1_v",             "scale": 1,    "type": "float" },
+  { "register": 32776, "source": "voltage_l2_v",             "scale": 1,    "type": "float" },
+  { "register": 32778, "source": "voltage_l3_v",             "scale": 1,    "type": "float" },
+  { "register": 32782, "source": "current_l1_a",             "scale": 1,    "type": "float" },
+  { "register": 32784, "source": "current_l2_a",             "scale": 1,    "type": "float" },
+  { "register": 32786, "source": "current_l3_a",             "scale": 1,    "type": "float" },
+  { "register": 32798, "source": "net_power_l1_kw",           "scale": 1000, "type": "float" },
+  { "register": 32800, "source": "net_power_l2_kw",           "scale": 1000, "type": "float" },
+  { "register": 32802, "source": "net_power_l3_kw",           "scale": 1000, "type": "float" },
+  { "register": 32804, "source": "net_power_l1_kw",           "scale": 1000, "type": "float" },
+  { "register": 32806, "source": "net_power_l2_kw",           "scale": 1000, "type": "float" },
+  { "register": 32808, "source": "net_power_l3_kw",           "scale": 1000, "type": "float" },
+  { "register": 32790, "source": "net_power_total_kw",        "scale": 1000, "type": "float" },
+  { "register": 32792, "source": "net_power_total_kw",        "scale": 1000, "type": "float" },
+  { "register": 32816, "source": "direction_l1",           "scale": 1,    "type": "float" },
+  { "register": 32818, "source": "direction_l2",           "scale": 1,    "type": "float" },
+  { "register": 32820, "source": "direction_l3",           "scale": 1,    "type": "float" },
+  { "register": 32780, "source": "constant",               "scale": 1,    "type": "float",  "value": 50 },
+  { "register": 33024, "source": "energy_delivered_total_kwh", "scale": 1,    "type": "float" },
+  { "register": 33030, "source": "energy_returned_total_kwh",  "scale": 1,    "type": "float" },
+  { "register": 316,   "source": "constant",               "scale": 1,    "type": "uint32", "value": 909127987 },
+  { "register": 318,   "source": "constant",               "scale": 1,    "type": "uint32", "value": 942748210 },
+  { "register": 320,   "source": "constant",               "scale": 1,    "type": "uint32", "value": 14644 },
+  { "register": 322,   "source": "constant",               "scale": 1,    "type": "uint32", "value": 0 },
+  { "register": 324,   "source": "constant",               "scale": 1,    "type": "int16",  "value": -1 }
+
+]

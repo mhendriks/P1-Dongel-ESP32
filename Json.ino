@@ -447,7 +447,7 @@ if ( !hideMQTTsettings) {
   ADD_SETTING("overvoltage_threshold", "i", 200, 300, settingOvervoltageThreshold);
   
   //MODBUS TCP settings
-  ADD_SETTING("mb_map", "i", 0, 8, SelMap); //RTU+TCP
+  ADD_SETTING("mb_map", "i", 0, 9, SelMap); //RTU+TCP
   ADD_SETTING("mb_id", "i", 1, 255, mb_config.id); //RTU+TCP
   ADD_SETTING("mb_port", "i", 0, 65535, mb_config.port); //TCP
   if ( mb_rx != -1 ){ //check if modbus rtu hardware is available
@@ -539,6 +539,28 @@ ApiResponse handleSmApi()
     return jsonDocResponse(jsonDoc);
     
 } // handleSmApi()
+//====================================================
+
+String smActualJsonDebug() {
+  const byte previousFieldsElements = fieldsElements;
+  const bool previousOnlyIfPresent = onlyIfPresent;
+
+  jsonDoc.clear();
+  fieldsElements = ACTUALELEMENTS;
+  onlyIfPresent = true;
+  DSMRdata.applyEach(buildJson());
+  JsonGas();
+  JsonWater();
+  JsonPP();
+
+  String out;
+  serializeJson(jsonDoc, out);
+
+  jsonDoc.clear();
+  fieldsElements = previousFieldsElements;
+  onlyIfPresent = previousOnlyIfPresent;
+  return out;
+}
 //====================================================
 
 ApiResponse handleDevApi()

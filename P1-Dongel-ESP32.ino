@@ -8,15 +8,14 @@
 BACKLOG
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
-- auto switch 3 - 1 fase max fuse
 - temperatuur ook opnemen in grafieken (A van Dijken)
 - SSE of websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
 - Interface HomeKit ivm triggeren op basis van energieverbruik/teruglevering (Thijs v Z)
 - grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
 - Consistentie tijd-assen, links oud, rechts nieuw
-  - in Actueel staat de laatste meting rechts en de oudste meting links
-  - in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
+- in Actueel staat de laatste meting rechts en de oudste meting links
+- in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
 - Harold B: Dark-mode frontend
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
 - Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
@@ -33,16 +32,15 @@ BACKLOG
     - detail P per fase afgelopen uur (sample eens per 10s)
 - kwartierpiek historie opnemen (wanneer nieuwe piek ontstaat)
 - dynamische prijzen inl
-- improvement: modbus in own process = non-blocking 
 - Huawei FusionSolar integratie ( Francis )
-- mqtt push setting json to the dongle
 - inlezen van solar config in frontend
 - default mqtt : mqtt://core-mosquitto:1883 en addons als user
 - change: solar support for 3 inverters
 - Shelly EM udp emulation
 - issue cost gas 4.16/5.2 (Karel)
 - ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
-- bug HW api water meter id
+- De daily insights kunnen downloaden zoals RNGhours (Harrie)
+- De waarden in daily insights labelen met het datum/tijdstip waarop gemeten (Harrie)
 
 Default checks
 - wifi
@@ -69,27 +67,19 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - CPU Frequency: "160MHz"
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
-  - De daily insights kunnen downloaden zoals RNGhours (Harrie)
-  - De waarden in daily insights labelen met het datum/tijdstip waarop gemeten (Harrie)
-
-5.4.0
-√ add: auto update feature (default off)
-√ UDP option available as build feature
-√ add: check startup + process day values based on yesterday - NRG Monitor (4.17 / 5.2)
-√ Over Voltage configurable via settings
-√ added: Homey support based on the HW P1 dongle v1 api
-√ Webasto Unite (inepro / KLEFR ondersteuning) -> mapping: 8 - Frank
-√ Insight table view changed
-√ MQTT on/off toggle
 
 5.4.1
 - added: MEENT webhook
+- Virtual P1 feature in settings (Ethernet/Ultra only)
+x- major refactoring modbus mapping ... first step in customer json config mapping 
+- add: modbus mapping EM330 (type 4)
 
 5.5.0
+- add: Ultra dongles are able to make custom modbus mappings via json file
+- add: Modbus listner mode 
 - add PV production to history files
 - refactor: asyncwebserver
 - update button in HA to trigger the update (mqtt based #70)
-- Virtual P1 feature in settings
 
 */
 
@@ -121,6 +111,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define SHELLY_EMU
 // #define USB_CONFIG
 // #define POST_POWERCH
+// #define POST_MEENT
 // #define VIRTUAL_P1
 
 #include "DSMRloggerAPI.h"
@@ -214,7 +205,7 @@ void setup()
   
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
   StartESPNOW();
-  StartPowerCH();
+  StartWebhook();
   UdpBegin();
 } // setup()
 
@@ -238,5 +229,5 @@ void loop () {
   PrintHWMark(2);
   handleP2P();
   handleUDP();
-  PostPowerCh();
+  PostWebhook();
 } // loop()

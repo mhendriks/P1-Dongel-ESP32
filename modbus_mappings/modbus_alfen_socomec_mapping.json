@@ -1,0 +1,10 @@
+[
+  { "register": 50528, "source": "current_l1_a",   "scale": 1000, "type": "uint32" },
+  { "register": 50530, "source": "current_l2_a",   "scale": 1000, "type": "uint32" },
+  { "register": 50532, "source": "current_l3_a",   "scale": 1000, "type": "uint32" },
+  { "register": 50534, "source": "current_total_a","scale": 1000, "type": "uint32" },
+  { "register": 50544, "source": "net_power_l1_kw", "scale": 100,  "type": "int32" },
+  { "register": 50546, "source": "net_power_l2_kw", "scale": 100,  "type": "int32" },
+  { "register": 50548, "source": "net_power_l3_kw", "scale": 100,  "type": "int32" }
+
+]

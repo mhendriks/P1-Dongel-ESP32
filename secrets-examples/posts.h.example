@@ -1,9 +1,10 @@
 #pragma once
-
-// Optional suffix appended to OTAURL to form BaseOTAurl
-// Examples: "", "latest/", "beta/"
-#define OTAURL_PREFIX ""
-
 // Only used when POST_POWERCH is enabled
-#define URL_POWERCH "https://example.invalid/api/power"
+#define URL_POWERCH "https://example.invalid/api/data"
+
+// Only used when POST_MEENT is enabled
+#define URL_MEENT "https://example.invalid/api/data/"
+static const char* MEENT_API_VERSION = "v0.3";
+static const char* MEENT_AUTH_TOKEN = "Bearer xxxxxxxxxxxxxxxx";
+
 

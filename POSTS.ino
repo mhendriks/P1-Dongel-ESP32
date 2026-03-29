@@ -1,13 +1,20 @@
 #if __has_include("./../../_secrets/posts.h")
   #include "./../../_secrets/posts.h"
 #else
-  // Optional local overrides (PowerCH URL, OTAURL_PREFIX, etc.)
+  // Optional local overrides (webhook URLs, OTAURL_PREFIX, etc.)
   #ifndef URL_POWERCH
     #define URL_POWERCH ""
+  #endif
+  #ifndef URL_MEENT
+    #define URL_MEENT ""
   #endif
   #ifndef OTAURL_PREFIX
     #define OTAURL_PREFIX ""
   #endif
+#endif
+
+#if defined(POST_POWERCH) && defined(POST_MEENT)
+  #error "POST_POWERCH and POST_MEENT cannot be enabled at the same time"
 #endif
 
 void PostTelegram() {
@@ -31,13 +38,12 @@ void PostTelegram() {
   
 }
 
+#if defined(POST_POWERCH) || defined(POST_MEENT)
 
-#ifdef POST_POWERCH
+static WiFiClientSecure webhookTlsClient;
+uint8_t webhookPostErrors = 0;
 
-static WiFiClientSecure tslPower;
-uint8_t PostErrors = 0;
-
-String JsonPowerCH() {
+String JsonWebhook() {
   
   JsonDocument doc;
   // char idbuf[21]; //64b value   
@@ -51,54 +57,64 @@ String JsonPowerCH() {
   serializeJson(doc, output);
 
 #ifdef DEBUG
-  Debugf("JsonPowerCH: %s\n", output.c_str());
+  Debugf("Webhook Json: %s\n", output.c_str());
 #endif  
 
   return output;
 }
 
-time_t tPower;
+time_t webhookStartMs;
 
-void PostPowerCh() {
+void PostWebhook() {
 #ifdef DEBUG
-  tPower = millis();
+  webhookStartMs = millis();
 #endif
-  if (!bNewTelegramPostPower || netw_state == NW_NONE || PostErrors > 100 ) return;
-  bNewTelegramPostPower = false;
+  if (!bNewTelegramWebhook || netw_state == NW_NONE || webhookPostErrors > 100 ) return;
+  bNewTelegramWebhook = false;
 
   HTTPClient http;
-  if (http.begin(tslPower, URL_POWERCH)) {
-    http.addHeader("Content-Type", "application/json");
+  String webhookUrl;
+#ifdef POST_POWERCH
+  webhookUrl = URL_POWERCH;
+#elif defined(POST_MEENT)
+  webhookUrl = URL_MEENT;
+#endif
 
-    int httpResponseCode = http.POST(JsonPowerCH());
+  if (http.begin(webhookTlsClient, webhookUrl)) {
+    http.addHeader("Content-Type", "application/json");
+#ifdef POST_MEENT
+    http.addHeader("API-Version", MEENT_API_VERSION);
+    http.addHeader("Authorization", MEENT_AUTH_TOKEN);
+#endif
+
+    int httpResponseCode = http.POST(JsonWebhook());
     DebugT(F("HTTP Response code: ")); Debugln(httpResponseCode);
 
-    if (httpResponseCode == 200) PostErrors = 0;
+    if (httpResponseCode >= 200 && httpResponseCode < 300) webhookPostErrors = 0;
     else {
-      PostErrors++;
-      
-      tslPower.stop(); // hard reset van de TLS-socket zodat volgende call schoon start
+      webhookPostErrors++;
+      webhookTlsClient.stop(); // hard reset van de TLS-socket zodat volgende call schoon start
       delay(10);
     }
     http.end();                  // resources van HTTPClient vrijgeven
   } else {
-    PostErrors++;
+    webhookPostErrors++;
     DebugTln(F("HTTP begin failed"));
     // begin() faalt? zorg ook hier dat de client schoon is
-    tslPower.stop();
+    webhookTlsClient.stop();
     delay(10);
   }
 
 #ifdef DEBUG
-  Debugf("PowerCH process time: %d\n", millis() - tPower);
+  Debugf("Webhook process time: %d\n", millis() - webhookStartMs);
 #endif
 }
 
-void StartPowerCH() {
-  tslPower.setInsecure();
-  tslPower.setTimeout(5000);
+void StartWebhook() {
+  webhookTlsClient.setInsecure();
+  webhookTlsClient.setTimeout(5000);
 }
 #else 
-  void StartPowerCH(){}
-  void PostPowerCh(){}
+  void StartWebhook(){}
+  void PostWebhook(){}
 #endif

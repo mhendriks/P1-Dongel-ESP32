@@ -415,7 +415,12 @@ void processTelegram(){
   actT = newT;
   
   // PostHomey();
-  if ( (bV5meter && telegramCount % 3 == 0 ) || !bV5meter ) bNewTelegramPostPower = true;
+  #ifdef POST_POWERCH
+    if ( (bV5meter && telegramCount % 3 == 0 ) || !bV5meter ) bNewTelegramWebhook = true; //every 3 secs (v5) or new telegram (v2/4)
+  #endif
+  #ifdef POST_MEENT
+      if ( (bV5meter && telegramCount % 10 == 0 ) || !bV5meter ) bNewTelegramWebhook = true; //every 10 secs (v5) or new telegram (v2/4)
+  #endif
   #ifdef UDP_BCAST
     New_P1_UDP = true;
   #endif 

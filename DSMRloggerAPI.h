@@ -75,6 +75,7 @@ void SendTariffData();
 void EID_RESTART_IDLE_TIMER();
 uint32_t actueleOverspanningSeconden(uint32_t overspanningTotaal, unsigned long startTijd, bool overspanning);
 void ResetOvervoltageStats();
+String smActualJsonDebug();
 
 WebServer httpServer(80);
 NetServer ws_raw(82);
@@ -355,7 +356,7 @@ bool        bActJsonMQTT = false;
 bool        bRawPort = false;
 bool        bLED_PRT = true;
 bool        P1Out = false;
-bool        bNewTelegramPostPower = false;
+bool        bNewTelegramWebhook = false;
 bool        bV5meter = true;
 bool        bP1offline = true;
 time_t      last_telegram_t = 0;

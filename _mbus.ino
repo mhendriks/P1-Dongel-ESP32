@@ -5,6 +5,9 @@
 #define MBUS_TIMEOUT  10000
 #define MBUS_VAL_UNAVAILABLE 0xFFFFFFFF
 
+enum class ModbusDataType : uint8_t;
+enum class MbSource : uint8_t;
+
 float calculateLineVoltage(float V1, float V2) {
   return sqrt(3) * (V1 + V2) / 2.0;
 }
@@ -13,7 +16,7 @@ float calculateLineVoltage(float V1, float V2) {
 ModbusServerWiFi MBserver;
 
 // Modbus data types
-enum class ModbusDataType { UINT32, INT16, FLOAT };
+enum class ModbusDataType : uint8_t { UINT32, INT32, INT16, FLOAT };
 
 union {
   float    f;
@@ -21,322 +24,634 @@ union {
   int32_t  i;
 } map_temp;
 
-// Struct om registerwaarden op te halen
-struct ModbusMapping {
-    ModbusDataType type;
-    std::function<uint32_t()> valueGetter;
+
+
+enum class MbSource : uint8_t {
+  timestamp_epoch,
+  energy_delivered_tariff1_kwh,
+  energy_delivered_tariff2_kwh,
+  energy_returned_tariff1_kwh,
+  energy_returned_tariff2_kwh,
+  energy_delivered_total_kwh,
+  energy_returned_total_kwh,
+  energy_net_total_kwh,
+  energy_net_tariff1_kwh,
+  energy_net_tariff2_kwh,
+  energy_net_avg_kwh,
+  energy_delivered_avg_kwh,
+  energy_returned_avg_kwh,
+  power_delivered_kw,
+  power_returned_kw,
+  net_power_total_kw,
+  voltage_l1_v,
+  voltage_l2_v,
+  voltage_l3_v,
+  current_l1_a,
+  current_l2_a,
+  current_l3_a,
+  current_total_a,
+  signed_current_l1_a,
+  signed_current_l2_a,
+  signed_current_l3_a,
+  gas_timestamp_epoch,
+  gas_delivered_m3,
+  electricity_tariff,
+  peak_pwr_last_q_kw,
+  net_power_l1_kw,
+  net_power_l2_kw,
+  net_power_l3_kw,
+  direction_total,
+  direction_l1,
+  direction_l2,
+  direction_l3,
+  line_voltage_l12_v,
+  line_voltage_l23_v,
+  line_voltage_l31_v,
+  line_voltage_avg_v,
+  water_delivered_m3,
+  unavailable_float,
+  constant,
+  p1_device_id,
+  firmware_version_packed,
+  device_online,
+  uptime_seconds,
 };
+
+struct ActiveRecipe {
+  uint16_t registerAddress;
+  int16_t scale;
+  uint8_t source;
+  uint8_t type;
+  int32_t value;
+  float valueFloat = NAN;
+};
+
+static constexpr size_t kMaxActiveRecipes = 64;
+
+static ActiveRecipe activeRecipes[kMaxActiveRecipes];
+static size_t activeRecipeCount = 0;
+static uint16_t activeRecipeMaxReg = 0;
+static bool activeRecipeLoaded = false;
+
+#include "_mbus_mapping.h"
+
+static float mbSignedCurrent(float current, float returned);
+static float readMbSourceValue(MbSource source);
+static float readScaledMbSourceValue(MbSource source, int16_t scale);
+static bool readMbSourceUInt32(MbSource source, int16_t scale, uint32_t value, uint32_t& outValue);
+static uint32_t encodeActiveRecipeValue(const ActiveRecipe& recipe);
+static const ActiveRecipe* findActiveRecipe(uint16_t reg);
+static bool loadActiveRecipes(const ActiveRecipe* recipes, size_t recipeCount);
+static bool loadPresetRecipes(int mappingChoice);
+static bool parseMbSource(const char* sourceText, MbSource& outSource);
+static bool parseMbType(const char* typeText, ModbusDataType& outType);
+static bool loadActiveRecipesFromJsonText(const char* json);
+
+static bool parseMbSource(const char* sourceText, MbSource& outSource) {
+  struct SourceName {
+    const char* name;
+    MbSource source;
+  };
+
+  static const SourceName kSources[] = {
+    {"timestamp_epoch",         MbSource::timestamp_epoch},
+    {"energy_delivered_tariff1_kwh",MbSource::energy_delivered_tariff1_kwh},
+    {"energy_delivered_tariff2_kwh",MbSource::energy_delivered_tariff2_kwh},
+    {"energy_returned_tariff1_kwh", MbSource::energy_returned_tariff1_kwh},
+    {"energy_returned_tariff2_kwh", MbSource::energy_returned_tariff2_kwh},
+    {"energy_delivered_total_kwh",  MbSource::energy_delivered_total_kwh},
+    {"energy_returned_total_kwh",   MbSource::energy_returned_total_kwh},
+    {"energy_net_total_kwh",        MbSource::energy_net_total_kwh},
+    {"energy_net_tariff1_kwh",      MbSource::energy_net_tariff1_kwh},
+    {"energy_net_tariff2_kwh",      MbSource::energy_net_tariff2_kwh},
+    {"energy_net_avg_kwh",          MbSource::energy_net_avg_kwh},
+    {"energy_delivered_avg_kwh",    MbSource::energy_delivered_avg_kwh},
+    {"energy_returned_avg_kwh",     MbSource::energy_returned_avg_kwh},
+    {"power_delivered_kw",          MbSource::power_delivered_kw},
+    {"power_returned_kw",           MbSource::power_returned_kw},
+    {"net_power_total_kw",          MbSource::net_power_total_kw},
+    {"voltage_l1_v",                MbSource::voltage_l1_v},
+    {"voltage_l2_v",                MbSource::voltage_l2_v},
+    {"voltage_l3_v",                MbSource::voltage_l3_v},
+    {"current_l1_a",                MbSource::current_l1_a},
+    {"current_l2_a",                MbSource::current_l2_a},
+    {"current_l3_a",                MbSource::current_l3_a},
+    {"current_total_a",             MbSource::current_total_a},
+    {"signed_current_l1_a",         MbSource::signed_current_l1_a},
+    {"signed_current_l2_a",         MbSource::signed_current_l2_a},
+    {"signed_current_l3_a",         MbSource::signed_current_l3_a},
+    {"gas_timestamp_epoch",         MbSource::gas_timestamp_epoch},
+    {"gas_delivered_m3",            MbSource::gas_delivered_m3},
+    {"electricity_tariff",      MbSource::electricity_tariff},
+    {"peak_pwr_last_q_kw",      MbSource::peak_pwr_last_q_kw},
+    {"net_power_l1_kw",         MbSource::net_power_l1_kw},
+    {"net_power_l2_kw",         MbSource::net_power_l2_kw},
+    {"net_power_l3_kw",         MbSource::net_power_l3_kw},
+    {"direction_total",         MbSource::direction_total},
+    {"direction_l1",            MbSource::direction_l1},
+    {"direction_l2",            MbSource::direction_l2},
+    {"direction_l3",            MbSource::direction_l3},
+    {"line_voltage_l12_v",      MbSource::line_voltage_l12_v},
+    {"line_voltage_l23_v",      MbSource::line_voltage_l23_v},
+    {"line_voltage_l31_v",      MbSource::line_voltage_l31_v},
+    {"line_voltage_avg_v",      MbSource::line_voltage_avg_v},
+    {"water_delivered_m3",      MbSource::water_delivered_m3},
+    {"unavailable_float",       MbSource::unavailable_float},
+    {"constant",                MbSource::constant},
+    {"p1_device_id",            MbSource::p1_device_id},
+    {"firmware_version_packed", MbSource::firmware_version_packed},
+    {"device_online",           MbSource::device_online},
+    {"uptime_seconds",          MbSource::uptime_seconds},
+  };
+
+  for (const SourceName& entry : kSources) {
+    if (strcmp(sourceText, entry.name) == 0) {
+      outSource = entry.source;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+static bool parseMbType(const char* typeText, ModbusDataType& outType) {
+  if (strcmp(typeText, "float") == 0) {
+    outType = ModbusDataType::FLOAT;
+    return true;
+  }
+  if (strcmp(typeText, "uint32") == 0) {
+    outType = ModbusDataType::UINT32;
+    return true;
+  }
+  if (strcmp(typeText, "int32") == 0) {
+    outType = ModbusDataType::INT32;
+    return true;
+  }
+  if (strcmp(typeText, "int16") == 0) {
+    outType = ModbusDataType::INT16;
+    return true;
+  }
+  return false;
+}
+
+static float mbSignedCurrent(float current, float returned) {
+  return current * (returned ? -1.0f : 1.0f);
+}
+
+static float readMbSourceValue(MbSource source) {
+  switch (source) {
+    case MbSource::timestamp_epoch:
+      return (float)(actT - (actTimestamp[12] == 'S' ? 7200 : 3600));
+    case MbSource::energy_delivered_tariff1_kwh:
+      return (DSMRdata.energy_delivered_tariff1_present && !bUseEtotals) ? DSMRdata.energy_delivered_tariff1.val() : NAN;
+    case MbSource::energy_delivered_tariff2_kwh:
+      return (DSMRdata.energy_delivered_tariff2_present && !bUseEtotals) ? DSMRdata.energy_delivered_tariff2.val() : NAN;
+    case MbSource::energy_returned_tariff1_kwh:
+      return (DSMRdata.energy_returned_tariff1_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff1.val() : NAN;
+    case MbSource::energy_returned_tariff2_kwh:
+      return (DSMRdata.energy_returned_tariff2_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff2.val() : NAN;
+    case MbSource::energy_delivered_total_kwh:
+      return DSMRdata.energy_delivered_total_present
+        ? DSMRdata.energy_delivered_total.val()
+        : ((DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) +
+           (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f));
+    case MbSource::energy_returned_total_kwh:
+      return DSMRdata.energy_returned_total_present
+        ? DSMRdata.energy_returned_total.val()
+        : ((DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
+           (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f));
+    case MbSource::energy_net_total_kwh:
+      return
+        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_returned_tariff1_present ||
+         DSMRdata.energy_delivered_tariff2_present || DSMRdata.energy_returned_tariff2_present)
+          ? (float)(
+              (DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) -
+              (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
+              (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f) -
+              (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)
+            )
+          : NAN;
+    case MbSource::energy_net_tariff1_kwh:
+      return
+        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_returned_tariff1_present)
+          ? (float)(
+              (DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) -
+              (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f)
+            )
+          : NAN;
+    case MbSource::energy_net_tariff2_kwh:
+      return
+        (DSMRdata.energy_delivered_tariff2_present || DSMRdata.energy_returned_tariff2_present)
+          ? (float)(
+              (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f) -
+              (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)
+            )
+          : NAN;
+    case MbSource::energy_net_avg_kwh: {
+      float value = readMbSourceValue(MbSource::energy_net_total_kwh);
+      return isnan(value) ? NAN : (value / 3.0f);
+    }
+    case MbSource::energy_delivered_avg_kwh: {
+      float value = readMbSourceValue(MbSource::energy_delivered_total_kwh);
+      return isnan(value) ? NAN : (value / 3.0f);
+    }
+    case MbSource::energy_returned_avg_kwh: {
+      float value = readMbSourceValue(MbSource::energy_returned_total_kwh);
+      return isnan(value) ? NAN : (value / 3.0f);
+    }
+    case MbSource::power_delivered_kw:
+      return DSMRdata.power_delivered_present ? DSMRdata.power_delivered.val() : NAN;
+    case MbSource::power_returned_kw:
+      return DSMRdata.power_returned_present ? DSMRdata.power_returned.val() : NAN;
+    case MbSource::net_power_total_kw:
+      return DSMRdata.power_delivered_present ? (DSMRdata.power_delivered.val() - DSMRdata.power_returned.val()) : NAN;
+    case MbSource::voltage_l1_v:
+      return DSMRdata.voltage_l1_present ? (float)DSMRdata.voltage_l1.val() : NAN;
+    case MbSource::voltage_l2_v:
+      return DSMRdata.voltage_l2_present ? (float)DSMRdata.voltage_l2.val() : NAN;
+    case MbSource::voltage_l3_v:
+      return DSMRdata.voltage_l3_present ? (float)DSMRdata.voltage_l3.val() : NAN;
+    case MbSource::current_l1_a:
+      return DSMRdata.current_l1_present ? (float)DSMRdata.current_l1.val() : NAN;
+    case MbSource::current_l2_a:
+      return DSMRdata.current_l2_present ? (float)DSMRdata.current_l2.val() : NAN;
+    case MbSource::current_l3_a:
+      return DSMRdata.current_l3_present ? (float)DSMRdata.current_l3.val() : NAN;
+    case MbSource::current_total_a:
+      return DSMRdata.current_l1_present
+        ? (float)(DSMRdata.current_l1.val() + DSMRdata.current_l2.val() + DSMRdata.current_l3.val())
+        : NAN;
+    case MbSource::signed_current_l1_a:
+      return DSMRdata.current_l1_present ? mbSignedCurrent((float)DSMRdata.current_l1.val(), DSMRdata.power_returned_l1.val()) : NAN;
+    case MbSource::signed_current_l2_a:
+      return DSMRdata.current_l2_present ? mbSignedCurrent((float)DSMRdata.current_l2.val(), DSMRdata.power_returned_l2.val()) : NAN;
+    case MbSource::signed_current_l3_a:
+      return DSMRdata.current_l3_present ? mbSignedCurrent((float)DSMRdata.current_l3.val(), DSMRdata.power_returned_l3.val()) : NAN;
+    case MbSource::gas_timestamp_epoch:
+      return mbusGas ? (float)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600)) : NAN;
+    case MbSource::gas_delivered_m3:
+      return mbusGas ? (float)gasDelivered : NAN;
+    case MbSource::electricity_tariff:
+      return DSMRdata.electricity_tariff_present ? (float)atoi(DSMRdata.electricity_tariff.c_str()) : NAN;
+    case MbSource::peak_pwr_last_q_kw:
+      return DSMRdata.peak_pwr_last_q_present ? (float)DSMRdata.peak_pwr_last_q.val() : NAN;
+    case MbSource::net_power_l1_kw:
+      return DSMRdata.power_delivered_l1_present ? (float)(DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val()) : NAN;
+    case MbSource::net_power_l2_kw:
+      return DSMRdata.power_delivered_l2_present ? (float)(DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val()) : NAN;
+    case MbSource::net_power_l3_kw:
+      return DSMRdata.power_delivered_l3_present ? (float)(DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val()) : NAN;
+    case MbSource::direction_total:
+      return DSMRdata.power_returned > 0 ? -1.0f : 1.0f;
+    case MbSource::direction_l1:
+      return DSMRdata.power_returned_l1 > 0 ? -1.0f : 1.0f;
+    case MbSource::direction_l2:
+      return DSMRdata.power_returned_l2_present ? (DSMRdata.power_returned_l2 > 0 ? -1.0f : 1.0f) : NAN;
+    case MbSource::direction_l3:
+      return DSMRdata.power_returned_l3_present ? (DSMRdata.power_returned_l3 > 0 ? -1.0f : 1.0f) : NAN;
+    case MbSource::line_voltage_l12_v:
+      return (DSMRdata.voltage_l1_present && DSMRdata.voltage_l2_present) ? calculateLineVoltage(DSMRdata.voltage_l1, DSMRdata.voltage_l2) : NAN;
+    case MbSource::line_voltage_l23_v:
+      return (DSMRdata.voltage_l2_present && DSMRdata.voltage_l3_present) ? calculateLineVoltage(DSMRdata.voltage_l2, DSMRdata.voltage_l3) : NAN;
+    case MbSource::line_voltage_l31_v:
+      return (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) : NAN;
+    case MbSource::line_voltage_avg_v: {
+      float value = 0.0f;
+      value += (DSMRdata.voltage_l1_present && DSMRdata.voltage_l2_present) ? calculateLineVoltage(DSMRdata.voltage_l1, DSMRdata.voltage_l2) : 0.0f;
+      value += (DSMRdata.voltage_l2_present && DSMRdata.voltage_l3_present) ? calculateLineVoltage(DSMRdata.voltage_l2, DSMRdata.voltage_l3) : 0.0f;
+      value += (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) : 0.0f;
+      return value / 3.0f;
+    }
+    case MbSource::water_delivered_m3:
+      return WtrMtr ? (float)(P1Status.wtr_m3 + (P1Status.wtr_l / 1000.0f)) : NAN;
+    case MbSource::unavailable_float:
+      return NAN;
+    case MbSource::constant:
+      return NAN;
+    case MbSource::p1_device_id:
+      return 0x5031444F;
+    case MbSource::firmware_version_packed:
+      return (float)packed_version_u32();
+    case MbSource::device_online:
+      return (float)(bP1offline ? 0 : 1);
+    case MbSource::uptime_seconds:
+      return (float)(esp_log_timestamp() / 1000);
+  }
+
+  return NAN;
+}
+
+static float readScaledMbSourceValue(MbSource source, int16_t scale) {
+  if (scale != 1000 && scale != -1000 && scale != 10000 && scale != -10000) {
+    float value = readMbSourceValue(source);
+    return isnan(value) ? NAN : value * scale;
+  }
+
+  const float sign = (scale < 0) ? -1.0f : 1.0f;
+
+  if (scale == 10000 || scale == -10000) {
+    switch (source) {
+      case MbSource::net_power_total_kw:
+        return DSMRdata.power_delivered_present
+          ? sign * (float)(((int32_t)DSMRdata.power_delivered.int_val() - (int32_t)DSMRdata.power_returned.int_val()) * 10)
+          : NAN;
+      case MbSource::net_power_l1_kw:
+        return DSMRdata.power_delivered_l1_present
+          ? sign * (float)(((int32_t)DSMRdata.power_delivered_l1.int_val() - (int32_t)DSMRdata.power_returned_l1.int_val()) * 10)
+          : NAN;
+      case MbSource::net_power_l2_kw:
+        return DSMRdata.power_delivered_l2_present
+          ? sign * (float)(((int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val()) * 10)
+          : NAN;
+      case MbSource::net_power_l3_kw:
+        return DSMRdata.power_delivered_l3_present
+          ? sign * (float)(((int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val()) * 10)
+          : NAN;
+      default: {
+        float value = readMbSourceValue(source);
+        return isnan(value) ? NAN : value * scale;
+      }
+    }
+  }
+
+  switch (source) {
+    case MbSource::energy_delivered_tariff1_kwh:
+      return (DSMRdata.energy_delivered_tariff1_present && !bUseEtotals) ? sign * DSMRdata.energy_delivered_tariff1.int_val() : NAN;
+    case MbSource::energy_delivered_tariff2_kwh:
+      return (DSMRdata.energy_delivered_tariff2_present && !bUseEtotals) ? sign * DSMRdata.energy_delivered_tariff2.int_val() : NAN;
+    case MbSource::energy_returned_tariff1_kwh:
+      return (DSMRdata.energy_returned_tariff1_present && !bUseEtotals) ? sign * DSMRdata.energy_returned_tariff1.int_val() : NAN;
+    case MbSource::energy_returned_tariff2_kwh:
+      return (DSMRdata.energy_returned_tariff2_present && !bUseEtotals) ? sign * DSMRdata.energy_returned_tariff2.int_val() : NAN;
+    case MbSource::energy_delivered_total_kwh:
+      return DSMRdata.energy_delivered_total_present
+        ? sign * DSMRdata.energy_delivered_total.int_val()
+        : sign * ((DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.int_val() : 0) +
+                  (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.int_val() : 0));
+    case MbSource::energy_returned_total_kwh:
+      return DSMRdata.energy_returned_total_present
+        ? sign * DSMRdata.energy_returned_total.int_val()
+        : sign * ((DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.int_val() : 0) +
+                  (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.int_val() : 0));
+    case MbSource::power_delivered_kw:
+      return DSMRdata.power_delivered_present ? sign * DSMRdata.power_delivered.int_val() : NAN;
+    case MbSource::power_returned_kw:
+      return DSMRdata.power_returned_present ? sign * DSMRdata.power_returned.int_val() : NAN;
+    case MbSource::voltage_l1_v:
+      return DSMRdata.voltage_l1_present ? sign * (float)DSMRdata.voltage_l1.int_val() : NAN;
+    case MbSource::voltage_l2_v:
+      return DSMRdata.voltage_l2_present ? sign * (float)DSMRdata.voltage_l2.int_val() : NAN;
+    case MbSource::voltage_l3_v:
+      return DSMRdata.voltage_l3_present ? sign * (float)DSMRdata.voltage_l3.int_val() : NAN;
+    case MbSource::current_l1_a:
+      return DSMRdata.current_l1_present ? sign * (float)DSMRdata.current_l1.int_val() : NAN;
+    case MbSource::current_l2_a:
+      return DSMRdata.current_l2_present ? sign * (float)DSMRdata.current_l2.int_val() : NAN;
+    case MbSource::current_l3_a:
+      return DSMRdata.current_l3_present ? sign * (float)DSMRdata.current_l3.int_val() : NAN;
+    case MbSource::current_total_a:
+      return DSMRdata.current_l1_present
+        ? sign * (float)(DSMRdata.current_l1.int_val() + DSMRdata.current_l2.int_val() + DSMRdata.current_l3.int_val())
+        : NAN;
+    case MbSource::peak_pwr_last_q_kw:
+      return DSMRdata.peak_pwr_last_q_present ? sign * DSMRdata.peak_pwr_last_q.int_val() : NAN;
+    case MbSource::net_power_total_kw:
+      return DSMRdata.power_delivered_present
+        ? sign * (float)((int32_t)DSMRdata.power_delivered.int_val() - (int32_t)DSMRdata.power_returned.int_val())
+        : NAN;
+    case MbSource::net_power_l1_kw:
+      return DSMRdata.power_delivered_l1_present
+        ? sign * (float)((int32_t)DSMRdata.power_delivered_l1.int_val() - (int32_t)DSMRdata.power_returned_l1.int_val())
+        : NAN;
+    case MbSource::net_power_l2_kw:
+      return DSMRdata.power_delivered_l2_present
+        ? sign * (float)((int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val())
+        : NAN;
+    case MbSource::net_power_l3_kw:
+      return DSMRdata.power_delivered_l3_present
+        ? sign * (float)((int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val())
+        : NAN;
+    case MbSource::gas_delivered_m3:
+      return mbusGas ? sign * (float)lroundf((float)gasDelivered * 1000.0f) : NAN;
+    case MbSource::water_delivered_m3:
+      return WtrMtr ? sign * (float)(P1Status.wtr_m3 * 1000 + P1Status.wtr_l) : NAN;
+    default: {
+      float value = readMbSourceValue(source);
+      return isnan(value) ? NAN : value * scale;
+    }
+  }
+}
+
+static bool readMbSourceUInt32(MbSource source, int16_t scale, uint32_t value, uint32_t& outValue) {
+  if (source == MbSource::constant && scale == 1) {
+    outValue = (uint32_t)value;
+    return true;
+  }
+
+  if (scale != 1) return false;
+
+  switch (source) {
+    case MbSource::timestamp_epoch:
+      outValue = (uint32_t)(actT - (actTimestamp[12] == 'S' ? 7200 : 3600));
+      return true;
+    case MbSource::gas_timestamp_epoch:
+      if (!mbusGas) return false;
+      outValue = (uint32_t)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600));
+      return true;
+    case MbSource::electricity_tariff:
+      if (!DSMRdata.electricity_tariff_present) return false;
+      outValue = (uint32_t)atoi(DSMRdata.electricity_tariff.c_str());
+      return true;
+    case MbSource::p1_device_id:
+      outValue = 0x5031444F;
+      return true;
+    case MbSource::firmware_version_packed:
+      outValue = packed_version_u32();
+      return true;
+    case MbSource::device_online:
+      outValue = bP1offline ? 0U : 1U;
+      return true;
+    case MbSource::uptime_seconds:
+      outValue = (uint32_t)(esp_log_timestamp() / 1000);
+      return true;
+    default:
+      return false;
+  }
+}
+
+static uint32_t encodeActiveRecipeValue(const ActiveRecipe& recipe) {
+  const MbSource source = static_cast<MbSource>(recipe.source);
+  const ModbusDataType type = static_cast<ModbusDataType>(recipe.type);
+
+  if (type == ModbusDataType::UINT32) {
+    uint32_t u32Value = 0;
+    if (readMbSourceUInt32(source, recipe.scale, recipe.value, u32Value)) {
+      return u32Value;
+    }
+  }
+
+  float value = (source == MbSource::constant)
+    ? ((type == ModbusDataType::FLOAT && !isnan(recipe.valueFloat)) ? recipe.valueFloat : (float)recipe.value)
+    : readScaledMbSourceValue(source, recipe.scale);
+
+  if (type == ModbusDataType::FLOAT) {
+    return packF(value);
+  }
+
+  if (isnan(value)) {
+    return MBUS_VAL_UNAVAILABLE;
+  }
+
+  switch (type) {
+    case ModbusDataType::UINT32:
+      return (uint32_t)value;
+    case ModbusDataType::INT32:
+      return (uint32_t)((int32_t)value);
+    case ModbusDataType::INT16:
+      return (uint32_t)((int16_t)value);
+    case ModbusDataType::FLOAT:
+      return packF(value);
+  }
+
+  return MBUS_VAL_UNAVAILABLE;
+}
+
+static const ActiveRecipe* findActiveRecipe(uint16_t reg) {
+  for (size_t i = 0; i < activeRecipeCount; i++) {
+    if (activeRecipes[i].registerAddress == reg) {
+      return &activeRecipes[i];
+    }
+  }
+  return nullptr;
+}
+
+static bool loadActiveRecipes(const ActiveRecipe* recipes, size_t recipeCount) {
+  activeRecipeCount = 0;
+  activeRecipeMaxReg = 0;
+
+  for (size_t i = 0; i < recipeCount && i < kMaxActiveRecipes; i++) {
+    const ActiveRecipe& recipe = recipes[i];
+    if (activeRecipeCount >= kMaxActiveRecipes) break;
+
+    ActiveRecipe& active = activeRecipes[activeRecipeCount++];
+    active = recipe;
+
+    const ModbusDataType type = static_cast<ModbusDataType>(active.type);
+    const uint16_t regSize = (type == ModbusDataType::INT16) ? 1 : 2;
+    const uint16_t endReg = active.registerAddress + regSize;
+    if (endReg > activeRecipeMaxReg) activeRecipeMaxReg = endReg;
+  }
+
+  activeRecipeLoaded = (activeRecipeCount > 0);
+  return activeRecipeLoaded;
+}
+
+static bool loadActiveRecipesFromJsonText(const char* json) {
+  JsonDocument doc;
+  if (deserializeJson(doc, json)) {
+    activeRecipeCount = 0;
+    activeRecipeMaxReg = 0;
+    activeRecipeLoaded = false;
+    return false;
+  }
+
+  JsonArray recipes = doc.as<JsonArray>();
+  activeRecipeCount = 0;
+  activeRecipeMaxReg = 0;
+
+  for (JsonObject recipe : recipes) {
+    if (activeRecipeCount >= kMaxActiveRecipes) break;
+
+    MbSource source;
+    ModbusDataType type;
+
+    if (!parseMbSource(recipe["source"] | "", source)) continue;
+    if (!parseMbType(recipe["type"] | "", type)) continue;
+
+    ActiveRecipe& active = activeRecipes[activeRecipeCount++];
+    active.registerAddress = recipe["register"] | 0;
+    active.scale = recipe["scale"] | 1;
+    active.source = static_cast<uint8_t>(source);
+    active.type = static_cast<uint8_t>(type);
+    active.value = recipe["value"] | 0;
+    active.valueFloat = NAN;
+    if (source == MbSource::constant && type == ModbusDataType::FLOAT && recipe["value"].is<float>()) {
+      active.valueFloat = recipe["value"].as<float>();
+    } else if (source == MbSource::constant && type == ModbusDataType::FLOAT && recipe["value"].is<double>()) {
+      active.valueFloat = (float)recipe["value"].as<double>();
+    }
+
+    const uint16_t regSize = (type == ModbusDataType::INT16) ? 1 : 2;
+    const uint16_t endReg = active.registerAddress + regSize;
+    if (endReg > activeRecipeMaxReg) activeRecipeMaxReg = endReg;
+  }
+
+  activeRecipeLoaded = (activeRecipeCount > 0);
+  return activeRecipeLoaded;
+}
+
+static bool loadPresetRecipes(int mappingChoice) {
+  switch (mappingChoice) {
+    case 0:
+      return loadActiveRecipes(kDefaultRecipes0, sizeof(kDefaultRecipes0) / sizeof(kDefaultRecipes0[0]));
+    case 1:
+      return loadActiveRecipes(kSdm630Recipes, sizeof(kSdm630Recipes) / sizeof(kSdm630Recipes[0]));
+    case 2:
+      return loadActiveRecipes(kDtsu666Recipes, sizeof(kDtsu666Recipes) / sizeof(kDtsu666Recipes[0]));
+    case 3:
+      return loadActiveRecipes(kAlfenSocomecRecipes, sizeof(kAlfenSocomecRecipes) / sizeof(kAlfenSocomecRecipes[0]));
+    case 4:
+      return loadActiveRecipes(kEm330Recipes, sizeof(kEm330Recipes) / sizeof(kEm330Recipes[0]));
+    case 5:
+      return loadActiveRecipes(kAbbB21Recipes, sizeof(kAbbB21Recipes) / sizeof(kAbbB21Recipes[0]));
+    case 6:
+      return loadActiveRecipes(kMx3xxRecipes, sizeof(kMx3xxRecipes) / sizeof(kMx3xxRecipes[0]));
+    case 7:
+      return loadActiveRecipes(kDefaultFloatRecipes, sizeof(kDefaultFloatRecipes) / sizeof(kDefaultFloatRecipes[0]));
+    case 8:
+      return loadActiveRecipes(kKlefrRecipes, sizeof(kKlefrRecipes) / sizeof(kKlefrRecipes[0]));
+    case 9:
+      return loadActiveRecipes(kDefaultFloatRecipes, sizeof(kDefaultFloatRecipes) / sizeof(kDefaultFloatRecipes[0]));
+    default:
+      return loadActiveRecipes(kDefaultRecipes0, sizeof(kDefaultRecipes0) / sizeof(kDefaultRecipes0[0]));
+  }
+}
+
+static void initMbMapping(int mappingChoice) {
+  loadPresetRecipes(mappingChoice);
+}
+
+static bool useMbRuntimeMapping() {
+  return activeRecipeLoaded;
+}
+
+static uint16_t getMbActiveMaxReg() {
+  return activeRecipeMaxReg;
+}
+
+static bool readMbActiveRegister(uint16_t reg, uint8_t& type, uint32_t& valueU32, int16_t& valueI16) {
+  const ActiveRecipe* recipe = findActiveRecipe(reg);
+  if (!recipe) return false;
+
+  type = recipe->type;
+  const uint32_t encoded = encodeActiveRecipeValue(*recipe);
+
+  if (type == static_cast<uint8_t>(ModbusDataType::INT16)) {
+    valueI16 = (int16_t)encoded;
+  } else {
+    valueU32 = encoded;
+  }
+
+  return true;
+}
+
 
 static inline uint32_t packF(float f) { union { float f; uint32_t u; } x{f}; return x.u; }
-
-
-// Modbus mapping default = 0
-std::map<uint16_t, ModbusMapping> mapping_default = {
-    { 0,  { ModbusDataType::UINT32, []() { return (uint32_t)(actT - (actTimestamp[12] == 'S' ? 7200 : 3600)); } }},
-    { 2,  { ModbusDataType::UINT32, []() { return (DSMRdata.energy_delivered_tariff1_present && !bUseEtotals) ? (uint32_t)DSMRdata.energy_delivered_tariff1.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 4,  { ModbusDataType::UINT32, []() { return (DSMRdata.energy_delivered_tariff2_present && !bUseEtotals) ? (uint32_t)DSMRdata.energy_delivered_tariff2.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 6,  { ModbusDataType::UINT32, []() { return (DSMRdata.energy_returned_tariff1_present && !bUseEtotals) ? (uint32_t)DSMRdata.energy_returned_tariff1.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 8,  { ModbusDataType::UINT32, []() { return (DSMRdata.energy_returned_tariff2_present && !bUseEtotals) ? (uint32_t)DSMRdata.energy_returned_tariff2.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 10, { ModbusDataType::UINT32, []() { return (DSMRdata.energy_delivered_total_present) ? (uint32_t)DSMRdata.energy_delivered_total.int_val() : DSMRdata.energy_delivered_tariff1.int_val()+DSMRdata.energy_delivered_tariff2.int_val(); } }},
-    { 12, { ModbusDataType::UINT32, []() { return (DSMRdata.energy_returned_total_present) ? (uint32_t)DSMRdata.energy_returned_total.int_val() : DSMRdata.energy_returned_tariff1.int_val()+DSMRdata.energy_returned_tariff2.int_val(); } }},
-    { 14, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_present) ? (uint32_t)DSMRdata.power_delivered.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 16, { ModbusDataType::UINT32, []() { return (DSMRdata.power_returned_present) ? (uint32_t)DSMRdata.power_returned.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 18, { ModbusDataType::UINT32, []() { return (DSMRdata.voltage_l1_present) ? (uint32_t)DSMRdata.voltage_l1.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 20, { ModbusDataType::UINT32, []() { return (DSMRdata.voltage_l2_present) ? (uint32_t)DSMRdata.voltage_l2.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 22, { ModbusDataType::UINT32, []() { return (DSMRdata.voltage_l3_present) ? (uint32_t)DSMRdata.voltage_l3.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 24, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l1_present) ? (uint32_t)DSMRdata.current_l1.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 26, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l2_present) ? (uint32_t)DSMRdata.current_l2.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 28, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l3_present) ? (uint32_t)DSMRdata.current_l3.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 30, { ModbusDataType::UINT32, []() { return (mbusGas) ? (uint32_t)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600)) : MBUS_VAL_UNAVAILABLE; } }},
-    { 32, { ModbusDataType::UINT32, []() { return (mbusGas) ? (uint32_t)(gasDelivered * 1000) : MBUS_VAL_UNAVAILABLE; } }},
-    { 34, { ModbusDataType::UINT32, []() { return (DSMRdata.electricity_tariff_present) ? (uint32_t)atoi(DSMRdata.electricity_tariff.c_str()) : MBUS_VAL_UNAVAILABLE; } }},
-    { 36, { ModbusDataType::UINT32, []() { return (DSMRdata.peak_pwr_last_q_present) ? (uint32_t)DSMRdata.peak_pwr_last_q.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 38, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l1_present) ? (int32_t)DSMRdata.power_delivered_l1.int_val() - (int32_t)DSMRdata.power_returned_l1.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 40, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l2_present) ? (int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 42, { ModbusDataType::UINT32, []() { return (int32_t)(DSMRdata.power_delivered_l3_present) ? (int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val() : MBUS_VAL_UNAVAILABLE; } }},
-    { 44, { ModbusDataType::UINT32, []() { return WtrMtr ? (uint32_t)(P1Status.wtr_m3 * 1000 + P1Status.wtr_l) : MBUS_VAL_UNAVAILABLE; } }},
-    { 46, { ModbusDataType::UINT32, []() { /* P1DO as fixed identifier */ return 0x5031444F; } }},
-};
-
-// Modbus mapping default (FLOAT32 varianten) = nieuw
-std::map<uint16_t, ModbusMapping> mapping_default_2 = {
-    { 0,  { ModbusDataType::UINT32, []() { return (uint32_t)(actT - (actTimestamp[12] == 'S' ? 7200 : 3600)); } }},
-    { 2,  { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_delivered_tariff1_present && !bUseEtotals) ? DSMRdata.energy_delivered_tariff1.int_val() : NAN); }}},
-    { 4,  { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_delivered_tariff2_present && !bUseEtotals) ? DSMRdata.energy_delivered_tariff2.int_val() : NAN); }}},
-    { 6,  { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_returned_tariff1_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff1.int_val() : NAN); }}},
-    { 8,  { ModbusDataType::FLOAT, []() { return packF((DSMRdata.energy_returned_tariff2_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff2.int_val() : NAN); }}},
-    { 10, { ModbusDataType::FLOAT, []() { return packF(
-        DSMRdata.energy_delivered_total_present ? DSMRdata.energy_delivered_total.int_val() :( (DSMRdata.energy_delivered_tariff1_present ? 
-        DSMRdata.energy_delivered_tariff1.int_val():0) + (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.int_val():0) )
-      ); 
-    }}},
-    { 12, { ModbusDataType::FLOAT, []() { return packF( DSMRdata.energy_returned_total_present ? DSMRdata.energy_returned_total.int_val() : ( (DSMRdata.energy_returned_tariff1_present ? 
-    DSMRdata.energy_returned_tariff1.int_val():0) + (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.int_val():0) ) );}}},
-    { 14, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_delivered_present) ? DSMRdata.power_delivered.int_val() : NAN); }}},
-    { 16, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_returned_present) ? DSMRdata.power_returned.int_val() : NAN); }}},
-    { 18, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_delivered_present) ? (DSMRdata.power_delivered.val() - DSMRdata.power_returned.val()) * 1000.0 : NAN); }}},
-    { 20, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.voltage_l1_present) ? (float)DSMRdata.voltage_l1.val() : NAN); }}},
-    { 22, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.voltage_l2_present) ? (float)DSMRdata.voltage_l2.val() : NAN); }}},
-    { 24, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.voltage_l3_present) ? (float)DSMRdata.voltage_l3.val() : NAN); }}},
-    { 26, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.current_l1_present) ? (float)DSMRdata.current_l1.val() * (DSMRdata.power_returned_l1.val()?-1.0:1.0): NAN); }}},
-    { 28, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.current_l2_present) ? (float)DSMRdata.current_l2.val() * (DSMRdata.power_returned_l2.val()?-1.0:1.0): NAN); }}},
-    { 30, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.current_l3_present) ? (float)DSMRdata.current_l3.val() * (DSMRdata.power_returned_l3.val()?-1.0:1.0): NAN); }}},
-    { 32, { ModbusDataType::UINT32, []() { return (mbusGas) ? (float)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600)) : MBUS_VAL_UNAVAILABLE; }}},
-    { 34, { ModbusDataType::FLOAT, []() { return packF((mbusGas) ? (float)gasDelivered : NAN); }}},
-    { 36, { ModbusDataType::UINT32, []() { return (DSMRdata.electricity_tariff_present) ? (uint32_t)atoi(DSMRdata.electricity_tariff.c_str()) : MBUS_VAL_UNAVAILABLE; } }},
-    { 38, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.peak_pwr_last_q_present) ? (float)DSMRdata.peak_pwr_last_q.val() : NAN); }}},
-    { 40, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_delivered_l1_present) ? (float)(DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val())*1000 : NAN); }}},
-    { 42, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_delivered_l2_present) ? (float)(DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val())*1000 : NAN); }}},
-    { 44, { ModbusDataType::FLOAT, []() { return packF((DSMRdata.power_delivered_l3_present) ? (float)(DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val())*1000 : NAN); }}},
-    { 46, { ModbusDataType::FLOAT, []() { return packF(WtrMtr ? (float)(P1Status.wtr_m3 + (P1Status.wtr_l / 1000.0f)) : NAN); }}},
-    { 48, { ModbusDataType::UINT32, []() { return (uint32_t)0x5031444F; }}}, /* P1DO as fixed identifier */
-    { 50, { ModbusDataType::UINT32, []() { return packed_version_u32(); }}},
-    { 52, { ModbusDataType::UINT32, []() { return bP1offline?0:1; }}},
-};
-
-//6: https://www.phoenixcontact.com/nl-nl/producten/energiemetingsmoduul-eem-ma371-2908307#:~:text=EMpro_register_table_1.6.0
-std::map<uint16_t, ModbusMapping> mapping_mx3xx = {
-    {32774,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {32776,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l2_present ? DSMRdata.voltage_l2.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {32778,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l3_present ? DSMRdata.voltage_l3.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {32782,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l1_present ? DSMRdata.current_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {32784,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l2_present ? DSMRdata.current_l2.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {32786,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l3_present ? DSMRdata.current_l3.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {32798,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l1_present ? (-DSMRdata.power_returned_l1.int_val() + DSMRdata.power_delivered_l1.int_val()) :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
-    {32800,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l2_present ? (-DSMRdata.power_returned_l2.int_val() + DSMRdata.power_delivered_l2.int_val()) :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
-    {32802,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l3_present ? (-DSMRdata.power_returned_l3.int_val() + DSMRdata.power_delivered_l3.int_val()) :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
-    {32804,  {ModbusDataType::FLOAT, []() { return mapping_mx3xx[32798].valueGetter(); }}}, // Alias P1
-    {32806,  {ModbusDataType::FLOAT, []() { return mapping_mx3xx[32800].valueGetter(); }}}, // Alias P2
-    {32808,  {ModbusDataType::FLOAT, []() { return mapping_mx3xx[32802].valueGetter(); }}}, // Alias P3
-    {32790,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_present ? (-DSMRdata.power_returned.int_val() + DSMRdata.power_delivered.int_val()) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {32792,  {ModbusDataType::FLOAT, []() { return mapping_mx3xx[32790].valueGetter(); }}}, // Alias voor 52
-    // {62,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned > 0 ? -1.0 : 1.0; return map_temp.u; }}},
-    {32816,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l1 > 0 ? -1.0 : 1.0; return map_temp.u; }}},
-    {32818,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l2_present ? (DSMRdata.power_returned_l2 > 0 ? -1.0 : 1.0) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {32820,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l3_present ? (DSMRdata.power_returned_l3 > 0 ? -1.0 : 1.0) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {32780,  {ModbusDataType::FLOAT, []() { map_temp.f = 50.0; return map_temp.u; }}},
-    {33024,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff2 + DSMRdata.energy_delivered_tariff1 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {33030,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff2 + DSMRdata.energy_returned_tariff1 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {  316,  {ModbusDataType::UINT32, []() { uint32_t val = '1'; val = val << 8;val += '3';val = val << 8;val += '6';val = val << 8;val += '0'; return val;    }}},
-    {  318,  {ModbusDataType::UINT32, []() { uint32_t val = '2'; val = val << 8;val += '2';val = val << 8;val += '8';val = val << 8;val += '1'; return val;  }}},
-    {  320,  {ModbusDataType::UINT32, []() { uint32_t val = '9'; val = val << 8;val += '4';val = val << 8;val += NULL;val = val << 8;val += NULL; return val;    }}},
-    {  322,  {ModbusDataType::UINT32, []() { return NULL;    }}},
-    {  324,  {ModbusDataType::INT16, []() { return NULL;    }}},
-};
-
-// Modbus mapping SDM630 = 1, see https://www.eastroneurope.com/images/uploads/products/protocol/SDM630_MODBUS_Protocol.pdf
-std::map<uint16_t, ModbusMapping> mapping_sdm630 = {
-    {0,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {2,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l2.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {4,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l3.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {6,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l1_present ? DSMRdata.current_l1.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {8,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l2_present ? DSMRdata.current_l2.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {10,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l3_present ? DSMRdata.current_l3.val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {12,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l1_present ? (-DSMRdata.power_returned_l1.val() + DSMRdata.power_delivered_l1.val()) * 1000.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
-    {14,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l2_present ? (-DSMRdata.power_returned_l2.val() + DSMRdata.power_delivered_l2.val()) * 1000.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
-    {16,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l3_present ? (-DSMRdata.power_returned_l3.val() + DSMRdata.power_delivered_l3.val()) * 1000.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
-    {24,  {ModbusDataType::FLOAT, []() { return mapping_sdm630[12].valueGetter(); }}}, // Alias P1
-    {26,  {ModbusDataType::FLOAT, []() { return mapping_sdm630[14].valueGetter(); }}}, // Alias P2
-    {28,  {ModbusDataType::FLOAT, []() { return mapping_sdm630[16].valueGetter(); }}}, // Alias P3
-    {52,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_present ? (-DSMRdata.power_returned.val() + DSMRdata.power_delivered.val()) * 1000.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {60,  {ModbusDataType::FLOAT, []() { return mapping_sdm630[52].valueGetter(); }}}, // Alias voor 52
-    {62,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned > 0 ? -1.0 : 1.0; return map_temp.u; }}},
-    {30,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l1 > 0 ? -1.0 : 1.0; return map_temp.u; }}},
-    {32,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l2_present ? (DSMRdata.power_returned_l2 > 0 ? -1.0 : 1.0) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {34,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_returned_l3_present ? (DSMRdata.power_returned_l3 > 0 ? -1.0 : 1.0) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {70,  {ModbusDataType::FLOAT, []() { map_temp.f = 50.0; return map_temp.u; }}},
-    {72,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff2 + DSMRdata.energy_delivered_tariff1 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {74,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff2 + DSMRdata.energy_returned_tariff1 :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {200, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l1_present && DSMRdata.voltage_l2_present) ? calculateLineVoltage(DSMRdata.voltage_l1, DSMRdata.voltage_l2) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {202, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l2_present && DSMRdata.voltage_l3_present) ? calculateLineVoltage(DSMRdata.voltage_l2, DSMRdata.voltage_l3) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {204, {ModbusDataType::FLOAT, []() { map_temp.f = (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) :MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {0xfc00, {ModbusDataType::UINT32, []() { return 22085951; /*todo make uniqe*/ }}}
-};
-
-// https://www.socomec.it/sites/default/files/2021-05/COUNTIS-E27-MODBUS_COMMUNICATION-TABLE_2017-08_CMT_EN.html
-std::map<uint16_t, ModbusMapping> mapping_alfen_socomec = {
-    { 0xC560, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l1_present ? (uint32_t)DSMRdata.current_l1.int_val() : MBUS_VAL_UNAVAILABLE); } }},
-    { 0xC562, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l2_present ? (uint32_t)DSMRdata.current_l2.int_val() : MBUS_VAL_UNAVAILABLE); } }},
-    { 0xC564, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l3_present ? (uint32_t)DSMRdata.current_l3.int_val() : MBUS_VAL_UNAVAILABLE); } }},
-
-    { 0xC566, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l1_present ? (uint32_t)DSMRdata.current_l1.int_val()+DSMRdata.current_l2.int_val()+DSMRdata.current_l3.int_val() : MBUS_VAL_UNAVAILABLE); } }},
-
-    { 0xC570 /* 50544 */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l1_present ? (int32_t)(( DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }},
-    { 0xC572 /* 50546 */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l2_present ? (int32_t)(( DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }},
-    { 0xC574 /* 50548 */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l3_present ? (int32_t)(( DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }}
-};
-
-std::map<uint16_t, ModbusMapping> mapping_abb_b21 = {
-    {0x5B00,   {ModbusDataType::UINT32, []() { return ( DSMRdata.voltage_l1_present ? (uint32_t)(DSMRdata.voltage_l1 * 10) : MBUS_VAL_UNAVAILABLE);  }}},
-    {0x5B02,   {ModbusDataType::UINT32, []() { return ( DSMRdata.voltage_l1_present ? (uint32_t)(DSMRdata.voltage_l2 * 10): MBUS_VAL_UNAVAILABLE);  }}},
-    {0x5B04,   {ModbusDataType::UINT32, []() { return ( DSMRdata.voltage_l1_present ? (uint32_t)(DSMRdata.voltage_l3 * 10) : MBUS_VAL_UNAVAILABLE);  }}},
-
-    { 0x5B0C, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l1_present ? (uint32_t)DSMRdata.current_l1.int_val()/10 : MBUS_VAL_UNAVAILABLE); } }},
-    { 0x5B0E, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l2_present ? (uint32_t)DSMRdata.current_l2.int_val()/10 : MBUS_VAL_UNAVAILABLE); } }},
-    { 0x5B10, { ModbusDataType::UINT32, []() { return (DSMRdata.current_l3_present ? (uint32_t)DSMRdata.current_l3.int_val()/10 : MBUS_VAL_UNAVAILABLE); } }},
-
-    { 0x5B14,        { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_present ? (int32_t)(( DSMRdata.power_delivered.val() - DSMRdata.power_returned.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }},
-    { 0x5B16 /*  */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l1_present ? (int32_t)(( DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }},
-    { 0x5B18 /*  */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l2_present ? (int32_t)(( DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }},
-    { 0x5B1A /*  */, { ModbusDataType::UINT32, []() { return (DSMRdata.power_delivered_l3_present ? (int32_t)(( DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val() ) * 100) : MBUS_VAL_UNAVAILABLE); } }}
-};
-
-// Modbus mapping CHINT DTSU666
-std::map<uint16_t, ModbusMapping> mapping_dtsu666 = {
-  //U
-    {0x2006,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l1.val() * 10.0: MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {0x2008,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l2.val() * 10.0: MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {0x200A,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.voltage_l1_present ? DSMRdata.voltage_l3.val() * 10.0: MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-  //I
-    {0x200C,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l1_present ? DSMRdata.current_l1.int_val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {0x200E,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l2_present ? DSMRdata.current_l2.int_val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-    {0x2010,   {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.current_l3_present ? DSMRdata.current_l3.int_val() : MBUS_VAL_UNAVAILABLE; return map_temp.u; }}},
-
-  //P
-    {0x2012,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_present ? (-DSMRdata.power_returned.val() + DSMRdata.power_delivered.val()) * 100.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
-    {0x2014,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l1_present ? (-DSMRdata.power_returned_l1.val() + DSMRdata.power_delivered_l1.val()) * 100.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
-    {0x2016,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l2_present ? (-DSMRdata.power_returned_l2.val() + DSMRdata.power_delivered_l2.val()) * 100.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}},
-    {0x2018,  {ModbusDataType::FLOAT, []() { map_temp.f = DSMRdata.power_delivered_l3_present ? (-DSMRdata.power_returned_l3.val() + DSMRdata.power_delivered_l3.val()) * 100.0 :MBUS_VAL_UNAVAILABLE; return map_temp.u;}}} 
-};
-
-std::map<uint16_t, ModbusMapping> mapping_klefr = {
-    {0x4000, {ModbusDataType::UINT32, []() { return (uint32_t)18010365; }}},
-    {0x4005, {ModbusDataType::FLOAT, []() { return packF(1.18f); }}},
-    {0x4007, {ModbusDataType::FLOAT, []() { return packF(18.0f); }}},
-    {0x4009, {ModbusDataType::FLOAT, []() { return packF(1.0f); }}},
-
-    {0x5000, {ModbusDataType::FLOAT, []() { return packF(NAN); }}},
-    {0x5002, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.voltage_l1_present ? (float)DSMRdata.voltage_l1.val() : NAN); }}},
-    {0x5004, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.voltage_l2_present ? (float)DSMRdata.voltage_l2.val() : NAN); }}},
-    {0x5006, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.voltage_l3_present ? (float)DSMRdata.voltage_l3.val() : NAN); }}},
-    {0x5008, {ModbusDataType::FLOAT, []() { return packF(50.0f); }}},
-    {0x500A, {ModbusDataType::FLOAT, []() { return packF(NAN); }}},
-    {0x500C, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.current_l1_present ? (float)DSMRdata.current_l1.val() : NAN); }}},
-    {0x500E, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.current_l2_present ? (float)DSMRdata.current_l2.val() : NAN); }}},
-    {0x5010, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.current_l3_present ? (float)DSMRdata.current_l3.val() : NAN); }}},
-    {0x5012, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_delivered_present ? (float)(DSMRdata.power_delivered.val() - DSMRdata.power_returned.val()) : NAN); }}},
-    {0x5014, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_delivered_l1_present ? (float)(DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val()) : NAN); }}},
-    {0x5016, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_delivered_l2_present ? (float)(DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val()) : NAN); }}},
-    {0x5018, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_delivered_l3_present ? (float)(DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val()) : NAN); }}},
-    {0x501A, {ModbusDataType::FLOAT, []() { return packF(0); }}},
-    {0x501C, {ModbusDataType::FLOAT, []() { return packF(0); }}},
-    {0x501E, {ModbusDataType::FLOAT, []() { return packF(0); }}},
-    {0x5020, {ModbusDataType::FLOAT, []() { return packF(0); }}},
-    {0x5022, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x5012].valueGetter(); }}},
-    {0x5024, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x5014].valueGetter(); }}},
-    {0x5026, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x5016].valueGetter(); }}},
-    {0x5028, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x5018].valueGetter(); }}},
-    {0x502A, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_returned_present ? -1.0f : 1.0f); }}},
-    {0x502C, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_returned_l1_present ? (DSMRdata.power_returned_l1.val() > 0 ? -1.0f : 1.0f) : NAN); }}},
-    {0x502E, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_returned_l2_present ? (DSMRdata.power_returned_l2.val() > 0 ? -1.0f : 1.0f) : NAN); }}},
-    {0x5030, {ModbusDataType::FLOAT, []() { return packF(DSMRdata.power_returned_l3_present ? (DSMRdata.power_returned_l3.val() > 0 ? -1.0f : 1.0f) : NAN); }}},
-
-    {0x6000, {ModbusDataType::FLOAT, []() { return packF(
-        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_returned_tariff1_present ||
-         DSMRdata.energy_delivered_tariff2_present || DSMRdata.energy_returned_tariff2_present) ?
-        (float)(
-          (DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) -
-          (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
-          (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f) -
-          (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)
-        ) : NAN
-    ); }}},
-    {0x6002, {ModbusDataType::FLOAT, []() { return packF(
-        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_returned_tariff1_present) ?
-        (float)(
-          (DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) -
-          (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f)
-        ) : NAN
-    ); }}},
-    {0x6004, {ModbusDataType::FLOAT, []() { return packF(
-        (DSMRdata.energy_delivered_tariff2_present || DSMRdata.energy_returned_tariff2_present) ?
-        (float)(
-          (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f) -
-          (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)
-        ) : NAN
-    ); }}},
-    {0x6006, {ModbusDataType::FLOAT, []() { return packF(
-        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_returned_tariff1_present ||
-         DSMRdata.energy_delivered_tariff2_present || DSMRdata.energy_returned_tariff2_present) ?
-        (float)(
-          ((DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) -
-           (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
-           (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f) -
-           (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)) / 3.0f
-        ) : NAN
-    ); }}},
-    {0x6008, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x6006].valueGetter(); }}},
-    {0x600A, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x6006].valueGetter(); }}},
-    {0x600C, {ModbusDataType::FLOAT, []() { return packF(
-        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_delivered_tariff2_present) ?
-        (float)(
-          (DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) +
-          (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f)
-        ) : NAN
-    ); }}},
-    {0x600E, {ModbusDataType::FLOAT, []() { return packF(
-        DSMRdata.energy_delivered_tariff1_present ? (float)DSMRdata.energy_delivered_tariff1.val() : NAN
-    ); }}},
-    {0x6010, {ModbusDataType::FLOAT, []() { return packF(
-        DSMRdata.energy_delivered_tariff2_present ? (float)DSMRdata.energy_delivered_tariff2.val() : NAN
-    ); }}},
-    {0x6012, {ModbusDataType::FLOAT, []() { return packF(
-        (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_delivered_tariff2_present) ?
-        (float)(
-          ((DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) +
-           (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f)) / 3.0f
-        ) : NAN
-    ); }}},
-    {0x6014, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x6012].valueGetter(); }}},
-    {0x6016, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x6012].valueGetter(); }}},
-    {0x6018, {ModbusDataType::FLOAT, []() { return packF(
-        (DSMRdata.energy_returned_tariff1_present || DSMRdata.energy_returned_tariff2_present) ?
-        (float)(
-          (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
-          (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)
-        ) : NAN
-    ); }}},
-    {0x601A, {ModbusDataType::FLOAT, []() { return packF(
-        DSMRdata.energy_returned_tariff1_present ? (float)DSMRdata.energy_returned_tariff1.val() : NAN
-    ); }}},
-    {0x601C, {ModbusDataType::FLOAT, []() { return packF(
-        DSMRdata.energy_returned_tariff2_present ? (float)DSMRdata.energy_returned_tariff2.val() : NAN
-    ); }}},
-    {0x601E, {ModbusDataType::FLOAT, []() { return packF(
-        (DSMRdata.energy_returned_tariff1_present || DSMRdata.energy_returned_tariff2_present) ?
-        (float)(
-          ((DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
-           (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)) / 3.0f
-        ) : NAN
-    ); }}},
-    {0x6020, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x601E].valueGetter(); }}},
-    {0x6022, {ModbusDataType::FLOAT, []() { return mapping_klefr[0x601E].valueGetter(); }}},
-};
-
-// uint16_t getMaxKey(const std::map<uint16_t, ModbusMapping>& mapping) {
-//     if (mapping.empty()) return 0; // Of een andere passende foutwaarde
-//     return mapping.rbegin()->first; // Laatste sleutel in gesorteerde map
-// }
-
-// Pointer to the active mapping
-std::map<uint16_t, ModbusMapping>* selectedMapping = &mapping_default;  // Standaard mapping
-uint16_t MaxReg[9] = { 48, 0xfc00+2, 0x2018+2, 0xC574+2, 100, 0x5B1A+2, 33030+2, 54, 0x6022+2 };
 
 // Change active mapping
 void setModbusMapping(int mappingChoice) {
     SelMap = mappingChoice;
-    switch (mappingChoice) {
-        case 0: selectedMapping = &mapping_default; break;
-        case 1: selectedMapping = &mapping_sdm630; break;
-        case 2: selectedMapping = &mapping_dtsu666; break;
-        case 3: selectedMapping = &mapping_alfen_socomec; break;
-        // case 4: selectedMapping = &mapping_em330; break;
-        case 5: selectedMapping = &mapping_abb_b21; break;
-        case 6: selectedMapping = &mapping_mx3xx; break;
-        case 7: selectedMapping = &mapping_default_2; break;
-        case 8: selectedMapping = &mapping_klefr; break;
-        default: selectedMapping = &mapping_default; break; // Fallback naar default
-    }
+    initMbMapping(mappingChoice);
 }
 
 //handle modbus request
@@ -350,8 +665,14 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
     request.get(4, words);
     
     Debugf("addr [0x%X] words [0x%02X] DevID [0x%02X] FC [0x%02X]\n", address, words, request.getServerID(), request.getFunctionCode());
+#ifdef DEBUG
+    String actualJson = smActualJsonDebug();
+    Debugf("--MODBUS actual snapshot: %s\n", actualJson.c_str());
+#endif
 
-    if ( (address + words) > MaxReg[SelMap] ){
+    uint16_t maxReg = getMbActiveMaxReg();
+
+    if ( (address + words) > maxReg ){
         response.setError(request.getServerID(), request.getFunctionCode(), ILLEGAL_DATA_ADDRESS);
         return response;
     }
@@ -369,18 +690,11 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
 
     while (currentAddr < (address + words)) {
         
-        ModbusDataType type = ModbusDataType::UINT32;
-        if (selectedMapping->find(currentAddr) != selectedMapping->end()) {
-            type = (*selectedMapping)[currentAddr].type;
-            if ( type == ModbusDataType::UINT32 ){
-              val.u = (*selectedMapping)[currentAddr].valueGetter();
-            } else if ( type == ModbusDataType::FLOAT ){
-              val.u = (*selectedMapping)[currentAddr].valueGetter();
-            }   else if ( type == ModbusDataType::INT16 ){
-              val.w = (*selectedMapping)[currentAddr].valueGetter();
-            }   
+        uint8_t typeId = static_cast<uint8_t>(ModbusDataType::UINT32);
+        bool hasValue = readMbActiveRegister(currentAddr, typeId, val.u, val.w);
+        ModbusDataType type = static_cast<ModbusDataType>(typeId);
 
-        } else {
+        if (!hasValue) {
             Debugf("MBUS WRONG VALUE -- addr: %d\n", currentAddr);
             val.u = MBUS_VAL_UNAVAILABLE;
         }
@@ -394,17 +708,8 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
 #endif
         switch (type) {
             case ModbusDataType::FLOAT: 
-            case ModbusDataType::UINT32: {
-                if ( SelMap == 6 ) {
-                  uMbusData temp;
-                  temp.u = val.u;
-                  val.b[0]= temp.b[2];
-                  val.b[1]= temp.b[3];
-                  val.b[2]= temp.b[0];
-                  val.b[3]= temp.b[1];
-                  Debugf("--MODBUS HEX    : %08X\n", val.u);
-                  Debugf("--MODBUS HEX org: %08X\n", temp.u);
-                }
+            case ModbusDataType::UINT32:
+            case ModbusDataType::INT32: {                
                 response.add(val.u);
                 currentAddr += 2;
                 break;

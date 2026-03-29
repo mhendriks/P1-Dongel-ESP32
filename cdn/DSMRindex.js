@@ -2575,6 +2575,7 @@ function clearDirtySettings(){
 				{ v: 6, t: "MX3xx" },
 				{ v: 7, t: "Default 2 - floats" },
 				{ v: 8, t: "KLEFR / INEPRO / Webasto Unite" },
+// 				{ v: 9, t: "Default 3 - recipe floats" },
 			  ];
 			
 			  const sel = document.createElement("select");
