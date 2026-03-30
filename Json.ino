@@ -454,6 +454,7 @@ if ( !hideMQTTsettings) {
     ADD_SETTING("mb_baud", "i", 300, 115200, mb_config.baud); //RTU
     ADD_SETTING("mb_parity", "i", 134217744, 134217791, mb_config.parity); //RTU
   }
+  doc["mb_monitor"] = bModbusMonitor;
   //booleans
   doc["hist"] = EnableHistory;
   doc["auto_update"] = bAutoUpdate;
@@ -629,6 +630,17 @@ ApiResponse handleDevApi()
   else return jsonNotFoundResponse();
   
 } // handleDevApi()
+
+ApiResponse handleModbusMonitorApi() {
+  if (httpServer.method() == HTTP_POST) {
+    clearModbusMonitorEntries();
+    JsonDocument doc;
+    doc["cleared"] = true;
+    return jsonDocResponse(doc);
+  }
+
+  return jsonOkResponse(modbusMonitorJson());
+}
 
 bool isInFieldsArray(const char* lookUp)
 {                        

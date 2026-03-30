@@ -822,6 +822,78 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
     text-align: left;
 }
 
+#Settings .settings-card{
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.4);
+}
+
+#Settings .settings-card h3{
+  margin: 0 0 8px 0;
+  color: #111;
+}
+
+#Settings .settings-card p{
+  color: #222;
+}
+
+#Settings .settings-card-header{
+  margin-bottom: 14px;
+}
+
+#Settings .settings-card-toggle{
+  margin-bottom: 14px;
+}
+
+#Settings .settings-card-actions{
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+#Settings .settings-card-actions .btn{
+  background: #5a5a5a;
+  color: #fff;
+  border: 1px solid rgba(0,0,0,0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  text-decoration: none;
+  line-height: 1;
+}
+
+#Settings .settings-card-actions .btn:hover{
+  background: #444;
+  color: #fff;
+}
+
+#Settings .checkbox-row{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+#Settings .settings-help{
+  margin-top: 6px;
+}
+
+#modbus_monitor_table th,
+#modbus_monitor_table td{
+  text-align: left;
+  padding: 8px 10px;
+}
+
+#modbus_monitor_table td:last-child,
+#modbus_monitor_table th:last-child{
+  text-transform: capitalize;
+}
+
 
 /* input wrapper */
 /* 

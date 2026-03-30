@@ -68,15 +68,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
 
-5.4.1
-- added: MEENT webhook
-- Virtual P1 feature in settings (Ethernet/Ultra only)
-x- major refactoring modbus mapping ... first step in customer json config mapping 
-- add: modbus mapping EM330 (type 4)
-
 5.5.0
+- Virtual P1 feature in settings (Ethernet/Ultra only)
 - add: Ultra dongles are able to make custom modbus mappings via json file
-- add: Modbus listner mode 
+
 - add PV production to history files
 - refactor: asyncwebserver
 - update button in HA to trigger the update (mqtt based #70)
@@ -85,11 +80,11 @@ x- major refactoring modbus mapping ... first step in customer json config mappi
 
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define XTRA_LOG
 
 //--- PROFILES -> NO PROFILE = WiFi Dongle  ---
-#define ULTRA           //ultra (mini) dongle
+// #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       //+D1MC 

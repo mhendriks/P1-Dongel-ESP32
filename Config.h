@@ -147,7 +147,7 @@ mod_conf *active_mod_conf = &module_config[0];
 #endif
 
 #define OPT2 ""
-#define OPT3 "" 
+#define OPT3 ""
 
 #ifdef MBUS
   #define OPT4  "[MODBUS]"

@@ -2433,6 +2433,7 @@ function initSettingsSubTabsOnce() {
       const targetId = btn.getAttribute("data-target");
       const pane = document.getElementById(targetId);
       if (pane) pane.classList.add("active");
+      if (targetId === "settings_modbus") refreshModbusMonitorView();
     });
   });
 }
@@ -2506,6 +2507,8 @@ function splitSettingsUI() {
 
   const mqttToggleRow = document.getElementById("settingR_mqtt_enabled");
   if (mqttToggleRow) mqtt.prepend(mqttToggleRow);
+  const modbusMonitorCard = document.getElementById("modbus_monitor_card");
+  if (modbusMonitorCard) modbus.appendChild(modbusMonitorCard);
   updateMQTTSettingsVisibility();
 }
 
@@ -2532,6 +2535,127 @@ function clearDirtySettings(){
     .querySelectorAll('#Settings .settingDiv.is-dirty')
     .forEach(row => row.classList.remove('is-dirty'));
 }
+
+function getModbusMonitorSetting() {
+  return objDAL?.dev_settings?.mb_monitor;
+}
+
+function getModbusMonitorEnabled() {
+  const setting = getModbusMonitorSetting();
+  if (typeof setting === "boolean") return setting;
+  if (setting && typeof setting === "object" && "value" in setting) return !!setting.value;
+  return null;
+}
+
+function renderModbusMonitorData(json) {
+  const body = document.getElementById("modbus_monitor_body");
+  const empty = document.getElementById("modbus_monitor_empty");
+  const wrap = document.getElementById("modbus_monitor_table_wrap");
+  const tbody = document.querySelector("#modbus_monitor_table tbody");
+  if (!body || !empty || !wrap || !tbody) return;
+
+  if (!json?.enabled) {
+    body.style.display = "none";
+    wrap.style.display = "none";
+    empty.style.display = "";
+    tbody.innerHTML = "";
+    return;
+  }
+
+  body.style.display = "";
+  tbody.innerHTML = "";
+
+  const rows = Array.isArray(json.data) ? json.data : [];
+  if (rows.length === 0) {
+    wrap.style.display = "none";
+    empty.style.display = "";
+    return;
+  }
+
+  empty.style.display = "none";
+  wrap.style.display = "";
+
+  rows.forEach(row => {
+    const tr = document.createElement("tr");
+    [
+      row.timestamp ? formatTimestamp(row.timestamp) : "-",
+      row.mode ?? "-",
+      row.id ?? "-",
+      row.fc ?? "-",
+      row.address ?? "-",
+      row.words ?? "-",
+      row.result ?? "-"
+    ].forEach(value => {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      tr.appendChild(cell);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function refreshModbusMonitorData() {
+  const enabled = getModbusMonitorEnabled();
+  if (!enabled) {
+    renderModbusMonitorData({ enabled: false, data: [] });
+    return;
+  }
+
+  fetch("/api/v2/modbus/monitor")
+    .then(response => response.json())
+    .then(json => renderModbusMonitorData(json))
+    .catch(error => console.error("refreshModbusMonitorData()", error));
+}
+
+function refreshModbusMonitorView() {
+  const card = document.getElementById("modbus_monitor_card");
+  const toggle = document.getElementById("modbus_monitor_toggle");
+  const enabled = getModbusMonitorEnabled();
+  if (!card || !toggle) return;
+
+  if (enabled === null) {
+    card.style.display = "none";
+    return;
+  }
+
+  card.style.display = "";
+  toggle.checked = enabled;
+  renderModbusMonitorData({ enabled, data: [] });
+  if (enabled) refreshModbusMonitorData();
+}
+
+function initModbusMonitorControls() {
+  const toggle = document.getElementById("modbus_monitor_toggle");
+  const refreshBtn = document.getElementById("modbus_monitor_refresh");
+  const clearBtn = document.getElementById("modbus_monitor_clear");
+
+  if (toggle && !toggle.dataset.bound) {
+    toggle.dataset.bound = "1";
+    toggle.addEventListener("change", () => {
+      sendPostSetting("mb_monitor", toggle.checked);
+      if (objDAL?.dev_settings) objDAL.dev_settings.mb_monitor = toggle.checked;
+      refreshModbusMonitorView();
+    });
+  }
+
+  if (refreshBtn && !refreshBtn.dataset.bound) {
+    refreshBtn.dataset.bound = "1";
+    refreshBtn.addEventListener("click", event => {
+      event.preventDefault();
+      refreshModbusMonitorData();
+    });
+  }
+
+  if (clearBtn && !clearBtn.dataset.bound) {
+    clearBtn.dataset.bound = "1";
+    clearBtn.addEventListener("click", event => {
+      event.preventDefault();
+      fetch("/api/v2/modbus/monitor", { method: "POST" })
+        .then(() => refreshModbusMonitorData())
+        .catch(error => console.error("clear modbus monitor", error));
+    });
+  }
+}
   
   //============================================================================  
   function refreshSettings()
@@ -2542,6 +2666,7 @@ function clearDirtySettings(){
 	for( let i in data )
 	{
 	  if ( i == "conf") continue;
+	  if ( i == "mb_monitor") continue;
 	  console.log("["+i+"]=>["+data[i].value+"]");
 	  let settings = document.getElementById('settings_table');
 	  if( ( document.getElementById("settingR_"+i)) == null )
@@ -2592,6 +2717,57 @@ function clearDirtySettings(){
 				sel.appendChild(opt);
 			  });
 			
+			  sInput = sel;
+			}
+			else if (i === "mb_parity") {
+			  const SERIAL_CONFIGS = [
+				{ v: 134217744, t: "5N1" },
+				{ v: 134217748, t: "6N1" },
+				{ v: 134217752, t: "7N1" },
+				{ v: 134217756, t: "8N1" },
+				{ v: 134217776, t: "5N2" },
+				{ v: 134217780, t: "6N2" },
+				{ v: 134217784, t: "7N2" },
+				{ v: 134217788, t: "8N2" },
+				{ v: 134217746, t: "5E1" },
+				{ v: 134217750, t: "6E1" },
+				{ v: 134217754, t: "7E1" },
+				{ v: 134217758, t: "8E1" },
+				{ v: 134217778, t: "5E2" },
+				{ v: 134217782, t: "6E2" },
+				{ v: 134217786, t: "7E2" },
+				{ v: 134217790, t: "8E2" },
+				{ v: 134217747, t: "5O1" },
+				{ v: 134217751, t: "6O1" },
+				{ v: 134217755, t: "7O1" },
+				{ v: 134217759, t: "8O1" },
+				{ v: 134217779, t: "5O2" },
+				{ v: 134217783, t: "6O2" },
+				{ v: 134217787, t: "7O2" },
+				{ v: 134217791, t: "8O2" }
+			  ];
+
+			  const sel = document.createElement("select");
+			  sel.setAttribute("id", fldId);
+
+			  const cur = parseInt(data[i].value ?? "0", 10);
+
+			  SERIAL_CONFIGS.forEach(o => {
+				const opt = document.createElement("option");
+				opt.value = String(o.v);
+				opt.textContent = o.t;
+				if (o.v === cur) opt.selected = true;
+				sel.appendChild(opt);
+			  });
+
+			  if (!SERIAL_CONFIGS.some(o => o.v === cur)) {
+				const opt = document.createElement("option");
+				opt.value = String(cur);
+				opt.textContent = `Unknown (${cur})`;
+				opt.selected = true;
+				sel.appendChild(opt);
+			  }
+
 			  sInput = sel;
 			}
 			else {
@@ -2655,6 +2831,8 @@ function clearDirtySettings(){
 
   initSettingsSubTabsOnce();
   splitSettingsUI();
+  initModbusMonitorControls();
+  refreshModbusMonitorView();
 
       
   } // refreshSettings()

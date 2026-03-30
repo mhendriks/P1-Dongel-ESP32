@@ -126,6 +126,7 @@ void writeSettings() {
   docw["mb_port"] = mb_config.port;
   docw["mb_baud"] = mb_config.baud;
   docw["mb_parity"] = mb_config.parity - 134217700;
+  docw["mb_monitor"] = bModbusMonitor;
   docw["mqtt-hide"] = hideMQTTsettings;
   docw["remove-index"] = RemoveIndexAfterUpdate;
   docw["macid-topic"] = MacIDinToptopic;
@@ -273,6 +274,7 @@ void readSettings(bool show)
   if (doc["mb_port"].is<int>()) mb_config.port = doc["mb_port"];
   if (doc["mb_baud"].is<int>()) mb_config.baud = doc["mb_baud"];
   if (doc["mb_parity"].is<int>()) mb_config.parity = 134217700 + doc["mb_parity"].as<int>();
+  if (doc["mb_monitor"].is<bool>()) bModbusMonitor = doc["mb_monitor"];
   if (doc["skip-network"].is<bool>()) skipNetwork = doc["skip-network"];
 
   #ifdef UDP_BCAST
@@ -459,6 +461,7 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "mb_port")) mb_config.port = String(newValue).toInt();  
   if (!stricmp(field, "mb_baud")) mb_config.baud = String(newValue).toInt();  
   if (!stricmp(field, "mb_parity")) mb_config.parity = String(newValue).toInt();  
+  if (!stricmp(field, "mb_monitor")) bModbusMonitor = (stricmp(newValue, "true") == 0 ? true : false);
 
   SendTariffData(); // P2PType = NRGTARIFS;
   writeSettings();

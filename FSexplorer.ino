@@ -112,6 +112,14 @@ void setupFSexplorer() {
     if (!auth()) return;
     sendApiResponse(handleSmApiField());
   });
+  httpServer.on("/api/v2/modbus/monitor", HTTP_GET, [](){
+    if (!auth()) return;
+    sendApiResponse(handleModbusMonitorApi());
+  });
+  httpServer.on("/api/v2/modbus/monitor", HTTP_POST, [](){
+    if (!auth()) return;
+    sendApiResponse(handleModbusMonitorApi());
+  });
 
   httpServer.on("/eid/getclaim",[](){
     if (!auth()) return;

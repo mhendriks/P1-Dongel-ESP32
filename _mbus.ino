@@ -15,6 +15,80 @@ float calculateLineVoltage(float V1, float V2) {
 // Set up a Modbus server
 ModbusServerWiFi MBserver;
 
+static constexpr uint8_t kModbusTransportTcp = 0;
+static constexpr uint8_t kModbusTransportRtu = 1;
+
+static constexpr size_t kModbusMonitorCapacity = 30;
+
+struct ModbusMonitorEntry {
+  char timestamp[20];
+  uint8_t serverId;
+  uint8_t functionCode;
+  uint16_t address;
+  uint16_t words;
+  uint8_t resultCode;
+  uint8_t transport;
+};
+
+static ModbusMonitorEntry g_modbusMonitorEntries[kModbusMonitorCapacity];
+static size_t g_modbusMonitorCount = 0;
+static size_t g_modbusMonitorHead = 0;
+
+static const char* modbusTransportText(uint8_t transport) {
+  switch (transport) {
+    case kModbusTransportTcp: return "TCP";
+    case kModbusTransportRtu: return "RTU";
+  }
+  return "?";
+}
+
+static void logModbusMonitorRequest(uint8_t transport, const ModbusMessage& request, uint16_t address, uint16_t words, uint8_t resultCode) {
+  if (!bModbusMonitor) return;
+
+  ModbusMonitorEntry& entry = g_modbusMonitorEntries[g_modbusMonitorHead];
+  strlcpy(entry.timestamp, actTimestamp, sizeof(entry.timestamp));
+  entry.serverId = request.getServerID();
+  entry.functionCode = request.getFunctionCode();
+  entry.address = address;
+  entry.words = words;
+  entry.resultCode = resultCode;
+  entry.transport = transport;
+
+  g_modbusMonitorHead = (g_modbusMonitorHead + 1) % kModbusMonitorCapacity;
+  if (g_modbusMonitorCount < kModbusMonitorCapacity) g_modbusMonitorCount++;
+}
+
+String modbusMonitorJson() {
+  JsonDocument doc;
+  doc["enabled"] = bModbusMonitor;
+  doc["capacity"] = kModbusMonitorCapacity;
+  doc["count"] = g_modbusMonitorCount;
+
+  JsonArray data = doc["data"].to<JsonArray>();
+  for (size_t i = 0; i < g_modbusMonitorCount; i++) {
+    const size_t index = (g_modbusMonitorHead + kModbusMonitorCapacity - 1 - i) % kModbusMonitorCapacity;
+    const ModbusMonitorEntry& entry = g_modbusMonitorEntries[index];
+    JsonObject row = data.add<JsonObject>();
+    row["timestamp"] = entry.timestamp;
+    row["mode"] = modbusTransportText(entry.transport);
+    row["id"] = entry.serverId;
+    row["fc"] = entry.functionCode;
+    row["address"] = entry.address;
+    row["words"] = entry.words;
+    row["result"] = (entry.resultCode == 0) ? "ok" : "error";
+    if (entry.resultCode != 0) row["error_code"] = entry.resultCode;
+  }
+
+  String body;
+  serializeJson(doc, body);
+  return body;
+}
+
+void clearModbusMonitorEntries() {
+  g_modbusMonitorCount = 0;
+  g_modbusMonitorHead = 0;
+}
+
 // Modbus data types
 enum class ModbusDataType : uint8_t { UINT32, INT32, INT16, FLOAT };
 
@@ -654,8 +728,7 @@ void setModbusMapping(int mappingChoice) {
     initMbMapping(mappingChoice);
 }
 
-//handle modbus request
-ModbusMessage MBusHandleRequest(ModbusMessage request) {
+static ModbusMessage MBusHandleRequestInternal(ModbusMessage request, uint8_t transport) {
     uint16_t address;
     uint16_t words;
     digitalWrite(statusled, LOW);
@@ -674,6 +747,7 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
 
     if ( (address + words) > maxReg ){
         response.setError(request.getServerID(), request.getFunctionCode(), ILLEGAL_DATA_ADDRESS);
+        logModbusMonitorRequest(transport, request, address, words, ILLEGAL_DATA_ADDRESS);
         return response;
     }
 
@@ -723,12 +797,21 @@ ModbusMessage MBusHandleRequest(ModbusMessage request) {
     }
 
     digitalWrite(statusled, HIGH);
+    logModbusMonitorRequest(transport, request, address, words, 0);
     return response;
 }
 
+ModbusMessage MBusHandleRequestTCP(ModbusMessage request) {
+  return MBusHandleRequestInternal(request, kModbusTransportTcp);
+}
+
+ModbusMessage MBusHandleRequestRTU(ModbusMessage request) {
+  return MBusHandleRequestInternal(request, kModbusTransportRtu);
+}
+
 void mbusSetup(){
-  MBserver.registerWorker(mb_config.id, READ_HOLD_REGISTER, &MBusHandleRequest);//FC03
-  MBserver.registerWorker(mb_config.id, READ_INPUT_REGISTER, &MBusHandleRequest);//FC04
+  MBserver.registerWorker(mb_config.id, READ_HOLD_REGISTER, &MBusHandleRequestTCP);//FC03
+  MBserver.registerWorker(mb_config.id, READ_INPUT_REGISTER, &MBusHandleRequestTCP);//FC04
   MBserver.start(mb_config.port, MBUS_CLIENTS, MBUS_TIMEOUT);
 }
 
@@ -765,8 +848,8 @@ void SetupMB_RTU(){
   RTU_SERIAL.begin( mb_config.baud , mb_config.parity , mb_rx, mb_tx );
 
   MBserverRTU = new ModbusServerRTU(MBUS_RTU_TIMEOUT, mb_rts);
-  MBserverRTU->registerWorker(mb_config.id , READ_HOLD_REGISTER, &MBusHandleRequest);//FC03
-  MBserverRTU->registerWorker(mb_config.id, READ_INPUT_REGISTER, &MBusHandleRequest);//FC04
+  MBserverRTU->registerWorker(mb_config.id , READ_HOLD_REGISTER, &MBusHandleRequestRTU);//FC03
+  MBserverRTU->registerWorker(mb_config.id, READ_INPUT_REGISTER, &MBusHandleRequestRTU);//FC04
   MBserverRTU->begin(RTU_SERIAL);
 }
 #else

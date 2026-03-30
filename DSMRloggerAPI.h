@@ -355,6 +355,7 @@ bool        bWarmteLink = false;
 bool        bActJsonMQTT = false;
 bool        bRawPort = false;
 bool        bLED_PRT = true;
+bool        bModbusMonitor = false;
 bool        P1Out = false;
 bool        bNewTelegramWebhook = false;
 bool        bV5meter = true;
@@ -465,6 +466,10 @@ int8_t mb_tx  = -1;
 int8_t mb_rts = -1;
 
 bool en_connected = false;
+
+ApiResponse handleModbusMonitorApi();
+String modbusMonitorJson();
+void clearModbusMonitorEntries();
 
 #include "Debug.h"
 #include <ESPmDNS.h>

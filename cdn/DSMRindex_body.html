@@ -443,7 +443,43 @@
 		<div id="settings_general" class="settings-pane active"></div>
 		<div id="settings_tariff" class="settings-pane"></div>
 		<div id="settings_mqtt" class="settings-pane"></div>
-		<div id="settings_modbus" class="settings-pane"></div>
+		<div id="settings_modbus" class="settings-pane">
+		  <div id="modbus_monitor_card" class="settings-card" style="display:none">
+			<div class="settings-card-header">
+			  <h3 data-i18n-key="modbus-monitor-title">Modbus monitor</h3>
+			  <p data-i18n-key="modbus-monitor-desc">Logt de laatste 30 Modbus requests zodat zichtbaar is wat de client opvraagt. Werkt voor TCP en RTU.</p>
+			</div>
+			<div class="settings-card-toggle">
+			  <label class="checkbox-row" for="modbus_monitor_toggle">
+				<input type="checkbox" id="modbus_monitor_toggle">
+				<span data-i18n-key="modbus-monitor-enable">Modbus monitor inschakelen</span>
+			  </label>
+			</div>
+			<div id="modbus_monitor_body" style="display:none">
+			  <div class="settings-card-actions">
+				<a id="modbus_monitor_refresh" class="btn" href="#" data-i18n-key="btn-refresh">Verversen</a>
+				<a id="modbus_monitor_clear" class="btn" href="#" data-i18n-key="btn-clear">Wissen</a>
+			  </div>
+			  <p id="modbus_monitor_empty" class="settings-help" data-i18n-key="modbus-monitor-empty">Nog geen Modbus requests ontvangen</p>
+			  <div id="modbus_monitor_table_wrap" style="display:none">
+				<table id="modbus_monitor_table">
+				  <thead>
+					<tr>
+					  <th data-i18n-key="modbus-monitor-col-time">Tijd</th>
+					  <th data-i18n-key="modbus-monitor-col-mode">Mode</th>
+					  <th data-i18n-key="modbus-monitor-col-id">ID</th>
+					  <th data-i18n-key="modbus-monitor-col-fc">FC</th>
+					  <th data-i18n-key="modbus-monitor-col-address">Adres</th>
+					  <th data-i18n-key="modbus-monitor-col-words">Words</th>
+					  <th data-i18n-key="modbus-monitor-col-result">Resultaat</th>
+					</tr>
+				  </thead>
+				  <tbody></tbody>
+				</table>
+			  </div>
+			</div>
+		  </div>
+		</div>
 	
 	  </div>
    </div>
