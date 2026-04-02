@@ -264,6 +264,7 @@
   "dict_mqtt_toptopic": "MQTT Toppämne",
   "dict_mqttinterval": "Skicka MQTT-meddelanden (sek.)",
   "dict_mqtt_interval": "Skicka MQTT-meddelanden (sek.)",
+  "dict_meent_interval": "Skicka MEENT-webhook (sek.)",
   "dict_mqttbroker_connected": "MQTT broker ansluten",
   "dict_telegramcount": "Telegram processade",
   "dict_telegramerrors": "Telegram med fel",

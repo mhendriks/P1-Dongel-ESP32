@@ -445,6 +445,9 @@ if ( !hideMQTTsettings) {
   ADD_SETTING("b_auth_user", "s", 0, sizeof(bAuthUser) - 1, bAuthUser);
   ADD_SETTING("b_auth_pw", "s", 0, sizeof(bAuthPW) - 1, bAuthPW);
   ADD_SETTING("overvoltage_threshold", "i", 200, 300, settingOvervoltageThreshold);
+#ifdef POST_MEENT
+  ADD_SETTING("meent_interval", "i", 1, 3600, settingMeentInterval);
+#endif
   
   //MODBUS TCP settings
   ADD_SETTING("mb_map", "i", 0, 9, SelMap); //RTU+TCP

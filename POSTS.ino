@@ -42,6 +42,7 @@ void PostTelegram() {
 
 static WiFiClientSecure webhookTlsClient;
 uint8_t webhookPostErrors = 0;
+uint32_t webhookLastPostMs = 0;
 
 String JsonWebhook() {
   
@@ -70,6 +71,13 @@ void PostWebhook() {
   webhookStartMs = millis();
 #endif
   if (!bNewTelegramWebhook || netw_state == NW_NONE || webhookPostErrors > 100 ) return;
+
+#ifdef POST_MEENT
+  const uint32_t meentIntervalMs = (uint32_t)constrain(settingMeentInterval, (uint16_t)1, (uint16_t)3600) * 1000UL;
+  const uint32_t nowMs = millis();
+  if (webhookLastPostMs != 0 && (uint32_t)(nowMs - webhookLastPostMs) < meentIntervalMs) return;
+#endif
+
   bNewTelegramWebhook = false;
 
   HTTPClient http;
@@ -90,8 +98,12 @@ void PostWebhook() {
     int httpResponseCode = http.POST(JsonWebhook());
     DebugT(F("HTTP Response code: ")); Debugln(httpResponseCode);
 
-    if (httpResponseCode >= 200 && httpResponseCode < 300) webhookPostErrors = 0;
-    else {
+    if (httpResponseCode >= 200 && httpResponseCode < 300) {
+      webhookPostErrors = 0;
+#ifdef POST_MEENT
+      webhookLastPostMs = millis();
+#endif
+    } else {
       webhookPostErrors++;
       webhookTlsClient.stop(); // hard reset van de TLS-socket zodat volgende call schoon start
       delay(10);

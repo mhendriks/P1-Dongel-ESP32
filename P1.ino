@@ -419,7 +419,7 @@ void processTelegram(){
     if ( (bV5meter && telegramCount % 3 == 0 ) || !bV5meter ) bNewTelegramWebhook = true; //every 3 secs (v5) or new telegram (v2/4)
   #endif
   #ifdef POST_MEENT
-      if ( (bV5meter && telegramCount % 10 == 0 ) || !bV5meter ) bNewTelegramWebhook = true; //every 10 secs (v5) or new telegram (v2/4)
+    bNewTelegramWebhook = true; // interval handling is done in PostWebhook()
   #endif
   #ifdef UDP_BCAST
     New_P1_UDP = true;

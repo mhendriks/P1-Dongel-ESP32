@@ -246,6 +246,7 @@
   "dict_mqtt_toptopic": "MQTT Top Topic",
   "dict_mqttinterval": "Verzend MQTT Berichten (Sec.)",
   "dict_mqtt_interval": "Verzend MQTT Berichten (Sec.)",
+  "dict_meent_interval": "Verzend MEENT webhook (sec.)",
   "dict_mqttbroker_connected": "MQTT broker verbonden",
   "dict_telegramcount": "Telegrammen verwerkt",
   "dict_telegramerrors": "Telegrammen met fouten",

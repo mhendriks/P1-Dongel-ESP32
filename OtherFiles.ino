@@ -96,6 +96,7 @@ void writeSettings() {
   docw["GasVasteKosten"] = settingGNBK;
   docw["WaterVasteKosten"] = settingWNBK;
   docw["OverVoltageThreshold"] = settingOvervoltageThreshold;
+  docw["MeentInterval"] = settingMeentInterval;
   // docw["SmHasFaseInfo"] = settingSmHasFaseInfo;
   docw["IndexPage"] = settingIndexPage;
   yield();
@@ -212,6 +213,9 @@ void readSettings(bool show)
   if (doc["OverVoltageThreshold"].is<int>()) {
     settingOvervoltageThreshold = constrain(doc["OverVoltageThreshold"].as<int>(), 200, 300);
   }
+  if (doc["MeentInterval"].is<int>()) {
+    settingMeentInterval = constrain(doc["MeentInterval"].as<int>(), 1, 3600);
+  }
   // settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
   if (doc["mqtt-hide"].is<bool>()) hideMQTTsettings = doc["mqtt-hide"];
@@ -297,6 +301,7 @@ void readSettings(bool show)
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), "DSMRindexEDGE.html");
   
   if (settingMQTTbrokerPort    < 1) settingMQTTbrokerPort   = 1883;
+  settingMeentInterval = constrain(settingMeentInterval, 1, 3600);
 
   if (!show) return;
 
@@ -336,6 +341,9 @@ void updateSetting(const char *field, const char *newValue)
       settingOvervoltageThreshold = newThreshold;
       ResetOvervoltageStats();
     }
+  }
+  if (!stricmp(field, "meent_interval")) {
+    settingMeentInterval = constrain(String(newValue).toInt(), 1, 3600);
   }
 
   if (!stricmp(field, "w_tariff"))          settingWDT          = String(newValue).toFloat();  

@@ -29,11 +29,16 @@ Create `../../_secrets/posts.h` with at least:
 
 // Only needed when POST_POWERCH is enabled
 #define URL_POWERCH "https://example.invalid/api/power"
+
+// Only needed when POST_MEENT is enabled
+#define URL_MEENT "https://meent.dev.muze.nl/api/data/"
 ```
 
 Notes:
 - `OTAURL_PREFIX` is used in `DSMRloggerAPI.h` to build `BaseOTAurl`.
 - If `POST_POWERCH` is not enabled, `URL_POWERCH` is not used.
+- If `POST_MEENT` is not enabled, `URL_MEENT` is not used.
+- `POST_POWERCH` and `POST_MEENT` are mutually exclusive compile-time features.
 
 ## 3) Example `energyid.h`
 
