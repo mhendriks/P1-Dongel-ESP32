@@ -70,6 +70,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 5.4.2
 - add: default interval MEENT configurable
+- hardening sma json parsing
+- fix: mA issue some Kenter meters
 
 5.5.0
 - Virtual P1 feature in settings (Ethernet/Ultra only)
@@ -87,10 +89,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //--- PROFILES -> NO PROFILE = WiFi Dongle  ---
-#define ULTRA            //ultra (mini) dongle
+// #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE       //+D1MC 
+#define NRG_DONGLE       //+D1MC 
 // #define P1P
 
 //SPECIAL
@@ -109,7 +111,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define SHELLY_EMU
 // #define USB_CONFIG
 // #define POST_POWERCH
-#define POST_MEENT
+// #define POST_MEENT
 // #define VIRTUAL_P1
 
 #include "DSMRloggerAPI.h"

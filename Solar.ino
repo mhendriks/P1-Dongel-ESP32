@@ -25,6 +25,38 @@ SolarPwrSystems Omniksol  = { false, "", "", 0, 0, 0, 0, 0,  15, 0, "/omniksol.j
 static String   _sma_sid;
 static uint32_t _sma_sid_t0 = 0;
 
+static void smaDebugResponse(const char* label, const String& resp) {
+#ifdef DEBUG
+  const size_t maxPreview = 200;
+  DebugT(label);
+  Debug(" len=");
+  Debug(resp.length());
+  if (resp.length() > maxPreview) {
+    Debug(" preview=");
+    Debugln(resp.substring(0, maxPreview) + "...");
+  } else {
+    Debug(" body=");
+    Debugln(resp);
+  }
+#endif
+}
+
+static bool smaReadMetricValue(JsonObject dev, const char* key, long& out) {
+  if (dev.isNull()) return false;
+
+  JsonObject metric = dev[key];
+  if (metric.isNull()) return false;
+
+  JsonArray values = metric["1"];
+  if (values.isNull() || values.size() == 0) return false;
+
+  JsonVariant val = values[0]["val"];
+  if (val.isNull()) return false;
+
+  out = val.as<long>();
+  return true;
+}
+
 static bool smaHttpPOST(const String& url, const String& body, String& out) {
   out = "";
   HTTPClient http;
@@ -38,9 +70,12 @@ static bool smaHttpPOST(const String& url, const String& body, String& out) {
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Connection", "close");
   http.setTimeout(5000);
+  WDT_FEED();
   int rc = http.POST(body);
+  WDT_FEED();
   if (rc == 200) out = http.getString();
   http.end();
+  WDT_FEED();
   if (clientTLS) delete clientTLS;
   if (client)    delete client;
   return (rc == 200 && out.length() > 0);
@@ -51,7 +86,7 @@ static bool smaLogin(const String& baseUrl, const String& password, const char* 
   String url  = baseUrl + "/dyn/login.json";
   String body = String("{\"pass\":\"") + password + "\",\"right\":\"" + right + "\"}";
   if (!smaHttpPOST(url, body, resp)) { _sma_sid = ""; DebugTln("Error smaHttpPOST"); return false; }
-  DebugT("sma POST resp: ");Debugln(resp);
+  smaDebugResponse("sma login resp:", resp);
   JsonDocument doc;
   if (deserializeJson(doc, resp))     { _sma_sid = ""; DebugTln("Error sma deserializeJson error"); return false; }
   String sid = doc["result"]["sid"].as<String>();
@@ -68,7 +103,7 @@ static bool smaGetPacAndDay(const String& baseUrl, long& pac_W, long& day_Wh) {
   String url  = baseUrl + "/dyn/getValues.json?sid=" + _sma_sid;
   String body = "{\"destDev\":[],\"keys\":[\"6100_40263F00\",\"6400_00262200\"]}";
   if (!smaHttpPOST(url, body, resp)) { DebugTln("Error smaHttpPOST values"); return false; }
-  DebugT("sma POST resp: ");Debugln(resp);
+  smaDebugResponse("sma values resp:", resp);
   JsonDocument doc; // ~8k is genoeg voor deze response
   if (deserializeJson(doc, resp)) return false;
 
@@ -77,13 +112,15 @@ static bool smaGetPacAndDay(const String& baseUrl, long& pac_W, long& day_Wh) {
   if (result.isNull()) return false;
   auto it = result.begin(); if (it == result.end()) return false;
   JsonObject dev = it->value();
+  if (dev.isNull()) return false;
 
-  JsonVariant pac = dev["6100_40263F00"]["1"][0]["val"];
-  JsonVariant day = dev["6400_00262200"]["1"][0]["val"];
-  if (pac.isNull() || day.isNull()) return false;
+  long pac = 0;
+  long day = 0;
+  if (!smaReadMetricValue(dev, "6100_40263F00", pac)) return false;
+  if (!smaReadMetricValue(dev, "6400_00262200", day)) return false;
 
-  pac_W  = (long)pac.as<long>();
-  day_Wh = (long)day.as<long>();
+  pac_W  = pac;
+  day_Wh = day;
   return true;
 }
 
