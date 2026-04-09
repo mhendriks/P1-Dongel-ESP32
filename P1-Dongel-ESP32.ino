@@ -69,9 +69,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 
 5.4.2
-- add: default interval MEENT configurable
-- hardening sma json parsing
-- fix: mA issue some Kenter meters
+√ add: default interval MEENT configurable
+√ hardening sma json parsing
+√ fix: mA issue some Kenter meters (dsmr2lib)
+
 
 5.5.0
 - Virtual P1 feature in settings (Ethernet/Ultra only)
@@ -85,7 +86,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+// #define DEBUG  
 // #define XTRA_LOG
 
 //--- PROFILES -> NO PROFILE = WiFi Dongle  ---
@@ -97,6 +98,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //SPECIAL
 // #define __Az__
+// #define OTAURL_PREFIX "eb/"
 
 //FEATURES
 #define MBUS

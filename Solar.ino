@@ -24,6 +24,7 @@ SolarPwrSystems Omniksol  = { false, "", "", 0, 0, 0, 0, 0,  15, 0, "/omniksol.j
 
 static String   _sma_sid;
 static uint32_t _sma_sid_t0 = 0;
+static const size_t SMA_MAX_RESPONSE_LEN = 2048;
 
 static void smaDebugResponse(const char* label, const String& resp) {
 #ifdef DEBUG
@@ -73,7 +74,37 @@ static bool smaHttpPOST(const String& url, const String& body, String& out) {
   WDT_FEED();
   int rc = http.POST(body);
   WDT_FEED();
-  if (rc == 200) out = http.getString();
+  if (rc == 200) {
+    int len = http.getSize();
+    if (len > 0 && len > (int)SMA_MAX_RESPONSE_LEN) {
+      DebugT("SMA response too large: "); Debugln(len);
+      http.end();
+      WDT_FEED();
+      if (clientTLS) delete clientTLS;
+      if (client)    delete client;
+      return false;
+    }
+    out = http.getString();
+    if (out.length() > SMA_MAX_RESPONSE_LEN) {
+      DebugT("SMA response body too large: "); Debugln(out.length());
+      out = "";
+      http.end();
+      WDT_FEED();
+      if (clientTLS) delete clientTLS;
+      if (client)    delete client;
+      return false;
+    }
+    out.trim();
+    if (!out.startsWith("{")) {
+      DebugT("SMA response is not JSON: "); Debugln(out.substring(0, min((size_t)80, out.length())));
+      out = "";
+      http.end();
+      WDT_FEED();
+      if (clientTLS) delete clientTLS;
+      if (client)    delete client;
+      return false;
+    }
+  }
   http.end();
   WDT_FEED();
   if (clientTLS) delete clientTLS;

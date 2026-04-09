@@ -373,7 +373,7 @@ bool        bNETSWenabled = true;
 #endif
 
 #ifdef UDP_BCAST
-bool        bUDPenabled = false;
+bool        bUDPenabled = true;
 #endif
 
 //bool        bWriteFiles = false;
