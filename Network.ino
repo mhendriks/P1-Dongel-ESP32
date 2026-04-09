@@ -502,20 +502,22 @@ void startMDNS(const char *Hostname) {
     return;
   }
 
-  MDNS.addService("hwenergy", "tcp", 80);
-  MDNS.addService("homewizard", "tcp", 80);
+  if (isHWMimicSelected()) {
+    MDNS.addService("hwenergy", "tcp", 80);
+    MDNS.addService("homewizard", "tcp", 80);
 
-  MDNS.addServiceTxt("hwenergy", "tcp", "serial", MACID);
-  MDNS.addServiceTxt("hwenergy", "tcp", "product_type", "HWE-P1");
-  MDNS.addServiceTxt("hwenergy", "tcp", "product_name", "P1 Meter");
-  MDNS.addServiceTxt("hwenergy", "tcp", "path", "/api/v1");
-  MDNS.addServiceTxt("hwenergy", "tcp", "api_enabled", "1");
+    MDNS.addServiceTxt("hwenergy", "tcp", "serial", MACID);
+    MDNS.addServiceTxt("hwenergy", "tcp", "product_type", "HWE-P1");
+    MDNS.addServiceTxt("hwenergy", "tcp", "product_name", "P1 Meter");
+    MDNS.addServiceTxt("hwenergy", "tcp", "path", "/api/v1");
+    MDNS.addServiceTxt("hwenergy", "tcp", "api_enabled", "1");
 
-  MDNS.addServiceTxt("homewizard", "tcp", "serial", MACID);
-  MDNS.addServiceTxt("homewizard", "tcp", "product_type", "HWE-P1");
-  MDNS.addServiceTxt("homewizard", "tcp", "product_name", "P1 Meter");
-  MDNS.addServiceTxt("homewizard", "tcp", "path", "/api/v1");
-  MDNS.addServiceTxt("homewizard", "tcp", "api_enabled", "1");
+    MDNS.addServiceTxt("homewizard", "tcp", "serial", MACID);
+    MDNS.addServiceTxt("homewizard", "tcp", "product_type", "HWE-P1");
+    MDNS.addServiceTxt("homewizard", "tcp", "product_name", "P1 Meter");
+    MDNS.addServiceTxt("homewizard", "tcp", "path", "/api/v1");
+    MDNS.addServiceTxt("homewizard", "tcp", "api_enabled", "1");
+  }
 // #else
   MDNS.addService( Hostname, "tcp", 80);
   MDNS.addService( "p1dongle", "tcp", 80);

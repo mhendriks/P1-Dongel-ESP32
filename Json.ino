@@ -458,6 +458,7 @@ if ( !hideMQTTsettings) {
     ADD_SETTING("mb_parity", "i", 134217744, 134217791, mb_config.parity); //RTU
   }
   doc["mb_monitor"] = bModbusMonitor;
+  if (mimicsEnabled()) ADD_SETTING("mimic", "i", MIMIC_NONE, MIMIC_SHELLY_PRO_3EM, mimicType);
   //booleans
   doc["hist"] = EnableHistory;
   doc["auto_update"] = bAutoUpdate;

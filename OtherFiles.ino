@@ -133,6 +133,7 @@ void writeSettings() {
   docw["macid-topic"] = MacIDinToptopic;
   docw["skip-network"] = skipNetwork;
   docw["try_calc_i"] = try_calc_i;
+  docw["mimic"] = mimicsEnabled() ? mimicType : MIMIC_NONE;
 
 
   docw["eid-enabled"] = bEID_enabled;
@@ -280,6 +281,12 @@ void readSettings(bool show)
   if (doc["mb_parity"].is<int>()) mb_config.parity = 134217700 + doc["mb_parity"].as<int>();
   if (doc["mb_monitor"].is<bool>()) bModbusMonitor = doc["mb_monitor"];
   if (doc["skip-network"].is<bool>()) skipNetwork = doc["skip-network"];
+  if (doc["mimic"].is<int>()) {
+    int newMimic = constrain(doc["mimic"].as<int>(), (int)MIMIC_NONE, (int)MIMIC_SHELLY_PRO_3EM);
+    mimicType = mimicsEnabled() ? newMimic : MIMIC_NONE;
+  } else {
+    mimicType = MIMIC_NONE;
+  }
 
   #ifdef UDP_BCAST
   if (doc["udp"].is<bool>()) bUDPenabled = doc["udp"];
@@ -312,6 +319,7 @@ void readSettings(bool show)
 void updateSetting(const char *field, const char *newValue)
 {
   bool mqtt_reconnect = false;
+  bool reboot_required = false;
   DebugTf("-> field[%s], newValue[%s]\r\n", field, newValue);
 
   if (!FSmounted) return;
@@ -470,9 +478,19 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "mb_baud")) mb_config.baud = String(newValue).toInt();  
   if (!stricmp(field, "mb_parity")) mb_config.parity = String(newValue).toInt();  
   if (!stricmp(field, "mb_monitor")) bModbusMonitor = (stricmp(newValue, "true") == 0 ? true : false);
+  if (!stricmp(field, "mimic")) {
+    int newMimic = constrain(String(newValue).toInt(), (int)MIMIC_NONE, (int)MIMIC_SHELLY_PRO_3EM);
+    reboot_required = (mimicType != newMimic);
+    mimicType = mimicsEnabled() ? newMimic : MIMIC_NONE;
+  }
 
   SendTariffData(); // P2PType = NRGTARIFS;
   writeSettings();
+  if (reboot_required) {
+    LogFile("reboot: mimic changed", true);
+    delay(200);
+    P1Reboot();
+  }
   
 } // updateSetting()
 

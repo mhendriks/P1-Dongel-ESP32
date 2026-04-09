@@ -441,6 +441,26 @@ bool      RemoveIndexAfterUpdate = true;
 bool      MacIDinToptopic = false;
 char      MQTopTopic[50+14] = "";
 
+enum MimicType : uint8_t {
+  MIMIC_NONE = 0,
+  MIMIC_HW_P1 = 1,
+  MIMIC_SHELLY_PRO_3EM = 2,
+};
+
+uint8_t   mimicType = MIMIC_NONE;
+
+inline bool mimicsEnabled() {
+  return ENABLE_MIMICS != 0;
+}
+
+inline bool isHWMimicSelected() {
+  return mimicsEnabled() && mimicType == MIMIC_HW_P1;
+}
+
+inline bool isShellyPro3EmMimicSelected() {
+  return mimicsEnabled() && mimicType == MIMIC_SHELLY_PRO_3EM;
+}
+
 //update
 #ifndef OTAURL_PREFIX
   #define OTAURL_PREFIX ""

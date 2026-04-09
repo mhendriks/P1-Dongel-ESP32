@@ -68,11 +68,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
 
-5.4.2
-√ add: default interval MEENT configurable
-√ hardening sma json parsing
-√ fix: mA issue some Kenter meters (dsmr2lib)
-
 
 5.5.0
 - Virtual P1 feature in settings (Ethernet/Ultra only)
@@ -93,8 +88,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-#define NRG_DONGLE       //+D1MC 
-// #define P1P
+// #define NRG_DONGLE       //+D1MC 
+// #define _P1P
 
 //SPECIAL
 // #define __Az__
@@ -110,7 +105,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define MB_RTU
 #define ESPNOW  
 // #define UDP_BCAST
-// #define SHELLY_EMU
 // #define USB_CONFIG
 // #define POST_POWERCH
 // #define POST_MEENT

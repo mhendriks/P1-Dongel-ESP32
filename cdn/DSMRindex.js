@@ -2719,6 +2719,28 @@ function initModbusMonitorControls() {
 			
 			  sInput = sel;
 			}
+			else if (i === "mimic") {
+			  const MIMICS = [
+				{ v: 0, t: t("mimic-disabled") },
+				{ v: 1, t: "HW P1" },
+				{ v: 2, t: "Shelly Pro 3EM" }
+			  ];
+
+			  const sel = document.createElement("select");
+			  sel.setAttribute("id", fldId);
+
+			  const cur = parseInt(data[i].value ?? "0", 10);
+
+			  MIMICS.forEach(o => {
+				const opt = document.createElement("option");
+				opt.value = String(o.v);
+				opt.textContent = o.t;
+				if (o.v === cur) opt.selected = true;
+				sel.appendChild(opt);
+			  });
+
+			  sInput = sel;
+			}
 			else if (i === "mb_parity") {
 			  const SERIAL_CONFIGS = [
 				{ v: 134217744, t: "5N1" },

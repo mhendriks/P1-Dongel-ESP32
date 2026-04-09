@@ -1,7 +1,7 @@
 #pragma once
-#ifdef SHELLY_EMU
+#if ENABLE_MIMICS
 
-//Emulates UDP EMG3 Shelly device
+// Emulates a Shelly Pro 3EM-style UDP/RPC surface for meter integrations.
 
 #include <Arduino.h>
 #include <WiFi.h>
@@ -54,7 +54,7 @@ private:
     return s;
   }
   static String makeId() {
-    String s = "p1-dongle-";
+    String s = "shellypro3em-";
     s += macID;
     return s;
   }
@@ -66,91 +66,111 @@ private:
 
   void fillDeviceInfo(JsonObject dst){
     dst["id"]    = _id;
-    dst["model"] = "ShellyEMG3";
+    dst["model"] = "ShellyPro3EM";
     dst["mac"]   = macID;  // zonder ':'
     dst["arch"]  = "ESP32";
+    dst["gen"]   = 2;
     dst["fw_id"] = "2025.1.0";
     dst["ver"]   = "3.1.0";
-    dst["app"]   = "EM";
+    dst["app"]   = "Pro3EM";
+    dst["auth_en"] = false;
+    dst["discoverable"] = true;
   }
 
-inline void fillStatus( JsonObject dst, bool EM_only ){
-  // ====== P1 metingen ======
-  const float pImp_kW   = P1::powerImportkW();   // DSMR 1-0:1.7.0
-  const float pExp_kW   = P1::powerExportkW();   // DSMR 1-0:2.7.0
-  const float P1        = P1::pL1();            // W (optioneel aanwezig)
-  const float P2        = P1::pL2();            // W (optioneel aanwezig)
-  const float P3        = P1::pL3();            // W (optioneel aanwezig)
-  const float U1        = P1::uL1();            // V (optioneel aanwezig)
-  const float I1        = P1::iL1();            // A (optioneel aanwezig)
-  const float U2        = P1::uL2();            // V (optioneel aanwezig)
-  const float I2        = P1::iL2();            // A (optioneel aanwezig)
-  const float U3        = P1::uL3();            // V (optioneel aanwezig)
-  const float I3        = P1::iL3();            // A (optioneel aanwezig)
+  void fillEmComponent(JsonObject em){
+    const float pImp_kW = P1::powerImportkW();
+    const float pExp_kW = P1::powerExportkW();
+    const float phaseA = P1::pL1();
+    const float phaseB = P1::pL2();
+    const float phaseC = P1::pL3();
+    const float voltA = P1::uL1();
+    const float currA = P1::iL1();
+    const float voltB = P1::uL2();
+    const float currB = P1::iL2();
+    const float voltC = P1::uL3();
+    const float currC = P1::iL3();
 
-  // Netto actief vermogen (Shelly: + import, − export), in W
-  const float P = 1000.0f * (pImp_kW - pExp_kW);
+    const float aprtA = (isfinite(voltA) && isfinite(currA)) ? fabsf(voltA * currA) : NAN;
+    const float aprtB = (isfinite(voltB) && isfinite(currB)) ? fabsf(voltB * currB) : NAN;
+    const float aprtC = (isfinite(voltC) && isfinite(currC)) ? fabsf(voltC * currC) : NAN;
 
-  // Energiestanden (Wh, Shelly verwacht Wh)
-  const long  Ea_Wh = lroundf(1000.0f * P1::importTotalkWh()); // 1.8.0
-  const long  Er_Wh = lroundf(1000.0f * P1::exportTotalkWh()); // 2.8.0
+    const float pfA = (isfinite(phaseA) && isfinite(aprtA) && aprtA > 0.001f) ? constrain(phaseA / aprtA, -1.0f, 1.0f) : 0.0f;
+    const float pfB = (isfinite(phaseB) && isfinite(aprtB) && aprtB > 0.001f) ? constrain(phaseB / aprtB, -1.0f, 1.0f) : 0.0f;
+    const float pfC = (isfinite(phaseC) && isfinite(aprtC) && aprtC > 0.001f) ? constrain(phaseC / aprtC, -1.0f, 1.0f) : 0.0f;
 
-  // ====== sys ======
-  if ( !EM_only )
-  {
-    ArduinoJson::JsonObject sys = dst["sys"].to<ArduinoJson::JsonObject>();
-    sys["mac"]      = macID;                         // "64E8336A4AC8"
-    sys["device"]   = _id;                             // "shellyemg3-64e8336a4ac8"
-    sys["uptime"]   = uptime();                 // s
+    const float totalActPower = 1000.0f * (pImp_kW - pExp_kW);
+    const float totalAprtPower = (isfinite(aprtA) ? aprtA : 0.0f) + (isfinite(aprtB) ? aprtB : 0.0f) + (isfinite(aprtC) ? aprtC : 0.0f);
+    const float totalCurrent = (isfinite(currA) ? currA : 0.0f) + (isfinite(currB) ? currB : 0.0f) + (isfinite(currC) ? currC : 0.0f);
+
+    em["id"] = 0;
+    if (isfinite(phaseA)) em["a_act_power"] = phaseA;
+    if (isfinite(voltA)) em["a_voltage"] = voltA;
+    if (isfinite(currA)) em["a_current"] = currA;
+    if (isfinite(aprtA)) em["a_aprt_power"] = aprtA;
+    em["a_pf"] = pfA;
+
+    if (isfinite(phaseB)) em["b_act_power"] = phaseB;
+    if (isfinite(voltB)) em["b_voltage"] = voltB;
+    if (isfinite(currB)) em["b_current"] = currB;
+    if (isfinite(aprtB)) em["b_aprt_power"] = aprtB;
+    em["b_pf"] = pfB;
+
+    if (isfinite(phaseC)) em["c_act_power"] = phaseC;
+    if (isfinite(voltC)) em["c_voltage"] = voltC;
+    if (isfinite(currC)) em["c_current"] = currC;
+    if (isfinite(aprtC)) em["c_aprt_power"] = aprtC;
+    em["c_pf"] = pfC;
+
+    em["total_act_power"] = totalActPower;
+    em["total_aprt_power"] = totalAprtPower;
+    em["total_current"] = totalCurrent;
+    em["n_current"] = nullptr;
+    em.createNestedArray("errors");
+  }
+
+  void fillShellyStatus(JsonObject dst){
+    JsonObject wifi_sta = dst["wifi_sta"].to<JsonObject>();
+    wifi_sta["connected"] = (WiFi.status() == WL_CONNECTED);
+    wifi_sta["ssid"] = WiFi.SSID();
+    wifi_sta["rssi"] = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
+
+    JsonObject cloud = dst["cloud"].to<JsonObject>();
+    cloud["connected"] = false;
+
+    JsonObject mqtt = dst["mqtt"].to<JsonObject>();
+    mqtt["connected"] = false;
+
+    JsonObject em = dst["em:0"].to<JsonObject>();
+    fillEmComponent(em);
+  }
+
+  void fillRpcStatus(JsonObject dst){
+    JsonObject sys = dst["sys"].to<JsonObject>();
+    sys["mac"] = macID;
+    sys["device"] = _id;
+    sys["uptime"] = uptime();
 
     time_t now = 0;
     #ifdef ARDUINO_ARCH_ESP32
-      now = time(nullptr); // 0 als geen NTP — prima
+      now = time(nullptr);
     #endif
     sys["unixtime"] = now;
+    sys["cfg_rev"] = 1;
+    sys["fw_id"] = "2025.1.0";
+    sys["fw_ver"] = "3.1.0";
+    sys["app"] = "Pro3EM";
+    sys["model"] = "ShellyPro3EM";
+    sys["gen"] = 2;
 
-    sys["cfg_rev"]  = 1;
-    sys["fw_id"]    = "2025.1.0";
-    sys["fw_ver"]   = "3.1.0";
-    sys["app"]      = "EM";
-    sys["model"]    = "ShellyEMG3";
-  }
-
-  // ====== em ======
-  {
-    ArduinoJson::JsonObject em;
-    if ( EM_only ) em = dst;
-    else em = dst["em"].to<ArduinoJson::JsonObject>();
-    em["id"]                            = 0;   // kanaal 0
-    if (isfinite(P1)) em["a_act_power"] = P1;   // W (+ import / − export)
-    if (isfinite(P2)) em["b_act_power"] = P2;   // W (+ import / − export)
-    if (isfinite(P3)) em["c_act_power"] = P3;   // W (+ import / − export)
-
-    if (isfinite(U1)) em["a_voltage"] = U1;   // V (optioneel)
-    if (isfinite(I1)) em["a_current"] = I1;   // A (optioneel)
-    if (isfinite(U2)) em["b_voltage"] = U2;   // V (optioneel)
-    if (isfinite(I2)) em["b_current"] = I2;   // A (optioneel)
-    if (isfinite(U3)) em["c_voltage"] = U3;   // V (optioneel)
-    if (isfinite(I3)) em["c_current"] = I3;   // A (optioneel)
-    
-    em["freq"]                = 50.0f;      // Hz (constante fallback)
-    em["a_total_act_energy"]  = Ea_Wh;      // Wh import
-    em["a_total_ret_energy"]  = Er_Wh;      // Wh export
-    em["total_act_power"]     = P;  
-    em["total_current"]       = I1+I2+I3 ? I1+I2+I3 : 0;
-    em["n_current"]           = em["total_current"];
-  }
-
-  // ====== wifi ======
-  if ( !EM_only )
-  {
-    ArduinoJson::JsonObject wifi = dst["wifi"].to<ArduinoJson::JsonObject>();
+    JsonObject wifi = dst["wifi"].to<JsonObject>();
     wifi["sta_ip"] = WiFi.localIP().toString();
-    wifi["rssi"]   = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
-    wifi["ssid"]   = WiFi.SSID();
+    wifi["rssi"] = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
+    wifi["ssid"] = WiFi.SSID();
     wifi["status"] = (WiFi.status() == WL_CONNECTED) ? "got ip" : "disconnected";
+
+    JsonObject em = dst["em:0"].to<JsonObject>();
+    fillEmComponent(em);
   }
-}
   void handlePacket(AsyncUDPPacket packet) {
     // JSON parsen rechtstreeks uit het UDP-buffer (lengte-aware)
     JsonDocument req;  // ArduinoJson 7 dynamisch
@@ -176,14 +196,25 @@ inline void fillStatus( JsonObject dst, bool EM_only ){
     JsonDocument resp;
 
     if (method.equals(F("EM.GetStatus"))) {
-      fillStatus(resp.to<JsonObject>(), true);
+      fillEmComponent(resp.to<JsonObject>());
       String out; serializeJson(resp, out);
       packet.write((const uint8_t*)out.c_str(), out.length());
       return;
     }
     //only for the other responses
     resp["id"]  = req["id"].isNull() ? 1 : req["id"];
-    resp["src"] = "emu";
+    resp["src"] = _id;
+
+    if (method.equals(F("Shelly.ListMethods"))) {
+      JsonArray methods = resp["result"].to<JsonArray>();
+      methods.add("EM.GetStatus");
+      methods.add("Shelly.GetDeviceInfo");
+      methods.add("Shelly.GetStatus");
+      methods.add("Shelly.ListMethods");
+      String out; serializeJson(resp, out);
+      packet.write((const uint8_t*)out.c_str(), out.length());
+      return;
+    }
 
     if (method.equals(F("Shelly.GetDeviceInfo"))) {
       fillDeviceInfo(resp["result"].to<JsonObject>());
@@ -192,7 +223,13 @@ inline void fillStatus( JsonObject dst, bool EM_only ){
       return;
     }
     if (method.equals(F("Shelly.GetStatus"))) {
-      fillStatus(resp["result"].to<JsonObject>(),false);
+      fillRpcStatus(resp["result"].to<JsonObject>());
+      String out; serializeJson(resp, out);
+      packet.write((const uint8_t*)out.c_str(), out.length());
+      return;
+    }
+    if (method.equals(F("status")) || method.equals(F("Shelly.Status"))) {
+      fillShellyStatus(resp.to<JsonObject>());
       String out; serializeJson(resp, out);
       packet.write((const uint8_t*)out.c_str(), out.length());
       return;
@@ -211,6 +248,7 @@ inline void fillStatus( JsonObject dst, bool EM_only ){
 
 void ShellyEmuBegin(){
   if ( skipNetwork ) return;
+  if ( !isShellyPro3EmMimicSelected() ) return;
   shellyUDP.begin(/*also2220=*/true);  // luistert op 1010 én 2220
 }
 #else

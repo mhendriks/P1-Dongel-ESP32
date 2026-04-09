@@ -8,6 +8,10 @@
 #define PATH_DATA_FILES     "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@" STR(_VERSION_MAJOR) "." STR(_VERSION_MINOR) "/data"
 #define URL_INDEX_FALLBACK  "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/data"
 
+#ifndef ENABLE_MIMICS
+  #define ENABLE_MIMICS 1
+#endif
+
 //LED STUFF
 #define LED_BLUE  0x07
 #define LED_RED   0x070000
