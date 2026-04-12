@@ -68,6 +68,11 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
 
+5.4.3
+√ fix: sma local file server crash
+√ changes for the Shelly Pro 3EM RPC UDP support (Marstek)
+√ first draft HAN NVE support (disabled)
+
 
 5.5.0
 - Virtual P1 feature in settings (Ethernet/Ultra only)
@@ -88,7 +93,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE       //+D1MC 
+#define NRG_DONGLE       //+D1MC 
 // #define _P1P
 
 //SPECIAL
@@ -109,6 +114,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define POST_POWERCH
 // #define POST_MEENT
 // #define VIRTUAL_P1
+// #define HAN_READER
+// #define HAN_TESTDATA
+// #define HAN_TESTDATA_RAW
+// #define HAN_TESTDATA_DYNAMIC
 
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>

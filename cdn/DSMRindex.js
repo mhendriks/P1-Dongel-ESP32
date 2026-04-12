@@ -2721,7 +2721,7 @@ function initModbusMonitorControls() {
 			}
 			else if (i === "mimic") {
 			  const MIMICS = [
-				{ v: 0, t: t("mimic-disabled") },
+				{ v: 0, t: t("Disabled") },
 				{ v: 1, t: "HW P1" },
 				{ v: 2, t: "Shelly Pro 3EM" }
 			  ];

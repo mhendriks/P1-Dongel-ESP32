@@ -19,6 +19,9 @@
 
 #include "version.h" //first of all
 #include "Config.h"
+#ifdef HAN_READER
+  #include "han2Lib/src/han2.h"
+#endif
 
 // water sensor
 volatile float       WtrFactor      = 1;
@@ -67,6 +70,86 @@ struct ApiResponse {
 #define MQTT_RECONNECT_DEFAULT_TIME 10 //seconds
 
 P1Reader    slimmeMeter(&Serial1, DTR_IO);
+#ifdef HAN_READER
+han::HanReader hanMeter(&Serial1);
+#if defined(HAN_TESTDATA) || defined(HAN_TESTDATA_RAW)
+han::test::KamstrupNveReplayProfile hanTestProfile;
+#endif
+enum class SmartMeterSource : uint8_t {
+  DSMR,
+  HAN,
+};
+
+class SmartMeterHandle {
+ public:
+  SmartMeterHandle(P1Reader& dsmr, han::HanReader& han, SmartMeterSource source = SmartMeterSource::HAN)
+      : dsmr_(dsmr), han_(han), source_(source) {}
+
+  void setSource(SmartMeterSource source) { source_ = source; }
+  SmartMeterSource source() const { return source_; }
+  bool isHan() const { return source_ == SmartMeterSource::HAN; }
+
+  void doChecksum(bool checksum) {
+    if (isHan()) han_.doChecksum(checksum);
+    else dsmr_.doChecksum(checksum);
+  }
+
+  void enable(bool once) {
+    if (isHan()) han_.enable(once);
+    else dsmr_.enable(once);
+  }
+
+  void disable() {
+    if (isHan()) han_.disable();
+    else dsmr_.disable();
+  }
+
+  bool available() {
+    return isHan() ? han_.available() : dsmr_.available();
+  }
+
+  bool loop() {
+    return isHan() ? han_.loop() : dsmr_.loop();
+  }
+
+  String CompleteRaw() {
+    return isHan() ? han_.CompleteRaw() : dsmr_.CompleteRaw();
+  }
+
+  String raw() {
+    return isHan() ? han_.raw() : dsmr_.raw();
+  }
+
+  void clear() {
+    if (isHan()) han_.clear();
+    else dsmr_.clear();
+  }
+
+  void clearAll() {
+    if (isHan()) han_.clearAll();
+    else dsmr_.clearAll();
+  }
+
+  void ChangeStream(Stream* stream) {
+    if (isHan()) han_.ChangeStream(stream);
+    else dsmr_.ChangeStream(stream);
+  }
+
+  template<typename TData>
+  bool parse(TData* data, String* err = nullptr) {
+    return isHan() ? han_.parse(data, err) : dsmr_.parse(data, err);
+  }
+
+ private:
+  P1Reader& dsmr_;
+  han::HanReader& han_;
+  SmartMeterSource source_;
+};
+
+SmartMeterHandle smartMeter(slimmeMeter, hanMeter);
+#else
+#define smartMeter slimmeMeter
+#endif
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void LogFile(const char* payload, bool toDebug = false);

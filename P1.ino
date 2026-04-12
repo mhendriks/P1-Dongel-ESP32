@@ -1,12 +1,12 @@
 /*
-***************************************************************************  
+***************************************************************************
 **  Program  : handleSlimmeMeter - part of DSMRloggerAPI
 **  Version  : v4.2.1
 **
 **  Copyright (c) 2023 Martijn Hendriks
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
-***************************************************************************      
+***************************************************************************
 */
 
 volatile bool dtr1         = false;
@@ -19,17 +19,23 @@ uint32_t      SerialLastChecked = 0;
 void fP1Reader( void * pvParameters ){
   DebugTln(F("Enable slimme meter..."));
   SetupP1In();
+#ifndef HAN_READER
   SetupP1Out();
+#endif
   esp_task_wdt_add(nullptr);
-  slimmeMeter.enable(false);
+  smartMeter.enable(false);
 // #ifdef ULTRA
 //   // digitalWrite(17, LOW); //default on
 // #endif   
   while(true) {
     PrintHWMark(0);
+#ifndef HAN_READER
     CheckP1Signal();
     handleSlimmemeter();
     P1OutBridge();
+#else
+    handleHanReader();
+#endif
     esp_task_wdt_reset();
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
@@ -67,11 +73,11 @@ void SetupP1In(){
 
   Debugf("%u baud\n", (unsigned)(bPre40 ? 9600 : 115200));
   Serial1.setRxInvert(true); //only Rx  
-  slimmeMeter.doChecksum(!bPre40);
+  smartMeter.doChecksum(!bPre40);
 
   // Drain: clear the last bytes / ISR-race
   while (Serial1.available()) {(void)Serial1.read();vTaskDelay(1);}
-  slimmeMeter.clearAll(); //on errors clear buffer
+  smartMeter.clearAll(); //on errors clear buffer
   telegramCount = 0;
   telegramErrors = 0;
   
@@ -92,6 +98,203 @@ struct showValues {
     }
   }
 };
+
+static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
+  bP1offline = false;
+  P1error_cnt_sequence = 0;
+  DSMRdata = DSMRdataNew;
+  last_telegram_t = millis();
+
+#ifdef HAN_READER
+  if (isHan) {
+    gasDelivered = 0.0f;
+    gasDeliveredTimestamp = "";
+    waterDelivered = 0.0f;
+    waterDeliveredTimestamp = "";
+    mbusGas = 0;
+    mbusWater = 0;
+    WtrMtr = false;
+    bUseEtotals = false;
+    bWarmteLink = false;
+  }
+#endif
+
+  if ((telegramCount - telegramErrors) == 1) {
+    SMCheckOnce();
+  } else {
+    DSMRdata.identification = smID;
+    if (DSMRdata.p1_version_be_present) {
+      DSMRdata.p1_version = DSMRdata.p1_version_be;
+      DSMRdata.p1_version_be_present  = false;
+      DSMRdata.p1_version_present     = true;
+    }
+  }
+
+  if (bUseEtotals) {
+    DSMRdata.energy_delivered_tariff1_present = true;
+    DSMRdata.energy_delivered_tariff1 = DSMRdata.energy_delivered_total;
+    DSMRdata.energy_returned_tariff1_present = true;
+    DSMRdata.energy_returned_tariff1 = DSMRdata.energy_returned_total;
+  }
+
+  modifySmFaseInfo();
+  if (bWarmteLink) {
+    DSMRdata.timestamp = DSMRdata.mbus1_delivered.timestamp;
+    DSMRdata.timestamp_present = true;
+    gasDelivered = MbusDelivered(1);
+    gasDeliveredTimestamp = mbusDeliveredTimestamp;
+  } else  {
+    if (!DSMRdata.timestamp_present && !skipNetwork ) {
+      if (Verbose2) DebugTln(F("NTP Time set"));
+      if (getLocalTime(&tm)) {
+        DSTactive = tm.tm_isdst;
+        sprintf(cMsg, "%02d%02d%02d%02d%02d%02d%s\0\0",
+                (tm.tm_year -100 ), tm.tm_mon + 1, tm.tm_mday,
+                tm.tm_hour, tm.tm_min, tm.tm_sec, DSTactive ? "S" : "W");
+      } else {
+        strCopy(cMsg, sizeof(cMsg), actTimestamp);
+        LogFile("timestamp = old time", true);
+      }
+      DSMRdata.timestamp         = cMsg;
+      DSMRdata.timestamp_present = true;
+    }
+
+    if (mbusWater) {
+      waterDelivered = MbusDelivered(mbusWater);
+      waterDeliveredTimestamp = mbusDeliveredTimestamp;
+    }
+    if (mbusGas) {
+      gasDelivered = MbusDelivered(mbusGas);
+      gasDeliveredTimestamp = mbusDeliveredTimestamp;
+    }
+  }
+
+  processTelegram();
+  if (Verbose2) DSMRdata.applyEach(showValues());
+}
+
+static void handleParsedMeter(P1Reader& meter, bool isHan) {
+  if (!meter.available()) return;
+
+  ToggleLED(LED_ON);
+  CapTelegram = meter.CompleteRaw();
+  if (!isHan) Out1Avail = true;
+  if (bRawPort) ws_raw.println(CapTelegram);
+
+#ifdef VIRTUAL_P1
+  if (!isHan) virtSetLastData();
+#endif
+
+  if (showRaw) {
+    Debugf("Telegram Raw (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
+    showRaw = false;
+    meter.clear();
+    ToggleLED(LED_OFF);
+    return;
+  }
+
+  telegramCount++;
+  if (!bHideP1Log) {
+    DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n",
+            telegramCount, telegramErrors, meter.raw().length());
+  }
+  MyData DSMRdataNew = {};
+  String DSMRerror;
+
+  if (meter.parse(&DSMRdataNew, &DSMRerror)) {
+    applyParsedSmartMeterData(DSMRdataNew, isHan);
+  } else {
+    telegramErrors++;
+    if (P1error_cnt_sequence++ > 3) bP1offline = true;
+    DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
+    DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
+    meter.clear();
+  }
+
+  ToggleLED(LED_OFF);
+}
+
+#ifdef HAN_READER
+static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
+  if (!meter.available()) return;
+
+  ToggleLED(LED_ON);
+  CapTelegram = meter.CompleteRaw();
+  if (!isHan) Out1Avail = true;
+  if (bRawPort) ws_raw.println(CapTelegram);
+
+  if (!isHan) {
+#ifdef VIRTUAL_P1
+    virtSetLastData();
+#endif
+  }
+
+  if (showRaw) {
+    Debugf("Telegram Raw (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
+    showRaw = false;
+    meter.clear();
+    ToggleLED(LED_OFF);
+    return;
+  }
+
+  telegramCount++;
+  if (!bHideP1Log) {
+    DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n",
+            telegramCount, telegramErrors, meter.raw().length());
+  }
+  MyData DSMRdataNew = {};
+  String DSMRerror;
+
+  if (meter.parse(&DSMRdataNew, &DSMRerror)) {
+    applyParsedSmartMeterData(DSMRdataNew, isHan);
+  } else {
+    telegramErrors++;
+    if (P1error_cnt_sequence++ > 3) bP1offline = true;
+    DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
+    DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
+    meter.clear();
+  }
+
+  ToggleLED(LED_OFF);
+}
+
+static void handleParsedMeter(han::HanReader& meter, bool isHan) {
+  if (!meter.available()) return;
+
+  ToggleLED(LED_ON);
+  CapTelegram = meter.CompleteRaw();
+  if (!isHan) Out1Avail = true;
+  if (bRawPort) ws_raw.println(CapTelegram);
+
+  if (showRaw) {
+    Debugf("Telegram Raw (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
+    showRaw = false;
+    meter.clear();
+    ToggleLED(LED_OFF);
+    return;
+  }
+
+  telegramCount++;
+  if (!bHideP1Log) {
+    DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n",
+            telegramCount, telegramErrors, meter.raw().length());
+  }
+  MyData DSMRdataNew = {};
+  String DSMRerror;
+
+  if (meter.parse(&DSMRdataNew, &DSMRerror)) {
+    applyParsedSmartMeterData(DSMRdataNew, isHan);
+  } else {
+    telegramErrors++;
+    if (P1error_cnt_sequence++ > 3) bP1offline = true;
+    DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
+    DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
+    meter.clear();
+  }
+
+  ToggleLED(LED_OFF);
+}
+#endif
 
 void SetDTR(bool val){
   //  portENTER_CRITICAL_ISR(&mux);
@@ -160,7 +363,7 @@ void handleVirtualP1(){
     if (vp1_client.connected()) {
       bVirt_connected = false;
       vp1_client.stop();
-      slimmeMeter.ChangeStream(&Serial1);
+      smartMeter.ChangeStream(&Serial1);
     } else return;
   }
 
@@ -177,7 +380,7 @@ void handleVirtualP1(){
       DebugTln(F("Virtual P1 connected"));
       vp1_last_data = millis();
       bVirt_connected = true;
-      slimmeMeter.ChangeStream(&vp1_client);
+      smartMeter.ChangeStream(&vp1_client);
     }
   }
 }
@@ -186,27 +389,34 @@ void handleVirtualP1(){}
 #endif  
 
 //==================================================================================
+#ifdef HAN_READER
+void handleHanReader() {
+  smartMeter.setSource(SmartMeterSource::HAN);
+#if defined(HAN_TESTDATA) || defined(HAN_TESTDATA_RAW)
+  hanTestProfile.step(hanMeter, millis(),
+#ifdef HAN_TESTDATA_DYNAMIC
+                      true
+#else
+                      false
+#endif
+  );
+#else
+  smartMeter.loop();
+#endif
+  handleParsedMeter(smartMeter, true);
+  if (millis() - last_telegram_t > 35000) bP1offline = true;
+}
+#endif
+
+//==================================================================================
 void handleSlimmemeter()
 {
-  //DebugTf("showRaw (%s)\r\n", showRaw ?"true":"false");
-    slimmeMeter.loop();
-    if (slimmeMeter.available()) {
-      ToggleLED(LED_ON);
-      CapTelegram = slimmeMeter.CompleteRaw();
-      Out1Avail = true;
-      if ( bRawPort ) ws_raw.println( CapTelegram ); //print telegram to dongle port
-  
-#ifdef VIRTUAL_P1
-  virtSetLastData();
-#endif
-      if (showRaw) {
-        //-- process telegrams in raw mode
-        Debugf("Telegram Raw (%d)\n%s\n", slimmeMeter.raw().length(), CapTelegram.c_str() ); 
-        showRaw = false; //only 1 reading
-      } else processSlimmemeter();
-      ToggleLED(LED_OFF);
-    } //available
-    if (millis() - last_telegram_t > (bV5meter ? 3500 : 35000)) bP1offline = true;
+  #ifdef HAN_READER
+  smartMeter.setSource(SmartMeterSource::DSMR);
+  #endif
+  smartMeter.loop();
+  handleParsedMeter(smartMeter, false);
+  if (millis() - last_telegram_t > (bV5meter ? 3500 : 35000)) bP1offline = true;
 } // handleSlimmemeter()
 
 //==================================================================================
@@ -246,90 +456,6 @@ void SMCheckOnce(){
   DebugTf("bUseEtotals: %d\r\n",bUseEtotals);
   DebugTf("bWarmteLink: %d\r\n",bWarmteLink);
 }
-//==================================================================================
-void processSlimmemeter() {
-    telegramCount++;
-    
-    // example: [21:00:11][   9880/  8960] loop        ( 997): read telegram [28] => [140307210001S]
-    if (!bHideP1Log) {
-      // Debugln(F("\r\nP [Time----][FreeHeap/mBlck][Function----(line):"));
-      DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n", telegramCount, telegramErrors,slimmeMeter.raw().length());
-    }
-    
-    MyData DSMRdataNew = {};
-    String DSMRerror;
-        
-    if (slimmeMeter.parse(&DSMRdataNew, &DSMRerror))   // Parse succesful
-    {
-      bP1offline = false;
-      P1error_cnt_sequence = 0;
-      DSMRdata = DSMRdataNew;
-      last_telegram_t = millis();
-      if ( (telegramCount - telegramErrors) == 1) SMCheckOnce(); //only the first succesfull telegram
-      else {
-        //use the keys from the initial check; saves processing power
-        DSMRdata.identification = smID;
-        if ( DSMRdata.p1_version_be_present ){
-          DSMRdata.p1_version = DSMRdata.p1_version_be;
-          DSMRdata.p1_version_be_present  = false;
-          DSMRdata.p1_version_present     = true;
-        } 
-      }
-      if ( bUseEtotals ){
-        DSMRdata.energy_delivered_tariff1_present = true;
-        DSMRdata.energy_delivered_tariff1 = DSMRdata.energy_delivered_total;
-        DSMRdata.energy_returned_tariff1_present = true;
-        DSMRdata.energy_returned_tariff1 = DSMRdata.energy_returned_total;
-      }
-
-      modifySmFaseInfo();
-      if ( bWarmteLink ) { // IF HEATLINK
-      
-        DSMRdata.timestamp = DSMRdata.mbus1_delivered.timestamp;
-        DSMRdata.timestamp_present = true;
-        gasDelivered = MbusDelivered(1); //always #1
-        gasDeliveredTimestamp = mbusDeliveredTimestamp;
-
-      } else  {
-        if (!DSMRdata.timestamp_present && !skipNetwork ) { 
-          if (Verbose2) DebugTln(F("NTP Time set"));
-        if ( getLocalTime(&tm) ) {
-            DSTactive = tm.tm_isdst;
-            sprintf(cMsg, "%02d%02d%02d%02d%02d%02d%s\0\0", (tm.tm_year -100 ), tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,DSTactive?"S":"W");
-        } else {
-          strCopy(cMsg, sizeof(cMsg), actTimestamp);
-          LogFile("timestamp = old time",true);
-        }
-          DSMRdata.timestamp         = cMsg;
-          DSMRdata.timestamp_present = true;
-      } //!timestamp present
-
-      //-- handle mbus delivered values
-      if (mbusWater) {
-        waterDelivered = MbusDelivered(mbusWater);
-        waterDeliveredTimestamp = mbusDeliveredTimestamp;
-      }
-      if (mbusGas) {
-        gasDelivered = MbusDelivered(mbusGas);
-        gasDeliveredTimestamp = mbusDeliveredTimestamp;
-      }
-      } //no warmte link
-        
-      processTelegram();
-     
-      if (Verbose2) DSMRdata.applyEach(showValues());
-    } 
-    else // Parser error, print error
-    {
-      telegramErrors++;
-      if ( P1error_cnt_sequence++ > 3 ) bP1offline = true;
-      DebugTf("Parse error\r\n%s\r\n\r\n", DSMRerror.c_str());
-      DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
-      slimmeMeter.clear(); //on errors clear buffer
-    }
-  
-} // handleSlimmeMeter()
-
 //called every hour
 void UpdateYesterday( ){
 #ifdef DEBUG

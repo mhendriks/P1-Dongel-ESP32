@@ -153,6 +153,12 @@ mod_conf *active_mod_conf = &module_config[0];
 #define OPT2 ""
 #define OPT3 ""
 
+#ifdef HAN_READER
+  #define OPT3A "[HAN]"
+#else
+  #define OPT3A
+#endif
+
 #ifdef MBUS
   #define OPT4  "[MODBUS]"
 #else
@@ -183,6 +189,6 @@ mod_conf *active_mod_conf = &module_config[0];
   #define OPT8
 #endif
 
-#define ALL_OPTIONS PROFILE OPT1 OPT2 OPT3 OPT4 OPT5 OPT6 OPT7 OPT8
+#define ALL_OPTIONS PROFILE OPT1 OPT2 OPT3 OPT3A OPT4 OPT5 OPT6 OPT7 OPT8
 #define _DEFAULT_MQTT_TOPIC _DEFAULT_HOSTNAME "/"
 #define _DEFAULT_HOMEPAGE  "/DSMRindexEDGE.html"
