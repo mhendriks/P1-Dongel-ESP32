@@ -494,8 +494,10 @@ void startTelnet()
 //=======================================================================
 void startMDNS(const char *Hostname) {
   if ( skipNetwork ) return;
+  
   DebugTf("[1] mDNS setup as [%s.local]\r\n", Hostname);
-  String MACID = macID;
+  String lowerMACID = macID;
+  lowerMACID.toLowerCase();
 
   if ( !MDNS.begin(Hostname) ) {
     DebugTln(F("[3] Error setting up MDNS responder!\r\n"));
@@ -506,29 +508,34 @@ void startMDNS(const char *Hostname) {
     MDNS.addService("hwenergy", "tcp", 80);
     MDNS.addService("homewizard", "tcp", 80);
 
-    MDNS.addServiceTxt("hwenergy", "tcp", "serial", MACID);
+    MDNS.addServiceTxt("hwenergy", "tcp", "serial", lowerMACID);
     MDNS.addServiceTxt("hwenergy", "tcp", "product_type", "HWE-P1");
     MDNS.addServiceTxt("hwenergy", "tcp", "product_name", "P1 Meter");
     MDNS.addServiceTxt("hwenergy", "tcp", "path", "/api/v1");
     MDNS.addServiceTxt("hwenergy", "tcp", "api_enabled", "1");
 
-    MDNS.addServiceTxt("homewizard", "tcp", "serial", MACID);
+    MDNS.addServiceTxt("homewizard", "tcp", "serial", lowerMACID);
     MDNS.addServiceTxt("homewizard", "tcp", "product_type", "HWE-P1");
     MDNS.addServiceTxt("homewizard", "tcp", "product_name", "P1 Meter");
     MDNS.addServiceTxt("homewizard", "tcp", "path", "/api/v1");
     MDNS.addServiceTxt("homewizard", "tcp", "api_enabled", "1");
   }
-// #else
+
+  if (isShellyPro3EmMimicSelected()) {
+    String shellyInstance = "shellypro3em-";
+    shellyInstance += lowerMACID;
+
+    MDNS.addService("shelly", "tcp", 80);
+    mdns_service_instance_name_set("_shelly", "_tcp", shellyInstance.c_str());
+    MDNS.addServiceTxt("shelly", "tcp", "gen", "2");
+    MDNS.addServiceTxt("shelly", "tcp", "app", "Pro3EM");
+    MDNS.addServiceTxt("shelly", "tcp", "ver", "1.4.2");
+  }
+
   MDNS.addService( Hostname, "tcp", 80);
   MDNS.addService( "p1dongle", "tcp", 80);
-  MDNS.addServiceTxt("p1dongle", "tcp", "id", MACID );
-#ifdef ULTRA    
-  MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1U" );    
-#elif defined (ETHERNET)
-  MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1E" );    
-#else
-  MDNS.addServiceTxt("p1dongle", "tcp", "hw", "P1P" );    
-#endif
+  MDNS.addServiceTxt("p1dongle", "tcp", "id", lowerMACID );
+  MDNS.addServiceTxt("p1dongle", "tcp", "hw", HWTypeNames[HardwareType] );    
 } // startMDNS()
 
 #endif
