@@ -26,32 +26,6 @@ static String   _sma_sid;
 static uint32_t _sma_sid_t0 = 0;
 static const size_t SMA_MAX_RESPONSE_LEN = 2048;
 
-static void smaLogEvent(const char* msg) {
-  LogFile(msg, false);
-}
-
-static void smaLogCode(const char* prefix, int value) {
-  char msg[96];
-  snprintf(msg, sizeof(msg), "SMA: %s %d", prefix, value);
-  LogFile(msg, false);
-}
-
-static void smaDebugResponse(const char* label, const String& resp) {
-#ifdef DEBUG
-  const size_t maxPreview = 200;
-  DebugT(label);
-  Debug(" len=");
-  Debug(resp.length());
-  if (resp.length() > maxPreview) {
-    Debug(" preview=");
-    Debugln(resp.substring(0, maxPreview) + "...");
-  } else {
-    Debug(" body=");
-    Debugln(resp);
-  }
-#endif
-}
-
 static bool smaReadMetricValue(JsonObject dev, const char* key, long& out) {
   if (dev.isNull()) return false;
 
@@ -71,12 +45,16 @@ static bool smaReadMetricValue(JsonObject dev, const char* key, long& out) {
 static bool smaHttpPOST(const String& url, const String& body, String& out) {
   out = "";
   HTTPClient http;
-  WiFiClient *client = nullptr;
   WiFiClientSecure *clientTLS = nullptr;
 
   bool https = url.startsWith("https://");
-  if (https) { clientTLS = new WiFiClientSecure(); clientTLS->setInsecure(); http.begin(*clientTLS, url); }
-  else       { client   = new WiFiClient();        http.begin(*client,   url); }
+  if (https) {
+    clientTLS = new WiFiClientSecure();
+    clientTLS->setInsecure();
+    http.begin(*clientTLS, url);
+  } else {
+    http.begin(url);
+  }
 
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Connection", "close");
@@ -84,45 +62,34 @@ static bool smaHttpPOST(const String& url, const String& body, String& out) {
   WDT_FEED();
   int rc = http.POST(body);
   WDT_FEED();
-  if (rc != 200) smaLogCode("HTTP rc", rc);
   if (rc == 200) {
     int len = http.getSize();
     if (len > 0 && len > (int)SMA_MAX_RESPONSE_LEN) {
-      DebugT("SMA response too large: "); Debugln(len);
-      smaLogCode("response too large", len);
       http.end();
       WDT_FEED();
       if (clientTLS) delete clientTLS;
-      if (client)    delete client;
       return false;
     }
     out = http.getString();
     if (out.length() > SMA_MAX_RESPONSE_LEN) {
-      DebugT("SMA response body too large: "); Debugln(out.length());
-      smaLogCode("body too large", out.length());
       out = "";
       http.end();
       WDT_FEED();
       if (clientTLS) delete clientTLS;
-      if (client)    delete client;
       return false;
     }
     out.trim();
     if (!out.startsWith("{")) {
-      DebugT("SMA response is not JSON: "); Debugln(out.substring(0, min((size_t)80, out.length())));
-      smaLogEvent("SMA: response not JSON");
       out = "";
       http.end();
       WDT_FEED();
       if (clientTLS) delete clientTLS;
-      if (client)    delete client;
       return false;
     }
   }
   http.end();
   WDT_FEED();
   if (clientTLS) delete clientTLS;
-  if (client)    delete client;
   return (rc == 200 && out.length() > 0);
 }
 
@@ -130,39 +97,37 @@ static bool smaLogin(const String& baseUrl, const String& password, const char* 
   String resp;
   String url  = baseUrl + "/dyn/login.json";
   String body = String("{\"pass\":\"") + password + "\",\"right\":\"" + right + "\"}";
-  if (!smaHttpPOST(url, body, resp)) { _sma_sid = ""; DebugTln("Error smaHttpPOST"); smaLogEvent("SMA: login POST failed"); return false; }
-  smaDebugResponse("sma login resp:", resp);
+  if (!smaHttpPOST(url, body, resp)) { _sma_sid = ""; DebugTln("Error smaHttpPOST"); return false; }
   JsonDocument doc;
-  if (deserializeJson(doc, resp))     { _sma_sid = ""; DebugTln("Error sma deserializeJson error"); smaLogEvent("SMA: login JSON parse failed"); return false; }
+  if (deserializeJson(doc, resp))     { _sma_sid = ""; DebugTln("Error sma deserializeJson error"); return false; }
   String sid = doc["result"]["sid"].as<String>();
-  if (sid.isEmpty())                  { _sma_sid = ""; DebugTln("Error SMA sid empty"); smaLogEvent("SMA: login sid empty"); return false; }
+  if (sid.isEmpty())                  { _sma_sid = ""; DebugTln("Error SMA sid empty"); return false; }
   _sma_sid = sid; _sma_sid_t0 = millis();
   return true;
 }
 
 static bool smaGetPacAndDay(const String& baseUrl, long& pac_W, long& day_Wh) {
   if (_sma_sid.isEmpty() || (millis() - _sma_sid_t0) > 12UL*60UL*1000UL) {
-    if (!smaLogin(baseUrl, SMAinv.Token)) { smaLogEvent("SMA: refresh sid failed"); return false; } // Token == password (bewust)
+    if (!smaLogin(baseUrl, SMAinv.Token)) return false; // Token == password (bewust)
   }
   String resp;
   String url  = baseUrl + "/dyn/getValues.json?sid=" + _sma_sid;
   String body = "{\"destDev\":[],\"keys\":[\"6100_40263F00\",\"6400_00262200\"]}";
-  if (!smaHttpPOST(url, body, resp)) { DebugTln("Error smaHttpPOST values"); smaLogEvent("SMA: values POST failed"); return false; }
-  smaDebugResponse("sma values resp:", resp);
+  if (!smaHttpPOST(url, body, resp)) { DebugTln("Error smaHttpPOST values"); return false; }
   JsonDocument doc; // ~8k is genoeg voor deze response
-  if (deserializeJson(doc, resp)) { smaLogEvent("SMA: values JSON parse failed"); return false; }
+  if (deserializeJson(doc, resp)) return false;
 
   // eerste device
   JsonObject result = doc["result"];
-  if (result.isNull()) { smaLogEvent("SMA: values missing result"); return false; }
-  auto it = result.begin(); if (it == result.end()) { smaLogEvent("SMA: values result empty"); return false; }
+  if (result.isNull()) return false;
+  auto it = result.begin(); if (it == result.end()) return false;
   JsonObject dev = it->value();
-  if (dev.isNull()) { smaLogEvent("SMA: values device invalid"); return false; }
+  if (dev.isNull()) return false;
 
   long pac = 0;
   long day = 0;
-  if (!smaReadMetricValue(dev, "6100_40263F00", pac)) { smaLogEvent("SMA: missing pac value"); return false; }
-  if (!smaReadMetricValue(dev, "6400_00262200", day)) { smaLogEvent("SMA: missing day value"); return false; }
+  if (!smaReadMetricValue(dev, "6100_40263F00", pac)) return false;
+  if (!smaReadMetricValue(dev, "6400_00262200", day)) return false;
 
   pac_W  = pac;
   day_Wh = day;
