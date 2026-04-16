@@ -292,6 +292,12 @@ void readSettings(bool show)
   if (doc["udp"].is<bool>()) bUDPenabled = doc["udp"];
   #endif
   if (doc["nrgm-enabled"].is<bool>()) bNRGMenabled = doc["nrgm-enabled"];
+  else {
+    // legacy migration from <=5.2.9
+    bNRGMenabled = (Pref.peers > 0);
+    writeSettings();
+  }
+
   #ifdef NETSWITCH
   if (doc["netsw-enabled"].is<bool>()) bNETSWenabled = doc["netsw-enabled"];
   #endif

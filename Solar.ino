@@ -376,11 +376,15 @@ void GetSolarDataN() {
   GetSolarData(OMNIKSOL,   false);
 }
 
+uint32_t totalSolarDailyWh() {
+  return Enphase.Daily + SolarEdge.Daily + SMAinv.Daily + Omniksol.Daily;
+}
+
 void SendSolarJson() {
   bool any = Enphase.Available || SolarEdge.Available || SMAinv.Available || Omniksol.Available;
   if (!any) { httpServer.send(200, "application/json", "{\"active\":false}"); return; }
 
-  uint32_t totalDaily  = Enphase.Daily  + SolarEdge.Daily  + SMAinv.Daily  + Omniksol.Daily;
+  uint32_t totalDaily  = totalSolarDailyWh();
   uint32_t totalActual = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual + Omniksol.Actual;
   uint32_t totalWp     = Enphase.Wp     + SolarEdge.Wp     + SMAinv.Wp     + Omniksol.Wp;
 

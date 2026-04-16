@@ -23,7 +23,6 @@ BACKLOG
 - Rob v D: 'Actueel' --> 'Grafisch' staat gasverbruik (blauw) vermeld, terwijl ik geen gas heb (verbruik is dan ook nul). Waterverbruik zie ik daar niet. In de uur/dag/maand overzichten zie ik wel water en geen gas.
 - RNGhours files vergroten (nu 48h -> 336h) (Broes)
 - teruglevering dashboard verkeerde verhoudingen ( Pieter ) 
-- RNGDays 31 days
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
 - HA auto update ala : https://www.zigbee2mqtt.io/guide/usage/ota_updates.html#automatic-checking-for-available-updates
@@ -36,7 +35,6 @@ BACKLOG
 - inlezen van solar config in frontend
 - default mqtt : mqtt://core-mosquitto:1883 en addons als user
 - change: solar support for 3 inverters
-- Shelly EM udp emulation
 - issue cost gas 4.16/5.2 (Karel)
 - ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
 - De daily insights kunnen downloaden zoals RNGhours (Harrie)
@@ -68,17 +66,17 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
 
-5.4.3
-√ fix: sma local file server crash
-√ changes for the Shelly Pro 3EM RPC UDP support (Marstek)
-√ first draft HAN NVE support (disabled)
-
-
 5.5.0
+- fix: frontend calculation production Self ... 
+- fix: update dash after new day is started
+- add PV production to history files
+- change: days storage to 31 days
+- first draft HAN NVE support (disabled)
+
+5.6.0
 - Virtual P1 feature in settings (Ethernet/Ultra only)
 - add: Ultra dongles are able to make custom modbus mappings via json file
 
-- add PV production to history files
 - refactor: asyncwebserver
 - update button in HA to trigger the update (mqtt based #70)
 
@@ -93,7 +91,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-#define NRG_DONGLE       //+D1MC 
+// #define NRG_DONGLE       //+D1MC 
 // #define _P1P
 
 //SPECIAL
