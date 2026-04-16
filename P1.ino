@@ -511,7 +511,7 @@ void processTelegram(){
     if ( hour(actT) == 1 && hour(newT) == 3 ){
       uint8_t slot = CalcSlot(RINGHOURS, false); //based on actT
       slot = ( slot + 1 ) % RingFiles[RINGHOURS].slots; //increase slot 1h to next slot = 2h
-      writeRingFileAtSlot(RINGHOURS, slot, nullptr, true); //todo winter -> summer time issue actT = 1h so next slot should be written too
+      writeRingFileAtSlot(RINGHOURS, slot, nullptr, true, false); //todo winter -> summer time issue actT = 1h so next slot should be written too
       DebugTln(F("DST gap fix"));
     }
     UpdateYesterday();

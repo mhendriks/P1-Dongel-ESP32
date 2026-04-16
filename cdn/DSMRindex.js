@@ -68,6 +68,45 @@ let TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wm
 let hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
 let day = 0;
 
+function getTimestampDayKey(timestampValue) {
+  if (typeof timestampValue !== "string" || timestampValue.length < 6) return 0;
+
+  const year = Number(timestampValue.slice(0, 2));
+  const month = Number(timestampValue.slice(2, 4));
+  const day = Number(timestampValue.slice(4, 6));
+
+  if ([year, month, day].some(Number.isNaN)) return 0;
+  return (year * 10000) + (month * 100) + day;
+}
+
+function resetDailyHistoryBuffers() {
+  hist_arrG = [0, 0, 0, 0];
+  hist_arrW = [0, 0, 0, 0];
+  hist_arrPa = [0, 0, 0, 0];
+  hist_arrPi = [0, 0, 0, 0];
+}
+
+function refreshSolarSelfUse() {
+  const json = objDAL.getSolar();
+  const dailyProduction = Number(json?.total?.daily) || 0;
+
+  if (!dailyProduction) {
+    document.getElementById('scr').innerHTML = "-";
+    document.getElementById('seue').innerHTML = "-";
+    return;
+  }
+
+  const exportedWh = Math.max(0, Number(Pi_today) * 1000);
+  const importedWh = Math.max(0, Number(Pd_today) * 1000);
+  const selfUsedWh = Math.max(0, dailyProduction - exportedWh);
+  const totalUsageWh = selfUsedWh + importedWh;
+
+  document.getElementById('scr').innerHTML = Number((selfUsedWh / dailyProduction) * 100).toFixed(0);
+  document.getElementById('seue').innerHTML = totalUsageWh > 0
+    ? Number((selfUsedWh / totalUsageWh) * 100).toFixed(0)
+    : "-";
+}
+
 //default struct for the gauge element
 // ! structuredClone can NOT copy a struct with functions
 let cfgDefaultGAUGE = {
@@ -611,17 +650,7 @@ function UpdateSolar(){
 		document.getElementById('dash_solar_p').innerHTML = formatValue(json.total.daily/1000.0);
 		document.getElementById('dash_solar').style.display = 'block';
 		trend_solar.options.title.text = Number(json.total.actual).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" W";
-
-		//SCR
-		if ( !Pi_today ) return;
-		// console.log("Pi_today: " + Pi_today*1000);
-		// console.log("json.total.daily: " + json.total.daily);
-		if ( json.total.daily ) document.getElementById('scr').innerHTML = Number(((json.total.daily-(1000*Pi_today))/json.total.daily)*100).toFixed(0);
-		else document.getElementById('seue').innerHTML = "-";
-		// Number(maxV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
-		//SEUE				( Productie - Teruglevering ) / ( Afname + Productie - Teruglevering )
-		if ( json.total.daily ) document.getElementById('seue').innerHTML = Number( (json.total.daily-(1000*Pi_today)) / (json.total.daily-(1000*Pi_today)+(Pd_today*1000))*100 ).toFixed(0);
-		else document.getElementById('seue').innerHTML = "-";
+		refreshSolarSelfUse();
 	}
  }
 
@@ -762,12 +791,6 @@ function refreshDashboard(json){
 	setPresentationType('TAB'); //zet grafische mode uit
 	
 	let Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
-	//check new day = refresh
-	let DayEpochTemp = Math.floor(new Date().getTime() / 86400000.0);
-	if (DayEpoch != DayEpochTemp || hist_arrP.length < 4 ) {
-		if ( EnableHist ) refreshHistData("Days"); //load data first visit
-		DayEpoch = DayEpochTemp;
-	}
 
 		//-------CHECKS
 
@@ -775,6 +798,18 @@ function refreshDashboard(json){
 		if (json.timestamp.value == "-") {
 			console.log("timestamp missing : p1 data incorrect!");
 			return;
+		}
+
+		const dayKey = getTimestampDayKey(json.timestamp.value);
+		if (dayKey && DayEpoch !== dayKey) {
+			resetDailyHistoryBuffers();
+			Pi_today = 0;
+			Pd_today = 0;
+			if (EnableHist) objDAL.refreshHist();
+			if (SolarActive) objDAL.refreshSolar();
+			DayEpoch = dayKey;
+		} else if (!DayEpoch && EnableHist) {
+			objDAL.refreshHist();
 		}
 		
 		//-------TOON METERS
@@ -918,6 +953,7 @@ function refreshDashboard(json){
       
 		  Pi_today = Parri[0];
 		  Pd_today = Parra[0];
+		  refreshSolarSelfUse();
 	        
       if (Injection) 
       {
@@ -1068,7 +1104,11 @@ function bootsTrapMain()
 			default:
 				//redirect to cmd
 				const btn = document.getElementById("b"+cmd);
-				if (btn) btn.click(); else console.log("Button b"+cmd+" not found");
+				if (btn) {
+					btn.click();
+					activeTab = btn.id;
+					openTab();
+				} else console.log("Button b"+cmd+" not found");
 		}
 	}
     document.getElementById('dongle_io').addEventListener('input', NTSWupdateVisibility);
@@ -1824,6 +1864,7 @@ function formatFailureLog(svalue) {
         data.data[i].p_ert2= (data.data[i].values[3] - data.data[slotbefore].values[3]);
 		data.data[i].p_gd  = (data.data[i].values[4] - data.data[slotbefore].values[4]);
         data.data[i].water = (data.data[i].values[5] - data.data[slotbefore].values[5]);
+        data.data[i].solar = (data.data[i].values.length > 6) ? Number(data.data[i].values[6]) : -1;
 
         //sums of T1 & T2
 		data.data[i].p_ed  = (data.data[i].p_edt1 + data.data[i].p_edt2);
@@ -1856,6 +1897,7 @@ function formatFailureLog(svalue) {
         data.data[i].p_ert2    = data.data[i].values[3];        
         data.data[i].p_gd      = data.data[i].values[4];
 		data.data[i].water     = data.data[i].values[5];
+        data.data[i].solar     = (data.data[i].values.length > 6) ? Number(data.data[i].values[6]) : -1;
         data.data[i].p_ed      = (data.data[i].p_edt1 + data.data[i].p_edt2);
         data.data[i].p_er      = (data.data[i].p_ert1 + data.data[i].p_ert2);        
         data.data[i].p_edw     = (data.data[i].p_ed * 1000);
@@ -1910,7 +1952,7 @@ function refreshHistData(type) {
 			// Extra logica voor dashboard
 			let act_slot = data.actSlot;
 			for (let i = 0; i < 4; i++) {
-				let tempslot = math.mod(act_slot - i, 15);
+				let tempslot = math.mod(act_slot - i, data.data.length);
 				let values = data.data[tempslot].values;
 				hist_arrG[i] = values[4];
 				hist_arrW[i] = values[5];
@@ -1955,7 +1997,7 @@ function CopyTelegram(){
   } // refreshSmTelegram()
 
   //format a value based on the locale of the client
-  function formatValue(value)
+function formatValue(value)
   {
     let t="";
     if (!isNaN(value) ) 
@@ -2021,12 +2063,24 @@ function CopyTelegram(){
     document.getElementById("actual").style.display    = "block";
 
   } // showActualTable()
+
+  function hasSolarHistory(data)
+  {
+    if (!data || !Array.isArray(data.data)) return false;
+    return data.data.some(entry =>
+      Array.isArray(entry.values) &&
+      entry.values.length > 6 &&
+      !isNaN(Number(entry.values[6])) &&
+      Number(entry.values[6]) > 0
+    );
+  }
     
       
   //============================================================================  
   function showHistTable(data, type)
   { 
     console.log("showHistTable("+type+")");
+    const solarVisible = (type == "Days") && hasSolarHistory(data);
     // the last element has the metervalue, so skip it
     let stop = data.actSlot + 1;
     let start = data.data.length + data.actSlot ;
@@ -2043,7 +2097,7 @@ function CopyTelegram(){
       let tref = tableRef.getElementsByTagName('tbody')[0];
       let itemid = type+"Table_"+type+"_R"+index;
       let nCells = 5;
-      if (type == "Days") nCells += 1;
+      if (type == "Days") nCells += 2;
       createTableRowWithCells( tref, itemid, nCells, '-');
 
         /*
@@ -2080,6 +2134,12 @@ function CopyTelegram(){
       if (data.data[index].water >= 0) tableCells[4].innerHTML = Number(data.data[index].water).toLocaleString( 'nl-NL' );
 
       if (type == "Days") tableCells[5].innerHTML = Number( (data.data[index].costs_e + data.data[index].costs_g) * 1.0 ).toLocaleString('nl-NL', {minimumFractionDigits: 2, maximumFractionDigits: 2} );
+      if (type == "Days") {
+        const solarValue = data.data[index].solar;
+        tableCells[6].innerHTML = solarValue >= 0
+          ? Number(solarValue).toLocaleString('nl-NL', {minimumFractionDigits: 3, maximumFractionDigits: 3})
+          : "-";
+      }
       
     };
 
@@ -2089,6 +2149,7 @@ function CopyTelegram(){
     //--- show table
     document.getElementById("lastHours").style.display = "block";
     document.getElementById("lastDays").style.display  = "block";
+    if (type == "Days") show_hide_column2('lastDaysTable', 6, solarVisible);
 
   } // showHistTable()
 
@@ -3357,6 +3418,7 @@ function initModbusMonitorControls() {
     document.getElementById("dataChart" ).style.display = "none";
     document.getElementById("gasChart"  ).style.display = "none";
     document.getElementById("waterChart").style.display = "none";
+    document.getElementById("solarChart").style.display = "none";
   }
     
   //============================================================================  

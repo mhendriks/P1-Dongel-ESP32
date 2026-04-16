@@ -31,7 +31,7 @@
       <li><a id='bHoursTab'     data-i18n-key="mnu-hour" class='tabButton nav-item' href="#HoursTab" >Uur</a></li>
       <li><a id='bDaysTab'      data-i18n-key="mnu-day" class='tabButton nav-item' href="#DaysTab" >Dag</a></li>
       <li><a id='bMonthsTab'    data-i18n-key="mnu-month" class='tabButton nav-item' href="#MonthsTab" >Maand</a></li>
-      <li><a id='bPlafondTab'   data-i18n-key="mnu-plafond" class='tabButton nav-item' href="#PlafondTab" >PrijsPlafond</a></li>
+      <li><a id='bPlafondTab'   data-i18n-key="mnu-plafond" class='tabButton nav-item' href="#PlafondTab" >Na Salderen</a></li>
 	  <li>
 	  	<a id='bSysInfoTab' class='nav-img nav-item' href="#SysInfoTab" ><span class="iconify" data-icon="mdi-information-outline"></span></a>
 		<ul>
@@ -117,6 +117,8 @@
 		<col class="col3"/>
 		<col class="col4"/>
 		<col class="col5"/>
+		<col class="col6"/>
+		<col class="col7"/>
 		</colgroup>
       <thead>
         <tr>
@@ -126,6 +128,7 @@
             <th class=mbus-name data-i18n-key="lbl-gas-use">Gas-<br>verbruik<br>(m3)</th>
 			<th data-i18n-key="lbl-water-use">Water-<br>verbruik<br>(m3)</th>
             <th data-i18n-key="lbl-costs">Kosten</th>
+            <th>Solar<br>productie<br>(kWh)</th>
         </tr>
       </thead>
       <tbody>
@@ -241,22 +244,145 @@
   </section> <!-- END MonthsTab -->
   
   <section id="PlafondTab" class="tabName">
-	<h2 data-i18n-key="tle-cap">Prijsplafond (NL)</h2>
-	<p data-i18n-key="tle-cap-description">Deze grafiek laat verbruik zien t.o.v. prijsplafond om een idee te geven hoe het verbruik zich ontwikkelt.<br>
-	In de jaargrafieken is de seizoensinvloed meegenomen. In de maandgrafieken is de verdeling linear.<br>
-	Het is een hulpmiddel om een beeld te krijgen van het gebruik ten opzichte van het prijsplafond.</p>
-    <div>
+    <style>
+      #PlafondTab {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 0 auto;
+      }
+      #PlafondTab .impact-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        margin: 18px 0 20px 0;
+      }
+      #PlafondTab .impact-tariff-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin: 16px 0 6px 0;
+      }
+      #PlafondTab .impact-tariff-card {
+        background: linear-gradient(180deg,#ffffff,#f8fafc);
+        border-radius: 14px;
+        padding: 14px 16px;
+        box-shadow: 0 8px 20px rgba(21,43,77,.06);
+      }
+      #PlafondTab .impact-tariff-card input {
+        width: 100%;
+        margin-top: 8px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #d7dfeb;
+        font: inherit;
+        box-sizing: border-box;
+      }
+      #PlafondTab .impact-charts-grid {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 18px;
+        align-items: start;
+      }
+      #PlafondTab .impact-chart-card {
+        display: flex;
+        flex-direction: column;
+        border-radius: 18px;
+        padding: 16px;
+        box-shadow: 0 12px 28px rgba(21,43,77,.08);
+        min-height: 320px;
+      }
+      #PlafondTab .impact-chart-wrap {
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 220px;
+        height: 100%;
+      }
+      #PlafondTab .impact-chart-wrap canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+      @media (max-width: 820px) {
+        #PlafondTab .impact-charts-grid {
+          grid-template-columns: 1fr;
+        }
+        #PlafondTab .impact-chart-card {
+          min-height: 260px;
+        }
+        #PlafondTab .impact-chart-wrap {
+          min-height: 190px;
+        }
+      }
+    </style>
+	<h2 data-i18n-key="tle-cap">Na Salderen</h2>
+	<p data-i18n-key="tle-cap-description">Vanaf 1 januari 2027 stopt voor Nederlandse huishoudens de salderingsregeling.<br>
+	Je krijgt dan minimaal 50% van de kale energieprijs als vergoeding voor teruglevering, terwijl energieleveranciers mogelijk ook terugleverkosten rekenen.<br>
+	Met productiedata wordt ook direct eigen verbruik zichtbaar; zonder productiedata blijft de vergelijking gebaseerd op afname en teruglevering.</p>
+	<div>
       <b data-i18n-key="tle-graph-per">Grafiek per:</b>
       <input type="radio" id="btnYear" name=burnup onchange="setViewYEAR()" checked/>
       <label data-i18n-key="lbl-year" for="btnYear">Jaar</label>
       <input type="radio" id="btnMonth" name=burnup onchange="setViewMONTH()" />
       <label data-i18n-key="lbl-month" for="btnMonth">Maand</label>
     </div>
-    
-    <div class="chart-container" style="position: relative; height:40vh; width:80vw">
-		<canvas id="myChart1" ></canvas>
-		<canvas id="myChart2" ></canvas>
-	</div>
+
+    <div class="impact-tariff-grid">
+      <div class="impact-tariff-card">
+        <div data-i18n-key="impact-import-tariff" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5a6d8c;">Afnametarief</div>
+        <input id="impactImportTariffInput" type="text" inputmode="decimal" placeholder="0,300">
+      </div>
+      <div class="impact-tariff-card">
+        <div data-i18n-key="impact-net-feed-in" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#51715c;">Netto opbrengst per teruggeleverde kWh</div>
+        <input id="impactExportTariffInput" type="text" inputmode="decimal" placeholder="0,000">
+      </div>
+    </div>
+    <div id="impactTariffNote" data-i18n-key="impact-tariff-note-static" style="margin:0 0 18px 0;color:#58708e;font-size:13px;line-height:1.5;">
+      Gebruik eigen tarieven om het effect vanaf 2027 door te rekenen.
+    </div>
+
+    <div class="impact-summary-grid">
+      <div style="background:linear-gradient(145deg,#f6f9ff,#e9f0ff);border-radius:16px;padding:16px 18px;box-shadow:0 10px 24px rgba(27,74,133,.08);">
+        <div data-i18n-key="impact-import" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5a6d8c;">Afname</div>
+        <div id="impactImportValue" style="font-size:28px;font-weight:700;color:#16355f;margin-top:8px;">-</div>
+      </div>
+      <div style="background:linear-gradient(145deg,#f1fff7,#e2f8eb);border-radius:16px;padding:16px 18px;box-shadow:0 10px 24px rgba(28,110,64,.08);">
+        <div data-i18n-key="impact-export" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#51715c;">Teruglevering</div>
+        <div id="impactExportValue" style="font-size:28px;font-weight:700;color:#135333;margin-top:8px;">-</div>
+      </div>
+      <div id="impactSolarCard" style="background:linear-gradient(145deg,#fff8ec,#ffe8b8);border-radius:16px;padding:16px 18px;box-shadow:0 10px 24px rgba(161,110,11,.10);display:none;">
+        <div data-i18n-key="impact-production" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8a5e0b;">Productie</div>
+        <div id="impactSolarValue" style="font-size:28px;font-weight:700;color:#7d4e00;margin-top:8px;">-</div>
+      </div>
+      <div id="impactSelfUseCard" style="background:linear-gradient(145deg,#fffdf2,#fff2c6);border-radius:16px;padding:16px 18px;box-shadow:0 10px 24px rgba(161,132,11,.10);display:none;">
+        <div data-i18n-key="impact-selfuse" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8a760b;">Direct verbruikt</div>
+        <div id="impactSelfUseValue" style="font-size:28px;font-weight:700;color:#746000;margin-top:8px;">-</div>
+      </div>
+      <div style="background:linear-gradient(145deg,#fff2f2,#ffe0e0);border-radius:16px;padding:16px 18px;box-shadow:0 10px 24px rgba(153,31,31,.10);">
+        <div data-i18n-key="impact-extra-costs-2027" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#9a3f3f;">Extra kosten 2027</div>
+        <div id="impactDeltaValue" style="font-size:28px;font-weight:700;color:#8d1717;margin-top:8px;">-</div>
+      </div>
+    </div>
+
+    <div id="impactViewNote" style="margin:0 0 18px 0;padding:12px 16px;border-radius:14px;background:#f3f6fb;color:#2e4568;line-height:1.5;">
+      Vergelijking op basis van afname en teruglevering.
+    </div>
+
+    <div class="impact-charts-grid">
+      <div class="impact-chart-card" style="background:linear-gradient(180deg,#ffffff,#f7faff);">
+        <div data-i18n-key="impact-flow-title" style="font-weight:700;color:#18365e;margin-bottom:12px;">Energiestromen</div>
+        <div class="impact-chart-wrap">
+		  <canvas id="impactFlowChart" height="220"></canvas>
+        </div>
+      </div>
+      <div class="impact-chart-card" style="background:linear-gradient(180deg,#ffffff,#fff8f3);">
+        <div data-i18n-key="impact-sim-title" style="font-weight:700;color:#18365e;">Simulatie 2027</div>
+        <div data-i18n-key="impact-sim-subtitle" style="font-size:13px;color:#6b7c96;line-height:1.45;margin:6px 0 12px 0;">Toont voor de Nederlandse regeling de extra kosten van het wegvallen van salderen op basis van afgelopen periode alsof het 2027 is.</div>
+        <div class="impact-chart-wrap">
+		  <canvas id="impactValueChart" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+    <div data-i18n-key="impact-footnote" style="margin:18px 0 0 0;font-size:12px;line-height:1.55;color:#6f7f94;">
+      Deze pagina geeft een indicatieve simulatie op basis van historische data, bedoeld om extra inzicht te geven in het mogelijke effect vanaf 2027. De berekening gaat uit van een vast contract en gebruikt de ingestelde tarieven als benadering. Aan deze uitkomst kunnen geen rechten worden ontleend.
+    </div>
   </section> <!-- END PLAFOND -->
 
   <!-- START SysInfo Tab -->
@@ -962,6 +1088,7 @@
     <canvas id="dataChart" style="display: none;" width="900" height="300"></canvas>
     <canvas id="gasChart"  style="display: none;" width="900" height="125"></canvas>
 	<canvas id="waterChart"  style="display: none;" width="900" height="125"></canvas>
+    <canvas id="solarChart"  style="display: none;" width="900" height="125"></canvas>
   </div>
 <!-- Pin to bottom right corner -->
     <div class="bottom right-0"><span id="devVersion">[version]</span>  |  &copy; <a style="color:gray" target="_blank" href='http://smart-stuff.nl'>smart-stuff.nl</a></div>

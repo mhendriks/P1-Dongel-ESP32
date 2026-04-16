@@ -15,121 +15,154 @@ int actSlot = 0;
 RingRecord repaired[30];
 int repairedCount = 0;
 
-bool convertRingfileWithSlotExpansion(E_ringfiletype type, uint8_t newSlotCount) {
-  const S_ringfile& file = RingFiles[type];
-  File f = LittleFS.open(file.filename, "r");
-  if (!f) {
-    Debugln("ERROR: input file open failed.");
-    return false;
+static uint8_t ringValueCount(E_ringfiletype type) {
+  return RingFiles[type].valueCount;
+}
+
+static uint16_t ringRecordLen(E_ringfiletype type) {
+  return RingFiles[type].recordLen;
+}
+
+static void clearRingRecord(RingRecord& record) {
+  strlcpy(record.date, "20000000", sizeof(record.date));
+  for (int i = 0; i < RNG_DAYS_VALUE_COUNT; i++) {
+    record.values[i] = 0.0f;
+  }
+}
+
+static uint32_t ringRecordNumber(E_ringfiletype type, time_t t1) {
+  if (type == RINGMONTHS) {
+    return ((year(t1) - 1) * 12) + month(t1);
+  }
+  return t1 / RingFiles[type].seconds;
+}
+
+static float currentSolarDailyKwh() {
+  return totalSolarDailyWh() / 1000.0f;
+}
+
+static int formatRingRecord(E_ringfiletype type, char* buffer, size_t bufferSize, const char* key, const float* values) {
+  if (ringValueCount(type) == RNG_DAYS_VALUE_COUNT) {
+    return snprintf(buffer, bufferSize,
+                    "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}",
+                    key, values[0], values[1], values[2], values[3], values[4], values[5], values[6]);
   }
 
-  JsonDocument doc;
-  DeserializationError err = deserializeJson(doc, f);
-  f.close();
-  if (err) {
-    Debug("JSON parse error: ");
-    Debugln(err.c_str());
-    return false;
-  }
+  return snprintf(buffer, bufferSize,
+                  "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}",
+                  key, values[0], values[1], values[2], values[3], values[4], values[5]);
+}
 
-  JsonArray oldData = doc["data"];
-
-  struct Record {
-    char date[9];
-    float values[7];
-  };
-
-  Record newRecords[newSlotCount];
-  
-  //fill all data with defaults
-  for (int i = 0; i < newSlotCount; i++) {
-    strcpy(newRecords[i].date, "20000000");
-    for (int j = 0; j < 7; j++) newRecords[i].values[j] = 0.000;
-  }
-
-  // Oude records inladen op basis van nieuwe slotpositie
-  for (JsonObject obj : oldData) {
-    const char* date = obj["date"] | "";
-    
-    if (strcmp(date, "20000000") == 0) continue; // skip
-
-    time_t t1 = epoch(date, strlen(date), false);
-    uint32_t nr = (type == RINGMONTHS)
-      ? ((year(t1) - 1) * 12) + month(t1)
-      : t1 / RingFiles[type].seconds;
-    uint8_t slot = nr % newSlotCount;
-
-    strncpy(newRecords[slot].date, date, 9);
-    JsonArray values = obj["values"];
-    for (int i = 0; i < 6; i++) {
-      newRecords[slot].values[i] = values[i] | 0.0;
-    }
-    newRecords[slot].values[6] = 0.000;
-  }
-
-  // actSlot bepalen: slot van laatste geldige datum
-  const char* lastDate = oldData[oldData.size() - 1]["date"];
-  time_t t_last = epoch(lastDate, strlen(lastDate), false);
-  uint32_t nr_last = (type == RINGMONTHS)
-      ? ((year(t_last) - 1) * 12) + month(t_last)
-      : t_last / RingFiles[type].seconds;
-  uint8_t actSlot = nr_last % newSlotCount;
-
-  // Bestand wegschrijven
-  File fout = LittleFS.open("/RNGdays32_7.json", "w");
+static bool writeRingfileRecords(const char* filename, E_ringfiletype type, uint8_t actSlotValue, const RingRecord* records, uint16_t recordCount) {
+  File fout = LittleFS.open(filename, "w");
   if (!fout) {
-    Debugln("ERROR: output file open failed.");
+    DebugT(F("writeRingfileRecords: open failed for "));
+    Debugln(filename);
     return false;
   }
 
-  fout.printf("{\"actSlot\":%d,\"data\":[\n", actSlot);
-  for (int i = 0; i < newSlotCount; i++) {
-    fout.printf("{\"date\":\"%s\",\"values\":[", newRecords[i].date);
-    for (int j = 0; j < 7; j++) {
-      fout.printf("%10.3f", newRecords[i].values[j]);
-      if (j < 6) fout.print(",");
-    }
-    fout.print("]}");
-    fout.print(i < newSlotCount - 1 ? ",\n" : "\n");
+  fout.printf("{\"actSlot\":%2d,\"data\":[\n", actSlotValue);
+  for (uint16_t i = 0; i < recordCount; i++) {
+    char buffer[DATA_RECLEN_7];
+    formatRingRecord(type, buffer, sizeof(buffer), records[i].date, records[i].values);
+    fout.print(buffer);
+    fout.print(i < (recordCount - 1) ? ",\n" : "\n");
   }
   fout.print("]}");
   fout.close();
 
-  Debugln("Conversie succesvol");
   return true;
 }
 
-
-bool patchJsonFile_Add7thValue(E_ringfiletype type) {
-  const S_ringfile& file = RingFiles[type];
-  File fin = LittleFS.open(file.filename, "r");
+static bool migrateLegacyRNGdaysFile(const char* sourceFile) {
+  File fin = LittleFS.open(sourceFile, "r");
   if (!fin) {
-    Debugln("ERROR: input file");
+    DebugT(F("RNGdays migration: source open failed for "));
+    Debugln(sourceFile);
     return false;
   }
 
-  String outname = String(file.filename);
-  outname.replace(".json", "_7.json");
-  File fout = LittleFS.open(outname, "w");
-  if (!fout) {
-    Debugln("ERROR: output file.");
-    fin.close();
-    return false;
-  }
-
-  int linenr = 0;
-  while (fin.available()) {
-    String line = fin.readStringUntil('\n');
-    // Skip eerste en laatste regel (actSlot en afsluitende ]})
-    if ( linenr > 0 && linenr <= file.slots ) line.replace("]}", ",     0.000]}");
-    fout.println(line);
-    linenr++;
-  }
-
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, fin);
   fin.close();
-  fout.close();
-  Debugln("Conversie succesvol");
+  if (err) {
+    DebugT(F("RNGdays migration: parse error: "));
+    Debugln(err.c_str());
+    return false;
+  }
+
+  RingRecord newRecords[RNG_DAYS_SLOT_COUNT];
+  for (uint8_t i = 0; i < RNG_DAYS_SLOT_COUNT; i++) clearRingRecord(newRecords[i]);
+
+  JsonArray oldData = doc["data"];
+  bool haveNewest = false;
+  uint32_t newestNr = 0;
+
+  for (JsonObject obj : oldData) {
+    const char* date = obj["date"] | "";
+    if (strcmp(date, "20000000") == 0 || strlen(date) != 8) continue;
+
+    time_t t1 = epoch(date, strlen(date), false);
+    if (t1 <= 0) continue;
+
+    uint32_t nr = ringRecordNumber(RINGDAYS, t1);
+    uint8_t slot = nr % RNG_DAYS_SLOT_COUNT;
+
+    strlcpy(newRecords[slot].date, date, sizeof(newRecords[slot].date));
+    JsonArray values = obj["values"];
+    for (uint8_t i = 0; i < RING_DEFAULT_VALUE_COUNT; i++) {
+      newRecords[slot].values[i] = values[i] | 0.0f;
+    }
+    newRecords[slot].values[6] = 0.0f;
+
+    if (!haveNewest || nr > newestNr) {
+      newestNr = nr;
+      haveNewest = true;
+    }
+  }
+
+  const uint8_t migratedActSlot = haveNewest ? (newestNr % RNG_DAYS_SLOT_COUNT) : 0;
+  if (!writeRingfileRecords(RingFiles[RINGDAYS].filename, RINGDAYS, migratedActSlot, newRecords, RNG_DAYS_SLOT_COUNT)) {
+    DebugTln(F("RNGdays migration: writing new file failed"));
+    return false;
+  }
+
+  DebugTln(F("RNGdays migration completed"));
   return true;
+}
+
+static bool ensureRNGdaysLayout() {
+  if (!FSmounted || !LittleFS.exists(RingFiles[RINGDAYS].filename)) return true;
+
+  File f = LittleFS.open(RingFiles[RINGDAYS].filename, "r");
+  if (!f) return false;
+  const size_t currentSize = f.size();
+  f.close();
+
+  if (currentSize == (size_t)RingFiles[RINGDAYS].f_len) return true;
+
+  if (currentSize != (size_t)RNG_DAYS_LEGACY_FILE_LEN) {
+    DebugTf("RNGdays has unexpected size [%d], expected [%d] or [%d]\r\n",
+            (int)currentSize, RingFiles[RINGDAYS].f_len, RNG_DAYS_LEGACY_FILE_LEN);
+    return false;
+  }
+
+  if (LittleFS.exists(RNG_DAYS_BACKUP_FILE)) {
+    DebugTln(F("RNGdays migration: legacy backup already present, reusing current file as source"));
+    return migrateLegacyRNGdaysFile(RingFiles[RINGDAYS].filename);
+  }
+
+  if (!LittleFS.rename(RingFiles[RINGDAYS].filename, RNG_DAYS_BACKUP_FILE)) {
+    DebugTln(F("RNGdays migration: rename to backup failed"));
+    return false;
+  }
+
+  if (migrateLegacyRNGdaysFile(RNG_DAYS_BACKUP_FILE)) return true;
+
+  LittleFS.remove(RingFiles[RINGDAYS].filename);
+  LittleFS.rename(RNG_DAYS_BACKUP_FILE, RingFiles[RINGDAYS].filename);
+  DebugTln(F("RNGdays migration rolled back"));
+  return false;
 }
 
 
@@ -147,9 +180,9 @@ void printRecordArray(const RingRecord* records, int slots, const char* label = 
     Debug(records[i].date);
     Debug(" | Values: ");
 
-    for (int j = 0; j < 6; j++) {
+    for (int j = 0; j < RNG_DAYS_VALUE_COUNT; j++) {
       Debug(records[i].values[j], 3);
-      if (j < 5) Debug(", ");
+      if (j < (RNG_DAYS_VALUE_COUNT - 1)) Debug(", ");
     }
 
     Debugln();
@@ -176,13 +209,14 @@ bool loadRingfile(E_ringfiletype type) {
 
   actSlot = doc["actSlot"] | 0;
   JsonArray data = doc["data"];
+  for (uint16_t slot = 0; slot < RingFiles[type].slots; slot++) clearRingRecord(RNGDayRec[slot]);
   int i = 0;
   for (JsonObject obj : data) {
     if (i >= RingFiles[type].slots) break;
-    strncpy(RNGDayRec[i].date, obj["date"] | "", 9);
+    strlcpy(RNGDayRec[i].date, obj["date"] | "", sizeof(RNGDayRec[i].date));
 
     JsonArray values = obj["values"];
-    for (int j = 0; j < 6; j++) {
+    for (int j = 0; j < RingFiles[type].valueCount; j++) {
       RNGDayRec[i].values[j] = values[j] | 0.0;
     }
     i++;
@@ -272,9 +306,9 @@ bool saveRingfile(E_ringfiletype type) {
     f.print("\",\"values\":[");
 
     // Handmatig met vaste spacing en precisie
-    for (int j = 0; j < 6; j++) {
+    for (int j = 0; j < file.valueCount; j++) {
       f.printf("%10.3f", RNGDayRec[i].values[j]);
-      if (j < 5) f.print(", ");
+      if (j < (file.valueCount - 1)) f.print(",");
     }
 
     f.print("]}");
@@ -317,7 +351,7 @@ bool isPreviousDay(const char* newerDate, const char* olderDate) {
 void printRec(struct RingRecord* recs, int count) {
   for (int i = 0; i < count; ++i) {
     Debugf("Record %2d - date: %s | values: ", i, recs[i].date);
-    for (int j = 0; j < 6; ++j)
+    for (int j = 0; j < RNG_DAYS_VALUE_COUNT; ++j)
       Debugf("%.3f ", recs[i].values[j]);
     Debugln();
   }
@@ -329,7 +363,7 @@ void epochToDate(time_t ts, char* out) {
 }
 
 #define DAY_SEC 86400
-#define NUM_VALUES 6
+#define NUM_VALUES RNG_DAYS_VALUE_COUNT
 
 void repairRingRecords( RingRecord* records, int len) {
   for (int i = 0; i < len - 1; i++) {
@@ -441,6 +475,8 @@ void repairRingRecords( RingRecord* records, int len) {
 
 
 void CheckRingExists(){
+  ensureRNGdaysLayout();
+
   for (byte i = 0; i< 3; i++){
     if ( !LittleFS.exists(RingFiles[i].filename) ) {
       createRingFile( (E_ringfiletype)i );
@@ -465,9 +501,12 @@ void createRingFile(E_ringfiletype ringfiletype)
   RingFile.print("{\"actSlot\": 0,\"data\":[\n"); //start the json file 
   for (uint8_t slot=0; slot < RingFiles[ringfiletype].slots; slot++ ) 
   { 
-    //{"date":"20000000","values":[     0.000,     0.000,     0.000,     0.000,     0.000,     0.000]}
-    RingFile.print("{\"date\":\"20000000\",\"values\":[     0.000,     0.000,     0.000,     0.000,     0.000,     0.000]}"); // one empty record
-   if (slot < (RingFiles[ringfiletype].slots - 1) ) RingFile.print(",\n");
+    RingRecord emptyRecord;
+    clearRingRecord(emptyRecord);
+    char buffer[DATA_RECLEN_7];
+    formatRingRecord(ringfiletype, buffer, sizeof(buffer), emptyRecord.date, emptyRecord.values);
+    RingFile.print(buffer);
+    if (slot < (RingFiles[ringfiletype].slots - 1) ) RingFile.print(",\n");
 
   }
   if (RingFile.size() != RingFiles[ringfiletype].f_len) {
@@ -526,7 +565,7 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, const char* Timestamp)
 
 //===========================================================================================
 
-void writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *JsonRec, bool bWinterSummer) {
+void writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *JsonRec, bool bWinterSummer, bool bPrevRecord) {
 #ifdef NO_STORAGE
   return;
 #else
@@ -536,7 +575,8 @@ void writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
   // time_t start = millis();
   char key[9] = "";
   JsonDocument rec;
-  char buffer[DATA_RECLEN];
+  char buffer[DATA_RECLEN_7];
+  float values[RNG_DAYS_VALUE_COUNT] = {0.0f};
 
   // Parse optioneel JsonRec (alleen als meegegeven)
   bool hasJsonRec = (JsonRec && strlen(JsonRec) > 1);
@@ -579,11 +619,17 @@ void writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
     strncpy(key, rec["recid"] | "", 8);
     key[8] = '\0';
 
-    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT,
-             key,
-             (float)(rec["edt1"] | 0.0f), (float)(rec["edt2"] | 0.0f),
-             (float)(rec["ert1"] | 0.0f), (float)(rec["ert2"] | 0.0f),
-             (float)(rec["gdt"]  | 0.0f), (float)(rec["wtr"]  | 0.0f));
+    values[0] = (float)(rec["edt1"] | 0.0f);
+    values[1] = (float)(rec["edt2"] | 0.0f);
+    values[2] = (float)(rec["ert1"] | 0.0f);
+    values[3] = (float)(rec["ert2"] | 0.0f);
+    values[4] = (float)(rec["gdt"]  | 0.0f);
+    values[5] = (float)(rec["wtr"]  | 0.0f);
+    if (ringValueCount(ringfiletype) > RING_DEFAULT_VALUE_COUNT) {
+      values[6] = (float)(rec["solar"] | 0.0f);
+    }
+
+    formatRingRecord(ringfiletype, buffer, sizeof(buffer), key, values);
 
     httpServer.send(200, "application/json", httpServer.arg(0));
   } else {
@@ -591,25 +637,28 @@ void writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
     strncpy(key, actTimestamp, 8);
     key[8] = '\0';
     if (bWinterSummer) { key[6] = '0'; key[7] = '2'; }
-    snprintf(buffer, sizeof(buffer), (char*)DATA_FORMAT,
-             key,
-             (float)DSMRdata.energy_delivered_tariff1,
-             (float)DSMRdata.energy_delivered_tariff2,
-             (float)DSMRdata.energy_returned_tariff1,
-             (float)DSMRdata.energy_returned_tariff2,
-             (float)gasDelivered,
-             mbusWater ? (float)waterDelivered
-                       : (float)P1Status.wtr_m3 + (float)P1Status.wtr_l / 1000.0f);
+    values[0] = (float)DSMRdata.energy_delivered_tariff1;
+    values[1] = (float)DSMRdata.energy_delivered_tariff2;
+    values[2] = (float)DSMRdata.energy_returned_tariff1;
+    values[3] = (float)DSMRdata.energy_returned_tariff2;
+    values[4] = (float)gasDelivered;
+    values[5] = mbusWater ? (float)waterDelivered
+                          : (float)P1Status.wtr_m3 + (float)P1Status.wtr_l / 1000.0f;
+    if (ringValueCount(ringfiletype) > RING_DEFAULT_VALUE_COUNT) {
+      values[6] = bPrevRecord ? 0.0f : currentSolarDailyKwh();
+    }
+
+    formatRingRecord(ringfiletype, buffer, sizeof(buffer), key, values);
   }
 
   // Seek naar slot-offset en overschrijf record
-  uint16_t offset = (slot * DATA_RECLEN) + JSON_HEADER_LEN;
+  uint16_t offset = (slot * ringRecordLen(ringfiletype)) + JSON_HEADER_LEN;
   RingFile.seek(offset, SeekSet);
 
   int32_t bytesWritten = RingFile.print(buffer);
-  if (bytesWritten != (DATA_RECLEN - 2)) {
+  if (bytesWritten != (ringRecordLen(ringfiletype) - 2)) {
     DebugTf("ERROR! slot[%02d]: written [%d] bytes but should have been [%d]\r\n",
-            slot, bytesWritten, DATA_RECLEN);
+            slot, bytesWritten, ringRecordLen(ringfiletype));
   }
 
   if (slot < (RingFiles[ringfiletype].slots - 1)) RingFile.print(",\n");
@@ -634,12 +683,12 @@ void writeRingFile(E_ringfiletype ringfiletype, const char *JsonRec, bool bPrev)
     key[8] = '\0';
 
     uint8_t slot = CalcSlot(ringfiletype, key);
-    writeRingFileAtSlot(ringfiletype, slot, JsonRec, false);
+    writeRingFileAtSlot(ringfiletype, slot, JsonRec, false, false);
     return;
   }
 
   uint8_t slot = CalcSlot(ringfiletype, bPrev);
-  writeRingFileAtSlot(ringfiletype, slot, /*JsonRec*/ nullptr, false);
+  writeRingFileAtSlot(ringfiletype, slot, /*JsonRec*/ nullptr, false, bPrev);
 #endif
 }
 

@@ -23,8 +23,12 @@
 
 	<script src="https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@5.4/cdn/dal.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@5.4/cdn/DSMRgraphics.min.js"></script>
+	<script>
+	  if (typeof BurnupBootstrap !== "function") window.BurnupBootstrap = function() {};
+	  if (typeof refreshData !== "function") window.refreshData = function() {};
+	</script>
 	<script src="https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@5.4/cdn/DSMRindex.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@5.4/cdn/burnup.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@5.4/cdn/impact2027.js"></script>
 
   	<script>
 	  //============================================================================  
@@ -36,18 +40,22 @@
 	  function readPageBody()
 	  {
 		console.log("readPageBody() ..");
-		fetch("https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@5.4/cdn/DSMRindex_body.html")
+		fetch("/DSMRindex_body.html")
 		  .then(response => {
-			if (response.ok) {
-			  return response.text();
-			} else {
-			  console.log('Something went wrong');
-			  return "";
-			}
+			if (response.ok) return response.text();
+			return fetch("https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@5.4/cdn/DSMRindex_body.html")
+			  .then(cdnResponse => cdnResponse.ok ? cdnResponse.text() : "");
 		  })
 		  .then(text => {
 			document.body.innerHTML = text + document.body.innerHTML;
 			bootsTrapMain();
+			if (window.location.hash === "#PlafondTab") {
+			  const plafondButton = document.getElementById("bPlafondTab");
+			  if (plafondButton) plafondButton.click();
+			  setTimeout(function() {
+				if (typeof refreshData === "function") refreshData();
+			  }, 0);
+			}
 		  })
 		  .catch(function(error) {
 			console.log("readPageBody: "+error);

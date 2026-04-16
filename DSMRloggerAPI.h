@@ -200,29 +200,46 @@ enum  SolarSource { ENPHASE, SOLAR_EDGE, SMA, OMNIKSOL };
 //test
 struct RingRecord {
   char date[9];
-  float values[6];
+  float values[7];
 };
 
-RingRecord RNGDayRec[15];
+#define RING_DEFAULT_VALUE_COUNT   6
+#define RNG_HOURS_SLOT_COUNT      (48 + 1)
+#define RNG_DAYS_SLOT_COUNT       32
+#define RNG_DAYS_VALUE_COUNT       7
+#define RNG_DAYS_LEGACY_SLOTS     (14 + 1)
+#define RNG_DAYS_BACKUP_FILE      "/RNGdays.legacy.json"
+#define RNG_MONTHS_SLOT_COUNT     (24 + 1)
+
+RingRecord RNGDayRec[RNG_DAYS_SLOT_COUNT];
 
 void printRecordArray(const RingRecord* records, int slots, const char* label);
 bool loadRingfile(E_ringfiletype type);
 bool loadRNGDaysHistory();
+uint32_t totalSolarDailyWh();
 
 typedef struct {
     char filename[17];
     uint16_t slots;
     unsigned int seconds;
+    uint16_t recordLen;
+    uint8_t valueCount;
     int f_len;
   } S_ringfile;
 
 
 #define JSON_HEADER_LEN   23  //total length incl new line
 #define DATA_CLOSE        2   //length last row of datafile
-#define DATA_FORMAT      "{\"date\":\"%-8.8s\",\"values\":[%10.3f,%10.3f,%10.3f,%10.3f,%10.3f,%10.3f]}"
-#define DATA_RECLEN      98  //total length incl comma and new line
+#define DATA_RECLEN_6     98  //total length incl comma and new line
+#define DATA_RECLEN_7    109  //total length incl comma and new line
+#define RING_FILE_LEN(slots, reclen) ((slots) * (reclen) + DATA_CLOSE + JSON_HEADER_LEN - 1)
+#define RNG_DAYS_LEGACY_FILE_LEN RING_FILE_LEN(RNG_DAYS_LEGACY_SLOTS, DATA_RECLEN_6)
 
-const S_ringfile RingFiles[3] = {{"/RNGhours.json", 48+1,SECS_PER_HOUR, 4826}, {"/RNGdays.json",14+1,SECS_PER_DAY, (14+1)*(DATA_RECLEN)+DATA_CLOSE+JSON_HEADER_LEN-1 },{"/RNGmonths.json",24+1,0,2474}}; //+1 voor de vergelijking, laatste record wordt niet getoond 
+const S_ringfile RingFiles[3] = {
+  {"/RNGhours.json",  RNG_HOURS_SLOT_COUNT,  SECS_PER_HOUR, DATA_RECLEN_6, RING_DEFAULT_VALUE_COUNT, RING_FILE_LEN(RNG_HOURS_SLOT_COUNT,  DATA_RECLEN_6)},
+  {"/RNGdays.json",   RNG_DAYS_SLOT_COUNT,   SECS_PER_DAY,  DATA_RECLEN_7, RNG_DAYS_VALUE_COUNT,      RING_FILE_LEN(RNG_DAYS_SLOT_COUNT,   DATA_RECLEN_7)},
+  {"/RNGmonths.json", RNG_MONTHS_SLOT_COUNT, 0,             DATA_RECLEN_6, RING_DEFAULT_VALUE_COUNT, RING_FILE_LEN(RNG_MONTHS_SLOT_COUNT, DATA_RECLEN_6)}
+}; //+1 voor de vergelijking, laatste record wordt niet getoond
 
 // #include "Debug.h"
 

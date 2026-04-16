@@ -24,6 +24,7 @@ var electrData = createChartDataContainer();
 var actElectrData = createChartDataContainer();
 var actGasData = createChartDataContainer();
 var actWaterData = createChartDataContainer();
+var solarData = createChartDataContainer();
 
 //helper functions for datacontainers and datasets
 function createChartDataContainer(){
@@ -105,11 +106,15 @@ optionsGAS.scales.yAxes[0].scaleLabel.labelString = "m3";
 var optionsWATER = structuredClone(optionsGLOBAL);
 optionsWATER.scales.yAxes[0].scaleLabel.labelString = "m3";
 
+var optionsSOLAR = structuredClone(optionsGLOBAL);
+optionsSOLAR.scales.yAxes[0].scaleLabel.labelString = "kWh";
+
 
 //----------------Chart's-------------------------------------------------------
 var myElectrChart;
 var myGasChart;
 var myWaterChart;
+var mySolarChart;
 
 function createChartsGRAPH()
 {
@@ -120,6 +125,8 @@ function createChartsGRAPH()
   myGasChart = new Chart(ctx, { type: 'line', data: [], options: optionsGAS });
   ctx = document.getElementById("waterChart").getContext("2d");
   myWaterChart = new Chart(ctx, { type: 'line', data: [], options: optionsWATER });
+  ctx = document.getElementById("solarChart").getContext("2d");
+  mySolarChart = new Chart(ctx, { type: 'line', data: [], options: optionsSOLAR });
   fGraphsReady = true;
 }
 function ensureChartsReady()
@@ -160,7 +167,14 @@ function ensureChartsReady()
       myWaterChart.options.scales.yAxes[0].scaleLabel.labelString = labelString;
     	myWaterChart.update();
 		  document.getElementById("waterChart").style.display = "block";
-    }
+    } else document.getElementById("waterChart").style.display = "none";
+
+    if (type == "Days" && hasSolarHistory(data)) {
+      mySolarChart.data = solarData;
+      mySolarChart.options.scales.yAxes[0].scaleLabel.labelString = "kWh";
+      mySolarChart.update();
+      document.getElementById("solarChart").style.display = "block";
+    } else document.getElementById("solarChart").style.display = "none";
 
     //--- hide table
     document.getElementById("lastHours").style.display  = "none";
@@ -217,6 +231,7 @@ function ensureChartsReady()
     electrData = createChartDataContainerWithStack();
     gasData = createChartDataContainerWithStack();
 	  waterData = createChartDataContainerWithStack();
+    solarData = createChartDataContainer();
     
     //create datasets ED & ER
     var dsED1 = createDatasetBAR('false', 'red',    t("lbl_from_net")+" T1", "STACK");
@@ -230,6 +245,7 @@ function ensureChartsReady()
    
     // WATER
     var dsW1 = createDatasetLINE('false', 'blue', t("lbl-water-used"));
+    var dsS1 = createDatasetLINE('false', '#f7b638', 'Solar productie');
   
     var p = 0;
     var fTarif1 = false;
@@ -243,6 +259,7 @@ function ensureChartsReady()
       electrData.labels.push(formatGraphDate(type, data.data[i].date)); 
       gasData.labels.push(   formatGraphDate(type, data.data[i].date)); 
 	    waterData.labels.push( formatGraphDate(type, data.data[i].date));
+      solarData.labels.push( formatGraphDate(type, data.data[i].date));
 
       //add data to the sets
       var nFactor = 1.0;
@@ -253,6 +270,7 @@ function ensureChartsReady()
       if (data.data[i].p_ert2 >= 0) dsER2.data[p] = (data.data[i].p_ert2 * nFactor * -1.0);
       if (data.data[i].p_gd   >= 0)  dsG1.data[p] = (data.data[i].p_gd   * 1000.0);
       if (data.data[i].water  >= 0)  dsW1.data[p] = (data.data[i].water  * 1000.0);
+      if (type == "Days" && data.data[i].solar >= 0) dsS1.data[p] = data.data[i].solar;
 	    p++;
     } // for i ..
 
@@ -263,6 +281,7 @@ function ensureChartsReady()
     applyArrayFixedDecimals(dsER2.data, 3);
     applyArrayFixedDecimals(dsG1.data, 0);
     applyArrayFixedDecimals(dsW1.data, 0);
+    applyArrayFixedDecimals(dsS1.data, 3);
 
     //push all the datasets to the container
     electrData.datasets.push(dsED1);
@@ -274,6 +293,7 @@ function ensureChartsReady()
     }
     gasData.datasets.push(dsG1);
     waterData.datasets.push(dsW1);
+    if (type == "Days") solarData.datasets.push(dsS1);
 
   } // copyDataToChart()
   
