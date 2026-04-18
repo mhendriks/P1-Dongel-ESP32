@@ -39,6 +39,7 @@ BACKLOG
 - ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
 - De daily insights kunnen downloaden zoals RNGhours (Harrie)
 - De waarden in daily insights labelen met het datum/tijdstip waarop gemeten (Harrie)
+- one hostname for all dongles
 
 Default checks
 - wifi
@@ -66,17 +67,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
 
-5.5.0
-- fix: frontend calculation production Self ... 
-- fix: update dash after new day is started
-- add PV production to history files
-- change: days storage to 31 days
-- first draft HAN NVE support (disabled)
-
 5.6.0
+- Add remote Proxy 
 - Virtual P1 feature in settings (Ethernet/Ultra only)
 - add: Ultra dongles are able to make custom modbus mappings via json file
-
 - refactor: asyncwebserver
 - update button in HA to trigger the update (mqtt based #70)
 
@@ -88,7 +82,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //--- PROFILES -> NO PROFILE = WiFi Dongle  ---
-#define ULTRA            //ultra (mini) dongle
+// #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       //+D1MC 
@@ -102,9 +96,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 #define MBUS
 //#define MQTT_DISABLE
 //#define NO_STORAGE
-// #define NO_HA_AUTODISCOVERY
 //#define POST_TELEGRAM
-// #define MQTTKB
 // #define MB_RTU
 #define ESPNOW  
 // #define UDP_BCAST

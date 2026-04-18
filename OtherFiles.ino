@@ -461,6 +461,7 @@ void updateSetting(const char *field, const char *newValue)
     SetupP1In();
   }
   if (!stricmp(field, "raw-port")) bRawPort = (stricmp(newValue, "true") == 0?true:false);  
+  if (!stricmp(field, "try_calc_i")) try_calc_i = (stricmp(newValue, "true") == 0?true:false);
   if (!stricmp(field, "act-json-mqtt")) bActJsonMQTT = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "eid-enabled")) bEID_enabled = (stricmp(newValue, "true") == 0?true:false);  
   

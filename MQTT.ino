@@ -24,7 +24,7 @@ void CreateMacIDTopic() {
 void fMqtt( void * pvParameters ){
 #ifndef MQTT_DISABLE    
   DebugTln(F("Start MQTT Thread"));
-  MQTTSetBaseInfo();
+  // MQTTSetBaseInfo();
   MQTTsetServer();
   esp_task_wdt_add(nullptr);
   while(true) {
@@ -122,12 +122,6 @@ void AutoDiscoverHA(){
 //#endif  
   }
 
-}
-
-void MQTTSetBaseInfo(){
-#ifdef MQTTKB
-  sprintf( MQTopTopic,"%s/%s/", _DEFAULT_HOSTNAME, macID );
-#endif  
 }
 
 void MQTTDisconnect(){
@@ -297,9 +291,7 @@ void MQTTConnect() {
         MQTTclient.subscribe(cMsg);
       }
 
-#ifndef NO_HA_AUTODISCOVERY
-      if ( EnableHAdiscovery ) AutoDiscoverHA();
-#endif      
+    if ( EnableHAdiscovery ) AutoDiscoverHA();
     } else {
       LogFile("MQTT: ... connection FAILED! Will try again in 10 sec", true);
       DebugT("error code: ");Debugln(MQTTclient.state());
@@ -463,11 +455,6 @@ void sendMQTTData() {
   if ( !StaticInfoSend )  MQTTSentStaticInfo();
     
   fieldsElements = ACTUALELEMENTS;
-  
-#ifdef MQTTKB  
-  bActJsonMQTT = true;
-  EnableHAdiscovery = false;
-#endif
   
   if ( bActJsonMQTT ) jsonDoc.clear();
 

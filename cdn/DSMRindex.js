@@ -67,6 +67,7 @@ const SQUARE_M_CUBED 	   = "\u33A5";
 let TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wmax;
 let hist_arrW=[4], hist_arrG=[4], hist_arrPa=[4], hist_arrPi=[4], hist_arrP=[4]; //berekening verbruik
 let day = 0;
+let DailyHistoryReady = false;
 
 function getTimestampDayKey(timestampValue) {
   if (typeof timestampValue !== "string" || timestampValue.length < 6) return 0;
@@ -84,6 +85,23 @@ function resetDailyHistoryBuffers() {
   hist_arrW = [0, 0, 0, 0];
   hist_arrPa = [0, 0, 0, 0];
   hist_arrPi = [0, 0, 0, 0];
+  DailyHistoryReady = false;
+}
+
+function resetDashboardDailyValues() {
+  updateGaugeTrend(trend_p, [0, 0, 0]);
+  updateGaugeTrend(trend_pi, [0, 0, 0]);
+  updateGaugeTrend(trend_pa, [0, 0, 0]);
+  updateGaugeTrend(trend_g, [0, 0, 0]);
+  updateGaugeTrend(trend_q, [0, 0, 0]);
+  updateGaugeTrend(trend_w, [0, 0, 0]);
+
+  document.getElementById("P").innerHTML = formatValue(0);
+  document.getElementById("Pi").innerHTML = formatValue(0);
+  document.getElementById("Pa").innerHTML = formatValue(0);
+  document.getElementById("G").innerHTML = formatValue(0);
+  document.getElementById("Q").innerHTML = formatValueLocale(0, 0, 0);
+  document.getElementById("W").innerHTML = formatValueLocale(0, 0, 0);
 }
 
 function refreshSolarSelfUse() {
@@ -932,6 +950,15 @@ function refreshDashboard(json){
 				
     // stop here if there is no history enabled
 		if (!EnableHist) {Spinner(false);return;}
+
+		if (!DailyHistoryReady) {
+		  Pi_today = 0;
+		  Pd_today = 0;
+		  resetDashboardDailyValues();
+		  refreshSolarSelfUse();
+		  Spinner(false);
+		  return;
+		}
 		
     //-------VERBRUIK METER	
 		if (Dongle_Config != "p1-q") {
@@ -1958,6 +1985,10 @@ function refreshHistData(type) {
 				hist_arrW[i] = values[5];
 				hist_arrPa[i] = values[0] + values[1];
 				hist_arrPi[i] = values[2] + values[3];
+			}
+			DailyHistoryReady = true;
+			if (activeTab === "bDashTab" && objDAL.getFields()) {
+				refreshDashboard(objDAL.getFields());
 			}
 			break;
 

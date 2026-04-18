@@ -333,9 +333,16 @@
         <div data-i18n-key="impact-net-feed-in" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#51715c;">Netto opbrengst per teruggeleverde kWh</div>
         <input id="impactExportTariffInput" type="text" inputmode="decimal" placeholder="0,000">
       </div>
+      <div class="impact-tariff-card">
+        <div data-i18n-key="impact-battery-capacity" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#77621a;">Fictieve accucapaciteit (kWh)</div>
+        <input id="impactBatteryCapacityInput" type="text" inputmode="decimal" placeholder="0,0">
+      </div>
     </div>
     <div id="impactTariffNote" data-i18n-key="impact-tariff-note-static" style="margin:0 0 18px 0;color:#58708e;font-size:13px;line-height:1.5;">
       Gebruik eigen tarieven om het effect vanaf 2027 door te rekenen.
+    </div>
+    <div id="impactBatteryAdvice" data-i18n-key="impact-battery-advice-static" style="margin:-8px 0 18px 0;color:#7a6a33;font-size:13px;line-height:1.5;">
+      Met productiedata kan ook een indicatie voor accucapaciteit worden getoond.
     </div>
 
     <div class="impact-summary-grid">
@@ -359,6 +366,18 @@
         <div data-i18n-key="impact-extra-costs-2027" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#9a3f3f;">Extra kosten 2027</div>
         <div id="impactDeltaValue" style="font-size:28px;font-weight:700;color:#8d1717;margin-top:8px;">-</div>
       </div>
+      <div id="impactBatteryStoredCard" style="background:linear-gradient(145deg,#f3f9ff,#dfeefe);border-radius:16px;padding:16px 18px;box-shadow:0 10px 24px rgba(27,74,133,.08);display:none;">
+        <div data-i18n-key="impact-battery-stored" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#45658f;">Opgeslagen met accu</div>
+        <div id="impactBatteryStoredValue" style="font-size:28px;font-weight:700;color:#224a7a;margin-top:8px;">-</div>
+      </div>
+      <div id="impactBatterySpillCard" style="background:linear-gradient(145deg,#eefcf4,#d9f4e3);border-radius:16px;padding:16px 18px;box-shadow:0 10px 24px rgba(28,110,64,.08);display:none;">
+        <div data-i18n-key="impact-battery-spill" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#3d7a5d;">Rest-teruglevering</div>
+        <div id="impactBatterySpillValue" style="font-size:28px;font-weight:700;color:#1f5c3d;margin-top:8px;">-</div>
+      </div>
+      <div id="impactBatteryDeltaCard" style="background:linear-gradient(145deg,#fff7ea,#ffe8c2);border-radius:16px;padding:16px 18px;box-shadow:0 10px 24px rgba(161,110,11,.10);display:none;">
+        <div data-i18n-key="impact-extra-costs-2027-battery" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8d6110;">Extra kosten 2027 met accu</div>
+        <div id="impactBatteryDeltaValue" style="font-size:28px;font-weight:700;color:#7d5400;margin-top:8px;">-</div>
+      </div>
     </div>
 
     <div id="impactViewNote" style="margin:0 0 18px 0;padding:12px 16px;border-radius:14px;background:#f3f6fb;color:#2e4568;line-height:1.5;">
@@ -381,7 +400,7 @@
       </div>
     </div>
     <div data-i18n-key="impact-footnote" style="margin:18px 0 0 0;font-size:12px;line-height:1.55;color:#6f7f94;">
-      Deze pagina geeft een indicatieve simulatie op basis van historische data, bedoeld om extra inzicht te geven in het mogelijke effect vanaf 2027. De berekening gaat uit van een vast contract en gebruikt de ingestelde tarieven als benadering. Aan deze uitkomst kunnen geen rechten worden ontleend.
+      Deze pagina geeft een indicatieve simulatie op basis van historische data, bedoeld om extra inzicht te geven in het mogelijke effect vanaf 2027. De berekening gaat uit van een vast contract en gebruikt de ingestelde tarieven als benadering. De accusimulatie werkt op dagdata met 90% rendement en is daardoor vooral bedoeld als indicatie voor de maandweergave. Aan deze uitkomst kunnen geen rechten worden ontleend.
     </div>
   </section> <!-- END PLAFOND -->
 

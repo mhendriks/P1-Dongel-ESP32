@@ -40,6 +40,19 @@ bool auth() {
   return true;
 }
 
+int shellyRpcRequestId() {
+  if (!httpServer.hasArg("id")) return 1;
+  return httpServer.arg("id").toInt();
+}
+
+bool ensureShellyMimic() {
+  if (!isShellyPro3EmMimicSelected()) {
+    httpServer.send(404, "application/json", "{\"error\":\"Shelly mimic inactive\"}");
+    return false;
+  }
+  return true;
+}
+
 // Function to handle static file serving with authentication
 void serveStaticWithAuth(const char* uri, const char* fileName) {
   httpServer.on(uri, HTTP_GET, [fileName]() {
@@ -94,6 +107,42 @@ void setupFSexplorer() {
     httpServer.send( 200, "application/json", HWrootJson() );
   });
 
+  httpServer.on("/shelly", HTTP_GET, []() {
+    if (!auth()) return;
+    if (!ensureShellyMimic()) return;
+    httpServer.send(200, "application/json", shellyUDP.deviceInfoJson());
+  });
+
+  httpServer.on("/rpc/Shelly.GetDeviceInfo", HTTP_GET, []() {
+    if (!auth()) return;
+    if (!ensureShellyMimic()) return;
+    httpServer.send(200, "application/json", shellyUDP.rpcDeviceInfoJson(shellyRpcRequestId()));
+  });
+
+  httpServer.on("/rpc/Shelly.GetStatus", HTTP_GET, []() {
+    if (!auth()) return;
+    if (!ensureShellyMimic()) return;
+    httpServer.send(200, "application/json", shellyUDP.rpcShellyStatusJson(shellyRpcRequestId()));
+  });
+
+  httpServer.on("/rpc/Shelly.ListMethods", HTTP_GET, []() {
+    if (!auth()) return;
+    if (!ensureShellyMimic()) return;
+    httpServer.send(200, "application/json", shellyUDP.rpcShellyListMethodsJson(shellyRpcRequestId()));
+  });
+
+  httpServer.on("/rpc/EM.GetStatus", HTTP_GET, []() {
+    if (!auth()) return;
+    if (!ensureShellyMimic()) return;
+    httpServer.send(200, "application/json", shellyUDP.rpcEmStatusJson(shellyRpcRequestId()));
+  });
+
+  httpServer.on("/rpc/EMData.GetStatus", HTTP_GET, []() {
+    if (!auth()) return;
+    if (!ensureShellyMimic()) return;
+    httpServer.send(200, "application/json", shellyUDP.rpcEmDataStatusJson(shellyRpcRequestId()));
+  });
+  
   httpServer.on("/api/v2/stats", HTTP_GET, []() { 
     if ( !auth() ) return; 
     // StatsApi(); 

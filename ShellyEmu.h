@@ -43,6 +43,77 @@ public:
     }
   }
 
+  String deviceInfoJson() {
+    JsonDocument doc;
+    fillDeviceInfo(doc.to<JsonObject>());
+    String out;
+    serializeJson(doc, out);
+    return out;
+  }
+
+  String rpcDeviceInfoJson(int requestId = 1) {
+    JsonDocument doc;
+    doc["id"] = requestId;
+    doc["src"] = _id.length() ? _id : makeId();
+    fillDeviceInfo(doc["result"].to<JsonObject>());
+    String out;
+    serializeJson(doc, out);
+    return out;
+  }
+
+  String rpcEmStatusJson(int requestId = 1) {
+    JsonDocument doc;
+    doc["id"] = requestId;
+    doc["src"] = _id.length() ? _id : makeId();
+    fillEmComponent(doc["result"].to<JsonObject>());
+    String out;
+    serializeJson(doc, out);
+    return out;
+  }
+
+  String rpcEmDataStatusJson(int requestId = 1) {
+    JsonDocument doc;
+    doc["id"] = requestId;
+    doc["src"] = _id.length() ? _id : makeId();
+    fillEmDataComponent(doc["result"].to<JsonObject>());
+    String out;
+    serializeJson(doc, out);
+    return out;
+  }
+
+  String rpcShellyStatusJson(int requestId = 1) {
+    JsonDocument doc;
+    doc["id"] = requestId;
+    doc["src"] = _id.length() ? _id : makeId();
+    fillRpcStatus(doc["result"].to<JsonObject>());
+    String out;
+    serializeJson(doc, out);
+    return out;
+  }
+
+  String rpcShellyListMethodsJson(int requestId = 1) {
+    JsonDocument doc;
+    doc["id"] = requestId;
+    doc["src"] = _id.length() ? _id : makeId();
+    JsonArray methods = doc["result"].to<JsonArray>();
+    methods.add("EM.GetStatus");
+    methods.add("EMData.GetStatus");
+    methods.add("Shelly.GetDeviceInfo");
+    methods.add("Shelly.GetStatus");
+    methods.add("Shelly.ListMethods");
+    String out;
+    serializeJson(doc, out);
+    return out;
+  }
+
+  String shellyStatusJson() {
+    JsonDocument doc;
+    fillShellyStatus(doc.to<JsonObject>());
+    String out;
+    serializeJson(doc, out);
+    return out;
+  }
+
 private:
   AsyncUDP _udp1010, _udp2220;
   String _id;

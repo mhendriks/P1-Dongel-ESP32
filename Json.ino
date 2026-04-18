@@ -418,14 +418,12 @@ String deviceSettingsJson() {
 #ifndef MQTT_DISABLE
 if ( !hideMQTTsettings) {
   doc["mqtt_enabled"] = bMQTTenabled;
-#ifndef MQTTKB
 
   doc["mqtt_tls"] = bMQTToverTLS;
   ADD_SETTING("mqtt_broker", "s", 0, sizeof(settingMQTTbroker) - 1, settingMQTTbroker);
   ADD_SETTING("mqtt_broker_port", "i", 1, 9999, settingMQTTbrokerPort);
   ADD_SETTING("mqtt_user", "s", 0, sizeof(settingMQTTuser) - 1, settingMQTTuser);
   ADD_SETTING("mqtt_passwd", "s", 0, sizeof(settingMQTTpasswd) - 1, settingMQTTpasswd);
-#endif
   ADD_SETTING("mqtt_toptopic", "s", 0, sizeof(settingMQTTtopTopic) - 1, settingMQTTtopTopic);
   ADD_SETTING("mqtt_interval", "i", 0, 600, settingMQTTinterval);
   doc["act-json-mqtt"] = bActJsonMQTT;
@@ -464,6 +462,7 @@ if ( !hideMQTTsettings) {
   doc["auto_update"] = bAutoUpdate;
   doc["led"] = LEDenabled;
   doc["raw-port"] = bRawPort;
+  doc["try_calc_i"] = try_calc_i;
   doc["eid-enabled"] = bEID_enabled;
   doc["eid-planner"] = StroomPlanData.size() > 0 ? true : false;
   doc["nrgm-enabled"] = bNRGMenabled;

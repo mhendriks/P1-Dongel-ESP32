@@ -504,23 +504,10 @@ bool      FSmounted = false;
 bool      skipNetwork = false;
 bool      allowSkipNetworkByButton = false;
 bool      try_calc_i = true;
-//MQTT
-#ifndef MQTTKB
-  uint32_t   settingMQTTinterval = 10;
-  char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
-#else
-  #include "_mqtt_kb.h"
-  #define NO_HA_AUTODISCOVERY
-  #undef OTAURL
-  #define NO_STORAGE
-  #define OTAURL "http://ota.smart-stuff.nl/p1e/kb/"
-  uint32_t   settingMQTTinterval     = MQTT_INTERVAL;
-  char      settingMQTTbroker[101]  = MQTT_BROKER;
-  char      settingMQTTuser[75]     = MQTT_USER;
-  char      settingMQTTpasswd[160]  = MQTT_PASSWD;
-  char      settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
-#endif 
 
+//MQTT
+uint32_t   settingMQTTinterval = 10;
+char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
 uint32_t   settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;
