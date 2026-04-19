@@ -20,7 +20,7 @@
 #include "version.h" //first of all
 #include "Config.h"
 #ifdef HAN_READER
-  #include "han2Lib/src/han2.h"
+  #include <han2.h>
 #endif
 
 // water sensor
