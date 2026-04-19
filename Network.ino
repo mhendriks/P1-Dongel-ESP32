@@ -530,6 +530,10 @@ void startMDNS(const char *Hostname) {
     MDNS.addServiceTxt("shelly", "tcp", "gen", "2");
     MDNS.addServiceTxt("shelly", "tcp", "app", "Pro3EM");
     MDNS.addServiceTxt("shelly", "tcp", "ver", "1.4.2");
+
+    MDNS.addService("http", "tcp", 80);
+    mdns_service_instance_name_set("_http", "_tcp", shellyInstance.c_str());
+    MDNS.addServiceTxt("http", "tcp", "gen", "2");
   }
 
   MDNS.addService( Hostname, "tcp", 80);
