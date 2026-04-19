@@ -147,6 +147,7 @@ void setup()
   startTelnet();
   startMDNS(settingHostname);
   startNTP();
+  ProxyRemoteSetup();
   handleAutoUpdate(true); // startup check right after network and time init
   WDT_FEED();
 //================ Check necessary files ============================
@@ -225,4 +226,5 @@ void loop () {
   handleP2P();
   handleUDP();
   PostWebhook();
+  ProxyRemoteLoop();
 } // loop()

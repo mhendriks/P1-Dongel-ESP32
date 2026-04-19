@@ -148,6 +148,10 @@ void setupFSexplorer() {
     // StatsApi(); 
     httpServer.send(200, "application/json", apiStatsJson());
   });
+  httpServer.on("/api/v2/proxy", HTTP_GET, []() {
+    if (!auth()) return;
+    httpServer.send(200, "application/json", proxyStatusJson());
+  });
   
   httpServer.on(UriBraces("/api/v2/dev/{}"),[]() {
     if (!auth()) return;

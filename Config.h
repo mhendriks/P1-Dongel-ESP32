@@ -12,6 +12,17 @@
   #define ENABLE_MIMICS 1
 #endif
 
+#ifndef REMOTE_PROXY
+  #define REMOTE_PROXY 0
+#endif
+
+#define PROXY_REMOTE_DEFAULT_HOST        "proxy.smart-stuff.nl"
+#define PROXY_REMOTE_DEFAULT_PATH        "/api/v1/device/push"
+#define PROXY_REMOTE_DEFAULT_PORT        443
+#define PROXY_REMOTE_DEFAULT_INTERVAL    15
+#define PROXY_REMOTE_RETRY_MIN_MS        15000UL
+#define PROXY_REMOTE_RETRY_MAX_MS        300000UL
+
 //LED STUFF
 #define LED_BLUE  0x07
 #define LED_RED   0x070000

@@ -135,6 +135,18 @@ void writeSettings() {
   docw["try_calc_i"] = try_calc_i;
   docw["mimic"] = mimicsEnabled() ? mimicType : MIMIC_NONE;
 
+#if REMOTE_PROXY
+  docw["proxy-enabled"] = bProxyEnabled;
+  docw["proxy-tls"] = bProxyUseTLS;
+  docw["proxy-host"] = settingProxyHost;
+  docw["proxy-port"] = settingProxyPort;
+  docw["proxy-path"] = settingProxyPath;
+  docw["proxy-interval"] = settingProxyInterval;
+  docw["proxy-device-id"] = settingProxyDeviceId;
+  docw["proxy-secret"] = settingProxySecret;
+  docw["proxy-token"] = settingProxyToken;
+#endif
+
 
   docw["eid-enabled"] = bEID_enabled;
   if ( bEID_enabled ) EID_RESTART_IDLE_TIMER();
@@ -288,6 +300,18 @@ void readSettings(bool show)
     mimicType = MIMIC_NONE;
   }
 
+#if REMOTE_PROXY
+  if (doc["proxy-enabled"].is<bool>()) bProxyEnabled = doc["proxy-enabled"];
+  if (doc["proxy-tls"].is<bool>()) bProxyUseTLS = doc["proxy-tls"];
+  if (doc["proxy-host"].is<const char*>()) strlcpy(settingProxyHost, doc["proxy-host"].as<const char*>(), sizeof(settingProxyHost));
+  if (doc["proxy-port"].is<int>()) settingProxyPort = doc["proxy-port"];
+  if (doc["proxy-path"].is<const char*>()) strlcpy(settingProxyPath, doc["proxy-path"].as<const char*>(), sizeof(settingProxyPath));
+  if (doc["proxy-interval"].is<int>()) settingProxyInterval = constrain(doc["proxy-interval"].as<int>(), 5, 3600);
+  if (doc["proxy-device-id"].is<const char*>()) strlcpy(settingProxyDeviceId, doc["proxy-device-id"].as<const char*>(), sizeof(settingProxyDeviceId));
+  if (doc["proxy-secret"].is<const char*>()) strlcpy(settingProxySecret, doc["proxy-secret"].as<const char*>(), sizeof(settingProxySecret));
+  if (doc["proxy-token"].is<const char*>()) strlcpy(settingProxyToken, doc["proxy-token"].as<const char*>(), sizeof(settingProxyToken));
+#endif
+
   #ifdef UDP_BCAST
   if (doc["udp"].is<bool>()) bUDPenabled = doc["udp"];
   #endif
@@ -315,6 +339,12 @@ void readSettings(bool show)
   
   if (settingMQTTbrokerPort    < 1) settingMQTTbrokerPort   = 1883;
   settingMeentInterval = constrain(settingMeentInterval, 1, 3600);
+#if REMOTE_PROXY
+  if (strlen(settingProxyHost) < 3) strlcpy(settingProxyHost, PROXY_REMOTE_DEFAULT_HOST, sizeof(settingProxyHost));
+  if (strlen(settingProxyPath) < 2) strlcpy(settingProxyPath, PROXY_REMOTE_DEFAULT_PATH, sizeof(settingProxyPath));
+  settingProxyPort = constrain(settingProxyPort, (uint16_t)1, (uint16_t)65535);
+  settingProxyInterval = constrain(settingProxyInterval, (uint32_t)5, (uint32_t)3600);
+#endif
 
   if (!show) return;
 
@@ -491,8 +521,51 @@ void updateSetting(const char *field, const char *newValue)
     mimicType = mimicsEnabled() ? newMimic : MIMIC_NONE;
   }
 
+#if REMOTE_PROXY
+  bool proxy_config_changed = false;
+  if (!stricmp(field, "proxy_enabled")) {
+    bProxyEnabled = (stricmp(newValue, "true") == 0 ? true : false);
+    proxy_config_changed = true;
+  }
+  if (!stricmp(field, "proxy_tls")) {
+    bProxyUseTLS = (stricmp(newValue, "true") == 0 ? true : false);
+    proxy_config_changed = true;
+  }
+  if (!stricmp(field, "proxy_host")) {
+    strCopy(settingProxyHost, sizeof(settingProxyHost), newValue);
+    proxy_config_changed = true;
+  }
+  if (!stricmp(field, "proxy_port")) {
+    settingProxyPort = constrain(String(newValue).toInt(), 1, 65535);
+    proxy_config_changed = true;
+  }
+  if (!stricmp(field, "proxy_path")) {
+    strCopy(settingProxyPath, sizeof(settingProxyPath), newValue);
+    proxy_config_changed = true;
+  }
+  if (!stricmp(field, "proxy_interval")) {
+    settingProxyInterval = constrain(String(newValue).toInt(), 5, 3600);
+    proxy_config_changed = true;
+  }
+  if (!stricmp(field, "proxy_device_id")) {
+    strCopy(settingProxyDeviceId, sizeof(settingProxyDeviceId), newValue);
+    proxy_config_changed = true;
+  }
+  if (!stricmp(field, "proxy_secret")) {
+    strCopy(settingProxySecret, sizeof(settingProxySecret), newValue);
+    proxy_config_changed = true;
+  }
+  if (!stricmp(field, "proxy_reset_token")) {
+    settingProxyToken[0] = '\0';
+    proxy_config_changed = true;
+  }
+#endif
+
   SendTariffData(); // P2PType = NRGTARIFS;
   writeSettings();
+#if REMOTE_PROXY
+  if (proxy_config_changed) ProxyRemoteNotifyConfigChanged();
+#endif
   if (reboot_required) {
     LogFile("reboot: mimic changed", true);
     delay(200);

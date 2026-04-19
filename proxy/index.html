@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Smart Stuff Proxy</title>
+    <link rel="stylesheet" href="/~martijn/dsmr-api/v5/DSMRindex.css">
+    <link rel="stylesheet" href="proxy.css">
+    <link rel="icon" type="image/png" href="/~martijn/dsmr-api/v5/favicon/favicon-32x32.png" sizes="32x32">
+  </head>
+  <body class="proxy-mode">
+    <div class="proxy-shell">
+      <aside class="proxy-sidebar" id="proxy-sidebar">
+        <button class="proxy-sidebar-toggle" id="proxy-sidebar-toggle" type="button" aria-label="Zijbalk inklappen">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+        <div class="proxy-brand">
+          <p>Smart Stuff</p>
+          <h1>Proxy</h1>
+        </div>
+
+        <form class="proxy-device-picker" id="proxy-device-form">
+          <label for="proxy-device-id">Device ID</label>
+          <input id="proxy-device-id" name="device_id" type="text" placeholder="P1-001122334455">
+          <button type="submit">Open device</button>
+        </form>
+
+        <nav class="proxy-links">
+          <a href="#DashTab" data-proxy-tab="bDashTab">Dashboard</a>
+          <a href="#InsightsTab" data-proxy-tab="bInsightsTab">Insights</a>
+          <a href="#DaysTab" data-proxy-tab="bDaysTab">Daily stats</a>
+        </nav>
+
+        <section class="proxy-meta">
+          <div class="proxy-status" id="proxy-status-pill">Verbinden...</div>
+          <div class="proxy-meta-row">
+            <span>Device</span>
+            <strong id="proxy-meta-device">-</strong>
+          </div>
+          <div class="proxy-meta-row">
+            <span>Hostname</span>
+            <strong id="proxy-meta-hostname">-</strong>
+          </div>
+          <div class="proxy-meta-row">
+            <span>Firmware</span>
+            <strong id="proxy-meta-firmware">-</strong>
+          </div>
+          <div class="proxy-meta-row">
+            <span>Hardware</span>
+            <strong id="proxy-meta-hardware">-</strong>
+          </div>
+          <div class="proxy-meta-row">
+            <span>Laatste update</span>
+            <strong id="proxy-meta-updated">-</strong>
+          </div>
+        </section>
+      </aside>
+
+      <main class="proxy-content">
+        <div id="proxy-app"></div>
+      </main>
+    </div>
+
+    <script src="https://code.iconify.design/1/1.0.7/iconify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+    <script src="/~martijn/dsmr-api/v5/chartjs-plugin-labels.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/7.0.0/math.min.js"></script>
+
+    <script src="dal-proxy.js"></script>
+    <script src="/~martijn/dsmr-api/v5/DSMRgraphics.js"></script>
+    <script src="/~martijn/dsmr-api/v5/DSMRindex.js"></script>
+    <script src="/~martijn/dsmr-api/v5/burnup.js"></script>
+    <script src="proxy-shell.js"></script>
+  </body>
+</html>

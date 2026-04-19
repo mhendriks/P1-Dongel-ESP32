@@ -543,6 +543,10 @@ function hasValidMeterValue(field) {
 	return !Number.isNaN(asNumber(field.value));
 }
 
+function hasDashboardFieldsLoaded(fields) {
+	return !!fields && typeof fields === "object" && typeof fields.timestamp?.value === "string";
+}
+
 //============================================================================  
   
 function SetOnSettings(json) {
@@ -555,7 +559,7 @@ function SetOnSettings(json) {
 			json.gas_delivered_timestamp.value !== "-";
 		HeeftGas = hasGasValue || hasGasTimestamp;
 	}
-	if (!HeeftWater) HeeftWater = "water" in json ? !isNaN(json.water.value) : false;
+	if (!HeeftWater) HeeftWater = hasValidMeterValue(json.water);
 
 	if (!Injection) {
 		Injection = !isNaN(json.energy_returned_tariff1?.value) ? json.energy_returned_tariff1.value : false;
@@ -809,6 +813,12 @@ function refreshDashboard(json){
 	setPresentationType('TAB'); //zet grafische mode uit
 	
 	let Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
+
+		if (!hasDashboardFieldsLoaded(json)) {
+			console.warn("refreshDashboard skipped: fields not loaded yet");
+			Spinner(false);
+			return;
+		}
 
 		//-------CHECKS
 
@@ -1987,7 +1997,7 @@ function refreshHistData(type) {
 				hist_arrPi[i] = values[2] + values[3];
 			}
 			DailyHistoryReady = true;
-			if (activeTab === "bDashTab" && objDAL.getFields()) {
+			if (activeTab === "bDashTab" && hasDashboardFieldsLoaded(objDAL.getFields())) {
 				refreshDashboard(objDAL.getFields());
 			}
 			break;

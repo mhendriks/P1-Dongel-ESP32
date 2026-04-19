@@ -1,0 +1,235 @@
+:root {
+  --proxy-sidebar-width: 290px;
+  --proxy-sidebar-collapsed: 78px;
+  --proxy-sidebar-bg: #232834;
+  --proxy-sidebar-bg-2: #2d3442;
+  --proxy-sidebar-text: #eef2f7;
+  --proxy-sidebar-muted: #a9b2c1;
+  --proxy-sidebar-accent: #314b77;
+  --proxy-page-bg: #eef1f5;
+}
+
+body.proxy-mode {
+  background: var(--proxy-page-bg);
+}
+
+.proxy-shell {
+  min-height: 100vh;
+}
+
+.proxy-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--proxy-sidebar-width);
+  padding: 24px 18px;
+  color: var(--proxy-sidebar-text);
+  background: linear-gradient(180deg, var(--proxy-sidebar-bg) 0%, var(--proxy-sidebar-bg-2) 100%);
+  transition: width 0.2s ease, transform 0.2s ease;
+  z-index: 1200;
+  overflow: hidden;
+}
+
+.proxy-sidebar-toggle {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 42px;
+  height: 42px;
+  margin: 0 0 18px 0;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+
+.proxy-sidebar-toggle span {
+  width: 18px;
+  height: 2px;
+  margin: 0 auto;
+  background: #fff;
+}
+
+.proxy-brand p {
+  margin: 0;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  color: var(--proxy-sidebar-muted);
+}
+
+.proxy-brand h1 {
+  margin: 6px 0 0;
+  color: #fff;
+  font-size: 2.2rem;
+}
+
+.proxy-device-picker {
+  margin-top: 24px;
+  display: grid;
+  gap: 10px;
+}
+
+.proxy-device-picker label,
+.proxy-meta-row span {
+  color: var(--proxy-sidebar-muted);
+  font-size: 0.9rem;
+}
+
+.proxy-device-picker input,
+.proxy-device-picker button {
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.proxy-device-picker input {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.proxy-device-picker button {
+  border: none;
+  color: #fff;
+  background: var(--proxy-sidebar-accent);
+  cursor: pointer;
+}
+
+.proxy-links {
+  margin-top: 24px;
+  display: grid;
+  gap: 8px;
+}
+
+.proxy-links a {
+  display: block;
+  padding: 11px 14px;
+  border-radius: 12px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.proxy-links a:hover,
+.proxy-links a.active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.proxy-meta {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.proxy-status {
+  display: inline-flex;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  color: #fff;
+  background: #2f7d5b;
+}
+
+.proxy-status.offline {
+  background: #c96d2d;
+}
+
+.proxy-meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.proxy-meta-row strong {
+  color: #fff;
+  text-align: right;
+  font-weight: 600;
+}
+
+.proxy-content {
+  margin-left: var(--proxy-sidebar-width);
+  min-height: 100vh;
+}
+
+body.proxy-collapsed .proxy-sidebar {
+  width: var(--proxy-sidebar-collapsed);
+}
+
+body.proxy-collapsed .proxy-brand p,
+body.proxy-collapsed .proxy-brand h1,
+body.proxy-collapsed .proxy-device-picker,
+body.proxy-collapsed .proxy-meta,
+body.proxy-collapsed .proxy-links a {
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.proxy-collapsed .proxy-content {
+  margin-left: var(--proxy-sidebar-collapsed);
+}
+
+body.proxy-mode nav {
+  left: var(--proxy-sidebar-width);
+  width: calc(100% - var(--proxy-sidebar-width));
+}
+
+body.proxy-collapsed nav {
+  left: var(--proxy-sidebar-collapsed);
+  width: calc(100% - var(--proxy-sidebar-collapsed));
+}
+
+body.proxy-mode section {
+  width: min(1160px, calc(100vw - var(--proxy-sidebar-width) - 36px));
+}
+
+body.proxy-collapsed section {
+  width: min(1160px, calc(100vw - var(--proxy-sidebar-collapsed) - 36px));
+}
+
+body.proxy-mode #mainPage {
+  padding-bottom: 32px;
+}
+
+body.proxy-mode #messages {
+  margin-left: 12px;
+  margin-right: 12px;
+  border-radius: 12px;
+}
+
+body.proxy-mode #DashTab .card {
+  max-width: 220px;
+  min-width: 220px;
+}
+
+body.proxy-mode #DaysTab,
+body.proxy-mode #InsightsTab,
+body.proxy-mode #DashTab {
+  padding-top: 72px;
+}
+
+@media screen and (max-width: 980px) {
+  .proxy-sidebar {
+    transform: translateX(calc(-1 * var(--proxy-sidebar-width)));
+  }
+
+  .proxy-content,
+  body.proxy-collapsed .proxy-content {
+    margin-left: 0;
+  }
+
+  body.proxy-mode nav,
+  body.proxy-collapsed nav {
+    left: 0;
+    width: 100%;
+  }
+
+  body.proxy-mode section,
+  body.proxy-collapsed section {
+    width: min(1160px, calc(100vw - 24px));
+  }
+
+  body.proxy-sidebar-open .proxy-sidebar {
+    transform: translateX(0);
+  }
+}

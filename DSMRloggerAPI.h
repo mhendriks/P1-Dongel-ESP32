@@ -505,6 +505,25 @@ bool      skipNetwork = false;
 bool      allowSkipNetworkByButton = false;
 bool      try_calc_i = true;
 
+#if REMOTE_PROXY
+bool      bProxyEnabled = false;
+bool      bProxyUseTLS = true;
+char      settingProxyHost[80] = PROXY_REMOTE_DEFAULT_HOST;
+char      settingProxyPath[80] = PROXY_REMOTE_DEFAULT_PATH;
+uint16_t  settingProxyPort = PROXY_REMOTE_DEFAULT_PORT;
+uint32_t  settingProxyInterval = PROXY_REMOTE_DEFAULT_INTERVAL;
+char      settingProxyDeviceId[24] = "";
+char      settingProxySecret[32] = "";
+char      settingProxyToken[96] = "";
+char      proxyLastError[96] = "";
+uint32_t  proxyLastSuccess = 0;
+uint32_t  proxyLastAttempt = 0;
+uint32_t  proxySentCount = 0;
+uint32_t  proxyErrorCount = 0;
+uint16_t  proxyLastHttpCode = 0;
+bool      proxyConnected = false;
+#endif
+
 //MQTT
 uint32_t   settingMQTTinterval = 10;
 char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], settingMQTTtopTopic[50] = _DEFAULT_MQTT_TOPIC;
@@ -578,6 +597,10 @@ bool en_connected = false;
 ApiResponse handleModbusMonitorApi();
 String modbusMonitorJson();
 void clearModbusMonitorEntries();
+void ProxyRemoteSetup();
+void ProxyRemoteLoop();
+void ProxyRemoteNotifyConfigChanged();
+String proxyStatusJson();
 
 #include "Debug.h"
 #include <ESPmDNS.h>

@@ -378,6 +378,14 @@ String deviceInfoJson()
     sprintf(paired,"%i - %s", Pref.peers, en_connected?"connected":"unconnected");
   doc["paired"] = paired;
 
+#if REMOTE_PROXY
+  doc["proxy_enabled"] = bProxyEnabled;
+  doc["proxy_connected"] = proxyConnected;
+  doc["proxy_device_id"] = settingProxyDeviceId;
+  doc["proxy_last_http_code"] = proxyLastHttpCode;
+  doc["proxy_last_success"] = proxyLastSuccess;
+#endif
+
   doc["reboots"] = (int)P1Status.reboots;
   doc["lastreset"] = lastReset;  
 
@@ -457,6 +465,17 @@ if ( !hideMQTTsettings) {
   }
   doc["mb_monitor"] = bModbusMonitor;
   if (mimicsEnabled()) ADD_SETTING("mimic", "i", MIMIC_NONE, MIMIC_SHELLY_PRO_3EM, mimicType);
+#if REMOTE_PROXY
+  doc["proxy_enabled"] = bProxyEnabled;
+  doc["proxy_tls"] = bProxyUseTLS;
+  ADD_SETTING("proxy_host", "s", 0, sizeof(settingProxyHost) - 1, settingProxyHost);
+  ADD_SETTING("proxy_port", "i", 1, 65535, settingProxyPort);
+  ADD_SETTING("proxy_path", "s", 0, sizeof(settingProxyPath) - 1, settingProxyPath);
+  ADD_SETTING("proxy_interval", "i", 5, 3600, settingProxyInterval);
+  ADD_SETTING("proxy_device_id", "s", 0, sizeof(settingProxyDeviceId) - 1, settingProxyDeviceId);
+  ADD_SETTING("proxy_secret", "s", 0, sizeof(settingProxySecret) - 1, settingProxySecret);
+  doc["proxy_token_set"] = strlen(settingProxyToken) > 0;
+#endif
   //booleans
   doc["hist"] = EnableHistory;
   doc["auto_update"] = bAutoUpdate;
