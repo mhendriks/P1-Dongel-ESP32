@@ -126,7 +126,7 @@ dev_conf device_config[] = {
   // P1UX2 (Ultra X2 – aangepaste ETH pinout)
   {  0, 9, -1, -1,  12, -1,  21, 10, 11, 18, 15, 16, 14, 13, 17 },
   
-  //NRGDH
+  //NRGDH - ZAP2
   {  9, 8, -1, -1,  20, -1,  4,  1,  -1,  -1, -1, -1, -1, -1, -1 },
 
     //D1MC

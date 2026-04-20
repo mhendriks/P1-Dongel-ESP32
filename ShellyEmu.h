@@ -43,345 +43,127 @@ public:
     }
   }
 
-  String deviceInfoJson() {
-    JsonDocument doc;
-    fillDeviceInfo(doc.to<JsonObject>());
-    String out;
-    serializeJson(doc, out);
-    return out;
-  }
-
-  String rpcDeviceInfoJson(int requestId = 1) {
-    JsonDocument doc;
-    doc["id"] = requestId;
-    doc["src"] = _id.length() ? _id : makeId();
-    fillDeviceInfo(doc["result"].to<JsonObject>());
-    String out;
-    serializeJson(doc, out);
-    return out;
-  }
-
-  String rpcEmStatusJson(int requestId = 1) {
-    JsonDocument doc;
-    doc["id"] = requestId;
-    doc["src"] = _id.length() ? _id : makeId();
-    fillEmComponent(doc["result"].to<JsonObject>());
-    String out;
-    serializeJson(doc, out);
-    return out;
-  }
-
-  String rpcEmDataStatusJson(int requestId = 1) {
-    JsonDocument doc;
-    doc["id"] = requestId;
-    doc["src"] = _id.length() ? _id : makeId();
-    fillEmDataComponent(doc["result"].to<JsonObject>());
-    String out;
-    serializeJson(doc, out);
-    return out;
-  }
-
-  String rpcShellyStatusJson(int requestId = 1) {
-    JsonDocument doc;
-    doc["id"] = requestId;
-    doc["src"] = _id.length() ? _id : makeId();
-    fillRpcStatus(doc["result"].to<JsonObject>());
-    String out;
-    serializeJson(doc, out);
-    return out;
-  }
-
-  String rpcShellyListMethodsJson(int requestId = 1) {
-    JsonDocument doc;
-    doc["id"] = requestId;
-    doc["src"] = _id.length() ? _id : makeId();
-    JsonArray methods = doc["result"].to<JsonArray>();
-    methods.add("EM.GetStatus");
-    methods.add("EMData.GetStatus");
-    methods.add("Shelly.GetDeviceInfo");
-    methods.add("Shelly.GetStatus");
-    methods.add("Shelly.ListMethods");
-    String out;
-    serializeJson(doc, out);
-    return out;
-  }
-
-  String shellyStatusJson() {
-    JsonDocument doc;
-    fillShellyStatus(doc.to<JsonObject>());
-    String out;
-    serializeJson(doc, out);
-    return out;
-  }
-
 private:
   AsyncUDP _udp1010, _udp2220;
   String _id;
 
   // ====== helpers implementatie ======
-  static String macNoColons(const String& mac) {
-    String s; s.reserve(12);
-    for (size_t i=0;i<mac.length();++i) if (mac[i] != ':') s += mac[i];
-    return s;
+  static uint16_t localPortForPacket(AsyncUDPPacket& packet) {
+    return packet.isBroadcast() ? 0 : packet.localPort();
   }
+
   static String makeId() {
     String s = "shellypro3em-";
     s += macID;
     return s;
   }
-  static bool eqMethod(const char* m, const char* want){
-    if(!m) return false;
-    String s(m); s.trim();
-    return s.equals(want);
+
+  void logUdpEvent(AsyncUDPPacket& packet, const char* prefix, const String& details) {
+    String log = prefix;
+    log += " from ";
+    log += packet.remoteIP().toString();
+    log += ":";
+    log += String(packet.remotePort());
+    log += " on ";
+    log += String(localPortForPacket(packet));
+    if (details.length()) {
+      log += " ";
+      log += details;
+    }
+    LogFile(log.c_str(), true);
   }
 
-  void fillDeviceInfo(JsonObject dst){
-    dst["name"]  = nullptr;
-    dst["id"]    = _id;
-    dst["mac"]   = macID;  // zonder ':'
-    dst["slot"]  = 1;
-    dst["model"] = "SPEM-003CEBEU";
-    dst["gen"]   = 2;
-    dst["fw_id"] = "20240819-074548/1.4.2-gc2639da";
-    dst["ver"]   = "1.4.2";
-    dst["app"]   = "Pro3EM";
-    dst["auth_en"] = false;
-    dst["auth_domain"] = nullptr;
-    dst["profile"] = "triphase";
+  static float astraDecimalEnforcedPower(float power) {
+    const float decimalPointEnforcer = 0.001f;
+    if (fabsf(power) < 0.1f) {
+      return decimalPointEnforcer;
+    }
+    const float rounded = roundf(power);
+    return roundf((power + ((power == rounded || power == 0.0f) ? decimalPointEnforcer : 0.0f)) * 10.0f) / 10.0f;
   }
 
-  static float shareOfPositive(float phase, float total){
-    if (total <= 0.0001f || !isfinite(phase) || phase <= 0.0f) return 0.0f;
-    return phase / total;
+  static float astraTotalPower(float totalPower) {
+    const float rounded = roundf(totalPower);
+    totalPower = roundf(totalPower * 1000.0f) / 1000.0f;
+    if (totalPower == rounded || totalPower == 0.0f) {
+      totalPower += 0.001f;
+    }
+    return totalPower;
   }
 
-  static float shareOfNegative(float phase, float totalAbs){
-    if (totalAbs <= 0.0001f || !isfinite(phase) || phase >= 0.0f) return 0.0f;
-    return fabsf(phase) / totalAbs;
+  void fillAstraEmStatus(JsonDocument& doc, int requestId) {
+    const float phaseA = isfinite(P1::pL1()) ? P1::pL1() : 0.0f;
+    const float phaseB = isfinite(P1::pL2()) ? P1::pL2() : 0.0f;
+    const float phaseC = isfinite(P1::pL3()) ? P1::pL3() : 0.0f;
+
+    doc["id"] = requestId;
+    doc["src"] = _id.length() ? _id : makeId();
+    doc["dst"] = "unknown";
+
+    JsonObject result = doc["result"].to<JsonObject>();
+    result["a_act_power"] = astraDecimalEnforcedPower(phaseA);
+    result["b_act_power"] = astraDecimalEnforcedPower(phaseB);
+    result["c_act_power"] = astraDecimalEnforcedPower(phaseC);
+    result["total_act_power"] = astraTotalPower(phaseA + phaseB + phaseC);
   }
 
-  void fillEmDataComponent(JsonObject emdata){
-    const float phaseA = P1::pL1();
-    const float phaseB = P1::pL2();
-    const float phaseC = P1::pL3();
-    const float importTotal = P1::importTotalkWh();
-    const float exportTotal = P1::exportTotalkWh();
+  void fillAstraEm1Status(JsonDocument& doc, int requestId) {
+    const float phaseA = isfinite(P1::pL1()) ? P1::pL1() : 0.0f;
+    const float phaseB = isfinite(P1::pL2()) ? P1::pL2() : 0.0f;
+    const float phaseC = isfinite(P1::pL3()) ? P1::pL3() : 0.0f;
 
-    const float posTotal = (isfinite(phaseA) && phaseA > 0 ? phaseA : 0.0f)
-                         + (isfinite(phaseB) && phaseB > 0 ? phaseB : 0.0f)
-                         + (isfinite(phaseC) && phaseC > 0 ? phaseC : 0.0f);
-    const float negTotalAbs = (isfinite(phaseA) && phaseA < 0 ? fabsf(phaseA) : 0.0f)
-                            + (isfinite(phaseB) && phaseB < 0 ? fabsf(phaseB) : 0.0f)
-                            + (isfinite(phaseC) && phaseC < 0 ? fabsf(phaseC) : 0.0f);
+    doc["id"] = requestId;
+    doc["src"] = _id.length() ? _id : makeId();
+    doc["dst"] = "unknown";
 
-    const float aImport = importTotal * shareOfPositive(phaseA, posTotal);
-    const float bImport = importTotal * shareOfPositive(phaseB, posTotal);
-    const float cImport = importTotal * shareOfPositive(phaseC, posTotal);
-
-    const float aExport = exportTotal * shareOfNegative(phaseA, negTotalAbs);
-    const float bExport = exportTotal * shareOfNegative(phaseB, negTotalAbs);
-    const float cExport = exportTotal * shareOfNegative(phaseC, negTotalAbs);
-
-    emdata["id"] = 0;
-    emdata["a_total_act_energy"] = aImport;
-    emdata["a_total_act_ret_energy"] = aExport;
-    emdata["b_total_act_energy"] = bImport;
-    emdata["b_total_act_ret_energy"] = bExport;
-    emdata["c_total_act_energy"] = cImport;
-    emdata["c_total_act_ret_energy"] = cExport;
-    emdata["total_act"] = importTotal;
-    emdata["total_act_ret"] = exportTotal;
+    JsonObject result = doc["result"].to<JsonObject>();
+    result["act_power"] = astraTotalPower(phaseA + phaseB + phaseC);
   }
 
-  void fillSysComponent(JsonObject sys){
-    sys["mac"] = macID;
-    sys["restart_required"] = false;
-
-    char timeBuf[6] = "--:--";
-    if (year() > 2023) snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", hour(), minute());
-    sys["time"] = timeBuf;
-
-    time_t now = 0;
-    #ifdef ARDUINO_ARCH_ESP32
-      now = time(nullptr);
-    #endif
-    sys["unixtime"] = now;
-    sys["uptime"] = uptime();
-    sys["ram_size"] = ESP.getHeapSize();
-    sys["ram_free"] = ESP.getFreeHeap();
-    sys["fs_size"] = 524288;
-    sys["fs_free"] = 180224;
-    sys["cfg_rev"] = 11;
-  }
-
-  void fillWifiComponent(JsonObject wifi){
-    wifi["sta_ip"] = WiFi.localIP().toString();
-    wifi["rssi"] = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
-    wifi["ssid"] = WiFi.SSID();
-    wifi["status"] = (WiFi.status() == WL_CONNECTED) ? "got ip" : "disconnected";
-  }
-
-  void fillWifiStaComponent(JsonObject wifi_sta){
-    wifi_sta["connected"] = (WiFi.status() == WL_CONNECTED);
-    wifi_sta["ssid"] = WiFi.SSID();
-    wifi_sta["rssi"] = (WiFi.status() == WL_CONNECTED) ? WiFi.RSSI() : 0;
-  }
-
-  void fillEmComponent(JsonObject em){
-    const float pImp_kW = P1::powerImportkW();
-    const float pExp_kW = P1::powerExportkW();
-    const float phaseA = P1::pL1();
-    const float phaseB = P1::pL2();
-    const float phaseC = P1::pL3();
-    const float voltA = P1::uL1();
-    const float currA = P1::iL1();
-    const float voltB = P1::uL2();
-    const float currB = P1::iL2();
-    const float voltC = P1::uL3();
-    const float currC = P1::iL3();
-
-    const float aprtA = (isfinite(voltA) && isfinite(currA)) ? fabsf(voltA * currA) : NAN;
-    const float aprtB = (isfinite(voltB) && isfinite(currB)) ? fabsf(voltB * currB) : NAN;
-    const float aprtC = (isfinite(voltC) && isfinite(currC)) ? fabsf(voltC * currC) : NAN;
-
-    const float pfA = (isfinite(phaseA) && isfinite(aprtA) && aprtA > 0.001f) ? constrain(phaseA / aprtA, -1.0f, 1.0f) : 0.0f;
-    const float pfB = (isfinite(phaseB) && isfinite(aprtB) && aprtB > 0.001f) ? constrain(phaseB / aprtB, -1.0f, 1.0f) : 0.0f;
-    const float pfC = (isfinite(phaseC) && isfinite(aprtC) && aprtC > 0.001f) ? constrain(phaseC / aprtC, -1.0f, 1.0f) : 0.0f;
-
-    const float totalActPower = 1000.0f * (pImp_kW - pExp_kW);
-    const float totalAprtPower = (isfinite(aprtA) ? aprtA : 0.0f) + (isfinite(aprtB) ? aprtB : 0.0f) + (isfinite(aprtC) ? aprtC : 0.0f);
-    const float totalCurrent = (isfinite(currA) ? currA : 0.0f) + (isfinite(currB) ? currB : 0.0f) + (isfinite(currC) ? currC : 0.0f);
-
-    em["id"] = 0;
-    if (isfinite(phaseA)) em["a_act_power"] = phaseA;
-    if (isfinite(voltA)) em["a_voltage"] = voltA;
-    if (isfinite(currA)) em["a_current"] = currA;
-    if (isfinite(aprtA)) em["a_aprt_power"] = aprtA;
-    em["a_pf"] = pfA;
-    em["a_freq"] = 50.0f;
-
-    if (isfinite(phaseB)) em["b_act_power"] = phaseB;
-    if (isfinite(voltB)) em["b_voltage"] = voltB;
-    if (isfinite(currB)) em["b_current"] = currB;
-    if (isfinite(aprtB)) em["b_aprt_power"] = aprtB;
-    em["b_pf"] = pfB;
-    em["b_freq"] = 50.0f;
-
-    if (isfinite(phaseC)) em["c_act_power"] = phaseC;
-    if (isfinite(voltC)) em["c_voltage"] = voltC;
-    if (isfinite(currC)) em["c_current"] = currC;
-    if (isfinite(aprtC)) em["c_aprt_power"] = aprtC;
-    em["c_pf"] = pfC;
-    em["c_freq"] = 50.0f;
-
-    em["total_act_power"] = totalActPower;
-    em["total_aprt_power"] = totalAprtPower;
-    em["total_current"] = totalCurrent;
-    em["n_current"] = nullptr;
-    em.createNestedArray("user_calibrated_phase");
-    em.createNestedArray("errors");
-  }
-
-  void fillShellyStatus(JsonObject dst){
-    JsonObject cloud = dst["cloud"].to<JsonObject>();
-    cloud["connected"] = false;
-
-    JsonObject mqtt = dst["mqtt"].to<JsonObject>();
-    mqtt["connected"] = false;
-
-    JsonObject sys = dst["sys"].to<JsonObject>();
-    fillSysComponent(sys);
-
-    JsonObject em = dst["em:0"].to<JsonObject>();
-    fillEmComponent(em);
-
-    JsonObject emdata = dst["emdata:0"].to<JsonObject>();
-    fillEmDataComponent(emdata);
-  }
-
-  void fillRpcStatus(JsonObject dst){
-    fillShellyStatus(dst);
-  }
   void handlePacket(AsyncUDPPacket packet) {
-    // JSON parsen rechtstreeks uit het UDP-buffer (lengte-aware)
     JsonDocument req;  // ArduinoJson 7 dynamisch
     DeserializationError e = deserializeJson(req, packet.data(), packet.length());
 
     if (e) {
-      // Niet-JSON -> discovery/probe -> los DeviceInfo-object terug
-      JsonDocument di;
-      fillDeviceInfo(di.to<JsonObject>());
-      String out; serializeJson(di, out);
-      packet.write((const uint8_t*)out.c_str(), out.length());
+      logUdpEvent(packet, "Shelly UDP invalid JSON", "");
       return;
     }
 
-    // Method veilig uitlezen (trimmen)
+    if (!req["params"]["id"].is<int>()) {
+      String details = "ignored missing params.id";
+      if (!req["method"].isNull()) {
+        details += " method=";
+        details += req["method"].as<String>();
+      }
+      logUdpEvent(packet, "Shelly UDP", details);
+      return;
+    }
+
     const char* mraw = req["method"];
     String method = mraw ? String(mraw) : String();
     method.trim();
 
-    Debug("UDP method: ");Debugln(method);
+    logUdpEvent(packet, "Shelly UDP recv", "method=" + method);
 
-    // Standaard RPC-reply skelet
     JsonDocument resp;
-
     resp["id"]  = req["id"].isNull() ? 1 : req["id"];
     resp["src"] = _id;
 
     if (method.equals(F("EM.GetStatus"))) {
-      fillEmComponent(resp["result"].to<JsonObject>());
+      fillAstraEmStatus(resp, resp["id"].as<int>());
       String out; serializeJson(resp, out);
       packet.write((const uint8_t*)out.c_str(), out.length());
       return;
     }
-    if (method.equals(F("EMData.GetStatus"))) {
-      fillEmDataComponent(resp["result"].to<JsonObject>());
-      String out; serializeJson(resp, out);
-      packet.write((const uint8_t*)out.c_str(), out.length());
-      return;
-    }
-    //only for the other responses
-
-    if (method.equals(F("Shelly.ListMethods"))) {
-      JsonArray methods = resp["result"].to<JsonArray>();
-      methods.add("EM.GetStatus");
-      methods.add("EMData.GetStatus");
-      methods.add("Shelly.GetDeviceInfo");
-      methods.add("Shelly.GetStatus");
-      methods.add("Shelly.ListMethods");
-      String out; serializeJson(resp, out);
-      packet.write((const uint8_t*)out.c_str(), out.length());
-      return;
-    }
-
-    if (method.equals(F("Shelly.GetDeviceInfo"))) {
-      fillDeviceInfo(resp["result"].to<JsonObject>());
-      String out; serializeJson(resp, out);
-      packet.write((const uint8_t*)out.c_str(), out.length());
-      return;
-    }
-    if (method.equals(F("Shelly.GetStatus"))) {
-      fillRpcStatus(resp["result"].to<JsonObject>());
-      String out; serializeJson(resp, out);
-      packet.write((const uint8_t*)out.c_str(), out.length());
-      return;
-    }
-    if (method.equals(F("status")) || method.equals(F("Shelly.Status"))) {
-      fillShellyStatus(resp.to<JsonObject>());
+    if (method.equals(F("EM1.GetStatus"))) {
+      fillAstraEm1Status(resp, resp["id"].as<int>());
       String out; serializeJson(resp, out);
       packet.write((const uint8_t*)out.c_str(), out.length());
       return;
     }
 
     // Onbekende method -> minimaal deviceinfo als result
-    //todo log call
-    String log = "UDP: unsupported rpc -> ";
-    log += method;
-    LogFile(log.c_str(),true);
-    fillDeviceInfo(resp["result"].to<JsonObject>());
-    String out; serializeJson(resp, out);
-    packet.write((const uint8_t*)out.c_str(), out.length());
+    logUdpEvent(packet, "Shelly UDP unsupported", "method=" + method);
   }
 } shellyUDP;
 

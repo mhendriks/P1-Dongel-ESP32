@@ -2792,7 +2792,7 @@ function initModbusMonitorControls() {
 				{ v: 6, t: "MX3xx" },
 				{ v: 7, t: "Default 2 - floats" },
 				{ v: 8, t: "KLEFR / INEPRO / Webasto Unite" },
-// 				{ v: 9, t: "Default 3 - recipe floats" },
+				{ v: 9, t: "Phoenix Contact EEM-XM3xx" },
 			  ];
 			
 			  const sel = document.createElement("select");

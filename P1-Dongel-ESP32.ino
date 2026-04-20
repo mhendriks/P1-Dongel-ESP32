@@ -63,8 +63,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
 
-5.5.1
-- mimic shelly changes
 
 5.6.0
 - Add remote Proxy

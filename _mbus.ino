@@ -108,6 +108,8 @@ enum class MbSource : uint8_t {
   energy_returned_tariff2_kwh,
   energy_delivered_total_kwh,
   energy_returned_total_kwh,
+  energy_total_abs_kwh,
+  reactive_energy_total_varh,
   energy_net_total_kwh,
   energy_net_tariff1_kwh,
   energy_net_tariff2_kwh,
@@ -134,6 +136,7 @@ enum class MbSource : uint8_t {
   net_power_l1_kw,
   net_power_l2_kw,
   net_power_l3_kw,
+  apparent_power_total_va,
   direction_total,
   direction_l1,
   direction_l2,
@@ -146,6 +149,7 @@ enum class MbSource : uint8_t {
   unavailable_float,
   constant,
   p1_device_id,
+  device_serial_u32,
   firmware_version_packed,
   device_online,
   uptime_seconds,
@@ -195,6 +199,8 @@ static bool parseMbSource(const char* sourceText, MbSource& outSource) {
     {"energy_returned_tariff2_kwh", MbSource::energy_returned_tariff2_kwh},
     {"energy_delivered_total_kwh",  MbSource::energy_delivered_total_kwh},
     {"energy_returned_total_kwh",   MbSource::energy_returned_total_kwh},
+    {"energy_total_abs_kwh",        MbSource::energy_total_abs_kwh},
+    {"reactive_energy_total_varh",  MbSource::reactive_energy_total_varh},
     {"energy_net_total_kwh",        MbSource::energy_net_total_kwh},
     {"energy_net_tariff1_kwh",      MbSource::energy_net_tariff1_kwh},
     {"energy_net_tariff2_kwh",      MbSource::energy_net_tariff2_kwh},
@@ -221,6 +227,7 @@ static bool parseMbSource(const char* sourceText, MbSource& outSource) {
     {"net_power_l1_kw",         MbSource::net_power_l1_kw},
     {"net_power_l2_kw",         MbSource::net_power_l2_kw},
     {"net_power_l3_kw",         MbSource::net_power_l3_kw},
+    {"apparent_power_total_va", MbSource::apparent_power_total_va},
     {"direction_total",         MbSource::direction_total},
     {"direction_l1",            MbSource::direction_l1},
     {"direction_l2",            MbSource::direction_l2},
@@ -233,6 +240,7 @@ static bool parseMbSource(const char* sourceText, MbSource& outSource) {
     {"unavailable_float",       MbSource::unavailable_float},
     {"constant",                MbSource::constant},
     {"p1_device_id",            MbSource::p1_device_id},
+    {"device_serial_u32",       MbSource::device_serial_u32},
     {"firmware_version_packed", MbSource::firmware_version_packed},
     {"device_online",           MbSource::device_online},
     {"uptime_seconds",          MbSource::uptime_seconds},
@@ -294,6 +302,14 @@ static float readMbSourceValue(MbSource source) {
         ? DSMRdata.energy_returned_total.val()
         : ((DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
            (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f));
+    case MbSource::energy_total_abs_kwh: {
+      const float delivered = readMbSourceValue(MbSource::energy_delivered_total_kwh);
+      const float returned = readMbSourceValue(MbSource::energy_returned_total_kwh);
+      if (isnan(delivered) && isnan(returned)) return NAN;
+      return (isnan(delivered) ? 0.0f : delivered) + (isnan(returned) ? 0.0f : returned);
+    }
+    case MbSource::reactive_energy_total_varh:
+      return 0.0f;
     case MbSource::energy_net_total_kwh:
       return
         (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_returned_tariff1_present ||
@@ -375,6 +391,10 @@ static float readMbSourceValue(MbSource source) {
       return DSMRdata.power_delivered_l2_present ? (float)(DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val()) : NAN;
     case MbSource::net_power_l3_kw:
       return DSMRdata.power_delivered_l3_present ? (float)(DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val()) : NAN;
+    case MbSource::apparent_power_total_va: {
+      float value = readMbSourceValue(MbSource::net_power_total_kw);
+      return isnan(value) ? NAN : fabsf(value) * 1000.0f;
+    }
     case MbSource::direction_total:
       return DSMRdata.power_returned > 0 ? -1.0f : 1.0f;
     case MbSource::direction_l1:
@@ -404,6 +424,8 @@ static float readMbSourceValue(MbSource source) {
       return NAN;
     case MbSource::p1_device_id:
       return 0x5031444F;
+    case MbSource::device_serial_u32:
+      return (float)(uint32_t)_getChipId();
     case MbSource::firmware_version_packed:
       return (float)packed_version_u32();
     case MbSource::device_online:
@@ -538,6 +560,9 @@ static bool readMbSourceUInt32(MbSource source, int16_t scale, uint32_t value, u
       return true;
     case MbSource::p1_device_id:
       outValue = 0x5031444F;
+      return true;
+    case MbSource::device_serial_u32:
+      outValue = (uint32_t)_getChipId();
       return true;
     case MbSource::firmware_version_packed:
       outValue = packed_version_u32();
@@ -685,7 +710,7 @@ static bool loadPresetRecipes(int mappingChoice) {
     case 8:
       return loadActiveRecipes(kKlefrRecipes, sizeof(kKlefrRecipes) / sizeof(kKlefrRecipes[0]));
     case 9:
-      return loadActiveRecipes(kDefaultFloatRecipes, sizeof(kDefaultFloatRecipes) / sizeof(kDefaultFloatRecipes[0]));
+      return loadActiveRecipes(kPhoenixEemXm3xxRecipes, sizeof(kPhoenixEemXm3xxRecipes) / sizeof(kPhoenixEemXm3xxRecipes[0]));
     default:
       return loadActiveRecipes(kDefaultRecipes0, sizeof(kDefaultRecipes0) / sizeof(kDefaultRecipes0[0]));
   }
