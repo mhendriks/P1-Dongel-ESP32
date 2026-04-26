@@ -48,29 +48,10 @@ private:
   String _id;
 
   // ====== helpers implementatie ======
-  static uint16_t localPortForPacket(AsyncUDPPacket& packet) {
-    return packet.isBroadcast() ? 0 : packet.localPort();
-  }
-
   static String makeId() {
     String s = "shellypro3em-";
     s += macID;
     return s;
-  }
-
-  void logUdpEvent(AsyncUDPPacket& packet, const char* prefix, const String& details) {
-    String log = prefix;
-    log += " from ";
-    log += packet.remoteIP().toString();
-    log += ":";
-    log += String(packet.remotePort());
-    log += " on ";
-    log += String(localPortForPacket(packet));
-    if (details.length()) {
-      log += " ";
-      log += details;
-    }
-    LogFile(log.c_str(), true);
   }
 
   static float astraDecimalEnforcedPower(float power) {
@@ -91,20 +72,44 @@ private:
     return totalPower;
   }
 
+  static void setJsonNumber(JsonObject& obj, const char* key, float value, uint8_t decimals) {
+    char buf[24];
+    dtostrf(value, 0, decimals, buf);
+    char* start = buf;
+    while (*start == ' ') start++;
+    obj[key] = serialized(String(start));
+  }
+
   void fillAstraEmStatus(JsonDocument& doc, int requestId) {
     const float phaseA = isfinite(P1::pL1()) ? P1::pL1() : 0.0f;
     const float phaseB = isfinite(P1::pL2()) ? P1::pL2() : 0.0f;
     const float phaseC = isfinite(P1::pL3()) ? P1::pL3() : 0.0f;
+    const float voltA = P1::uL1();
+    const float voltB = P1::uL2();
+    const float voltC = P1::uL3();
+    const float currA = P1::iL1();
+    const float currB = P1::iL2();
+    const float currC = P1::iL3();
 
     doc["id"] = requestId;
     doc["src"] = _id.length() ? _id : makeId();
     doc["dst"] = "unknown";
 
     JsonObject result = doc["result"].to<JsonObject>();
-    result["a_act_power"] = astraDecimalEnforcedPower(phaseA);
-    result["b_act_power"] = astraDecimalEnforcedPower(phaseB);
-    result["c_act_power"] = astraDecimalEnforcedPower(phaseC);
-    result["total_act_power"] = astraTotalPower(phaseA + phaseB + phaseC);
+    setJsonNumber(result, "a_act_power", astraDecimalEnforcedPower(phaseA), 1);
+    setJsonNumber(result, "b_act_power", astraDecimalEnforcedPower(phaseB), 1);
+    setJsonNumber(result, "c_act_power", astraDecimalEnforcedPower(phaseC), 1);
+    if (isfinite(voltA)) setJsonNumber(result, "a_voltage", voltA, 1);
+    if (isfinite(voltB)) setJsonNumber(result, "b_voltage", voltB, 1);
+    if (isfinite(voltC)) setJsonNumber(result, "c_voltage", voltC, 1);
+    if (isfinite(currA)) setJsonNumber(result, "a_current", currA, 3);
+    if (isfinite(currB)) setJsonNumber(result, "b_current", currB, 3);
+    if (isfinite(currC)) setJsonNumber(result, "c_current", currC, 3);
+    setJsonNumber(result, "total_current",
+                  (isfinite(currA) ? currA : 0.0f)
+                + (isfinite(currB) ? currB : 0.0f)
+                + (isfinite(currC) ? currC : 0.0f), 3);
+    setJsonNumber(result, "total_act_power", astraTotalPower(phaseA + phaseB + phaseC), 3);
   }
 
   void fillAstraEm1Status(JsonDocument& doc, int requestId) {
@@ -117,7 +122,7 @@ private:
     doc["dst"] = "unknown";
 
     JsonObject result = doc["result"].to<JsonObject>();
-    result["act_power"] = astraTotalPower(phaseA + phaseB + phaseC);
+    setJsonNumber(result, "act_power", astraTotalPower(phaseA + phaseB + phaseC), 3);
   }
 
   void handlePacket(AsyncUDPPacket packet) {
@@ -125,25 +130,16 @@ private:
     DeserializationError e = deserializeJson(req, packet.data(), packet.length());
 
     if (e) {
-      logUdpEvent(packet, "Shelly UDP invalid JSON", "");
       return;
     }
 
     if (!req["params"]["id"].is<int>()) {
-      String details = "ignored missing params.id";
-      if (!req["method"].isNull()) {
-        details += " method=";
-        details += req["method"].as<String>();
-      }
-      logUdpEvent(packet, "Shelly UDP", details);
       return;
     }
 
     const char* mraw = req["method"];
     String method = mraw ? String(mraw) : String();
     method.trim();
-
-    logUdpEvent(packet, "Shelly UDP recv", "method=" + method);
 
     JsonDocument resp;
     resp["id"]  = req["id"].isNull() ? 1 : req["id"];
@@ -162,8 +158,7 @@ private:
       return;
     }
 
-    // Onbekende method -> minimaal deviceinfo als result
-    logUdpEvent(packet, "Shelly UDP unsupported", "method=" + method);
+    // Onbekende method -> negeren zoals bij AstraMeter
   }
 } shellyUDP;
 

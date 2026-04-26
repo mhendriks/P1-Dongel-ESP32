@@ -116,6 +116,17 @@ function refreshSolarSelfUse() {
 
   const exportedWh = Math.max(0, Number(Pi_today) * 1000);
   const importedWh = Math.max(0, Number(Pd_today) * 1000);
+  if (AccuActive && exportedWh > dailyProduction) {
+    // With battery export we cannot split feed-in between PV and battery discharge.
+    // In that case assume all PV could have been used locally, but keep self-sufficiency
+    // tied to actual grid import so we do not show 100% while there was still import.
+    document.getElementById('scr').innerHTML = "100";
+    document.getElementById('seue').innerHTML = importedWh > 0
+      ? Number((dailyProduction / (dailyProduction + importedWh)) * 100).toFixed(0)
+      : "100";
+    return;
+  }
+
   const selfUsedWh = Math.max(0, dailyProduction - exportedWh);
   const totalUsageWh = selfUsedWh + importedWh;
 
@@ -324,11 +335,11 @@ function InsightData(data){
                 if (value === undefined || value === null) return "";
 
                 if (key.startsWith("U")) {
-                    return (value / 1000).toFixed(1);
+                    return formatValueLocale(value / 1000, 1, 1);
                 }
 
                 if (key.startsWith("I")) {
-                    return (value / 1000).toFixed(3);
+                    return formatValueLocale(value / 1000, 3, 3);
                 }
 
                 if (key === "start_time") {
@@ -543,6 +554,15 @@ function hasValidMeterValue(field) {
 	return !Number.isNaN(asNumber(field.value));
 }
 
+function meterValue(field, fallback = 0) {
+	const value = asNumber(field?.value);
+	return Number.isNaN(value) ? fallback : value;
+}
+
+function hasHistoryData(data) {
+	return data && Array.isArray(data.data) && data.data.length > 0;
+}
+
 //============================================================================  
   
 function SetOnSettings(json) {
@@ -555,7 +575,7 @@ function SetOnSettings(json) {
 			json.gas_delivered_timestamp.value !== "-";
 		HeeftGas = hasGasValue || hasGasTimestamp;
 	}
-	if (!HeeftWater) HeeftWater = "water" in json ? !isNaN(json.water.value) : false;
+	if (!HeeftWater) HeeftWater = hasValidMeterValue(json.water);
 
 	if (!Injection) {
 		Injection = !isNaN(json.energy_returned_tariff1?.value) ? json.energy_returned_tariff1.value : false;
@@ -581,7 +601,7 @@ function SetOnSettings(json) {
 	const showCols = (table, cols, condition) => cols.forEach(col => show_hide_column(table, col, condition));
 
 	applyShowCols(HeeftWater, [
-	  ['lastHoursTable', [2]],
+	  ['lastHoursTable', [4]],
 	  ['lastDaysTable', [4]],
 	  ['lastMonthsTable', [13, 14, 15, 16]]
 	]);
@@ -813,12 +833,13 @@ function refreshDashboard(json){
 		//-------CHECKS
 
 		SetOnSettings(json);
-		if (json.timestamp.value == "-") {
+		const timestampValue = json.timestamp?.value ?? "-";
+		if (timestampValue == "-") {
 			console.log("timestamp missing : p1 data incorrect!");
 			return;
 		}
 
-		const dayKey = getTimestampDayKey(json.timestamp.value);
+		const dayKey = getTimestampDayKey(timestampValue);
 		if (dayKey && DayEpoch !== dayKey) {
 			resetDailyHistoryBuffers();
 			Pi_today = 0;
@@ -843,24 +864,29 @@ function refreshDashboard(json){
 			document.getElementById("l7").style.display = "block";
 			document.getElementById("l2").style.display = "none";
 		}
-		if ( json.peak_pwr_last_q.value != "-" ) document.getElementById("dash_peak").style.display = "block";
+		const peakLast = meterValue(json.peak_pwr_last_q, NaN);
+		const peakHighest = meterValue(json.highest_peak_pwr, NaN);
+		const hasPeakData = !Number.isNaN(peakLast) && !Number.isNaN(peakHighest);
+		if (hasPeakData) document.getElementById("dash_peak").style.display = "block";
 
 		//------- EID Planner
 		if ( eid_planner_enabled ) objDAL.refreshEIDPlanner();
 		
 		//-------Kwartierpiek
-		document.getElementById("peak_month").innerHTML = formatValue(json.highest_peak_pwr.value);
-		document.getElementById("dash_peak_delta").innerText = formatValue(json.highest_peak_pwr.value - json.peak_pwr_last_q.value);
-		trend_peak.data.datasets[0].data=[json.peak_pwr_last_q.value, json.highest_peak_pwr.value-json.peak_pwr_last_q.value];	
-		trend_peak.update();
-		if (json.peak_pwr_last_q.value > 0.75 * json.highest_peak_pwr.value ) trend_peak.data.datasets[0].backgroundColor = ["#dd0000", "rgba(0,0,0,0.1)"];
-		else trend_peak.data.datasets[0].backgroundColor = ["#009900", "rgba(0,0,0,0.1)"];
+		if (hasPeakData) {
+			document.getElementById("peak_month").innerHTML = formatValue(peakHighest);
+			document.getElementById("dash_peak_delta").innerText = formatValue(peakHighest - peakLast);
+			trend_peak.data.datasets[0].data=[peakLast, peakHighest - peakLast];	
+			trend_peak.update();
+			if (peakLast > 0.75 * peakHighest ) trend_peak.data.datasets[0].backgroundColor = ["#dd0000", "rgba(0,0,0,0.1)"];
+			else trend_peak.data.datasets[0].backgroundColor = ["#009900", "rgba(0,0,0,0.1)"];
+		}
 		
 		//-------VOLTAGE
 		let v1 = 0, v2 = 0, v3 = 0;
-		if (!isNaN(json.voltage_l1.value)) v1 = json.voltage_l1.value; 
-		if (!isNaN(json.voltage_l2.value)) v2 = json.voltage_l2.value;
-		if (!isNaN(json.voltage_l3.value)) v3 = json.voltage_l3.value;
+		v1 = meterValue(json.voltage_l1, 0); 
+		v2 = meterValue(json.voltage_l2, 0);
+		v3 = meterValue(json.voltage_l3, 0);
 
 
 		if ( ShowVoltage && v1 ) {
@@ -881,14 +907,14 @@ function refreshDashboard(json){
 // 			document.getElementById(`power_delivered_2min`).innerHTML = Number(minV.toFixed(1)).toLocaleString("nl", {minimumFractionDigits: 1, maximumFractionDigits: 1} );
 
 			//update gauge
-			gaugeV.data.datasets[0].data=[v1-207,253-json.voltage_l1.value];
-			if (v2) gaugeV.data.datasets[1].data=[v2-207,253-json.voltage_l2.value];
-			if (v3) gaugeV.data.datasets[2].data=[v3-207,253-json.voltage_l3.value];
+			gaugeV.data.datasets[0].data=[v1-207,253-v1];
+			if (v2) gaugeV.data.datasets[1].data=[v2-207,253-v2];
+			if (v3) gaugeV.data.datasets[2].data=[v3-207,253-v3];
 			gaugeV.update();
 		}
 		//-------ACTUAL
 		//afname of teruglevering bepalen en signaleren
-		let TotalKW	= json.power_delivered.value - json.power_returned.value;
+		let TotalKW	= meterValue(json.power_delivered, 0) - meterValue(json.power_returned, 0);
 
 		if ( TotalKW <= 0 ) { 
 // 			TotalKW = -1.0 * json.power_returned.value;
@@ -905,23 +931,24 @@ function refreshDashboard(json){
 		}
 		
 		//update gauge
-		if ( !isNaN(json.current_l1.value ) ) {
-		TotalAmps = (isNaN(json.current_l1.value)?0:json.current_l1.value) + 
-			(isNaN(json.current_l2.value)?0:json.current_l2.value) + 
-			(isNaN(json.current_l3.value)?0:json.current_l3.value);
+		const currentL1 = meterValue(json.current_l1, NaN);
+		const currentL2 = meterValue(json.current_l2, 0);
+		const currentL3 = meterValue(json.current_l3, 0);
+		if ( !Number.isNaN(currentL1) ) {
+		TotalAmps = currentL1 + currentL2 + currentL3;
 
-		gauge3f.data.datasets[0].data=[json.current_l1.value,AMPS-json.current_l1.value];
+		gauge3f.data.datasets[0].data=[currentL1, AMPS - currentL1];
 		if (Phases == 2) {
-			gauge3f.data.datasets[1].data=[json.current_l2.value,AMPS-json.current_l2.value];
+			gauge3f.data.datasets[1].data=[currentL2, AMPS - currentL2];
 			document.getElementById("f2").style.display = "inline-block";
 			document.getElementById("v2").style.display = "inline-block";
 			}
 		if (Phases == 3) {
-			gauge3f.data.datasets[1].data=[json.current_l2.value,AMPS-json.current_l2.value];
+			gauge3f.data.datasets[1].data=[currentL2, AMPS - currentL2];
 			document.getElementById("f2").style.display = "inline-block";
 			document.getElementById("v2").style.display = "inline-block";
 			
-			gauge3f.data.datasets[2].data=[json.current_l3.value,AMPS-json.current_l3.value];
+			gauge3f.data.datasets[2].data=[currentL3, AMPS - currentL3];
 			document.getElementById("f3").style.display = "inline-block";
 			document.getElementById("v3").style.display = "inline-block";
 			}
@@ -964,8 +991,8 @@ function refreshDashboard(json){
 		if (Dongle_Config != "p1-q") {
 
       //bereken verschillen afname, teruglevering en totaal
-      let nPA = (isNaN(json.energy_delivered_tariff1.value)? 0:json.energy_delivered_tariff1.value) + (isNaN(json.energy_delivered_tariff2.value)?0:json.energy_delivered_tariff2.value);
-      let nPI = (isNaN(json.energy_returned_tariff1.value) ? 0:json.energy_returned_tariff1.value)  + (isNaN(json.energy_returned_tariff2.value) ?0:json.energy_returned_tariff2.value);
+      let nPA = meterValue(json.energy_delivered_tariff1, 0) + meterValue(json.energy_delivered_tariff2, 0);
+      let nPI = meterValue(json.energy_returned_tariff1, 0) + meterValue(json.energy_returned_tariff2, 0);
       Parra = calculateDifferences( nPA, hist_arrPa, 1);
       Parri = calculateDifferences( nPI, hist_arrPi, 1);
       for(let i=0;i<3;i++){ Parr[i]=Parra[i] - Parri[i]; }
@@ -995,17 +1022,17 @@ function refreshDashboard(json){
 		} //!= p1-q
 		
     //-------GAS	
-		if ( HeeftGas && (Dongle_Config != "p1-q") ) 
+			if ( HeeftGas && hasValidMeterValue(json.gas_delivered) && (Dongle_Config != "p1-q") ) 
 		{
-      Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1);
+      Garr = calculateDifferences(meterValue(json.gas_delivered, 0), hist_arrG, 1);
       updateGaugeTrend(trend_g, Garr);
 			document.getElementById("G").innerHTML = formatValue(Garr[0]);
 		}
 		
 		//-------WATER	
-		if (HeeftWater) 
+			if (HeeftWater && hasValidMeterValue(json.water)) 
 		{
-      Warr = calculateDifferences(json.water.value, hist_arrW, 1000);
+      Warr = calculateDifferences(meterValue(json.water, 0), hist_arrW, 1000);
       updateGaugeTrend(trend_w, Warr);
 			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString();
 		}
@@ -1013,7 +1040,7 @@ function refreshDashboard(json){
 		//-------HEAT
 		if (Dongle_Config == "p1-q") 
 		{
-      Garr = calculateDifferences(json.gas_delivered.value, hist_arrG, 1000);
+      Garr = calculateDifferences(meterValue(json.gas_delivered, 0), hist_arrG, 1000);
       updateGaugeTrend(trend_q, Garr);
 			document.getElementById("Q").innerHTML = Number(Garr[0]).toLocaleString("nl", {minimumFractionDigits: 0, maximumFractionDigits: 0} );
 		}
@@ -1184,10 +1211,15 @@ function bootsTrapMain()
   // shows or hide table column v1
   function show_hide_column(table, col_no, do_show) {
    let tbl = document.getElementById(table);
+   if (!tbl) return;
    let col = tbl.getElementsByTagName('col')[col_no];
    if (col) {
      col.style.visibility=do_show?"":"collapse";
    }
+   tbl.querySelectorAll('tr').forEach(row => {
+     const cell = row.children[col_no];
+     if (cell) cell.style.display = do_show ? "" : "none";
+   });
 }
 
 //============================================================================  
@@ -1960,7 +1992,7 @@ function formatFailureLog(svalue) {
 function refreshHistData(type) {
 	console.log(`refresh${type}`);
 	let data = objDAL[`get${type}`]();
-	if (data === "") {
+	if (!hasHistoryData(data)) {
 		console.log(`refresh${type} : NO DATA`);
 		return;
 	}
@@ -2111,6 +2143,7 @@ function formatValue(value)
   function showHistTable(data, type)
   { 
     console.log("showHistTable("+type+")");
+    if (!hasHistoryData(data)) return;
     const solarVisible = (type == "Days") && hasSolarHistory(data);
     // the last element has the metervalue, so skip it
     let stop = data.actSlot + 1;
@@ -2180,6 +2213,8 @@ function formatValue(value)
     //--- show table
     document.getElementById("lastHours").style.display = "block";
     document.getElementById("lastDays").style.display  = "block";
+    if (type == "Hours") show_hide_column('lastHoursTable', 4, HeeftWater);
+    if (type == "Days") show_hide_column('lastDaysTable', 4, HeeftWater);
     if (type == "Days") show_hide_column2('lastDaysTable', 6, solarVisible);
 
   } // showHistTable()
@@ -2263,6 +2298,9 @@ function formatValue(value)
     	let rows = tbl.getElementsByTagName('tr');
 		rows[0].style.display = "none";
 	}	
+    const waterHeader = document.querySelector('#lastMonthsTable thead tr:first-child th:last-child');
+    if (waterHeader) waterHeader.style.display = HeeftWater ? "" : "none";
+    [13, 14, 15, 16].forEach(col => show_hide_column('lastMonthsTable', col, HeeftWater));
     document.getElementById("lastMonths").style.display = "block";
 
   } // showMonthsHist()

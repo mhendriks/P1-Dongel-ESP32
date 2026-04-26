@@ -175,17 +175,31 @@ section#APIdocTab div, #rawTelegram {
 	text-align: right;	
 }
 
+#actualTable {
+	border-collapse: separate;
+	border-spacing: 0;
+}
+
+#actualTable th, #actualTable td {
+	border-right: 1px solid #ddd;
+	border-bottom: 1px solid #ddd;
+}
+
 #insights {
 	max-width: 650px;
 	margin: 0 auto;
 }
 
 #InsightsTable {
+	border-collapse: separate;
+	border-spacing: 0;
 	table-layout: fixed;
 	width: 100%;
 }
 
 #InsightsTable th, #InsightsTable td {
+	border-right: 1px solid #ddd;
+	border-bottom: 1px solid #ddd;
 	text-align: center;
 }
 

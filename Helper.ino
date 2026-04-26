@@ -227,6 +227,7 @@ void DevTypeMapping(){
   rgbled_io = dc.rgb;
   RxP1      = dc.p1_in_rx;
   // DTR?      = dc.p1_in_dtr;
+  HanIO     = dc.han_io;
   statusled = dc.led;
   TxO1      = dc.p1_out_tx;
   DTR_out   = dc.p1_out_dtr;
@@ -236,8 +237,8 @@ void DevTypeMapping(){
   IOWater   = dc.water;
 
   DebugTf(
-    "Pins: RGB=%d statusLED=%d Rx=%d Tx=%d DTR=%d LED_out=%d P1Out=%d Water=%d UseRGB=%d\n",
-    rgbled_io, statusled, RxP1, TxO1, DTR_out, LED_out, P1Out, IOWater, UseRGB
+    "Pins: RGB=%d statusLED=%d Rx=%d HanIO=%d Tx=%d DTR=%d LED_out=%d P1Out=%d Water=%d UseRGB=%d\n",
+    rgbled_io, statusled, RxP1, HanIO, TxO1, DTR_out, LED_out, P1Out, IOWater, UseRGB
   );
 
   // W5500 RESET handling = ENABLE ETH
@@ -278,11 +279,14 @@ void FacReset() {
   resetWifi();
 }
 
+static bool ledOverrideOn = false;
+
 void ToggleLED(byte mode) {
   if ( UseRGB ) { 
     if ( LEDenabled ) SwitchLED( mode, LED_GREEN ); 
     else { rgbLedWrite(rgbled_io,0,0,0); /*rgb.setPixel(LED_BLACK);*/ }; 
   } 
+  else if ( ledOverrideOn ) return;
   else if ( LEDenabled ) digitalWrite(statusled, !digitalRead(statusled)); else digitalWrite(statusled, LED_OFF);
 }
 
@@ -292,22 +296,84 @@ void ClearRGB(){
   B_value = 0;
 }
 
+static bool ledStatusOn = false;
+static uint32_t ledStatusColor = LED_BLACK;
+static bool ledActivityOn = false;
+static uint32_t ledOverrideColor = LED_BLACK;
+static byte monoLedLevel = LED_OFF;
+static bool monoOverrideState = false;
+static uint32_t monoOverrideLastToggleMs = 0;
+
+static void setRgbColor(uint32_t color) {
+  ClearRGB();
+  switch ( color ) {
+    case LED_RED:   R_value = BRIGHTNESS; break;
+    case LED_GREEN: G_value = BRIGHTNESS; break;
+    case LED_BLUE:  B_value = BRIGHTNESS; break;
+  }
+}
+
+static void renderRgbLed() {
+  if ( !UseRGB ) return;
+
+  if ( !LEDenabled ) {
+    ClearRGB();
+  } else if ( ledOverrideOn ) {
+    setRgbColor(ledOverrideColor);
+  } else if ( ledActivityOn ) {
+    setRgbColor(LED_GREEN);
+  } else if ( ledStatusOn ) {
+    setRgbColor(ledStatusColor);
+  } else {
+    ClearRGB();
+  }
+
+  rgbLedWrite(rgbled_io,R_value,G_value,B_value); //sdk 3.0
+}
+
+void OverrideLED(bool enabled, uint32_t color) {
+  ledOverrideOn = enabled;
+  ledOverrideColor = enabled ? color : LED_BLACK;
+  if ( UseRGB ) {
+    renderRgbLed();
+  } else {
+    monoOverrideLastToggleMs = 0;
+    monoOverrideState = false;
+    if ( !enabled ) digitalWrite(statusled, monoLedLevel);
+  }
+}
+
 void SwitchLED( byte mode, uint32_t color) {
-if ( UseRGB ) {
-    if ( LEDenabled ) {
-      uint32_t value = 0; //off mode
-      if ( mode == LED_ON ) value = BRIGHTNESS; 
-      if ( color != LED_GREEN ) ClearRGB();
-      switch ( color ) {
-      case LED_RED:   R_value = value; break;
-      case LED_GREEN: G_value = value; break;
-      case LED_BLUE:  B_value = value; break;  
-      } 
-    } else ClearRGB();
-    rgbLedWrite(rgbled_io,R_value,G_value,B_value); //sdk 3.0
-   } else {
-      digitalWrite(statusled, color==LED_RED?LED_OFF:mode);
-   }
+  if ( UseRGB ) {
+    if ( color == LED_GREEN ) {
+      ledActivityOn = (mode == LED_ON);
+    } else {
+      ledStatusOn = (mode == LED_ON);
+      ledStatusColor = color;
+    }
+    renderRgbLed();
+  } else {
+    if ( ledOverrideOn ) return;
+    monoLedLevel = color==LED_RED?LED_OFF:mode;
+    digitalWrite(statusled, monoLedLevel);
+  }
+}
+
+void HandleLED() {
+  if ( UseRGB || !ledOverrideOn ) return;
+
+  if ( !LEDenabled ) {
+    digitalWrite(statusled, LED_OFF);
+    return;
+  }
+
+  uint32_t interval = (ledOverrideColor == LED_RED) ? 80 : 250;
+  uint32_t now = millis();
+  if ( monoOverrideLastToggleMs == 0 || (now - monoOverrideLastToggleMs) >= interval ) {
+    monoOverrideLastToggleMs = now;
+    monoOverrideState = !monoOverrideState;
+    digitalWrite(statusled, monoOverrideState ? LED_ON : LED_OFF);
+  }
 }
 
 //===========================================================================================

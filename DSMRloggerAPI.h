@@ -467,6 +467,7 @@ int8_t      TxO1 = TXO1;
 int8_t      DTR_out = O1_DTR_IO;
 int8_t      LED_out = P1_LED;
 int8_t      statusled = LED;
+int8_t      HanIO = -1;
 bool        bNRGMenabled = false;
 #ifdef NETSWITCH
 bool        bNETSWenabled = true;
