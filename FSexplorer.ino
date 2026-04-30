@@ -31,6 +31,15 @@ void sendApiResponse(const ApiResponse& response) {
   httpServer.send(response.status, response.contentType, response.body);
 }
 
+ApiRequestContext currentApiRequest(const String& pathArg = "") {
+  ApiRequestContext request;
+  request.method = httpServer.method();
+  request.pathArg = pathArg;
+  request.body = httpServer.arg(0);
+  request.uri = httpServer.uri();
+  return request;
+}
+
 // Function to check authentication
 bool auth() {
   if (strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW)) {
@@ -75,7 +84,7 @@ void setupFSexplorer() {
 
   httpServer.on("/api/v2/hist/months", HTTP_POST, [](){
     if (!auth()) return;
-    writeRingFile(RINGMONTHS, httpServer.arg(0).c_str(), false);
+    sendApiResponse(historyMonthsApiResponse(httpServer.arg(0)));
   });
 
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
@@ -83,52 +92,49 @@ void setupFSexplorer() {
 
   httpServer.on("/api/v1/telegram", HTTP_GET, []() { 
     if ( !auth() ) return; 
-    // HWapi();
-    httpServer.send( 200, "text/plain", CapTelegram.c_str() );
+    sendApiResponse({200, "text/plain", CapTelegram});
   });
 
   httpServer.on("/api/v1/data", HTTP_GET, []() { 
     if ( !auth() ) return; 
-    // HWapi();
-    httpServer.send( 200, "application/json", HWapiJson() );
+    sendApiResponse({200, "application/json", HWapiJson()});
   });
   
   httpServer.on("/api", HTTP_GET, []() { 
     if ( !auth() ) return; 
-    // HWapi_root(); 
-    httpServer.send( 200, "application/json", HWrootJson() );
+    sendApiResponse({200, "application/json", HWrootJson()});
   });
   
   httpServer.on("/api/v2/stats", HTTP_GET, []() { 
     if ( !auth() ) return; 
-    // StatsApi(); 
-    httpServer.send(200, "application/json", apiStatsJson());
+    sendApiResponse({200, "application/json", apiStatsJson()});
   });
   
   httpServer.on(UriBraces("/api/v2/dev/{}"),[]() {
     if (!auth()) return;
-    sendApiResponse(handleDevApi());
+    sendApiResponse(handleDevApi(currentApiRequest(httpServer.pathArg(0))));
   });
   httpServer.on(UriBraces("/api/v2/sm/{}"),[](){
     if (!auth()) return;
-    sendApiResponse(handleSmApi());
+    sendApiResponse(handleSmApi(currentApiRequest(httpServer.pathArg(0))));
   });
   httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){
     if (!auth()) return;
-    sendApiResponse(handleSmApiField());
+    sendApiResponse(handleSmApiField(currentApiRequest(httpServer.pathArg(0))));
   });
   httpServer.on("/api/v2/modbus/monitor", HTTP_GET, [](){
     if (!auth()) return;
-    sendApiResponse(handleModbusMonitorApi());
+    sendApiResponse(handleModbusMonitorApi(currentApiRequest()));
   });
   httpServer.on("/api/v2/modbus/monitor", HTTP_POST, [](){
     if (!auth()) return;
-    sendApiResponse(handleModbusMonitorApi());
+    sendApiResponse(handleModbusMonitorApi(currentApiRequest()));
   });
 
   httpServer.on("/eid/getclaim",[](){
     if (!auth()) return;
-    EIDGetClaim();
+    String action = httpServer.hasArg("action") ? httpServer.arg("action") : "";
+    sendApiResponse(EIDGetClaimApiResponse(action));
   });
   httpServer.on("/eid/planner",[](){
     if (!auth()) return;
@@ -137,15 +143,15 @@ void setupFSexplorer() {
 
   httpServer.on("/api/listfiles", HTTP_GET, [](){
     if (!auth()) return;
-    APIlistFiles();
+    sendApiResponse(listFilesApiResponse());
   });
   httpServer.on("/api/v2/gen", HTTP_GET, [](){
     if (!auth()) return;
-    SendSolarJson();
+    sendApiResponse(solarApiResponse());
   });
   httpServer.on("/api/v2/accu", HTTP_GET, [](){
     if (!auth()) return;
-    SendAccuJson();
+    sendApiResponse(accuApiResponse());
   });
   httpServer.on("/FSformat", [](){
     if (!auth()) return;
@@ -190,7 +196,7 @@ void setupFSexplorer() {
 } // setupFSexplorer()
 
 //=====================================================================================
-void APIlistFiles()             // Senden aller Daten an den Client
+ApiResponse listFilesApiResponse()             // Senden aller Daten an den Client
 {   
   typedef struct _fileMeta {
     char    Name[30];     
@@ -245,9 +251,9 @@ void APIlistFiles()             // Senden aller Daten an den Client
   fsStats["freeBytes"] = formatBytes(LittleFS.totalBytes() - (LittleFS.usedBytes() * 1.05));
   String body;
   serializeJson(doc, body);
-  sendApiResponse({200, "application/json", body});
+  return {200, "application/json", body};
   
-} // APIlistFiles()
+} // listFilesApiResponse()
 
 //=====================================================================================
 bool handleFile(String&& path) 

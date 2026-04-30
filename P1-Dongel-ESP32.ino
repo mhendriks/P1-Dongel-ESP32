@@ -63,7 +63,11 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
 
-5.6.0
+5.6.1
+- 
+
+5.7.0
+- kWh meter als bron voor productie data gebruiken (Harrie)
 - Add remote Proxy
 - Virtual P1 feature in settings (Ethernet/Ultra only)
 - add: Ultra dongles are able to make custom modbus mappings via json file
@@ -79,8 +83,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //--- PROFILES -> NO PROFILE = WiFi Dongle  ---
 // #define ULTRA            //ultra (mini) dongle
-// #define ETHERNET         //ethernet dongle
-// #define ETH_P1EP         //ethernet pro+ dongle
+#define ETHERNET         //ethernet dongle
+#define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       //+D1MC and NRGDH
 // #define _P1P
 
@@ -91,8 +95,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 //FEATURES
 #define MBUS
 //#define MQTT_DISABLE
-//#define NO_STORAGE
-//#define POST_TELEGRAM
 // #define MB_RTU
 #define ESPNOW  
 // #define UDP_BCAST
@@ -129,10 +131,11 @@ void setup()
   else DebugTln(F("!!!! FS Mount ERROR\r"));   // Serious problem with File System 
   WDT_FEED();
 //================ Status update ===================================
+  WorkerBegin();
   actT = epoch(actTimestamp, strlen(actTimestamp), true); // set the time to actTimestamp!
   P1StatusWrite();
   LogFile("",false); // write reboot status to file
-  if (!LittleFS.exists(SETTINGS_FILE)) writeSettings(); //otherwise the dongle crashes some times on the first boot
+  if (!LittleFS.exists(SETTINGS_FILE)) writeSettingsDirect(); //otherwise the dongle crashes some times on the first boot
   else readSettings(true);
   WDT_FEED();
 //=============start Networkstuff ==================================
@@ -143,7 +146,7 @@ void setup()
   startTelnet();
   startMDNS(settingHostname);
   startNTP();
-  handleAutoUpdate(true); // startup check right after network and time init
+  handleManifestCheckSchedule(true); // startup manifest check right after network and time init
   WDT_FEED();
 //================ Check necessary files ============================
   if ( !skipNetwork ) {
@@ -209,12 +212,11 @@ void loop () {
     CHANGE_INTERVAL_MIN(StatusTimer, 30);
   }
   handleKeyInput();
-  handleAutoUpdate(false);
+  handleManifestCheckSchedule(false);
   WifiWatchDog();
   handleRemoteUpdate();
   handleWater();
   handleEnergyID();  
-  PostTelegram();
   GetSolarDataN();
   handleVirtualP1();
   PrintHWMark(2);

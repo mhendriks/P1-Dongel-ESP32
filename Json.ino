@@ -36,10 +36,10 @@ static ApiResponse jsonNoContentResponse() {
   return {204, "application/json", ""};
 }
 
-static ApiResponse jsonNotFoundResponse() {
+static ApiResponse jsonNotFoundResponse(const String& uri = "") {
   JsonDocument doc;
   JsonObject error = doc["error"].to<JsonObject>();
-  error["url"] = httpServer.uri();
+  error["url"] = uri;
   error["message"] = "url not valid";
   String body;
   serializeJson(doc, body);
@@ -494,23 +494,23 @@ if ( !hideMQTTsettings) {
 }
 
 //====================================================
-ApiResponse handleSmApiField(){
+ApiResponse handleSmApiField(const ApiRequestContext& request){
   jsonDoc.clear();
-  if ( httpServer.pathArg(0) == "gas_delivered" ) JsonGas();
-  else if ( httpServer.pathArg(0) == "water") JsonWater();
+  if ( request.pathArg == "gas_delivered" ) JsonGas();
+  else if ( request.pathArg == "water") JsonWater();
   else {
     //other fields
     onlyIfPresent = false;
-    strCopy(Onefield, 24, httpServer.pathArg(0).c_str());
+    strCopy(Onefield, 24, request.pathArg.c_str());
     fieldsElements = FIELDELEMENTS;
     DSMRdata.applyEach(buildJson());
   }
   return jsonDocResponse(jsonDoc);
 }
 
-ApiResponse handleSmApi()
+ApiResponse handleSmApi(const ApiRequestContext& request)
 {
-  switch ( httpServer.pathArg(0)[0]) {
+  switch ( request.pathArg[0]) {
     
   case 'i': //info
     onlyIfPresent = false;
@@ -531,7 +531,7 @@ ApiResponse handleSmApi()
     return {200, "text/plain", CapTelegram};
     
   default:
-    return jsonNotFoundResponse();
+    return jsonNotFoundResponse(request.uri);
     
   } //switch
 
@@ -567,21 +567,21 @@ String smActualJsonDebug() {
 }
 //====================================================
 
-ApiResponse handleDevApi()
+ApiResponse handleDevApi(const ApiRequestContext& request)
 {
-   if ( httpServer.pathArg(0) == "info" )
+   if ( request.pathArg == "info" )
   {
     return jsonOkResponse(deviceInfoJson());
   }
-  else if ( httpServer.pathArg(0) == "time")
+  else if ( request.pathArg == "time")
   {
     return jsonOkResponse(deviceTimeJson());
   }
-  else if (httpServer.pathArg(0) == "settings")
+  else if (request.pathArg == "settings")
   {
-    if (httpServer.method() == HTTP_PUT || httpServer.method() == HTTP_POST)
+    if (request.method == HTTP_PUT || request.method == HTTP_POST)
     {
-      String jsonIn  = httpServer.arg(0).c_str();
+      String jsonIn  = request.body;
       DebugT("json in :");Debugln(jsonIn);
       char field[25] = "";
       char newValue[101]="";
@@ -623,19 +623,19 @@ ApiResponse handleDevApi()
 
       //DebugTf("--> field[%s] => newValue[%s]\r\n", field, newValue);
       updateSetting(field, newValue);
-      return jsonOkResponse(httpServer.arg(0));
+      return jsonOkResponse(request.body);
     }
     else
     {
       return jsonOkResponse(deviceSettingsJson());
     }
   }
-  else return jsonNotFoundResponse();
+  else return jsonNotFoundResponse(request.uri);
   
 } // handleDevApi()
 
-ApiResponse handleModbusMonitorApi() {
-  if (httpServer.method() == HTTP_POST) {
+ApiResponse handleModbusMonitorApi(const ApiRequestContext& request) {
+  if (request.method == HTTP_POST) {
     clearModbusMonitorEntries();
     JsonDocument doc;
     doc["cleared"] = true;

@@ -529,16 +529,43 @@ void createRingFile(String filename)
 //===========================================================================================
 // Calc slot based on actT
 
-uint8_t CalcSlot(E_ringfiletype ringfiletype, bool prev_slot) 
+enum RngWorkerMode : uint8_t {
+  RNG_WORKER_CURRENT_HOURS,
+  RNG_WORKER_CURRENT_DAYS,
+  RNG_WORKER_CURRENT_MONTHS,
+  RNG_WORKER_PREV_HOURS,
+  RNG_WORKER_PREV_DAYS,
+  RNG_WORKER_PREV_MONTHS,
+  RNG_WORKER_DST_GAP_HOURS
+};
+
+static volatile uint8_t rngWriteJobsPending = 0;
+
+static bool rngWritePending() {
+  return rngWriteJobsPending > 0;
+}
+
+bool RngWritePending() {
+  return rngWritePending();
+}
+
+uint8_t CalcSlotAt(E_ringfiletype ringfiletype, time_t slotTime, bool prev_slot)
 {
-  uint32_t  nr=0;
-  if (ringfiletype == RINGMONTHS ) nr = ( (year(actT) -1) * 12) + month(actT);    // eg: year(2023) * 12 = 24276 + month(9) = 202309
-  else nr = actT / RingFiles[ringfiletype].seconds;
-  if ( prev_slot ) nr--;
-  uint8_t slot = nr  % RingFiles[ringfiletype].slots;
+  uint32_t nr = 0;
+  if (ringfiletype == RINGMONTHS) nr = ((year(slotTime) - 1) * 12) + month(slotTime);
+  else nr = slotTime / RingFiles[ringfiletype].seconds;
+  if (prev_slot) nr--;
+  uint8_t slot = nr % RingFiles[ringfiletype].slots;
+#ifdef XTRA_LOG
   DebugTf("slot: Slot is [%d] nr is [%d]\r\n", slot, nr);
+#endif
 
   return slot;
+}
+
+uint8_t CalcSlot(E_ringfiletype ringfiletype, bool prev_slot) 
+{
+  return CalcSlotAt(ringfiletype, actT, prev_slot);
 }
 
 //===========================================================================================
@@ -551,28 +578,17 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, const char* Timestamp)
   if (ringfiletype == RINGMONTHS ) nr = ( (year(t1) -1) * 12) + month(t1);    // eg: year(2023) * 12 = 24276 + month(9) = 202309
   else nr = t1 / RingFiles[ringfiletype].seconds;
   uint8_t slot = nr % RingFiles[ringfiletype].slots;
+#ifdef XTRA_LOG
   DebugTf("slot: Slot is [%d] nr is [%d]\r\n", slot, nr);
+#endif
 
   return slot;
 }
 
-//===========================================================================================
+bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *JsonRec, bool bWinterSummer, bool bPrevRecord) {
+  if (!EnableHistory || !FSmounted) return false;
+  if (slot >= RingFiles[ringfiletype].slots) return false;
 
-//void writeRingFile(E_ringfiletype ringfiletype,const char *JsonRec) {
-////  uint8_t slot = CalcSlot(ringfiletype, false);
-//  writeRingFile(ringfiletype, JsonRec, false);
-//}
-
-//===========================================================================================
-
-void writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *JsonRec, bool bWinterSummer, bool bPrevRecord) {
-#ifdef NO_STORAGE
-  return;
-#else
-  if (!EnableHistory || !FSmounted) return;
-  if (slot >= RingFiles[ringfiletype].slots) return;
-
-  // time_t start = millis();
   char key[9] = "";
   JsonDocument rec;
   char buffer[DATA_RECLEN_7];
@@ -585,16 +601,17 @@ void writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
     DeserializationError error = deserializeJson(rec, JsonRec);
     if (error) {
       DebugT(F("convert:Failed to deserialize RECORD: ")); Debugln(error.c_str());
-      httpServer.send(500, "application/json", httpServer.arg(0));
       #ifdef XTRA_LOG
       LogFile("RNG: convert:Failed to deserialize RECORD", true);
       #endif
-      return;
+      return false;
     }
   }
 
   // Open ringfile
+#ifdef XTRA_LOG
   DebugT(F("read(): Ring file ")); Debugln(RingFiles[ringfiletype].filename);
+#endif
 
   File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "r+");
   if (!RingFile || (RingFile.size() != RingFiles[ringfiletype].f_len)) {
@@ -604,7 +621,7 @@ void writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
     LogFile("RNG: open ring file FAILED!!! --> Bailout", true);
     #endif
     RingFile.close();
-    return;
+    return false;
   }
 
   // Update header actSlot
@@ -630,8 +647,6 @@ void writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
     }
 
     formatRingRecord(ringfiletype, buffer, sizeof(buffer), key, values);
-
-    httpServer.send(200, "application/json", httpServer.arg(0));
   } else {
     // Actuele data (zoals je al deed)
     strncpy(key, actTimestamp, 8);
@@ -665,77 +680,183 @@ void writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
   else RingFile.print("\n");
 
   RingFile.close();
-  // Debugf("Time consumed writing RNGFile %s : %d\n", RingFiles[ringfiletype].filename, millis() - start);
-#endif
+  return bytesWritten == (ringRecordLen(ringfiletype) - 2);
 }
 
 
-void writeRingFile(E_ringfiletype ringfiletype, const char *JsonRec, bool bPrev) {
-#ifdef NO_STORAGE
-  return;
-#else
+bool writeRingFile(E_ringfiletype ringfiletype, const char *JsonRec, bool bPrev) {
   if (JsonRec && strlen(JsonRec) > 1) {
     JsonDocument rec;
-    if (deserializeJson(rec, JsonRec)) return;
+    if (deserializeJson(rec, JsonRec)) return false;
 
     char key[9] = "";
     strncpy(key, rec["recid"] | "", 8);
     key[8] = '\0';
 
     uint8_t slot = CalcSlot(ringfiletype, key);
-    writeRingFileAtSlot(ringfiletype, slot, JsonRec, false, false);
-    return;
+    return writeRingFileAtSlot(ringfiletype, slot, JsonRec, false, false);
   }
 
   uint8_t slot = CalcSlot(ringfiletype, bPrev);
-  writeRingFileAtSlot(ringfiletype, slot, /*JsonRec*/ nullptr, false, bPrev);
+  return writeRingFileAtSlot(ringfiletype, slot, /*JsonRec*/ nullptr, false, bPrev);
+}
+
+ApiResponse historyMonthsApiResponse(const String& body) {
+  if (writeRingFile(RINGMONTHS, body.c_str(), false)) {
+    return {200, "application/json", body};
+  }
+  return {500, "application/json", body};
+}
+
+static void writeRingSnapshotAtSlot(const WorkerRngPayload& snapshot,
+                                    E_ringfiletype ringfiletype,
+                                    uint8_t slot,
+                                    const char* keyIn,
+                                    bool bWinterSummer,
+                                    bool bPrevRecord) {
+  if (!EnableHistory || !FSmounted) return;
+  if (slot >= RingFiles[ringfiletype].slots) return;
+
+  char key[9] = "";
+  char buffer[DATA_RECLEN_7];
+  float values[RNG_DAYS_VALUE_COUNT] = {0.0f};
+
+  strlcpy(key, keyIn ? keyIn : "", sizeof(key));
+  if (bWinterSummer) { key[6] = '0'; key[7] = '2'; }
+
+  for (uint8_t i = 0; i < ringValueCount(ringfiletype); i++) values[i] = snapshot.values[i];
+  if (ringValueCount(ringfiletype) > RING_DEFAULT_VALUE_COUNT && bPrevRecord) values[6] = 0.0f;
+
+#ifdef XTRA_LOG
+  DebugT(F("read(): Ring file ")); Debugln(RingFiles[ringfiletype].filename);
 #endif
+
+  File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "r+");
+  if (!RingFile || (RingFile.size() != RingFiles[ringfiletype].f_len)) {
+    DebugT(F("open ring file FAILED!!! --> Bailout\r\n"));
+    Debugln(RingFiles[ringfiletype].filename);
+#ifdef XTRA_LOG
+    LogFile("RNG: open ring file FAILED!!! --> Bailout", true);
+#endif
+    RingFile.close();
+    return;
+  }
+
+  uint8_t actSlot = CalcSlotAt(ringfiletype, snapshot.actT, false);
+  snprintf(buffer, sizeof(buffer), "{\"actSlot\":%2d,\"data\":[\n", actSlot);
+  RingFile.print(buffer);
+
+  formatRingRecord(ringfiletype, buffer, sizeof(buffer), key, values);
+
+  uint16_t offset = (slot * ringRecordLen(ringfiletype)) + JSON_HEADER_LEN;
+  RingFile.seek(offset, SeekSet);
+
+  int32_t bytesWritten = RingFile.print(buffer);
+  if (bytesWritten != (ringRecordLen(ringfiletype) - 2)) {
+    DebugTf("ERROR! slot[%02d]: written [%d] bytes but should have been [%d]\r\n",
+            slot, bytesWritten, ringRecordLen(ringfiletype));
+  }
+
+  if (slot < (RingFiles[ringfiletype].slots - 1)) RingFile.print(",\n");
+  else RingFile.print("\n");
+
+  RingFile.close();
 }
 
 
-/*
+static void rngKeyFromTimestamp(char* key, size_t keySize, const char* timestamp) {
+  strlcpy(key, timestamp ? timestamp : "", keySize);
+  if (keySize > 8) key[8] = '\0';
+}
 
-ringfiles previous record
-example: 23-04-2023 10:03 ==> in ring file => 23042310
-
-previous records
-Hour: 23042309 -> epoch - 3.600 -> to string
-Day: 230422xx -> epoch - 86.400 -> to string
-Month: 2303xxxx -> month - 1 (if 0 then 12 and year - 1) or epoch - 31 days
- 
-*/
-
-//===========================================================================================
-void WritePrevRingRecord(E_ringfiletype ringfiletype){
-//  uint8_t slot = CalcSlot(ringfiletype, true);
-  char tempTS[20];
-  int yr,mth;
-  
-  strncpy( tempTS, actTimestamp, sizeof(tempTS) ); // backup act ts
-//  Debugf("actTS: %s\r\n",actTimestamp);
-  
-  switch ( ringfiletype ) {
-    //use newT because actT is not set at the first telegram
-    case RINGHOURS :  epochToTimestamp( newT-3600, actTimestamp, sizeof(actTimestamp) );
-                      break;
-    case RINGDAYS :   epochToTimestamp( newT-86400, actTimestamp, sizeof(actTimestamp) );
-                      break;
-    case RINGMONTHS : { // because not all months are 31 days ;-)
-                        yr = YearFromTimestamp(DSMRdata.timestamp.c_str());
-                        mth = MonthFromTimestamp(DSMRdata.timestamp.c_str());
-                        if ( mth == 1) {
-                          mth = 12;
-                          yr--;
-                        } else mth--;
-                        snprintf(actTimestamp, sizeof(actTimestamp),"%2.2d%2.2d2823",yr,mth);
-//                        Debugln(actTimestamp);
-                      break;
-                      }
+static void rngPrevMonthKey(char* key, size_t keySize, const char* dsmrTimestamp) {
+  int yr = YearFromTimestamp(String(dsmrTimestamp ? dsmrTimestamp : "").c_str());
+  int mth = MonthFromTimestamp(String(dsmrTimestamp ? dsmrTimestamp : "").c_str());
+  if (mth == 1) {
+    mth = 12;
+    yr--;
+  } else {
+    mth--;
   }
-  
-//  Debugf("newTS: %s \r\n",actTimestamp);
-  writeRingFile(ringfiletype, "", true);
-  strncpy( actTimestamp, tempTS, sizeof(tempTS) ); // restore act ts
+  snprintf(key, keySize, "%2.2d%2.2d2823", yr, mth);
+}
+
+static void rngWritePrevSnapshotRecord(const WorkerRngPayload& snapshot, E_ringfiletype ringfiletype) {
+  char key[9] = "";
+  switch (ringfiletype) {
+    case RINGHOURS:
+      {
+        char ts[20] = "";
+        epochToTimestamp(snapshot.newT - 3600, ts, sizeof(ts));
+        rngKeyFromTimestamp(key, sizeof(key), ts);
+      }
+      break;
+    case RINGDAYS:
+      {
+        char ts[20] = "";
+        epochToTimestamp(snapshot.newT - 86400, ts, sizeof(ts));
+        rngKeyFromTimestamp(key, sizeof(key), ts);
+      }
+      break;
+    case RINGMONTHS:
+      rngPrevMonthKey(key, sizeof(key), snapshot.dsmrTimestamp);
+      break;
+  }
+
+  uint8_t slot = CalcSlotAt(ringfiletype, snapshot.actT, true);
+  writeRingSnapshotAtSlot(snapshot, ringfiletype, slot, key, false, true);
+}
+
+static void rngWriteCurrentSnapshotRecord(const WorkerRngPayload& snapshot, E_ringfiletype ringfiletype) {
+  char key[9] = "";
+  rngKeyFromTimestamp(key, sizeof(key), snapshot.actTimestamp);
+  uint8_t slot = CalcSlotAt(ringfiletype, snapshot.actT, false);
+  writeRingSnapshotAtSlot(snapshot, ringfiletype, slot, key, false, false);
+}
+
+void RngWriteFromWorker(const WorkerRngPayload& snapshot) {
+  if (!EnableHistory) {
+    if (rngWriteJobsPending > 0) rngWriteJobsPending--;
+    return;
+  }
+
+  switch ((RngWorkerMode)snapshot.mode) {
+    case RNG_WORKER_CURRENT_HOURS:
+      rngWriteCurrentSnapshotRecord(snapshot, RINGHOURS);
+      break;
+    case RNG_WORKER_CURRENT_DAYS:
+      rngWriteCurrentSnapshotRecord(snapshot, RINGDAYS);
+      break;
+    case RNG_WORKER_CURRENT_MONTHS:
+      rngWriteCurrentSnapshotRecord(snapshot, RINGMONTHS);
+      break;
+    case RNG_WORKER_PREV_HOURS:
+      rngWritePrevSnapshotRecord(snapshot, RINGHOURS);
+      break;
+    case RNG_WORKER_PREV_DAYS:
+      rngWritePrevSnapshotRecord(snapshot, RINGDAYS);
+      break;
+    case RNG_WORKER_PREV_MONTHS:
+      rngWritePrevSnapshotRecord(snapshot, RINGMONTHS);
+      break;
+    case RNG_WORKER_DST_GAP_HOURS:
+      {
+        char key[9] = "";
+        rngKeyFromTimestamp(key, sizeof(key), snapshot.actTimestamp);
+        uint8_t slot = CalcSlotAt(RINGHOURS, snapshot.actT, false);
+        slot = (slot + 1) % RingFiles[RINGHOURS].slots;
+        writeRingSnapshotAtSlot(snapshot, RINGHOURS, slot, key, true, false);
+        DebugTln(F("DST gap fix"));
+      }
+      break;
+  }
+
+  if (snapshot.lastInBatch) P1SetDevFirstUse(false);
+  if (rngWriteJobsPending > 0) rngWriteJobsPending--;
+
+#ifdef XTRA_LOG
+  if (!rngWritePending()) LogFile("RNG: all files writen", true);
+#endif
 }
 
 //===========================================================================================
@@ -747,25 +868,55 @@ void writeRingFiles() {
     return; //do nothing or telegram < 2 skip 
   }
 
-  if ( P1Status.FirstUse ) {
-    // write previous slot first because of the current act_slot in the file
-    WritePrevRingRecord(RINGHOURS);
-    yield();
-    WritePrevRingRecord(RINGDAYS);
-    yield();
-    WritePrevRingRecord(RINGMONTHS);
-    P1SetDevFirstUse( false ); 
+  if (rngWritePending()) {
+#ifdef XTRA_LOG
+    LogFile("RNG: write already pending", true);
+#endif
+    return;
   }
-  //normal 
-  writeRingFile(RINGHOURS, "", false);
-  yield();
-  writeRingFile(RINGDAYS, "", false);
-  yield();
-  writeRingFile(RINGMONTHS, "", false);
-#ifdef XTRA_LOG  
-  LogFile("RNG: all files writen",true); //log only once
-#endif  
-//  bWriteFiles = false;
+
+  WorkerRngPayload snapshot = {};
+  snapshot.actT = actT;
+  snapshot.newT = newT;
+  strlcpy(snapshot.actTimestamp, actTimestamp, sizeof(snapshot.actTimestamp));
+  strlcpy(snapshot.dsmrTimestamp, DSMRdata.timestamp.c_str(), sizeof(snapshot.dsmrTimestamp));
+  snapshot.values[0] = (float)DSMRdata.energy_delivered_tariff1;
+  snapshot.values[1] = (float)DSMRdata.energy_delivered_tariff2;
+  snapshot.values[2] = (float)DSMRdata.energy_returned_tariff1;
+  snapshot.values[3] = (float)DSMRdata.energy_returned_tariff2;
+  snapshot.values[4] = (float)gasDelivered;
+  snapshot.values[5] = mbusWater ? (float)waterDelivered
+                                 : (float)P1Status.wtr_m3 + (float)P1Status.wtr_l / 1000.0f;
+  snapshot.values[6] = currentSolarDailyKwh();
+
+  RngWorkerMode modes[7];
+  uint8_t jobCount = 0;
+  if (P1Status.FirstUse) {
+    modes[jobCount++] = RNG_WORKER_PREV_HOURS;
+    modes[jobCount++] = RNG_WORKER_PREV_DAYS;
+    modes[jobCount++] = RNG_WORKER_PREV_MONTHS;
+  }
+  modes[jobCount++] = RNG_WORKER_CURRENT_HOURS;
+  modes[jobCount++] = RNG_WORKER_CURRENT_DAYS;
+  modes[jobCount++] = RNG_WORKER_CURRENT_MONTHS;
+  if (hour(actT) == 1 && hour(newT) == 3) modes[jobCount++] = RNG_WORKER_DST_GAP_HOURS;
+
+  if (!WorkerHasCapacity(WORKER_PRIO_LOW, jobCount)) {
+    LogFile("RNG: queue full, write skipped", true);
+    return;
+  }
+
+  rngWriteJobsPending = jobCount;
+  for (uint8_t i = 0; i < jobCount; i++) {
+    WorkerRngPayload jobPayload = snapshot;
+    jobPayload.mode = modes[i];
+    jobPayload.lastInBatch = (i == jobCount - 1);
+    if (!WorkerEnqueueRngWrite(jobPayload)) {
+      rngWriteJobsPending = 0;
+      LogFile("RNG: queue full, write skipped", true);
+      return;
+    }
+  }
   
 } // writeRingFiles()
  

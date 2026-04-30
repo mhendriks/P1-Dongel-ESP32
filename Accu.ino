@@ -13,10 +13,9 @@ AccuPwrSystems SolarEdgeAccu = {
 float SolarEdgeFlowPvPower = 0.0f;
 bool  SolarEdgeFlowPvValid = false;
 
-void SendAccuJson() {
+ApiResponse accuApiResponse() {
   if ( !SolarEdgeAccu.Available ) {
-    httpServer.send(200, "application/json", "{\"active\":false}");
-    return;
+    return {200, "application/json", "{\"active\":false}"};
   }
 
   String Json = "{\"active\":true,\"status\":\"";
@@ -34,5 +33,5 @@ void SendAccuJson() {
   DebugT("Accu Json: ");Debugln(Json);
 #endif
 
-  httpServer.send(200, "application/json", Json.c_str() );
+  return {200, "application/json", Json};
 }

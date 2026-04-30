@@ -399,7 +399,7 @@ const char* getResetReason() {
 
 void ShutDownHandler(){
   MQTTDisconnect();
-  P1StatusWrite();
+  P1StatusWriteDirect();
   P1StatusEnd();
   DebugTln(F("/!\\ SHUTDOWN /!\\"));
   DebugFlush();

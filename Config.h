@@ -148,11 +148,7 @@ mod_conf *active_mod_conf = &module_config[0];
   #define OPT5  
 #endif
 
-#ifdef POST_TELEGRAM
-  #define OPT6  "[POST]" 
-#else
-  #define OPT6
-#endif
+#define OPT6
 
 #ifdef NETSWITCH 
  #define OPT7 "[NETSW]"

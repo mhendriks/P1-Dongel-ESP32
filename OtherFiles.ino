@@ -66,7 +66,7 @@ void writeToJsonFile(const TSource &doc, File &_file)
 }
 
 //=======================================================================
-void writeSettings() {
+void writeSettingsDirect() {
   if ( !FSmounted ) return;
 
   DebugTln(F("Writing to [" SETTINGS_FILE "] ..."));
@@ -147,18 +147,18 @@ void writeSettings() {
   docw["netsw-enabled"] = bNETSWenabled;
   #endif
 
-#ifdef POST_TELEGRAM
-  docw["pt_port"] = pt_port;
-  docw["pt_interval"] = pt_interval;
-  docw["pt_end_point"] = pt_end_point;
-#endif
-
 #ifdef VIRTUAL_P1
   if ( strlen(virtual_p1_ip) ) docw["virtual_p1_ip"] = virtual_p1_ip;
 #endif  
 
   writeToJsonFile(docw, SettingsFile);
   
+} // writeSettingsDirect()
+
+//=======================================================================
+void writeSettings() {
+  if (WorkerEnqueueSimple(WORKER_JOB_SETTINGS_WRITE, WORKER_PRIO_NORMAL)) return;
+  writeSettingsDirect();
 } // writeSettings()
 
 //=======================================================================
@@ -241,11 +241,7 @@ void readSettings(bool show)
   CHANGE_INTERVAL_MS(publishMQTTtimer, 1000 * settingMQTTinterval - 100);
   LEDenabled = doc["LED"];
   if (doc["ota"].is<const char*>()) strlcpy(BaseOTAurl, doc["ota"].as<const char*>(), sizeof(BaseOTAurl));
-#ifdef NO_STORAGE
-  EnableHistory = false;
-#else
   if (doc["enableHistory"].is<bool>()) EnableHistory = doc["enableHistory"];
-#endif
   if (doc["watermeter"].is<bool>() ) WtrMtr = doc["watermeter"];
   if (doc["waterfactor"].is<float>()) WtrFactor = doc["waterfactor"];
 
@@ -257,12 +253,6 @@ void readSettings(bool show)
   if (doc["try_calc_i"].is<bool>()) try_calc_i = doc["try_calc_i"];
 
   if (doc["eid-enabled"].is<bool>()) bEID_enabled = doc["eid-enabled"];
-#ifdef POST_TELEGRAM
-  if (doc["pt_port"].is<int>()) pt_port = doc["pt_port"];
-  if (doc["pt_interval"].is<int>()) pt_interval = doc["pt_interval"];
-  if (doc["pt_end_point"].is<const char*>()) strlcpy(pt_end_point, doc["pt_end_point"].as<const char*>(), sizeof(pt_end_point));
-#endif
-
 #ifdef VIRTUAL_P1
   if (doc["virtual_p1_ip"].is<const char*>()) strlcpy(virtual_p1_ip, doc["virtual_p1_ip"].as<const char*>(), sizeof(virtual_p1_ip));  
 #endif  
@@ -492,11 +482,13 @@ void updateSetting(const char *field, const char *newValue)
   }
 
   SendTariffData(); // P2PType = NRGTARIFS;
-  writeSettings();
   if (reboot_required) {
+    writeSettingsDirect();
     LogFile("reboot: mimic changed", true);
     delay(200);
     P1Reboot();
+  } else {
+    writeSettings();
   }
   
 } // updateSetting()
@@ -509,7 +501,7 @@ size_t fileSizeOf(const char* path) {
 }
 
 //=======================================================================
-void LogFile(const char* payload, bool toDebug) {
+void LogFileWriteDirect(const char* payload, bool toDebug) {
   if (toDebug) DebugTln(payload);
   if (!FSmounted) return;
   size_t size = fileSizeOf("/littlefs/P1.log");
@@ -549,6 +541,12 @@ void LogFile(const char* payload, bool toDebug) {
     LogFile.println(log_payload.c_str());
     //closing the file
     LogFile.close(); 
+}
+
+//=======================================================================
+void LogFile(const char* payload, bool toDebug) {
+  if (WorkerEnqueueLog(payload, toDebug)) return;
+  LogFileWriteDirect(payload, toDebug);
 }
 /***************************************************************************
 *

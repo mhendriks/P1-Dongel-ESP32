@@ -71,6 +71,7 @@ void SetupP1In(){
 #ifdef HAN_READER
   if (smartMeter.isHan() && HanIO >= 0) rxPin = HanIO;
 #endif
+  Serial1.setRxBufferSize(4096);
   Serial1.begin(bPre40 ? 9600 : 115200,
                 bPre40 ? SERIAL_7E1 : SERIAL_8N1,
                 rxPin, TxO1);
@@ -174,7 +175,49 @@ static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
   }
 
   processTelegram();
+  if (!isHan) WorkerNotifyP1TelegramOk();
   if (Verbose2) DSMRdata.applyEach(showValues());
+}
+
+static void copyLogSafe(char* dst, size_t dstSize, const String& src) {
+  if (!dstSize) return;
+
+  size_t out = 0;
+  for (size_t i = 0; i < src.length() && out < dstSize - 1; i++) {
+    char c = src.charAt(i);
+    if (c == '\r' || c == '\n' || c == '\t') c = ' ';
+    if (c == '"' || c == '\\') c = '\'';
+    if ((uint8_t)c < 32) c = ' ';
+    dst[out++] = c;
+  }
+  dst[out] = '\0';
+}
+
+static void debugP1ParseError(bool isHan, size_t rawLen, const String& DSMRerror) {
+  char msg[96];
+  bool mqttBusy = false;
+
+#ifndef MQTT_DISABLE
+  mqttBusy = bSendMQTT || mqttPublishActive || mqttConnectActive;
+#endif
+
+  snprintf(msg, sizeof(msg),
+           "P1 parse error: src=%s len=%u err=%u total=%u rng=%u mqtt=%u heap=%u",
+           isHan ? "HAN" : "P1",
+           (unsigned)rawLen,
+           (unsigned)telegramErrors,
+           (unsigned)telegramCount,
+           RngWritePending() ? 1 : 0,
+           mqttBusy ? 1 : 0,
+           (unsigned)ESP.getFreeHeap());
+  DebugTln(msg);
+
+  char err[64];
+  copyLogSafe(err, sizeof(err), DSMRerror);
+  if (err[0]) {
+    snprintf(msg, sizeof(msg), "P1 parse detail: %s", err);
+    DebugTln(msg);
+  }
 }
 
 static void handleParsedMeter(P1Reader& meter, bool isHan) {
@@ -212,6 +255,7 @@ static void handleParsedMeter(P1Reader& meter, bool isHan) {
     if (P1error_cnt_sequence++ > 3) bP1offline = true;
     DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
     DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
+    debugP1ParseError(isHan, CapTelegram.length(), DSMRerror);
     meter.clear();
   }
 
@@ -256,6 +300,7 @@ static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
     if (P1error_cnt_sequence++ > 3) bP1offline = true;
     DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
     DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
+    debugP1ParseError(isHan, CapTelegram.length(), DSMRerror);
     meter.clear();
   }
 
@@ -293,6 +338,7 @@ static void handleParsedMeter(han::HanReader& meter, bool isHan) {
     if (P1error_cnt_sequence++ > 3) bP1offline = true;
     DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
     DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
+    debugP1ParseError(isHan, CapTelegram.length(), DSMRerror);
     meter.clear();
   }
 
@@ -512,12 +558,6 @@ void processTelegram(){
   DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
   if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse || !dataYesterday.lastUpdDay) {
     writeRingFiles(); //bWriteFiles = true; //handled in main flow
-    if ( hour(actT) == 1 && hour(newT) == 3 ){
-      uint8_t slot = CalcSlot(RINGHOURS, false); //based on actT
-      slot = ( slot + 1 ) % RingFiles[RINGHOURS].slots; //increase slot 1h to next slot = 2h
-      writeRingFileAtSlot(RINGHOURS, slot, nullptr, true, false); //todo winter -> summer time issue actT = 1h so next slot should be written too
-      DebugTln(F("DST gap fix"));
-    }
     UpdateYesterday();
     //check dag overgang
     if ( currentDay != (newT/(uint32_t)(3600*24)) ) {

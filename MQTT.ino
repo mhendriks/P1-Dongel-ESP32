@@ -270,6 +270,7 @@ void MQTTConnect() {
     DebugTf("connect %s %s %s %s\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
     
     // if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
+    mqttConnectActive = true;
     if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd ) ) {
       LogFile("MQTT: CONNECTED to broker", true);
       MQTTclient.publish(cMsg,"Online", true); //LWT = online
@@ -296,6 +297,7 @@ void MQTTConnect() {
       LogFile("MQTT: ... connection FAILED! Will try again in 10 sec", true);
       DebugT("error code: ");Debugln(MQTTclient.state());
     }
+    mqttConnectActive = false;
   } //due
 } //mqttconnect
 
@@ -449,6 +451,7 @@ void sendMQTTData() {
   if ( !bMQTTenabled || (settingMQTTinterval == 0) || (strlen(settingMQTTbroker) < 4) ) return;
   MQTTConnect();
   if ( MQTTclient.connected() ) {   
+  mqttPublishActive = true;
     
   DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
   
@@ -483,6 +486,7 @@ void sendMQTTData() {
   MQTTSendVictronData();
 #endif
 
+  mqttPublishActive = false;
   }
 }
 

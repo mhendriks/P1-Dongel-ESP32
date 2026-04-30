@@ -52,6 +52,7 @@ struct {
 #include "esp_chip_info.h"
 #include <esp_now.h>             //https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
 #include <esp_task_wdt.h>
+#include "Worker.h"
 
 JsonDocument StroomPlanData;
 
@@ -59,6 +60,13 @@ struct ApiResponse {
   int status;
   const char* contentType;
   String body;
+};
+
+struct ApiRequestContext {
+  HTTPMethod method;
+  String pathArg;
+  String body;
+  String uri;
 };
 
 #ifdef MBUS
@@ -153,7 +161,14 @@ SmartMeterHandle smartMeter(slimmeMeter, hanMeter);
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void LogFile(const char* payload, bool toDebug = false);
+void P1StatusWrite();
+void P1StatusWriteDirect();
+bool RngWritePending();
+void writeSettings();
+void writeSettingsDirect();
+void ManifestCheckFromWorker();
 void P1Reboot();
+void EIDPostHello(ApiResponse* response = nullptr);
 void SendTariffData();
 void EID_RESTART_IDLE_TIMER();
 uint32_t actueleOverspanningSeconden(uint32_t overspanningTotaal, unsigned long startTijd, bool overspanning);
@@ -521,6 +536,8 @@ String    mbusDeliveredTimestamp;
 String    smID;
 bool      StaticInfoSend = false;
 bool      bSendMQTT = false;
+volatile bool mqttPublishActive = false;
+volatile bool mqttConnectActive = false;
 bool      bMQTTenabled = true;
 bool      bMQTToverTLS = false;
 
@@ -558,14 +575,6 @@ char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
 bool      bAutoUpdate = false;
 
-//Post_Telegram
-#ifdef POST_TELEGRAM
-  time_t TelegramLastPost = 0;
-  uint16_t pt_port = 80;
-  uint16_t pt_interval = 60;
-  char pt_end_point[60];
-#endif
-
 //udp
 bool New_P1_UDP = false;
 
@@ -576,7 +585,15 @@ int8_t mb_rts = -1;
 
 bool en_connected = false;
 
-ApiResponse handleModbusMonitorApi();
+ApiResponse handleDevApi(const ApiRequestContext& request);
+ApiResponse handleSmApi(const ApiRequestContext& request);
+ApiResponse handleSmApiField(const ApiRequestContext& request);
+ApiResponse handleModbusMonitorApi(const ApiRequestContext& request);
+ApiResponse historyMonthsApiResponse(const String& body);
+ApiResponse listFilesApiResponse();
+ApiResponse solarApiResponse();
+ApiResponse accuApiResponse();
+ApiResponse EIDGetClaimApiResponse(const String& action);
 String modbusMonitorJson();
 void clearModbusMonitorEntries();
 

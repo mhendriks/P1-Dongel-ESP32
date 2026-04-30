@@ -59,7 +59,7 @@
   }
 
     void EIDStart(){
-      if ( bEID_enabled ) EIDPostHello(false);
+      if ( bEID_enabled ) EIDPostHello();
     }
 
     void clearEIDPlannerData(bool forceupdate){
@@ -90,11 +90,11 @@
 
       switch ( P1Status.eid_state ) {
         case EID_ENROLLED:
-            if ( !eid_webhook.length() ) { if ( DUE(T_EID_HELLO_FAIL) ) EIDPostHello(false); } //get the webhook url
+            if ( !eid_webhook.length() ) { if ( DUE(T_EID_HELLO_FAIL) ) EIDPostHello(); } //get the webhook url
             else if ( DUE(T_EID) )  { //is enrolled and got webhook url
               PostEnergyID();
             }
-            if ( DUE(T_EID_REFRESH) ) EIDPostHello(false); //refresh every 24h
+            if ( DUE(T_EID_REFRESH) ) EIDPostHello(); //refresh every 24h
             if ( recordNumber != "" && apiAccessToken != "" && !bGotDirective ) EIDGetDirectives(); //4.16 feature
             if ( bGetPlannerDetails ) EIDGetDirectDetails();
             if ( DUE(T_EID_PLAN) ) bGetPlannerDetails = true;
@@ -102,7 +102,7 @@
         case EID_CLAIMING:
           if ( DUE(T_EID_CLAIM) ) {
             DebugTln("EID_CLAIMING");
-            EIDPostHello(false); //refresh every 1m
+            EIDPostHello(); //refresh every 1m
           }
           break;
         case EID_IDLE:
@@ -162,9 +162,9 @@
 
     // {"webhookUrl":"https://sbns-energyid-prod.servicebus.windows.net/sbq-smartstuff-p1/messages","headers":{"authorization":"<gone>","x-twin-id":"<>"},"recordNumber":"EA-14195189","recordName":"Mijn woning","webhookPolicy":{"allowedInterval":"PT5M","uploadInterval":300}}
 
-    void EIDPostHello(bool fromHttpRequest) {
+    void EIDPostHello(ApiResponse* response) {
       if (!isEIDNetworkAvailable()) {
-        if (fromHttpRequest && httpServer.client()) httpServer.send(503);
+        if (response) *response = {503, "application/json", ""};
         return;
       }
 
@@ -197,7 +197,7 @@
         DeserializationError error = deserializeJson(doc, payload);
         if (error) {
           DebugTln(F("JSON parsing failed in claim response"));
-          if (fromHttpRequest) httpServer.send(400);
+          if (response) *response = {400, "application/json", ""};
         } else {
           const char* claimCode = doc["claimCode"];
 
@@ -234,13 +234,13 @@
             P1Status.eid_state = EID_ENROLLED;
           }
 
-          if (fromHttpRequest) httpServer.send(200, "application/json", payload);
+          if (response) *response = {200, "application/json", payload};
         }
       } else {
         Debugln(F("HTTP request failed or invalid response"));
         eid_webhook = "";
         RESTART_TIMER(T_EID_HELLO_FAIL);
-        if (fromHttpRequest) httpServer.send(400);
+        if (response) *response = {400, "application/json", ""};
       }
       
       static bool firstHelloDone = false;
@@ -331,13 +331,14 @@
       http.end();
     }
 
-    void EIDGetClaim(){
+    ApiResponse EIDGetClaimApiResponse(const String& action){
 
-      if ( !bEID_enabled ) return;
+      if ( !bEID_enabled ) return {503, "application/json", ""};
       //get server parameters
-    //  DebugT(F("server action: "));Debugln( httpServer.arg("action") );
-      if ( httpServer.arg("action") == "reset" ) P1Status.eid_state = EID_IDLE;
-      EIDPostHello(true); 
+      if ( action == "reset" ) P1Status.eid_state = EID_IDLE;
+      ApiResponse response = {500, "application/json", ""};
+      EIDPostHello(&response);
+      return response;
     }
 
     String IsoTS () {

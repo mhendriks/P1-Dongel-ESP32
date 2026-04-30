@@ -52,7 +52,7 @@ void P1SetDevType(){
    SetConfig();
 }
 
-void P1StatusWrite(){
+void P1StatusWriteDirect(){
     strcpy(P1Status.timestamp, actTimestamp);
     preferences.putUInt("reboots", P1Status.reboots);
     preferences.putString("timestamp",P1Status.timestamp);
@@ -62,6 +62,11 @@ void P1StatusWrite(){
     preferences.putUInt("peers", Pref.peers);
     preferences.putBytes("mac", Pref.mac, 6);
     DebugTln(F("P1Status successfully writen"));
+}
+
+void P1StatusWrite(){
+    if (WorkerEnqueueSimple(WORKER_JOB_P1_STATUS_WRITE, WORKER_PRIO_NORMAL)) return;
+    P1StatusWriteDirect();
 }
 
 void P1StatusReset(){
@@ -82,7 +87,7 @@ void P1StatusClear(){
   Pref.peers          = 0;
   memset(Pref.mac, 0, sizeof(Pref.mac));
 
-  P1StatusWrite();
+  P1StatusWriteDirect();
 }
 
 #endif

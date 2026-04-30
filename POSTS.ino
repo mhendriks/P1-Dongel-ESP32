@@ -17,42 +17,22 @@
   #error "POST_POWERCH and POST_MEENT cannot be enabled at the same time"
 #endif
 
-void PostTelegram() {
-#ifdef POST_TELEGRAM
-  if ( !strlen(pt_end_point) ) return;
-  if ( ( (esp_log_timestamp()/1000) - TelegramLastPost) < pt_interval ) return;
-  
-  TelegramLastPost = esp_log_timestamp()/1000;
-  
-  HTTPClient http;
-  http.begin(wifiClient, pt_end_point, pt_port);
-  
-  http.addHeader("Content-Type", "text/plain");
-  http.addHeader("Accept", "*/*");
-  
-  int httpResponseCode = http.POST( CapTelegram );
-  DebugT(F("HTTP Response code: "));Debugln(httpResponseCode);
-  
-  http.end();  
-#endif
-  
-}
-
 #if defined(POST_POWERCH) || defined(POST_MEENT)
 
 static WiFiClientSecure webhookTlsClient;
 uint8_t webhookPostErrors = 0;
 uint32_t webhookLastPostMs = 0;
+bool webhookPostPending = false;
 
-String JsonWebhook() {
+String JsonWebhook(const WorkerWebhookPayload& payload) {
   
   JsonDocument doc;
-  // char idbuf[21]; //64b value   
-  // snprintf(idbuf, sizeof idbuf, "%llu", (uint64_t) _getChipId() );
-  doc["id"] = String(_getChipId());  
-  doc["p_from_grid"] = DSMRdata.power_delivered.int_val();
-  doc["p_to_grid"] = DSMRdata.power_returned.int_val();
-  doc["timestamp"] = actT; // int of string, beide ok
+  char idbuf[21];
+  snprintf(idbuf, sizeof(idbuf), "%llu", (unsigned long long)payload.id);
+  doc["id"] = idbuf;
+  doc["p_from_grid"] = payload.pFromGrid;
+  doc["p_to_grid"] = payload.pToGrid;
+  doc["timestamp"] = payload.timestamp; // int of string, beide ok
 
   String output;
   serializeJson(doc, output);
@@ -67,10 +47,7 @@ String JsonWebhook() {
 time_t webhookStartMs;
 
 void PostWebhook() {
-#ifdef DEBUG
-  webhookStartMs = millis();
-#endif
-  if (!bNewTelegramWebhook || netw_state == NW_NONE || webhookPostErrors > 100 ) return;
+  if (!bNewTelegramWebhook || netw_state == NW_NONE || webhookPostErrors > 100 || webhookPostPending) return;
 
 #ifdef POST_MEENT
   const uint32_t meentIntervalMs = (uint32_t)constrain(settingMeentInterval, (uint16_t)1, (uint16_t)3600) * 1000UL;
@@ -78,7 +55,26 @@ void PostWebhook() {
   if (webhookLastPostMs != 0 && (uint32_t)(nowMs - webhookLastPostMs) < meentIntervalMs) return;
 #endif
 
+  WorkerWebhookPayload payload = {};
+  payload.id = _getChipId();
+  payload.pFromGrid = DSMRdata.power_delivered.int_val();
+  payload.pToGrid = DSMRdata.power_returned.int_val();
+  payload.timestamp = actT;
+
+  if (!WorkerEnqueueWebhookPost(payload)) return;
+
   bNewTelegramWebhook = false;
+  webhookPostPending = true;
+}
+
+void PostWebhookFromWorker(const WorkerWebhookPayload& payload) {
+#ifdef DEBUG
+  webhookStartMs = millis();
+#endif
+  if (netw_state == NW_NONE || webhookPostErrors > 100 ) {
+    webhookPostPending = false;
+    return;
+  }
 
   HTTPClient http;
   String webhookUrl;
@@ -95,7 +91,7 @@ void PostWebhook() {
     http.addHeader("Authorization", MEENT_AUTH_TOKEN);
 #endif
 
-    int httpResponseCode = http.POST(JsonWebhook());
+    int httpResponseCode = http.POST(JsonWebhook(payload));
     DebugT(F("HTTP Response code: ")); Debugln(httpResponseCode);
 
     if (httpResponseCode >= 200 && httpResponseCode < 300) {
@@ -120,6 +116,7 @@ void PostWebhook() {
 #ifdef DEBUG
   Debugf("Webhook process time: %d\n", millis() - webhookStartMs);
 #endif
+  webhookPostPending = false;
 }
 
 void StartWebhook() {
@@ -129,4 +126,5 @@ void StartWebhook() {
 #else 
   void StartWebhook(){}
   void PostWebhook(){}
+  void PostWebhookFromWorker(const WorkerWebhookPayload& payload){}
 #endif

@@ -1,8 +1,9 @@
 #include <HTTPUpdate.h>
 bool bWebUpdate = false;
-bool autoUpdateBootCheckDone = false;
-uint32_t autoUpdateLastDailyCheckKey = 0;
-uint32_t autoUpdateNextCheckMs = 0;
+bool manifestBootCheckDone = false;
+bool manifestCheckPending = false;
+uint32_t manifestLastDailyCheckKey = 0;
+uint32_t manifestScheduleNextCheckMs = 0;
 
 void handleRemoteUpdate(){
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
@@ -77,37 +78,57 @@ bool CheckNewVersion() {
   return bNewVersionAvailable;
 }
 
-void handleAutoUpdate(bool runBootCheckNow) {
-  if (skipNetwork || netw_state == NW_NONE || UpdateRequested || bWebUpdate) return;
-
-  const uint32_t nowMs = millis();
-  if (!runBootCheckNow && nowMs < autoUpdateNextCheckMs) return;
-  autoUpdateNextCheckMs = nowMs + (5UL * 60UL * 1000UL); // check planning every 5 minutes
-
-  const bool doBootCheck = (!autoUpdateBootCheckDone);
-
-  bool doDailyCheck = false;
-  if (now() > 1700000000) { // only if clock is sane
-    const int h = hour();
-    const uint32_t dayKey = (uint32_t)year() * 10000UL + (uint32_t)month() * 100UL + (uint32_t)day();
-    if ((h >= 1 && h < 6) && (autoUpdateLastDailyCheckKey != dayKey)) {
-      doDailyCheck = true;
-      autoUpdateLastDailyCheckKey = dayKey;
-    }
+void ManifestCheckFromWorker() {
+  if (skipNetwork || netw_state == NW_NONE || UpdateRequested || bWebUpdate) {
+    manifestCheckPending = false;
+    return;
   }
 
-  if (!doBootCheck && !doDailyCheck) return;
+  if (!CheckNewVersion()) {
+    manifestCheckPending = false;
+    return;
+  }
 
-  if (doBootCheck) autoUpdateBootCheckDone = true;
-
-  if (!CheckNewVersion()) return;
   if (!bAutoUpdate) {
     LogFile("AutoUpdate: update available (auto mode disabled)", true);
+    manifestCheckPending = false;
     return;
   }
 
   LogFile("AutoUpdate: starting OTA install", true);
   UpdateRequested = true;
+  manifestCheckPending = false;
+}
+
+void handleManifestCheckSchedule(bool runBootCheckNow) {
+  if (skipNetwork || netw_state == NW_NONE || UpdateRequested || bWebUpdate || manifestCheckPending) return;
+
+  const uint32_t nowMs = millis();
+  if (!runBootCheckNow && nowMs < manifestScheduleNextCheckMs) return;
+  manifestScheduleNextCheckMs = nowMs + (5UL * 60UL * 1000UL); // check planning every 5 minutes
+
+  const bool doBootCheck = (!manifestBootCheckDone);
+
+  bool doDailyCheck = false;
+  uint32_t dayKey = 0;
+  if (now() > 1700000000) { // only if clock is sane
+    const int h = hour();
+    dayKey = (uint32_t)year() * 10000UL + (uint32_t)month() * 100UL + (uint32_t)day();
+    if ((h >= 1 && h < 6) && (manifestLastDailyCheckKey != dayKey)) {
+      doDailyCheck = true;
+    }
+  }
+
+  if (!doBootCheck && !doDailyCheck) return;
+
+  manifestCheckPending = true;
+  if (!WorkerEnqueueSimple(WORKER_JOB_MANIFEST_CHECK, WORKER_PRIO_NORMAL)) {
+    manifestCheckPending = false;
+    return;
+  }
+
+  if (doBootCheck) manifestBootCheckDone = true;
+  if (doDailyCheck) manifestLastDailyCheckKey = dayKey;
 }
 
 void update_finished() {

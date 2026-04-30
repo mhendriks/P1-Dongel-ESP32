@@ -380,9 +380,9 @@ uint32_t totalSolarDailyWh() {
   return Enphase.Daily + SolarEdge.Daily + SMAinv.Daily + Omniksol.Daily;
 }
 
-void SendSolarJson() {
+ApiResponse solarApiResponse() {
   bool any = Enphase.Available || SolarEdge.Available || SMAinv.Available || Omniksol.Available;
-  if (!any) { httpServer.send(200, "application/json", "{\"active\":false}"); return; }
+  if (!any) return {200, "application/json", "{\"active\":false}"};
 
   uint32_t totalDaily  = totalSolarDailyWh();
   uint32_t totalActual = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual + Omniksol.Actual;
@@ -406,5 +406,5 @@ void SendSolarJson() {
   DebugTln("SendSolarJson");
   DebugT("Solar Json: "); Debugln(Json);
 #endif
-  httpServer.send(200, "application/json", Json.c_str());
+  return {200, "application/json", Json};
 }
