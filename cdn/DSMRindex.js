@@ -60,6 +60,7 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   let eid_enabled			= false
   let eid_planner_enabled	= false
   let pairing_enabled    	= false
+  let Meter_Source          = "DSMR"
   
   let locale 				= 'nl';  // standaard
 
@@ -117,10 +118,10 @@ function refreshSolarSelfUse() {
   const exportedWh = Math.max(0, Number(Pi_today) * 1000);
   const importedWh = Math.max(0, Number(Pd_today) * 1000);
   if ( exportedWh > dailyProduction) {
-    // With battery export we cannot split feed-in between PV and battery discharge.
-    // In that case assume all PV could have been used locally, but keep self-sufficiency
-    // tied to actual grid import so we do not show 100% while there was still import.
-    document.getElementById('scr').innerHTML = "100";
+    // Feed-in cannot be higher than PV production when both counters describe the
+    // same source/day. This can happen with battery export or mismatched day resets,
+    // so direct self-use cannot be derived reliably.
+    document.getElementById('scr').innerHTML = "-";
     document.getElementById('seue').innerHTML = importedWh > 0
       ? Number((dailyProduction / (dailyProduction + importedWh)) * 100).toFixed(0)
       : "100";
@@ -1448,6 +1449,8 @@ function parseDeviceInfo(obj) {
 
   // add dev info
   for (let k in obj) {
+    if (k === "meter_source") Meter_Source = obj[k];
+
     const row = tableRef.insertRow(-1);
     row.insertCell(0).innerHTML = td(k);
 
@@ -1753,8 +1756,11 @@ function formatFailureLog(svalue) {
   function parseSmFields(data)
   {
     //console.log("parsed .., fields is ["+ JSON.stringify(data)+"]");
+    const decodeEquipmentIds = Meter_Source !== "HAN";
     for (let item in data) 
     {
+      if (item.charAt(0) === "_") continue;
+
       console.log("fields item: " +item);
       console.log("fields data[item].value: " +data[item].value);
 
@@ -1805,7 +1811,7 @@ function formatFailureLog(svalue) {
         case 'mbus2_equipment_id_ntc':
         case 'mbus3_equipment_id_ntc':
         case 'mbus4_equipment_id_ntc':
-          tableCells[2].innerHTML = formatIdentifier(data[item].value);
+          tableCells[2].innerHTML = decodeEquipmentIds ? formatIdentifier(data[item].value) : data[item].value;
           break;
 
         default:

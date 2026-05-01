@@ -6,7 +6,7 @@
 ***************************************************************************      
 */
 
-const DEBUG = false;
+const DEBUG = true;
 
 const UPDATE_HIST 		= DEBUG ? 1000 * 10 : 1000 * 300;
 const UPDATE_ACTUAL 	= DEBUG ? 1000 * 5 	: 1000 * 5;
@@ -261,7 +261,7 @@ let objDAL 					= null;
 	}
 
 	refreshTelegram(){
-	  console.log("DAL::refreshTelegram");
+	  console.log("DAL::refreshRawSmartMeterData");
       this.fetchDataTEXT( URL_SM_TELEGRAM, this.parseTelegram.bind(this));
 	}
     

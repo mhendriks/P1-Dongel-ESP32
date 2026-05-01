@@ -298,6 +298,7 @@ void handleFileUpload()
       fsUploadFile.close();
     Debugln("FileUpload Size: " + (String)upload.totalSize);
     httpServer.sendContent(Header);
+    RngInvalidateHeaderCache(httpServer.urlDecode(upload.filename).c_str());
     if (upload.filename == "DSMRsettings.json") readSettings(false);
     if (upload.filename == "enphase.json" || upload.filename == "solaredge.json") ReadSolarConfigs();
 #ifdef NETSWITCH

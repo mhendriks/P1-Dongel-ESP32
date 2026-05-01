@@ -142,7 +142,7 @@ static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
     DSMRdata.energy_returned_tariff1 = DSMRdata.energy_returned_total;
   }
 
-  modifySmFaseInfo();
+  if (!isHan) modifySmFaseInfo();
   if (bWarmteLink) {
     DSMRdata.timestamp = DSMRdata.mbus1_delivered.timestamp;
     DSMRdata.timestamp_present = true;
@@ -233,7 +233,7 @@ static void handleParsedMeter(P1Reader& meter, bool isHan) {
 #endif
 
   if (showRaw) {
-    Debugf("Telegram Raw (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
+    Debugf("Raw smart meter data (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
     showRaw = false;
     meter.clear();
     ToggleLED(LED_OFF);
@@ -242,7 +242,7 @@ static void handleParsedMeter(P1Reader& meter, bool isHan) {
 
   telegramCount++;
   if (!bHideP1Log) {
-    DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n",
+    DebugTf("meterDataCount=[%d] meterDataErrors=[%d] bufferlength=[%d]\r\n",
             telegramCount, telegramErrors, meter.raw().length());
   }
   MyData DSMRdataNew = {};
@@ -254,7 +254,7 @@ static void handleParsedMeter(P1Reader& meter, bool isHan) {
     telegramErrors++;
     if (P1error_cnt_sequence++ > 3) bP1offline = true;
     DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
-    DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
+    DebugTf("Raw smart meter data\r\n%s\r\n\r\n", CapTelegram.c_str());
     debugP1ParseError(isHan, CapTelegram.length(), DSMRerror);
     meter.clear();
   }
@@ -278,7 +278,7 @@ static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
   }
 
   if (showRaw) {
-    Debugf("Telegram Raw (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
+    Debugf("Raw smart meter data (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
     showRaw = false;
     meter.clear();
     ToggleLED(LED_OFF);
@@ -287,7 +287,7 @@ static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
 
   telegramCount++;
   if (!bHideP1Log) {
-    DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n",
+    DebugTf("meterDataCount=[%d] meterDataErrors=[%d] bufferlength=[%d]\r\n",
             telegramCount, telegramErrors, meter.raw().length());
   }
   MyData DSMRdataNew = {};
@@ -299,7 +299,7 @@ static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
     telegramErrors++;
     if (P1error_cnt_sequence++ > 3) bP1offline = true;
     DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
-    DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
+    DebugTf("Raw smart meter data\r\n%s\r\n\r\n", CapTelegram.c_str());
     debugP1ParseError(isHan, CapTelegram.length(), DSMRerror);
     meter.clear();
   }
@@ -316,7 +316,7 @@ static void handleParsedMeter(han::HanReader& meter, bool isHan) {
   if (bRawPort) ws_raw.println(CapTelegram);
 
   if (showRaw) {
-    Debugf("Telegram Raw (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
+    Debugf("Raw smart meter data (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
     showRaw = false;
     meter.clear();
     ToggleLED(LED_OFF);
@@ -325,7 +325,7 @@ static void handleParsedMeter(han::HanReader& meter, bool isHan) {
 
   telegramCount++;
   if (!bHideP1Log) {
-    DebugTf("telegramCount=[%d] telegramErrors=[%d] bufferlength=[%d]\r\n",
+    DebugTf("meterDataCount=[%d] meterDataErrors=[%d] bufferlength=[%d]\r\n",
             telegramCount, telegramErrors, meter.raw().length());
   }
   MyData DSMRdataNew = {};
@@ -337,7 +337,7 @@ static void handleParsedMeter(han::HanReader& meter, bool isHan) {
     telegramErrors++;
     if (P1error_cnt_sequence++ > 3) bP1offline = true;
     DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
-    DebugTf("Telegram\r\n%s\r\n\r\n", CapTelegram.c_str());
+    DebugTf("Raw smart meter data\r\n%s\r\n\r\n", CapTelegram.c_str());
     debugP1ParseError(isHan, CapTelegram.length(), DSMRerror);
     meter.clear();
   }
@@ -526,23 +526,23 @@ void UpdateYesterday( ){
 
 //==================================================================================
 void processTelegram(){
-//  DebugTf("Telegram[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());                                                
+//  DebugTf("Smart meter data[%d]=>DSMRdata.timestamp[%s]\r\n", telegramCount, DSMRdata.timestamp.c_str());
 //  strcpy(newTimestamp, DSMRdata.timestamp.c_str()); 
 //!!! DO NOT REFER TO CPU CONSUMING FUNCTIONS ... THIS PROCES SHOULD NOT BLOCK OR TAKES LOTS OF CPU TIME
 
   newT = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), true); // update system time
   
-  //cal current more accurate; only works with SMR 5 meters
+  // Calculate current only when phase power is actually available.
   if ( try_calc_i ) {
-    if ( DSMRdata.voltage_l1_present && DSMRdata.voltage_l1  ){
+    if ( DSMRdata.voltage_l1_present && DSMRdata.voltage_l1 && (DSMRdata.power_delivered_l1_present || DSMRdata.power_returned_l1_present) ){
       DSMRdata.current_l1._value = (uint32_t)((DSMRdata.power_delivered_l1.int_val() + DSMRdata.power_returned_l1.int_val())/DSMRdata.voltage_l1*1000);
       DSMRdata.current_l1_present = true;
     }
-    if ( DSMRdata.voltage_l2_present && DSMRdata.voltage_l2  ){
+    if ( DSMRdata.voltage_l2_present && DSMRdata.voltage_l2 && (DSMRdata.power_delivered_l2_present || DSMRdata.power_returned_l2_present) ){
       DSMRdata.current_l2._value = (uint32_t)((DSMRdata.power_delivered_l2.int_val() + DSMRdata.power_returned_l2.int_val())/DSMRdata.voltage_l2*1000);
       DSMRdata.current_l2_present = true;
     }
-    if ( DSMRdata.voltage_l3_present && DSMRdata.voltage_l3 ){
+    if ( DSMRdata.voltage_l3_present && DSMRdata.voltage_l3 && (DSMRdata.power_delivered_l3_present || DSMRdata.power_returned_l3_present) ){
       DSMRdata.current_l3._value = (uint32_t)((DSMRdata.power_delivered_l3.int_val() + DSMRdata.power_returned_l3.int_val())/DSMRdata.voltage_l3*1000);
       DSMRdata.current_l3_present = true;
     }
@@ -586,7 +586,7 @@ void processTelegram(){
   
   // PostHomey();
   #ifdef POST_POWERCH
-    if ( (bV5meter && telegramCount % 3 == 0 ) || !bV5meter ) bNewTelegramWebhook = true; //every 3 secs (v5) or new telegram (v2/4)
+    if ( (bV5meter && telegramCount % 3 == 0 ) || !bV5meter ) bNewTelegramWebhook = true; //every 3 secs (v5) or new meter data (v2/4)
   #endif
   #ifdef POST_MEENT
     bNewTelegramWebhook = true; // interval handling is done in PostWebhook()

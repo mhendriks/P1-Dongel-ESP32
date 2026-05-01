@@ -364,6 +364,11 @@ String deviceInfoJson()
   }
   doc["network"] = network_state();
   doc["uptime"] = upTime();
+#ifdef HAN_READER
+  doc["meter_source"] = "HAN";
+#else
+  doc["meter_source"] = "DSMR";
+#endif
 
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
@@ -527,7 +532,7 @@ ApiResponse handleSmApi(const ApiRequestContext& request)
     onlyIfPresent = false;
     break;  
     
-  case 't': //telegram
+  case 't': //raw smart meter data
     return {200, "text/plain", CapTelegram};
     
   default:

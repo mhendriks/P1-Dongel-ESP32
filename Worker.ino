@@ -9,7 +9,15 @@ QueueHandle_t qWorkerHigh = nullptr;
 QueueHandle_t qWorkerNormal = nullptr;
 QueueHandle_t qWorkerLow = nullptr;
 TaskHandle_t tWorker = nullptr;
-WorkerStats workerStats = {};
+
+struct WorkerStats {
+  uint32_t enqueued[3];
+  uint32_t dropped[3];
+  uint32_t processed;
+  uint32_t unknown;
+};
+
+static WorkerStats workerStats = {};
 static volatile bool workerRngRunPermit = false;
 static bool workerDeferredRngJobValid = false;
 static WorkerJob workerDeferredRngJob = {};
@@ -31,19 +39,11 @@ static QueueHandle_t workerQueueForPriority(WorkerPriority priority) {
 }
 
 static void workerCountEnqueued(WorkerPriority priority) {
-  switch (priority) {
-    case WORKER_PRIO_HIGH:   workerStats.enqueuedHigh++; break;
-    case WORKER_PRIO_NORMAL: workerStats.enqueuedNormal++; break;
-    case WORKER_PRIO_LOW:    workerStats.enqueuedLow++; break;
-  }
+  if (priority <= WORKER_PRIO_LOW) workerStats.enqueued[priority]++;
 }
 
 static void workerCountDropped(WorkerPriority priority) {
-  switch (priority) {
-    case WORKER_PRIO_HIGH:   workerStats.droppedHigh++; break;
-    case WORKER_PRIO_NORMAL: workerStats.droppedNormal++; break;
-    case WORKER_PRIO_LOW:    workerStats.droppedLow++; break;
-  }
+  if (priority <= WORKER_PRIO_LOW) workerStats.dropped[priority]++;
 }
 
 static bool workerReceiveNext(WorkerJob& job) {
@@ -182,9 +182,6 @@ bool WorkerEnqueue(const WorkerJob& jobIn, WorkerPriority priority, TickType_t w
   }
 
   WorkerJob job = jobIn;
-  job.priority = priority;
-  if (job.createdMs == 0) job.createdMs = millis();
-
   if (xQueueSend(queue, &job, waitTicks) == pdTRUE) {
     workerCountEnqueued(priority);
     return true;
@@ -194,11 +191,9 @@ bool WorkerEnqueue(const WorkerJob& jobIn, WorkerPriority priority, TickType_t w
   return false;
 }
 
-bool WorkerEnqueueSimple(WorkerJobType type, WorkerPriority priority, uint8_t id, uint16_t flags) {
+bool WorkerEnqueueSimple(WorkerJobType type, WorkerPriority priority) {
   WorkerJob job = {};
   job.type = type;
-  job.flags = flags;
-  job.data.simple.id = id;
   return WorkerEnqueue(job, priority, 0);
 }
 
@@ -244,12 +239,12 @@ void WorkerNotifyP1TelegramOk() {
 
 void WorkerPrintStats() {
   DebugTf("Worker queues: H +%lu/-%lu N +%lu/-%lu L +%lu/-%lu processed=%lu unknown=%lu\r\n",
-          workerStats.enqueuedHigh,
-          workerStats.droppedHigh,
-          workerStats.enqueuedNormal,
-          workerStats.droppedNormal,
-          workerStats.enqueuedLow,
-          workerStats.droppedLow,
+          workerStats.enqueued[WORKER_PRIO_HIGH],
+          workerStats.dropped[WORKER_PRIO_HIGH],
+          workerStats.enqueued[WORKER_PRIO_NORMAL],
+          workerStats.dropped[WORKER_PRIO_NORMAL],
+          workerStats.enqueued[WORKER_PRIO_LOW],
+          workerStats.dropped[WORKER_PRIO_LOW],
           workerStats.processed,
           workerStats.unknown);
 }

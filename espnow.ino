@@ -29,7 +29,7 @@ bool bESPNowInit = false;
   to activate call StartESPNOW in setup
   function is triggerd from :
   - peer ASKTARIFF and ASKSTATICS
-  - when a new p1 telegram is processing (send actual data)
+  - when new p1 meter data is processing (send actual data)
   - changing statics or tariffs (sending new statics or tariff data) (todo)
 
   pairing done by pressing the dongle button once

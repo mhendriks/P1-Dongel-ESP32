@@ -161,9 +161,17 @@ function impactBindTariffInputs() {
   batteryInput.dataset.bound = "true";
 }
 
+function impactSyncBatteryControls() {
+  const batteryCapacityCard = document.getElementById("impactBatteryCapacityCard");
+  if (batteryCapacityCard) {
+    batteryCapacityCard.style.display = (sCurrentChart === "MONTH") ? "block" : "none";
+  }
+}
+
 function BurnupBootstrap() {
   impactApplyCopy();
   impactBindTariffInputs();
+  impactSyncBatteryControls();
 
   const flowCanvas = document.getElementById("impactFlowChart");
   const valueCanvas = document.getElementById("impactValueChart");
@@ -196,7 +204,7 @@ function BurnupBootstrap() {
           yAxes: [{
             ticks: {
               callback: function(value) {
-                return `${value} kWh`;
+                return impactFormatNumber(value, sCurrentChart === "YEAR" ? 0 : 1);
               },
               fontColor: "#42526e"
             },
@@ -241,7 +249,7 @@ function BurnupBootstrap() {
           yAxes: [{
             ticks: {
               callback: function(value) {
-                return `EUR ${impactFormatNumber(value, 0)}`;
+                return impactFormatNumber(value, sCurrentChart === "YEAR" ? 0 : 2);
               },
               fontColor: "#42526e"
             },
@@ -268,17 +276,20 @@ function ensureBurnupLoaded() {
 function setViewMONTH() {
   ensureBurnupLoaded();
   sCurrentChart = "MONTH";
+  impactSyncBatteryControls();
   refreshData();
 }
 
 function setViewYEAR() {
   ensureBurnupLoaded();
   sCurrentChart = "YEAR";
+  impactSyncBatteryControls();
   refreshData();
 }
 
 function refreshData() {
   ensureBurnupLoaded();
+  impactSyncBatteryControls();
 
   clearInterval(timerRefresh);
   clearTimeout(timerRetryRender);

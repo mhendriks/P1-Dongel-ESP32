@@ -37,7 +37,7 @@
 		<ul>
 			<li><a id='bInfo_SysInfo'   data-i18n-key="mnu-sysinfo" class='tabButton nav-item' href="#SysInfoTab" >Systeeminformatie</a></li>
 			<li><a id='bInfo_frontend'  data-i18n-key="mnu-frontend" class='tabButton nav-item' href="#FrontendTab" >Webpagina</a></li>
-			<li><a id='bInfo_Telegram'  data-i18n-key="mnu-telegram" class='tabButton nav-item' href="#TelegramTab" >Telegram</a></li>
+			<li><a id='bInfo_Telegram'  data-i18n-key="mnu-telegram" class='tabButton nav-item' href="#TelegramTab" >Ruwe data</a></li>
 			<li><a id='bInfo_Fields'    data-i18n-key="mnu-fields" class='tabButton nav-item' href="#FieldsTab" >Alle Velden</a></li>
 			<li><a id='bInfo_APIdoc'    data-i18n-key="mnu-api" class='tabButton nav-item' href="#APIdocTab" >API Docs</a></li>
 		</ul></li>
@@ -333,7 +333,7 @@
         <div data-i18n-key="impact-net-feed-in" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#51715c;">Netto opbrengst per teruggeleverde kWh</div>
         <input id="impactExportTariffInput" type="text" inputmode="decimal" placeholder="0,000">
       </div>
-      <div class="impact-tariff-card">
+      <div class="impact-tariff-card" id="impactBatteryCapacityCard">
         <div data-i18n-key="impact-battery-capacity" style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#77621a;">Fictieve accucapaciteit (kWh)</div>
         <input id="impactBatteryCapacityInput" type="text" inputmode="decimal" placeholder="0,0">
       </div>
@@ -430,16 +430,16 @@
   
   </section>  <!-- END SysInfo Tab -->
 
-  <!-- START TelegramTab -->
+  <!-- START raw data tab -->
   <section id="TelegramTab" class="tabName subTab">
-    <h2 data-i18n-key="tle-telegram">Ruwe Telegram data</h2>
+    <h2 data-i18n-key="tle-telegram">Ruwe slimme meter data</h2>
     <div id="rawTelegram">
     	<button onclick="CopyTelegram()" class="iconify" data-icon="mdi-content-copy" ></button>
 		<pre id="TelData">
 		</pre>
     </div>
     
-  </section> <!-- END TelegramTab -->
+  </section> <!-- END raw data tab -->
 
   <!-- START Fields Tab -->
   <section id="FieldsTab" class="tabName subTab">
@@ -534,7 +534,7 @@
   </tr>
     <tr>
     <td><a href="api/v2/sm/telegram" target="_blank">api/v2/sm/telegram</a></td>
-    <td>raw telegram as send by the Smart Meter including all \"\\r\\n\" line endings</td>
+    <td>raw smart meter data as sent by the Smart Meter including all \"\\r\\n\" line endings</td>
   </tr>
   <tr>
     <td><a href="api/v2/stats" target="_blank">api/v2/stats</a></td>

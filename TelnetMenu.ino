@@ -65,7 +65,7 @@ void displayBoardInfo()
   Debugln(F("\r\n==================================================================\r"));
   Debug(F("]\r\n      Firmware Version ["));  Debug( _VERSION_ONLY " - " __TIMESTAMP__ );
   Debug(F("]\r\n              #defines "));   Debug(F(ALL_OPTIONS));
-  Debug(F(" \r\n   Telegrams Processed ["));  Debug( telegramCount );
+  Debug(F(" \r\nSmart Meter Msgs Processed ["));  Debug( telegramCount );
   Debug(F("]\r\n           With Errors ["));  Debug( telegramErrors );
   Debug(F("]\r\n              FreeHeap ["));  Debug( ESP.getFreeHeap() );
   Debug(F("]\r\n             max.Block ["));  Debug( ESP.getMaxAllocHeap() );

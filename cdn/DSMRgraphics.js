@@ -422,10 +422,10 @@ function ensureChartsReady()
   //============================================================================  
   function copyActualToChart(data) 
   {
-    //convert telegram
+    //convert smart meter data
     var objTelegram = parseTelegramData(data);
 
-    //add to telegramhistory
+    //add to smart meter data history
     if(listTELEGRAMS.length >= MAX_ACTUAL_HISTORY) listTELEGRAMS.shift();
     listTELEGRAMS.push(objTelegram);
   }
@@ -555,15 +555,15 @@ function ensureChartsReady()
     listTELEGRAMS = [];
     for(var i=0; i<histdata.length; i++)
     {
-      //convert telegram
+      //convert smart meter data
       var objTelegram = parseTelegramData( histdata[i] );
     
-      //add to telegramhistory
+      //add to smart meter data history
       listTELEGRAMS.push(objTelegram);
     }
   }
 
-  //convert the telegram list to datasets
+  //convert the smart meter data list to datasets
   function createDataContainersACTUAL( listTELEGRAMS )
   {
     var dcEX = createChartDataContainerWithStack();

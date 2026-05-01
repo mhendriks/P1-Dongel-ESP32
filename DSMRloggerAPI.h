@@ -164,6 +164,8 @@ void LogFile(const char* payload, bool toDebug = false);
 void P1StatusWrite();
 void P1StatusWriteDirect();
 bool RngWritePending();
+void RngInvalidateHeaderCache(const char* filename);
+void writeRingFiles();
 void writeSettings();
 void writeSettingsDirect();
 void ManifestCheckFromWorker();

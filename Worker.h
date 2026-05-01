@@ -37,10 +37,6 @@ struct WorkerLogPayload {
   bool toDebug;
 };
 
-struct WorkerSimplePayload {
-  uint8_t id;
-};
-
 struct WorkerWebhookPayload {
   uint64_t id;
   int32_t pFromGrid;
@@ -60,32 +56,17 @@ struct WorkerRngPayload {
 
 struct WorkerJob {
   WorkerJobType type;
-  WorkerPriority priority;
-  uint32_t createdMs;
-  uint16_t flags;
   union {
     WorkerLogPayload log;
-    WorkerSimplePayload simple;
     WorkerWebhookPayload webhook;
     WorkerRngPayload rng;
     uint8_t raw[112];
   } data;
 };
 
-struct WorkerStats {
-  uint32_t enqueuedHigh;
-  uint32_t enqueuedNormal;
-  uint32_t enqueuedLow;
-  uint32_t droppedHigh;
-  uint32_t droppedNormal;
-  uint32_t droppedLow;
-  uint32_t processed;
-  uint32_t unknown;
-};
-
 bool WorkerBegin();
 bool WorkerEnqueue(const WorkerJob& job, WorkerPriority priority, TickType_t waitTicks = 0);
-bool WorkerEnqueueSimple(WorkerJobType type, WorkerPriority priority, uint8_t id = 0, uint16_t flags = 0);
+bool WorkerEnqueueSimple(WorkerJobType type, WorkerPriority priority);
 bool WorkerHasCapacity(WorkerPriority priority, uint8_t needed);
 bool WorkerEnqueueLog(const char* payload, bool toDebug);
 bool WorkerEnqueueWebhookPost(const WorkerWebhookPayload& payload);

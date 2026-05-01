@@ -14,6 +14,7 @@ int actSlot = 0;
 
 RingRecord repaired[30];
 int repairedCount = 0;
+static int16_t rngHeaderActSlot[3] = {-1, -1, -1};
 
 static uint8_t ringValueCount(E_ringfiletype type) {
   return RingFiles[type].valueCount;
@@ -21,6 +22,39 @@ static uint8_t ringValueCount(E_ringfiletype type) {
 
 static uint16_t ringRecordLen(E_ringfiletype type) {
   return RingFiles[type].recordLen;
+}
+
+static bool rngShouldWriteHeader(E_ringfiletype ringfiletype, uint8_t actSlotValue) {
+  return rngHeaderActSlot[ringfiletype] != actSlotValue;
+}
+
+static void rngRememberHeader(E_ringfiletype ringfiletype, uint8_t actSlotValue) {
+  rngHeaderActSlot[ringfiletype] = actSlotValue;
+}
+
+static void rngInvalidateHeader(E_ringfiletype ringfiletype) {
+  rngHeaderActSlot[ringfiletype] = -1;
+}
+
+void RngInvalidateHeaderCache(const char* filename) {
+  if (!filename) return;
+
+  const char* name = filename;
+  if (name[0] != '/') {
+    for (uint8_t i = 0; i < 3; i++) {
+      if (strcmp(name, RingFiles[i].filename + 1) == 0) {
+        rngInvalidateHeader((E_ringfiletype)i);
+        return;
+      }
+    }
+  }
+
+  for (uint8_t i = 0; i < 3; i++) {
+    if (strcmp(name, RingFiles[i].filename) == 0) {
+      rngInvalidateHeader((E_ringfiletype)i);
+      return;
+    }
+  }
 }
 
 static void clearRingRecord(RingRecord& record) {
@@ -70,6 +104,7 @@ static bool writeRingfileRecords(const char* filename, E_ringfiletype type, uint
   }
   fout.print("]}");
   fout.close();
+  rngRememberHeader(type, actSlotValue);
 
   return true;
 }
@@ -515,6 +550,7 @@ void createRingFile(E_ringfiletype ringfiletype)
   }
   RingFile.print("\n]}"); //terminate the json string
   RingFile.close();
+  rngRememberHeader(ringfiletype, 0);
 }
 
 //===========================================================================================
@@ -615,6 +651,7 @@ bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
 
   File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "r+");
   if (!RingFile || (RingFile.size() != RingFiles[ringfiletype].f_len)) {
+    rngInvalidateHeader(ringfiletype);
     DebugT(F("open ring file FAILED!!! --> Bailout\r\n"));
     Debugln(RingFiles[ringfiletype].filename);
     #ifdef XTRA_LOG
@@ -627,8 +664,11 @@ bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
   // Update header actSlot
   // (actSlot in header = toon in UI waar 'nu' is; laat dit bestaan zoals jij het doet)
   uint8_t actSlot = CalcSlot(ringfiletype, /*bPrev*/ false);
-  snprintf(buffer, sizeof(buffer), "{\"actSlot\":%2d,\"data\":[\n", actSlot);
-  RingFile.print(buffer);
+  if (rngShouldWriteHeader(ringfiletype, actSlot)) {
+    snprintf(buffer, sizeof(buffer), "{\"actSlot\":%2d,\"data\":[\n", actSlot);
+    RingFile.print(buffer);
+    rngRememberHeader(ringfiletype, actSlot);
+  }
 
   // Bouw record payload
   if (hasJsonRec) {
@@ -708,24 +748,20 @@ ApiResponse historyMonthsApiResponse(const String& body) {
   return {500, "application/json", body};
 }
 
-static void writeRingSnapshotAtSlot(const WorkerRngPayload& snapshot,
-                                    E_ringfiletype ringfiletype,
-                                    uint8_t slot,
-                                    const char* keyIn,
-                                    bool bWinterSummer,
-                                    bool bPrevRecord) {
-  if (!EnableHistory || !FSmounted) return;
-  if (slot >= RingFiles[ringfiletype].slots) return;
+static bool writeRingValuesAtSlot(E_ringfiletype ringfiletype,
+                                  uint8_t slot,
+                                  time_t actSlotTime,
+                                  const char* keyIn,
+                                  const float* valuesIn) {
+  if (!EnableHistory || !FSmounted) return false;
+  if (slot >= RingFiles[ringfiletype].slots) return false;
 
   char key[9] = "";
   char buffer[DATA_RECLEN_7];
   float values[RNG_DAYS_VALUE_COUNT] = {0.0f};
 
   strlcpy(key, keyIn ? keyIn : "", sizeof(key));
-  if (bWinterSummer) { key[6] = '0'; key[7] = '2'; }
-
-  for (uint8_t i = 0; i < ringValueCount(ringfiletype); i++) values[i] = snapshot.values[i];
-  if (ringValueCount(ringfiletype) > RING_DEFAULT_VALUE_COUNT && bPrevRecord) values[6] = 0.0f;
+  for (uint8_t i = 0; i < ringValueCount(ringfiletype); i++) values[i] = valuesIn[i];
 
 #ifdef XTRA_LOG
   DebugT(F("read(): Ring file ")); Debugln(RingFiles[ringfiletype].filename);
@@ -733,18 +769,22 @@ static void writeRingSnapshotAtSlot(const WorkerRngPayload& snapshot,
 
   File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "r+");
   if (!RingFile || (RingFile.size() != RingFiles[ringfiletype].f_len)) {
+    rngInvalidateHeader(ringfiletype);
     DebugT(F("open ring file FAILED!!! --> Bailout\r\n"));
     Debugln(RingFiles[ringfiletype].filename);
 #ifdef XTRA_LOG
     LogFile("RNG: open ring file FAILED!!! --> Bailout", true);
 #endif
     RingFile.close();
-    return;
+    return false;
   }
 
-  uint8_t actSlot = CalcSlotAt(ringfiletype, snapshot.actT, false);
-  snprintf(buffer, sizeof(buffer), "{\"actSlot\":%2d,\"data\":[\n", actSlot);
-  RingFile.print(buffer);
+  uint8_t actSlot = CalcSlotAt(ringfiletype, actSlotTime, false);
+  if (rngShouldWriteHeader(ringfiletype, actSlot)) {
+    snprintf(buffer, sizeof(buffer), "{\"actSlot\":%2d,\"data\":[\n", actSlot);
+    RingFile.print(buffer);
+    rngRememberHeader(ringfiletype, actSlot);
+  }
 
   formatRingRecord(ringfiletype, buffer, sizeof(buffer), key, values);
 
@@ -761,6 +801,25 @@ static void writeRingSnapshotAtSlot(const WorkerRngPayload& snapshot,
   else RingFile.print("\n");
 
   RingFile.close();
+  return bytesWritten == (ringRecordLen(ringfiletype) - 2);
+}
+
+static bool writeRingSnapshotAtSlot(const WorkerRngPayload& snapshot,
+                                    E_ringfiletype ringfiletype,
+                                    uint8_t slot,
+                                    const char* keyIn,
+                                    bool bWinterSummer,
+                                    bool bPrevRecord) {
+  char key[9] = "";
+  float values[RNG_DAYS_VALUE_COUNT] = {0.0f};
+
+  strlcpy(key, keyIn ? keyIn : "", sizeof(key));
+  if (bWinterSummer) { key[6] = '0'; key[7] = '2'; }
+
+  for (uint8_t i = 0; i < ringValueCount(ringfiletype); i++) values[i] = snapshot.values[i];
+  if (ringValueCount(ringfiletype) > RING_DEFAULT_VALUE_COUNT && bPrevRecord) values[6] = 0.0f;
+
+  return writeRingValuesAtSlot(ringfiletype, slot, snapshot.actT, key, values);
 }
 
 
@@ -855,7 +914,7 @@ void RngWriteFromWorker(const WorkerRngPayload& snapshot) {
   if (rngWriteJobsPending > 0) rngWriteJobsPending--;
 
 #ifdef XTRA_LOG
-  if (!rngWritePending()) LogFile("RNG: all files writen", true);
+  if (!rngWritePending()) LogFile("RNG: all files written", true);
 #endif
 }
 
@@ -865,7 +924,7 @@ void writeRingFiles() {
 #ifdef XTRA_LOG  
     LogFile("RNG: exit before writing",true); //log only once
 #endif    
-    return; //do nothing or telegram < 2 skip 
+    return; //do nothing or skip when fewer than 2 meter data messages
   }
 
   if (rngWritePending()) {

@@ -64,7 +64,16 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select correct port>
 
 5.6.1
-- 
+- small internal optimalisations
+- RNG file write performance update
+- fix: issue FE self use porduction
+- fix: Na Salderen graphs
+- fix; remove battery input in year view Na Salderen
+- changes: HAN support fixing processing details 
+- update/change lang files (missing items)
+
+
+
 
 5.7.0
 - kWh meter als bron voor productie data gebruiken (Harrie)
@@ -81,16 +90,16 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define DEBUG  
 // #define XTRA_LOG
 
-//--- PROFILES -> NO PROFILE = WiFi Dongle  ---
+//---  PROFILES  ---
 // #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE       //+D1MC and NRGDH
+#define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 
 //SPECIAL
 // #define __Az__
-// #define OTAURL_PREFIX "eb/"
+#define OTAURL_PREFIX "han/"
 
 //FEATURES
 #define MBUS
@@ -102,7 +111,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define POST_POWERCH
 // #define POST_MEENT
 // #define VIRTUAL_P1
-// #define HAN_READER
+#define HAN_READER
 // #define HAN_TESTDATA
 // #define HAN_TESTDATA_RAW
 // #define HAN_TESTDATA_DYNAMIC
