@@ -63,16 +63,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select correct port>
 
-5.6.1
-- small internal optimalisations
-- RNG file write performance update
-- fix: issue FE self use porduction
-- fix: Na Salderen graphs
-- fix; remove battery input in year view Na Salderen
-- changes: HAN support fixing processing details 
-- update/change lang files (missing items)
-
-
+5.6.2
 
 
 5.7.0
