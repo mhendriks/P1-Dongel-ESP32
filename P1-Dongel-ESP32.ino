@@ -63,16 +63,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.6.2
-- sdk update 3.3.8
-- refactor profiles (include in this repo now) 
-- D1MC + NRGDH general new hostname : nrg-gateway
-- cleanup dead code
-- cleanup comments
-- small refactoring
-- optimise performance
-- add: Dashboard widget and W/kW toggle. Click change icon right top corner and click widget to hide/show. You could toggle kw/w on the actual tab.
-
 5.7.0
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - refactoring targets
@@ -95,7 +85,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-#define NRG_DONGLE       // + D1MC and NRGDH
+// #define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 
 //SPECIAL
