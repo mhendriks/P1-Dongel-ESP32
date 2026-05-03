@@ -36,8 +36,6 @@ void fillSysInfo(JsonDocument& out){
   sys["wifi"]["ip"] = WiFi.localIP().toString();
 
   sys["hw"]["type"] = HardwareType ? HWTypeNames[HardwareType] : PROFILE;
-  // sys["hw"]["module"] = "RS485";
-
   #ifdef NRGD
     sys["hw"]["module"] = ModTypeNames[modType[0]];
   #else 
@@ -59,8 +57,8 @@ void fillSysInfo(JsonDocument& out){
   
   sys["mac"]["base"] = macStr;
 
-  sys["p1"]["telegram_ok"]  = telegramCount;   // yourCounter;
-  sys["p1"]["telegram_err"] = telegramErrors;    // yourCounterErr;
+  sys["p1"]["telegram_ok"]  = telegramCount;
+  sys["p1"]["telegram_err"] = telegramErrors;
 
 }
 
@@ -72,8 +70,6 @@ void handleLine(const String& line) {
   if (err) { out["ok"]=false; out["err"]=err.c_str(); serializeJson(out, USBSerial); USBSerial.write('\n'); return; }
 
   const char* cmd = in["cmd"] | "";
-
-  // if (!strcmp(cmd,"ping")) { out["ok"]=true; out["pong"]=millis(); sendJson(out); return; }
 
   if (!strcmp(cmd,"list")) {
     out["ok"]=true; JsonArray a = out.createNestedArray("keys");
@@ -112,13 +108,6 @@ void handleLine(const String& line) {
     return;
   }
 
-  // if (!strcmp(cmd,"del")) {
-  //   const char* k = in["k"] | "";
-  //   if (!*k) return replyError("missing key");
-  //   bool ok = prefs.remove(k);
-  //   out["ok"]=ok; out["k"]=k; out["deleted"]=ok; sendJson(out); return;
-  // }
-
   if (!strcmp(cmd,"wifi")) { 
     out["ok"]=true; 
     sendJson(out);  
@@ -130,7 +119,6 @@ void handleLine(const String& line) {
     return; 
   }
   if (!strcmp(cmd,"reboot")) { out["ok"]=true; sendJson(out); delay(100); ESP.restart(); return; }
-  // if (!strcmp(cmd,"start_wifi")) { out["ok"]=true; sendJson(out); delay(100); WiFi.begin(ssid,psk); return; }
 
   if (!strcmp(cmd, "sysinfo")) {
     out["ok"] = true;
@@ -140,28 +128,12 @@ void handleLine(const String& line) {
   }
 
   out["ok"]=false; out["err"]="unknown cmd";
-  // serializeJson(out, USBSerial); USBSerial.write('\n');
   sendJson(out);
-
-}
-
-void CheckAllPrefs() {
-
-  // auto ensureDefault = [](const char* key, const char* defVal) {
-  //   String v = preferences.getString(key, "");
-  //   if (v == "") {
-  //     preferences.putString(key, defVal);
-  //   }
-  // };
-
-  // ensureDefault("wifi_ssid", WiFi.SSID());
-  // ensureDefault("wifi_password",  WiFi.psk());
 
 }
 
 void fUSBConfig( void * pvParameters ){
   DebugTln(F("Enable usbconfig..."));
-  CheckAllPrefs();
   while(true) {
     USBconfigLoop();
     vTaskDelay(10 / portTICK_PERIOD_MS);

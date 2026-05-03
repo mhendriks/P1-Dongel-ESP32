@@ -9,11 +9,8 @@
 ***************************************************************************      
 */
 
-int recordCount = 0;
 int actSlot = 0;
 
-RingRecord repaired[30];
-int repairedCount = 0;
 static int16_t rngHeaderActSlot[3] = {-1, -1, -1};
 
 static uint8_t ringValueCount(E_ringfiletype type) {
@@ -36,25 +33,21 @@ static void rngInvalidateHeader(E_ringfiletype ringfiletype) {
   rngHeaderActSlot[ringfiletype] = -1;
 }
 
-void RngInvalidateHeaderCache(const char* filename) {
-  if (!filename) return;
-
-  const char* name = filename;
-  if (name[0] != '/') {
-    for (uint8_t i = 0; i < 3; i++) {
-      if (strcmp(name, RingFiles[i].filename + 1) == 0) {
-        rngInvalidateHeader((E_ringfiletype)i);
-        return;
-      }
-    }
-  }
+static int8_t ringFileIndexByName(const char* name) {
+  if (!name) return -1;
 
   for (uint8_t i = 0; i < 3; i++) {
-    if (strcmp(name, RingFiles[i].filename) == 0) {
-      rngInvalidateHeader((E_ringfiletype)i);
-      return;
-    }
+    const char* fullName = RingFiles[i].filename;
+    const char* bareName = fullName[0] == '/' ? fullName + 1 : fullName;
+    if (strcmp(name, fullName) == 0 || strcmp(name, bareName) == 0) return i;
   }
+
+  return -1;
+}
+
+void RngInvalidateHeaderCache(const char* filename) {
+  int8_t index = ringFileIndexByName(filename);
+  if (index >= 0) rngInvalidateHeader((E_ringfiletype)index);
 }
 
 static void clearRingRecord(RingRecord& record) {
@@ -245,13 +238,13 @@ bool loadRingfile(E_ringfiletype type) {
   actSlot = doc["actSlot"] | 0;
   JsonArray data = doc["data"];
   for (uint16_t slot = 0; slot < RingFiles[type].slots; slot++) clearRingRecord(RNGDayRec[slot]);
-  int i = 0;
+  uint16_t i = 0;
   for (JsonObject obj : data) {
     if (i >= RingFiles[type].slots) break;
     strlcpy(RNGDayRec[i].date, obj["date"] | "", sizeof(RNGDayRec[i].date));
 
     JsonArray values = obj["values"];
-    for (int j = 0; j < RingFiles[type].valueCount; j++) {
+    for (uint8_t j = 0; j < RingFiles[type].valueCount; j++) {
       RNGDayRec[i].values[j] = values[j] | 0.0;
     }
     i++;
@@ -323,46 +316,12 @@ bool loadRNGDaysHistory() {
   return true;
 }
 
-bool saveRingfile(E_ringfiletype type) {
-  const S_ringfile& file = RingFiles[type];
-  File f = LittleFS.open("/testDays.json", "w");
-  if (!f) {
-    Debug("Kan bestand niet openen voor schrijven: ");
-    Debugln(file.filename);
-    return false;
-  }
-  f.print("{\"actSlot\":");
-  f.print(actSlot);
-  f.print(",\"data\":[\n");
-
-  for (int i = 0; i < file.slots; i++) {
-    f.print("{\"date\":\"");
-    f.print(RNGDayRec[i].date);
-    f.print("\",\"values\":[");
-
-    // Handmatig met vaste spacing en precisie
-    for (int j = 0; j < file.valueCount; j++) {
-      f.printf("%10.3f", RNGDayRec[i].values[j]);
-      if (j < (file.valueCount - 1)) f.print(",");
-    }
-
-    f.print("]}");
-    if (i < file.slots - 1) f.print(",\n");
-  }
-
-  f.print("\n]}");
-  f.close();
-
-  Debug("Bestand opgeslagen in correct formaat: "); Debugln(file.filename);
-  return true;
-}
-
 time_t date2epoch(const char* date){
   struct tm tNew = {};
   if (strlen(date) != 8) return 0;
 
   sscanf(date, "%2d%2d%2d%2d", &tNew.tm_year, &tNew.tm_mon, &tNew.tm_mday, &tNew.tm_hour);
-  tNew.tm_hour = 23; //hard end of day 
+  tNew.tm_hour = 23;
   tNew.tm_year += 100;
   tNew.tm_mon -= 1;
 
@@ -370,170 +329,27 @@ time_t date2epoch(const char* date){
   return ts > 0 ? ts : 0;
 }
 
-bool isPreviousDay(const char* newerDate, const char* olderDate) {
-
-  time_t dateNew = date2epoch(newerDate);
-  time_t dateOld = date2epoch(olderDate);
-  
-  // Debug("dateNew: ");Debugln(dateNew);
-  // Debug("dateOld: ");Debugln(dateOld);
-  
-  // Debug("(dateNew - dateOld): ");Debugln((dateNew - dateOld));
-  
-  return (dateNew - dateOld) == 86400;
-}
-
-void printRec(struct RingRecord* recs, int count) {
-  for (int i = 0; i < count; ++i) {
-    Debugf("Record %2d - date: %s | values: ", i, recs[i].date);
-    for (int j = 0; j < RNG_DAYS_VALUE_COUNT; ++j)
-      Debugf("%.3f ", recs[i].values[j]);
-    Debugln();
-  }
-}
-
-void epochToDate(time_t ts, char* out) {
-  struct tm* t = localtime(&ts);
-  snprintf(out, 9, "%02d%02d%02d%02d", t->tm_year % 100, t->tm_mon + 1, t->tm_mday, t->tm_hour);
-}
-
-#define DAY_SEC 86400
-#define NUM_VALUES RNG_DAYS_VALUE_COUNT
-
-void repairRingRecords( RingRecord* records, int len) {
-  for (int i = 0; i < len - 1; i++) {
-    time_t tCurrent = date2epoch(records[i].date);
-    time_t tNext = date2epoch(records[i + 1].date);
-
-    if (tCurrent == 0 || tNext == 0) {
-      Debugf("❌ Ongeldige datum bij record %d of %d\n", i, i + 1);
-      continue;
-    }
-
-    // Verwacht dat tNext precies 1 dag eerder is
-    if ((tCurrent - tNext) != DAY_SEC) {
-      Debugf("📉 Afwijking bij record %d ➝ %d\n", i, i + 1);
-
-      // Zoek eerstvolgende correcte record
-      int j = i + 2;
-      while (j < len) {
-        time_t tCandidate = date2epoch(records[j].date);
-        if (tCandidate != 0 && (tCurrent - tCandidate) % DAY_SEC == 0) break;
-        j++;
-      }
-
-      if (j >= len) {
-        // Geen geldig record meer gevonden: vul rest met kopieën van i
-        Debugln("⚠️ Geen volgend correct record — kopieer vanaf huidig record naar einde");
-
-        for (int k = i + 1; k < len; k++) {
-          time_t tNew = tCurrent - ((k - i) * DAY_SEC);
-          epochToDate(tNew, records[k].date);
-          for (int v = 0; v < NUM_VALUES; v++) {
-            records[k].values[v] = records[i].values[v];
-          }
-          Debugf("📋 Record %d gekopieerd van %d (datum: %s)\n", k, i, records[k].date);
-        }
-        break;  // Niks meer te doen
-      }
-
-      int gap = j - i;
-      time_t tStart = tCurrent;
-      time_t tEnd = date2epoch(records[j].date);
-
-      for (int k = 1; k < gap; k++) {
-        time_t tNew = tStart - (DAY_SEC * k);
-        epochToDate(tNew, records[i + k].date);
-
-        float f = (float)k / gap;
-        for (int v = 0; v < NUM_VALUES; v++) {
-          float v1 = records[i].values[v];
-          float v2 = records[j].values[v];
-          records[i + k].values[v] = v1 + (v2 - v1) * f;
-        }
-
-        Debugf("🔧 Record %d hersteld (date: %s)\n", i + k, records[i + k].date);
-      }
-
-      i = j - 1; // spring verder
-    }
-  }
-
-  Debugln("✅ Herstel voltooid.");
-}
-
-
-// void CheckRingFile(E_ringfiletype ringfiletype) {
-//   File f = LittleFS.open(RingFiles[ringfiletype].filename, "r");
-//   if (!f) {
-//     Serial.println("Kan bestand niet openen.");
-//     return;
-//   }
-
-//   JsonDocument doc;
-//   DeserializationError err = deserializeJson(doc, f);
-//   f.close();
-//   if (err) {
-//     Debug("Parse fout: ");Debugln(err.c_str());
-//     return;
-//   }
-
-//   actSlot = doc["actSlot"].as<int>();
-//   int total = doc["data"].size();
-  
-//   Debugln("json to array");
-//   for (int i = 0; i < total; i++) {
-//     int idx = (total + actSlot - i) % total;
-//     strncpy(ringRecords[i].date, doc["data"][idx]["date"], 9);
-//     for (int j = 0; j < 6; j++) {
-//       ringRecords[i].values[j] = doc["data"][idx]["values"][j].as<float>();
-//     }
-//     Debugf("i: %02d - idx: %02d - date: %s\n",i,idx,ringRecords[i].date);
-//   }
-//   Debugln("VOOR herstel");
-//   printRec(ringRecords,total);
-
-//   repairRingRecords(ringRecords, total);
-//   Debugln("NA herstel");
-//   printRec(ringRecords,total);
-  
-//   // Check op 1 dag verschil tussen elke 2 records
-//   // for (int i = 1; i < total; i++) {
-//   //   if (!isPreviousDay(ringRecords[i - 1].date, ringRecords[i].date)) {
-//   //     Debug("Datumverschil ongeldig tussen ");
-//   //     Debug(ringRecords[i - 1].date);
-//   //     Debug(" en ");
-//   //     Debugln(ringRecords[i].date);
-//   //   } else Debugln("No gap between records");
-//   // }
-// }
-
-
 void CheckRingExists(){
   ensureRNGdaysLayout();
 
   for (byte i = 0; i< 3; i++){
     if ( !LittleFS.exists(RingFiles[i].filename) ) {
       createRingFile( (E_ringfiletype)i );
-      P1SetDevFirstUse( true ); //when one or more files are missing first use mode is triggered
+      P1SetDevFirstUse( true );
       DebugTln(F("First Use mode"));
     }
   }
 }
-//===========================================================================================
-
 void createRingFile(E_ringfiletype ringfiletype) 
 {
-  File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "w"); // open for writing  
+  File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "w");
   if (!RingFile) {
     DebugT(F("open ring file FAILED!!! --> Bailout\r\n"));Debugln(RingFiles[ringfiletype].filename);
     return;
   }
-  //write json to ring file
   DebugT(F("createFile: ")); Debugln(RingFiles[ringfiletype].filename);
     
-  //fill file with 0 values
-  RingFile.print("{\"actSlot\": 0,\"data\":[\n"); //start the json file 
+  RingFile.print("{\"actSlot\": 0,\"data\":[\n");
   for (uint8_t slot=0; slot < RingFiles[ringfiletype].slots; slot++ ) 
   { 
     RingRecord emptyRecord;
@@ -546,14 +362,12 @@ void createRingFile(E_ringfiletype ringfiletype)
   }
   if (RingFile.size() != RingFiles[ringfiletype].f_len) {
     DebugTln(F("ringfile size incorrect"));
-    //todo log error to logfile
+    // TODO: log this to the logfile.
   }
-  RingFile.print("\n]}"); //terminate the json string
+  RingFile.print("\n]}");
   RingFile.close();
   rngRememberHeader(ringfiletype, 0);
 }
-
-//===========================================================================================
 
 void createRingFile(String filename) 
 {
@@ -561,9 +375,6 @@ void createRingFile(String filename)
   else if (filename==RingFiles[1].filename) createRingFile(RINGDAYS);
   else if (filename==RingFiles[2].filename) createRingFile(RINGMONTHS);
 }
-
-//===========================================================================================
-// Calc slot based on actT
 
 enum RngWorkerMode : uint8_t {
   RNG_WORKER_CURRENT_HOURS,
@@ -604,11 +415,8 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, bool prev_slot)
   return CalcSlotAt(ringfiletype, actT, prev_slot);
 }
 
-//===========================================================================================
-
 uint8_t CalcSlot(E_ringfiletype ringfiletype, const char* Timestamp) 
 {
-  //slot positie bepalen
   uint32_t  nr = 0;
   time_t    t1 = epoch(Timestamp, strlen(Timestamp), false);
   if (ringfiletype == RINGMONTHS ) nr = ( (year(t1) -1) * 12) + month(t1);    // eg: year(2023) * 12 = 24276 + month(9) = 202309
@@ -621,6 +429,8 @@ uint8_t CalcSlot(E_ringfiletype ringfiletype, const char* Timestamp)
   return slot;
 }
 
+// Ring files are fixed-width JSON arrays. Keep formatRingRecord(), DATA_RECLEN_*,
+// and JSON_HEADER_LEN in sync before changing record formatting or seek offsets.
 bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *JsonRec, bool bWinterSummer, bool bPrevRecord) {
   if (!EnableHistory || !FSmounted) return false;
   if (slot >= RingFiles[ringfiletype].slots) return false;
@@ -630,7 +440,7 @@ bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
   char buffer[DATA_RECLEN_7];
   float values[RNG_DAYS_VALUE_COUNT] = {0.0f};
 
-  // Parse optioneel JsonRec (alleen als meegegeven)
+  // Parse an optional API record when supplied.
   bool hasJsonRec = (JsonRec && strlen(JsonRec) > 1);
   if (hasJsonRec) {
     DebugTln(JsonRec);
@@ -644,7 +454,6 @@ bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
     }
   }
 
-  // Open ringfile
 #ifdef XTRA_LOG
   DebugT(F("read(): Ring file ")); Debugln(RingFiles[ringfiletype].filename);
 #endif
@@ -661,8 +470,7 @@ bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
     return false;
   }
 
-  // Update header actSlot
-  // (actSlot in header = toon in UI waar 'nu' is; laat dit bestaan zoals jij het doet)
+  // Keep actSlot in the header so the UI knows which slot represents "now".
   uint8_t actSlot = CalcSlot(ringfiletype, /*bPrev*/ false);
   if (rngShouldWriteHeader(ringfiletype, actSlot)) {
     snprintf(buffer, sizeof(buffer), "{\"actSlot\":%2d,\"data\":[\n", actSlot);
@@ -670,9 +478,7 @@ bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
     rngRememberHeader(ringfiletype, actSlot);
   }
 
-  // Bouw record payload
   if (hasJsonRec) {
-    // Record uit JsonRec
     strncpy(key, rec["recid"] | "", 8);
     key[8] = '\0';
 
@@ -688,7 +494,7 @@ bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
 
     formatRingRecord(ringfiletype, buffer, sizeof(buffer), key, values);
   } else {
-    // Actuele data (zoals je al deed)
+    // Current meter snapshot.
     strncpy(key, actTimestamp, 8);
     key[8] = '\0';
     if (bWinterSummer) { key[6] = '0'; key[7] = '2'; }
@@ -706,7 +512,6 @@ bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
     formatRingRecord(ringfiletype, buffer, sizeof(buffer), key, values);
   }
 
-  // Seek naar slot-offset en overschrijf record
   uint16_t offset = (slot * ringRecordLen(ringfiletype)) + JSON_HEADER_LEN;
   RingFile.seek(offset, SeekSet);
 
@@ -738,7 +543,7 @@ bool writeRingFile(E_ringfiletype ringfiletype, const char *JsonRec, bool bPrev)
   }
 
   uint8_t slot = CalcSlot(ringfiletype, bPrev);
-  return writeRingFileAtSlot(ringfiletype, slot, /*JsonRec*/ nullptr, false, bPrev);
+  return writeRingFileAtSlot(ringfiletype, slot, nullptr, false, bPrev);
 }
 
 ApiResponse historyMonthsApiResponse(const String& body) {
@@ -874,6 +679,8 @@ static void rngWriteCurrentSnapshotRecord(const WorkerRngPayload& snapshot, E_ri
 }
 
 void RngWriteFromWorker(const WorkerRngPayload& snapshot) {
+  // Ring writes can touch flash and parse/format JSON, so they run from the worker
+  // queue instead of the P1 reader path.
   if (!EnableHistory) {
     if (rngWriteJobsPending > 0) rngWriteJobsPending--;
     return;
@@ -918,13 +725,12 @@ void RngWriteFromWorker(const WorkerRngPayload& snapshot) {
 #endif
 }
 
-//===========================================================================================
 void writeRingFiles() {
   if (!EnableHistory || ((telegramCount - telegramErrors ) < 2) ) {
 #ifdef XTRA_LOG  
-    LogFile("RNG: exit before writing",true); //log only once
+    LogFile("RNG: exit before writing",true);
 #endif    
-    return; //do nothing or skip when fewer than 2 meter data messages
+    return;
   }
 
   if (rngWritePending()) {
@@ -977,7 +783,7 @@ void writeRingFiles() {
     }
   }
   
-} // writeRingFiles()
+}
  
 
 /***************************************************************************

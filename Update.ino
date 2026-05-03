@@ -140,7 +140,6 @@ void update_started() {
   if (bWebUpdate) {
     httpServer.sendHeader("Location", "/#UpdateStart");
     httpServer.send ( 303, "text/html", "");
-    // //handle redirect otherwise the browser will stay in pending
     int cnt = 0;
     while (cnt++ < 10) {
       httpServer.handleClient();
@@ -158,7 +157,6 @@ void update_progress(int cur, int total) {
 void update_error(int err) {
   Debugf("HTTP update fatal error code %d | %s\n", err, httpUpdate.getLastErrorString().c_str());
   LogFile("OTA ERROR: no update",false);
-  // if (bWebUpdate) httpServer.send(500, "text/html", "OTA ERROR: " + err);
 }
 
 //---------------
@@ -187,7 +185,6 @@ void RemoteUpdate(const char* versie, bool sketch){
 
   if (bWebUpdate) {
     if (httpServer.argName(0) != "version") {
-        // httpServer.send(500, "text/html", "OTA ERROR: No version argument");
         LogFile("OTA ERROR: missing version argument",true );
         httpServer.sendHeader("Location", "/#UpdateStart?error=no_argument");
         httpServer.send ( 303, "text/html", "");
@@ -199,7 +196,6 @@ void RemoteUpdate(const char* versie, bool sketch){
   else if ( strlen(versie) ) _versie = versie; 
        else {   
               LogFile("OTA ERROR: missing version argument", true);
-              // httpServer.send(500, "text/html", "OTA ERROR: missing version argument");
               httpServer.sendHeader("Location", "/#UpdateStart?error=missing_argument");
               httpServer.send ( 303, "text/html", "");
               bWebUpdate = false; 
@@ -213,9 +209,6 @@ void RemoteUpdate(const char* versie, bool sketch){
   otaFile += _versie + "_" + flashSize + "Mb.bin"; 
     
   path = String(BaseOTAurl) + otaFile;
-
-  //TEST esphome install via webinterface
-  // if ( _versie == "esphome") path = "http://ota.smart-stuff.nl/esphome/nrgd.factory.bin";
   
   Debugf("OTA versie: %s | flashsize: %i Mb\n", _versie.c_str(), flashSize);
   Debugln("OTA path: " + path);

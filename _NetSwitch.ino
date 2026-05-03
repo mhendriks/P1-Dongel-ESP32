@@ -29,10 +29,6 @@ uint32_t uptimeSEC(){
     return (uint32_t)(esp_log_timestamp()/1000);
 }
 
-// uint32_t uptimeMIN(){
-//   return (uint32_t) esp_timer_get_time()/60000000;
-// }
-
 bool loadNetSwitchConfig(const char *filename) {
   File file = LittleFS.open(filename, "r");
   if (!file) {
@@ -76,7 +72,6 @@ void NetSwitchStateMngr(){
   if ( !bNetSwitchConfigRead ) return;
   //every time new p1 values are available
   int32_t Phouse = DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val();
-  // Debugf("Phouse = %d\n",Phouse);
 
   if ( Phouse > docTriggers["value"].as<int>() ) {
     if ( !ShellyStateTrue ) {
@@ -146,7 +141,6 @@ void ShellyDevMngr(){
   //only action if changed
   if ( newState != lastToggleState ){
     Debugf("Shelly toggle to: %s\n",newState?"on":"off");
-    // toggleShellySocket(newState);
     lastToggleState = newState;
     bShellySwitch = true;
   }

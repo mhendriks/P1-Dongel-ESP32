@@ -1,17 +1,14 @@
 #include <Arduino.h>
 #include "esp_timer.h"
 
-// --- ISR-safe state ---
 static portMUX_TYPE waterMux = portMUX_INITIALIZER_UNLOCKED;
 
-volatile uint32_t g_waterPulses = 0;     // geldige pulsen sinds boot
-volatile uint32_t g_debounces   = 0;     // weggegooide pulsen (te snel)
-volatile uint32_t g_lastPulseUs = 0;     // laatste geldige puls (us since boot)
+volatile uint32_t g_waterPulses = 0;
+volatile uint32_t g_debounces   = 0;
+volatile uint32_t g_lastPulseUs = 0;
 
-// 2.0s debounce -> 2,000,000 us
 static constexpr uint32_t WATER_MIN_PULSE_US = 2000000UL;
 
-// ---------------- ISR ----------------
 void IRAM_ATTR iWater() {
   uint32_t nowUs = (uint32_t)esp_timer_get_time();
 
@@ -27,7 +24,6 @@ void IRAM_ATTR iWater() {
   portEXIT_CRITICAL_ISR(&waterMux);
 }
 
-// ------ helpers om ISR-state veilig uit te lezen ------
 static inline uint32_t waterTakePulses() {
   static uint32_t last = 0;
   uint32_t cur;
@@ -49,34 +45,39 @@ static inline uint32_t waterGetDebounces() {
   return d;
 }
 
-// -------------- verwerking (niet-ISR) --------------
+static inline float waterCurrentM3() {
+  return (float)P1Status.wtr_m3 + ((float)P1Status.wtr_l / 1000.0f);
+}
+
+static void waterResetCounters() {
+  portENTER_CRITICAL(&waterMux);
+  g_waterPulses = 0;
+  g_debounces   = 0;
+  g_lastPulseUs = (uint32_t)esp_timer_get_time();
+  portEXIT_CRITICAL(&waterMux);
+}
+
 void handleWater() {
   if (!WtrMtr) return;
 
-  // haal nieuwe geldige pulsen op
   uint32_t newPulses = waterTakePulses();
   if (newPulses == 0) return;
 
-  // optioneel: delta tijd in seconden tussen "nu" en vorige reading
-  // (dit blijft jouw oude semantics houden: now() - WtrPrevReading)
-  // eerste puls kan groot zijn als WtrPrevReading nog 0 was -> daarom init in setupWater()
+  // Preserve the existing interval semantics: seconds since the previous accepted reading.
   WtrTimeBetween = (uint32_t)(now() - WtrPrevReading);
 
-  // update liters/m3
   P1Status.wtr_l += (int)(newPulses * (float)WtrFactor);
 
   while (P1Status.wtr_l >= 1000) {
     P1Status.wtr_m3++;
     P1Status.wtr_l -= 1000;
-    CHANGE_INTERVAL_MS(StatusTimer, 100);  // OK hier (niet in ISR)
+    CHANGE_INTERVAL_MS(StatusTimer, 100);
   }
 
-  // update "delivered" + timestamp (String/float OK hier)
   WtrPrevReading = now();
   waterDeliveredTimestamp = actTimestamp;
-  waterDelivered = (float)P1Status.wtr_m3 + ((float)P1Status.wtr_l / 1000.0f);
+  waterDelivered = waterCurrentM3();
 
-  // debug (format veilig)
   uint32_t deb = waterGetDebounces();
   DebugTf("Wtr delta readings: %lu | debounces: %lu | waterstand: %im3 en %i liters\n",
           (unsigned long)WtrTimeBetween,
@@ -105,19 +106,12 @@ void setupWater() {
     return;
   }
 
-  // Zorg dat de input niet zweeft (pas aan als jouw sensor pull-down nodig heeft)
   pinMode(IOWater, INPUT_PULLUP);
 
-  // init "vorige" tijd zodat je geen epoch-groot getal krijgt bij eerste puls
+  // Avoid a large first interval before the first accepted pulse.
   WtrPrevReading = now();
   WtrTimeBetween = 0;
-
-  // reset ISR counters
-  portENTER_CRITICAL(&waterMux);
-  g_waterPulses = 0;
-  g_debounces   = 0;
-  g_lastPulseUs = (uint32_t)esp_timer_get_time();
-  portEXIT_CRITICAL(&waterMux);
+  waterResetCounters();
 
   attachInterrupt(digitalPinToInterrupt(IOWater), iWater, RISING);
   DebugTln(F("WaterSensor setup completed"));

@@ -8,7 +8,6 @@
 #include <AsyncUDP.h>
 #include <ArduinoJson.h>
 
-// ShellyEmuUDP shellyUDP;
 namespace P1 {
   inline float powerImportkW()   { return (float) DSMRdata.power_delivered.val(); }  // DSMR 1-0:1.7.0 (kW)
   inline float powerExportkW()   { return DSMRdata.power_returned.val(); }  // DSMR 1-0:2.7.0 (kW)
@@ -31,8 +30,6 @@ class ShellyEmuUDP {
 public:
   void begin(bool also2220 = true) {
     _id     = makeId();
-    // _macStr = WiFi.macAddress();          // "AA:BB:CC:DD:EE:FF"
-    // _macHex = macNoColons(_macStr);       // "AABBCCDDEEFF"
 
     _udp1010.listen(1010);
     _udp1010.onPacket([this](AsyncUDPPacket p){ handlePacket(p); });

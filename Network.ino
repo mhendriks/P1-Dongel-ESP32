@@ -8,13 +8,12 @@
 #ifdef ETHERNET
   #include <ETH.h>
   #include <SPI.h>
-  
 
   #define ETH_TYPE            ETH_PHY_W5500
   #define ETH_RST            -1
   #define ETH_ADDR            1
 
-  //workaround to use the ESP_MAC_ETH mac address instead of local mac address
+  // Use the ESP_MAC_ETH address instead of the local MAC address.
   class EthernetClass {
   public:
     bool myBeginSPI(ETHClass& eth, eth_phy_type_t type, int32_t phy_addr, uint8_t *mac_addr, int cs, int irq, int rst, SPIClass *spi, int sck, int miso, int mosi, spi_host_device_t spi_host, uint8_t spi_freq_mhz);
@@ -36,11 +35,21 @@ static const uint32_t WIFI_WATCHDOG_LOST_MS = 20000;
 #ifdef DEBUG
   static const uint32_t WIFI_WATCHDOG_REBOOT_MS = 30*1000; // 30 sec
 #else
-  static const uint32_t WIFI_WATCHDOG_REBOOT_MS = 5*60*1000; // 5 minuten
+  static const uint32_t WIFI_WATCHDOG_REBOOT_MS = 5*60*1000; // 5 minutes
 #endif
 
 static inline bool markWifiDisconnected(uint32_t nowMs);
 
+static inline bool ethernetActive() {
+  return bEthUsage || netw_state == NW_ETH || netw_state == NW_ETH_LINK;
+}
+
+static void resetWifiWatchdogState() {
+  s_wifiLostMs = 0;
+  s_wifiRetryMs = 0;
+  s_wifiReconnectCnt = 0;
+  bNoNetworkConn = false;
+}
 
 static void attemptWifiReconnect() {
   WiFi.disconnect();
@@ -50,13 +59,13 @@ static void attemptWifiReconnect() {
 
 // Event handlers only signal loss. Reconnect/retry decisions happen only in WifiWatchDog().
 static inline void signalWifiLoss(const String& reason) {
-  if ( !bNoNetworkConn ) LogFile(reason.c_str(), true); // only once
+  if ( !bNoNetworkConn ) LogFile(reason.c_str(), true);
   markWifiDisconnected(millis());
 }
 
 void WifiWatchDog() {
   if ( skipNetwork ) return;
-  if ( bEthUsage || netw_state == NW_ETH || netw_state == NW_ETH_LINK ) return;
+  if ( ethernetActive() ) return;
   if ( WiFi.status() == WL_CONNECTED ) return;
 
   uint32_t now = millis();
@@ -136,7 +145,6 @@ WiFiManager manageWiFi;
 void GetMacAddress(){
 
   uint8_t efuseMac[6] = {0};
-  char macAddressString[18];
 
 #ifdef ETHERNET 
   readPreferredEthMac(efuseMac);
@@ -145,25 +153,13 @@ void GetMacAddress(){
 #endif
   sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
   sprintf(macID, "%02X%02X%02X%02X%02X%02X", efuseMac[0], efuseMac[1], efuseMac[2], efuseMac[3], efuseMac[4], efuseMac[5]);
-  // return String(macAddressString);
-
-
-  // strcpy( macStr, _mac.c_str() );
-  // _mac.replace( ":","" );
-  // strcpy( macID, _mac.c_str() );
-  USBPrint( "MacStr   : " ); USBPrintln( macStr ); //only at setup
+  USBPrint( "MacStr   : " ); USBPrintln( macStr );
 
   strncpy(DongleID, macID + 6, 6);
   DongleID[6] = '\0';
   Debug( "DongleID : " );Debugln( DongleID );
-//  USBSerial.print( "MacID: " );USBSerial.println( macID );
 }
 
-/***===========================================================================================
-    POST MAC + IP
-    https://www.allphptricks.com/create-and-consume-simple-rest-api-in-php/
-    http://g2pc1.bu.edu/~qzpeng/manual/MySQL%20Commands.htm
-**/
 void PostMacIP() {
   if ( skipNetwork ) return;
   HTTPClient http;
@@ -184,21 +180,11 @@ void PostMacIP() {
   http.end();  
 }
 
-// void setHostname() {
-//   //only once at startup when settingsfile isnt available
-//   // char hostname[32]; // Max lengte hostname is 32 karakters
-//   // sprintf(settingHostname, "%s-%0X", settingHostname, DongleID);
-//   char hostname[sizeof(settingHostname)];
-//   snprintf(hostname, sizeof(hostname), "%s-%s", settingHostname, DongleID);
-//   strlcpy(settingHostname, hostname, sizeof(settingHostname));
-// }
-
 void WifiOff() {
 #ifndef ESPNOW 
   if ( WiFi.isConnected() ) WiFi.disconnect(true,true);
   WiFi.mode(WIFI_OFF);
   esp_wifi_stop();
-  // esp_wifi_deinit();
   WiFi.setSleep(true);
 #endif
 #ifdef CONFIG_BT_ENABLED
@@ -211,7 +197,6 @@ void WifiOff() {
 static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
   switch (event) {
 #ifdef ETHERNET  
-  //****** ETH    
     case ARDUINO_EVENT_ETH_START: //1
       DebugTln("ETH Started");
       ETH.setHostname(settingHostname);
@@ -220,7 +205,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       DebugTln("\nETH Connected");
       WifiOff();
       netw_state = NW_ETH_LINK;
-      bEthUsage = true; //set only once 
+      bEthUsage = true;
       break;
     case ARDUINO_EVENT_ETH_GOT_IP6: //7
       LogFile("ETH GOT IP V6", true);
@@ -230,9 +215,8 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
         netw_state = NW_ETH;
         WifiOff();
         LogFile("ETH GOT IP", true);
-        bEthUsage = true; //set only once 
-        SwitchLED( LED_ON, LED_BLUE ); //Ethernet available = RGB LED Blue
-        // tLastConnect = 0;
+        bEthUsage = true;
+        SwitchLED( LED_ON, LED_BLUE );
         break;
       } 
     case ARDUINO_EVENT_ETH_STOP: //2
@@ -243,37 +227,23 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
       SwitchLED( LED_ON , LED_RED );
       LogFile("ETH Disconnected", true);
       break;
-#endif //ETHERNET
+#endif // ETHERNET
     
-    //****** WIFI ******//
-
     case ARDUINO_EVENT_WIFI_STA_START: //110
-      // initial nudge (soms is begin() traag met eerste connect)
-      // Debugln("--- WIFI START ----");
       break;
     case ARDUINO_EVENT_WIFI_STA_CONNECTED: //4
         sprintf(cMsg,"Connected to %s. Asking for IP address", WiFi.BSSIDstr().c_str());
         LogFile(cMsg, true);
-        // s_wifiKnownSsid = WiFi.SSID();
-        // s_wifiKnownPsk = WiFi.psk();
         break;
     case ARDUINO_EVENT_WIFI_STA_GOT_IP: //7
         LogFile("Wifi Connected",true);
         SwitchLED( LED_ON, LED_BLUE );
         Debug (F("IP address: " ));  Debug (WiFi.localIP());Debug(" )\n\n");
-        // s_wifiKnownSsid = WiFi.SSID();
-        // s_wifiKnownPsk = WiFi.psk();
 
         if ( bEthUsage ) WifiOff(); else netw_state = NW_WIFI;
-        s_wifiLostMs = 0;
-        s_wifiRetryMs = 0;
-        s_wifiReconnectCnt = 0;
-        bNoNetworkConn = false;
+        resetWifiWatchdogState();
         break;
     case ARDUINO_EVENT_WIFI_STA_STOP: //8
-      // Voor de zekerheid: driver soms stopt STA → start ’m weer
-      // LogFile("Wifi STA stopped-> restart",true);
-      // esp_wifi_start(); // idempotent als al gestart
       break;
     case ARDUINO_EVENT_WIFI_STA_LOST_IP: //117
         signalWifiLoss("Wifi connection lost - LOST IP");
@@ -301,23 +271,21 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
     }
 }
 
-//gets called when WiFiManager enters configuration mode
-//===========================================================================================
+// Called when WiFiManager enters configuration mode.
 void configModeCallback (WiFiManager *myWiFiManager) {
   DebugTln(F("Wifi Connection Failed -> Entered config mode\r"));
   DebugTln(WiFi.softAPIP().toString());
   DebugTln(myWiFiManager->getConfigPortalSSID());
   esp_task_wdt_reset();
-} // configModeCallback()
+}
 
-//===========================================================================================
 #include <esp_wifi.h>
 
 void startWiFi(const char* hostname, int timeOut) {  
-if ( skipNetwork ) return;
+  if ( skipNetwork ) return;
 #if not defined ETHERNET || defined ULTRA
   #ifdef ULTRA
-    //lets wait on ethernet first for 6.5sec and consume some time to charge the capacitors
+    // Let Ethernet get the first chance on Ultra hardware.
     uint8_t timeout = 0;
     while ( (netw_state == NW_NONE) && (timeout++ < 65) ) {
       delay(100); 
@@ -326,16 +294,15 @@ if ( skipNetwork ) return;
     } 
     Debugln();
     if ( netw_state != NW_NONE ) return;
-    enterPowerDownMode(); //disable ETH after 6.5 sec waiting ... lower power consumption
+    enterPowerDownMode();
   #endif 
   
   if ( netw_state != NW_NONE ) return;
   
-  //switch to lowpower wifi mode
-  esp_wifi_set_ps(WIFI_PS_MAX_MODEM); //lower calibration power
+  esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
   esp_wifi_set_max_tx_power(8);   // 8 = ±8.5 dBm
   
-  WiFi.setSleep(true);  //sleep when possible
+  WiFi.setSleep(true);
 
   #ifdef CONFIG_BT_ENABLED
     btStop();
@@ -344,8 +311,7 @@ if ( skipNetwork ) return;
 
   WiFi.setHostname(settingHostname);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
-  WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);  //to solve mesh issues 
-  // WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);      //to solve mesh issues 
+  WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
   if ( bFixedIP ) WiFi.config(staticIP, gateway, subnet, dns);
   LogFile("Wifi Starting",true);
   SwitchLED( LED_OFF, LED_BLUE );  
@@ -353,40 +319,26 @@ if ( skipNetwork ) return;
   manageWiFi.setConnectTimeout(15);
   manageWiFi.setConfigPortalBlocking(false);
   manageWiFi.setDebugOutput(false);
-  manageWiFi.setShowStaticFields(true); // force show static ip fields
-  manageWiFi.setShowDnsFields(true);    // force show dns field always  
+  manageWiFi.setShowStaticFields(true);
+  manageWiFi.setShowDnsFields(true);
   manageWiFi.setRemoveDuplicateAPs(false);
-  manageWiFi.setScanDispPerc(true); // display percentages instead of graphs for RSSI
-  manageWiFi.setClass("invert"); //dark theme
+  manageWiFi.setScanDispPerc(true);
+  manageWiFi.setClass("invert");
   
-  // manageWiFi.setMinimumSignalQuality(-1);
-  // manageWiFi.setScanDispPerc(false);
-
-  // const char* wifiMenu[] = {
-  //   "wifinoscan",
-  //   "info",
-  //   "sep",
-  //   "restart",
-  //   "exit"
-  // };
-  // manageWiFi.setMenu(wifiMenu, 5);
-  
-  //--- set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
   manageWiFi.setAPCallback(configModeCallback);
-  manageWiFi.setConfigPortalTimeout(timeOut); //config portal timeout in seconds
+  manageWiFi.setConfigPortalTimeout(timeOut);
   
   esp_task_wdt_reset();
   allowSkipNetworkByButton = true;
   manageWiFi.autoConnect(settingHostname);
 
-  //handle wifi webinterface timeout and connection (timeOut in sec) timeout in 30 sec
   uint16_t i = 0;
   while ( (i++ < 3000) && (netw_state == NW_NONE) && !bEthUsage && !skipNetwork ) {
     Debug("*");
     delay(100);
     manageWiFi.process();
     esp_task_wdt_reset();
-    SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE); //fast blinking
+    SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE);
   }
   Debugln();
   allowSkipNetworkByButton = false;
@@ -394,35 +346,33 @@ if ( skipNetwork ) return;
   if ( skipNetwork ) return; 
   if ( netw_state == NW_NONE && !bEthUsage ) {
     LogFile("reboot: Wifi failed to connect and hit timeout",true);
-    P1Reboot(); //timeout 
+    P1Reboot();
   }
   if ( netw_state == NW_ETH || bEthUsage ) {
     WifiOff();
     delay(500);
   }
   
-  //switch to normale wifi mode
   esp_wifi_set_ps(WIFI_PS_NONE);
   esp_wifi_set_max_tx_power(78);  // max (~20.5 dBm)
   
   SwitchLED( LED_ON, LED_BLUE );
 #else 
   Debugln(F("NO WIFI SUPPORT"));
-#endif //ifndef ETHERNET
-} // startWiFi()
+#endif // !ETHERNET
+}
 
-//===========================================================================================
 void WaitOnNetwork()
 {
   if ( skipNetwork ) { 
-    enterPowerDownMode();   //ethernet power down
-    WifiOff();              //wifi power down
-    EnableHistory = false;  //not usefull to store data
-    writeSettings();        //make persistant
-    SwitchLED(LED_OFF,LED_BLUE); //erase led status 
+    enterPowerDownMode();
+    WifiOff();
+    EnableHistory = false;
+    writeSettings();
+    SwitchLED(LED_OFF,LED_BLUE);
     return; 
     }
-  while ( netw_state != NW_ETH && netw_state != NW_WIFI ) { //endless wait for network connection
+  while ( netw_state != NW_ETH && netw_state != NW_WIFI ) {
     Debug(".");
     delay(200);
     esp_task_wdt_reset();
@@ -455,7 +405,6 @@ bool loadFixedIPConfig(const char *filename) {
   return true;
 }
 
-// validate fixed ip config
 bool validateConfig() {
   if (!staticIP || !gateway || !subnet || !dns) {
     Serial.println("IP-instellingen zijn ongeldig.");
@@ -468,20 +417,17 @@ bool validateConfig() {
   return true;
 }
 
-//===========================================================================================
 void startNetwork()
 {
   Network.onEvent(onNetworkEvent);
-  // Network.enableIPv6();
   if ( loadFixedIPConfig("/fixedip.json") ) bFixedIP = validateConfig();
   startETH();
   SetupButton();
-  startWiFi(settingHostname, 240);  // timeout 4 minuten
+  startWiFi(settingHostname, 240);
   WaitOnNetwork();
   USBPrint("Ip-addr: ");USBPrintln(IP_Address());
 }
 
-//===========================================================================================
 void startTelnet() 
 {
   if ( skipNetwork ) return;
@@ -489,9 +435,8 @@ void startTelnet()
   ws_raw.begin();
   TelnetStream.flush();
   DebugTln(F("Telnet server started .."));
-} // startTelnet()
+}
 
-//=======================================================================
 void startMDNS(const char *Hostname) {
   if ( skipNetwork ) return;
   
@@ -540,7 +485,7 @@ void startMDNS(const char *Hostname) {
   MDNS.addService( "p1dongle", "tcp", 80);
   MDNS.addServiceTxt("p1dongle", "tcp", "id", lowerMACID );
   MDNS.addServiceTxt("p1dongle", "tcp", "hw", HWTypeNames[HardwareType] );    
-} // startMDNS()
+}
 
 #endif
 
@@ -551,7 +496,6 @@ void startETH(){
   uint8_t mac_eth[6] = {0};
   readPreferredEthMac(mac_eth);
   
-  // if ( HardwareType == P1UX2 ) { 
     const dev_conf& dc = DEVCONF();
     cs    = dc.eth_cs;
     miso  = dc.eth_miso;
@@ -559,13 +503,12 @@ void startETH(){
     sck   = dc.eth_sck;
     uint8_t _int  = dc.eth_int;
     rst   = dc.eth_rst;
-    // }
 
   #ifdef DEBUG
     DebugTf("ETH pins: cs=%d int=%d rst=%d sck=%d miso=%d mosi=%d\n",cs, _int, rst, sck, miso, mosi);
   #endif
   
-  //ETH_RST not via the driver otherwise it couldnt be reset manually
+  // Keep ETH_RST outside the driver so it can still be reset manually.
   myEthernet.myBeginSPI(ETH, ETH_TYPE, ETH_ADDR, mac_eth, cs, _int, ETH_RST, NULL, sck, miso, mosi, SPI2_HOST, ETH_PHY_SPI_FREQ_MHZ );
 
   if ( bFixedIP ) ETH.config(staticIP, gateway, subnet, dns);
@@ -575,14 +518,13 @@ void startETH(){
 void W5500_Read_PHYCFGR() {
   digitalWrite(cs, LOW);
 
-  SPI.transfer16(0x002E);     // MSB, LSB
-  SPI.transfer(0x01);       // control: BSB=0 (common), OM=VDM, RWB=1(read)
+  SPI.transfer16(0x002E);
+  SPI.transfer(0x01);
   uint8_t phycfgr = SPI.transfer(0x00);
   
   digitalWrite(cs, HIGH);
 
 #ifdef DEBUG
-    // Print register value and status
     Debug("PHYCFGR Register: 0x");
     Debugln(phycfgr, HEX);
 
@@ -599,7 +541,7 @@ void enterPowerDownMode() {
   LogFile("ETH powered down, switching to WiFi", true);
   ETH.end();
   
-  //powerdown W5500 when RST is connected to the ESP32
+  // Power down W5500 when RST is connected to the ESP32.
   if ( HardwareType == P1UX2 && HardwareVersion >= 101 ) { 
     digitalWrite(rst,LOW); 
     DebugTln("P1UX2: W5500 RESET LOW");
@@ -611,16 +553,13 @@ void enterPowerDownMode() {
   
   W5500_Read_PHYCFGR();
 
-  // NOTE:
-  // We gebruiken control byte 0x04 (FDM write mode) i.p.v. 0x00 (VDM write).
-  // Op dit board reageert de W5500 na ETH.end() niet op 0x00,
-  // maar 0x04 + 0x70 zet 'm wél betrouwbaar in low-power.
-  // Niet veranderen naar 0x00 tenzij je TEST dat powerdown nog steeds werkt.
+  // This board needs FDM write mode here: after ETH.end(), the W5500 does not
+  // reliably react to 0x00, while 0x04 + 0x70 does enter low-power mode.
   SPI.beginTransaction(SPISettings(8000000UL, MSBFIRST, SPI_MODE0));
   digitalWrite(cs, LOW);
   SPI.transfer16(0x002E);
-  SPI.transfer(0x04);               // Control byte (W5500 write)
-  SPI.transfer(0x70);              // Data to write
+  SPI.transfer(0x04);
+  SPI.transfer(0x70);
   digitalWrite(cs, HIGH);
   SPI.endTransaction();
 
@@ -631,7 +570,7 @@ void enterPowerDownMode() {
 #else
   void startETH(){}
   void enterPowerDownMode(){}
-#endif //def ETHERNET
+#endif // ETHERNET
 
 String IP_Address(){
 

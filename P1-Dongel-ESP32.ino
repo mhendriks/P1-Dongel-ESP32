@@ -67,8 +67,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - sdk update 3.3.8
 - refactor profiles (include in this repo now) 
 - D1MC + NRGDH general new hostname : nrg-gateway
+- cleanup dead code
+- cleanup comments
+- small refactoring
 
-- code scan ... dode code
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - refactoring targets
 - kijken naar de frontend instellingen (in browser opslaan en alleen in browser houden anders in settings)
@@ -203,7 +205,6 @@ void setup()
   StartMqttTask();
   EIDStart();
   ShellyEmuBegin();
-  // setupWS();
   
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
   StartESPNOW();
