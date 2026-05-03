@@ -184,14 +184,14 @@ void PostMacIP() {
   http.end();  
 }
 
-void setHostname() {
-  //only once at startup when settingsfile isnt available
-  // char hostname[32]; // Max lengte hostname is 32 karakters
-  // sprintf(settingHostname, "%s-%0X", settingHostname, DongleID);
-  char hostname[sizeof(settingHostname)];
-  snprintf(hostname, sizeof(hostname), "%s-%s", settingHostname, DongleID);
-  strlcpy(settingHostname, hostname, sizeof(settingHostname));
-}
+// void setHostname() {
+//   //only once at startup when settingsfile isnt available
+//   // char hostname[32]; // Max lengte hostname is 32 karakters
+//   // sprintf(settingHostname, "%s-%0X", settingHostname, DongleID);
+//   char hostname[sizeof(settingHostname)];
+//   snprintf(hostname, sizeof(hostname), "%s-%s", settingHostname, DongleID);
+//   strlcpy(settingHostname, hostname, sizeof(settingHostname));
+// }
 
 void WifiOff() {
 #ifndef ESPNOW 
@@ -342,7 +342,7 @@ if ( skipNetwork ) return;
   #endif
   WiFi.setAutoReconnect(true);
 
-  WiFi.setHostname(hostname);
+  WiFi.setHostname(settingHostname);
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);  //to solve mesh issues 
   // WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);      //to solve mesh issues 
@@ -377,7 +377,7 @@ if ( skipNetwork ) return;
   
   esp_task_wdt_reset();
   allowSkipNetworkByButton = true;
-  manageWiFi.autoConnect(_HOTSPOT);
+  manageWiFi.autoConnect(settingHostname);
 
   //handle wifi webinterface timeout and connection (timeOut in sec) timeout in 30 sec
   uint16_t i = 0;

@@ -200,7 +200,7 @@ void readSettings(bool show)
   }
   
   //strcpy(LittleFSTimestamp, doc["Timestamp"]);
-  strlcpy(settingHostname, doc["Hostname"] | _DEFAULT_HOSTNAME, sizeof(settingHostname));
+  strlcpy(settingHostname, doc["Hostname"] | activeDefaultHostname, sizeof(settingHostname));
   strlcpy(settingIndexPage, doc["IndexPage"] | _DEFAULT_HOMEPAGE, sizeof(settingIndexPage));
   settingEDT1 = doc["EnergyDeliveredT1"];
   settingEDT2 = doc["EnergyDeliveredT2"];
@@ -232,7 +232,8 @@ void readSettings(bool show)
   strlcpy(settingMQTTuser, doc["MQTTUser"] | "", sizeof(settingMQTTuser));
   strlcpy(settingMQTTpasswd, doc["MQTTpasswd"] | "", sizeof(settingMQTTpasswd));
   settingMQTTinterval = doc["MQTTinterval"];
-  strlcpy(settingMQTTtopTopic, doc["MQTTtopTopic"] | "", sizeof(settingMQTTtopTopic));
+  if (doc["MQTTtopTopic"].is<const char*>()) strlcpy(settingMQTTtopTopic, doc["MQTTtopTopic"], sizeof(settingMQTTtopTopic));
+  else if (!settingMQTTtopTopic[0]) snprintf(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), "%s/", activeDefaultHostname);
   if (settingMQTTtopTopic[0] && settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strlcat(settingMQTTtopTopic, "/", sizeof(settingMQTTtopTopic));
   CreateMacIDTopic();
   if (doc["mqtt-enabled"].is<bool>()) bMQTTenabled = doc["mqtt-enabled"];
@@ -296,7 +297,7 @@ void readSettings(bool show)
   //end json
 
     mdns_hostname_set(settingHostname);
-    mdns_instance_name_set(_DEFAULT_HOSTNAME);
+    mdns_instance_name_set(activeDefaultHostname);
 
 //  Debug(F(".. done\r"));
 
@@ -322,7 +323,7 @@ void updateSetting(const char *field, const char *newValue)
 
   if (!stricmp(field, "Hostname")) {
     strCopy(settingHostname, 29, newValue); 
-    if (strlen(settingHostname) < 1) strCopy(settingHostname, 29, _DEFAULT_HOSTNAME); 
+    if (strlen(settingHostname) < 1) strCopy(settingHostname, 29, activeDefaultHostname); 
     char *dotPntr = strchr(settingHostname, '.') ;
     if (dotPntr != NULL)
     {

@@ -224,6 +224,11 @@ void DevTypeMapping(){
   //Hardware type is set... load the config
   const dev_conf& dc = DEVCONF();
   
+  activeDefaultHostname = dc.default_hostname;
+  strlcpy(settingHostname, activeDefaultHostname, sizeof(settingHostname));
+  snprintf(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), "%s/", settingHostname);
+
+  button_io = dc.button;
   rgbled_io = dc.rgb;
   RxP1      = dc.p1_in_rx;
   // DTR?      = dc.p1_in_dtr;
@@ -237,8 +242,8 @@ void DevTypeMapping(){
   IOWater   = dc.water;
 
   DebugTf(
-    "Pins: RGB=%d statusLED=%d Rx=%d HanIO=%d Tx=%d DTR=%d LED_out=%d P1Out=%d Water=%d UseRGB=%d\n",
-    rgbled_io, statusled, RxP1, HanIO, TxO1, DTR_out, LED_out, P1Out, IOWater, UseRGB
+    "Pins: button=%d RGB=%d statusLED=%d Rx=%d HanIO=%d Tx=%d DTR=%d LED_out=%d P1Out=%d Water=%d UseRGB=%d Hostname=%s\n",
+    button_io, rgbled_io, statusled, RxP1, HanIO, TxO1, DTR_out, LED_out, P1Out, IOWater, UseRGB, settingHostname
   );
 
   // W5500 RESET handling = ENABLE ETH

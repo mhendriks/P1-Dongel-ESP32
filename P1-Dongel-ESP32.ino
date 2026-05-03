@@ -61,10 +61,18 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Flash Frequency: "80MHz"
   - CPU Frequency: "160MHz"
   - Upload Speed: "961600"                                                                                
-  - Port: <select correct port>
+  - Port: <select port>
 
 5.6.2
+- sdk update 3.3.8
+- refactor profiles (include in this repo now) 
+- D1MC + NRGDH general new hostname : nrg-gateway
 
+- code scan ... dode code
+- 3 button control (a-pair, b-reboot, c=factory reset)
+- refactoring targets
+- kijken naar de frontend instellingen (in browser opslaan en alleen in browser houden anders in settings)
+- wallbox toevoegen 
 
 5.7.0
 - kWh meter als bron voor productie data gebruiken (Harrie)
@@ -78,7 +86,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 /******************** compiler options  ********************************************/
 
-// #define DEBUG  
+#define DEBUG  
 // #define XTRA_LOG
 
 //---  PROFILES  ---
@@ -90,7 +98,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //SPECIAL
 // #define __Az__
-#define OTAURL_PREFIX "han/"
+// #define OTAURL_PREFIX "eb/"
 
 //FEATURES
 #define MBUS
@@ -102,7 +110,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define POST_POWERCH
 // #define POST_MEENT
 // #define VIRTUAL_P1
-#define HAN_READER
+// #define HAN_READER
 // #define HAN_TESTDATA
 // #define HAN_TESTDATA_RAW
 // #define HAN_TESTDATA_DYNAMIC

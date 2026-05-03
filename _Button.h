@@ -24,7 +24,7 @@ void IRAM_ATTR isrButton() {
   if (now - lastEdgeMs < DEBOUNCE_MS) return; // debounce beide flanken
   lastEdgeMs = now;
 
-  btn_states buttonState = (btn_states)digitalRead(IO_BUTTON);
+  btn_states buttonState = (btn_states)digitalRead(button_io);
   if (buttonState != lastState) {
     portENTER_CRITICAL_ISR(&mux);
     lastState = buttonState;
@@ -127,17 +127,23 @@ void handleButtonLedFeedback(){
 //Aux processor task
 void fAuxProc(void *pvParameters) {
   DebugTln(F("Starting Button handler"));
-  pinMode(IO_BUTTON, INPUT_PULLUP);
+  if (button_io < 0) {
+    DebugTln(F("No button configured"));
+    vTaskDelete(NULL);
+    return;
+  }
+
+  pinMode(button_io, INPUT_PULLUP);
 
   // Init lastState op basis van huidige level
-  lastState = (btn_states)digitalRead(IO_BUTTON);
+  lastState = (btn_states)digitalRead(button_io);
   Tpressed  = 0;
   Treleased = 0;
   bButtonPressed = false;
   bButtonReleased = false;
   s_buttonIgnoreUntilMs = millis() + 1500;
 
-  attachInterrupt(digitalPinToInterrupt(IO_BUTTON), isrButton, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(button_io), isrButton, CHANGE);
   DebugTln(F("BUTTON setup completed"));
 
   while (true) {

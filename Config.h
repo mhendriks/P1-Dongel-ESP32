@@ -20,36 +20,7 @@
 uint32_t R_value = 0, B_value = 0, G_value = 0;
 
 //PROFILES
-#ifdef ULTRA
-  #include "hw_profile_ultra.h"
-#else
-  #ifdef ETHERNET
-    #ifdef __Az__
-      #ifdef ETH_P1EP
-        #include "hw_profile_p1ep_az.h"
-      #else
-        #include "hw_profile_p1_eth_az.h"
-      #endif
-    #else 
-      #define NETSWITCH
-      #ifdef ETH_P1EP
-        #define VIRTUAL_P1
-        #include "hw_profile_p1ep.h"
-      #else 
-        #include "hw_profile_p1_eth.h"
-      #endif  
-    #endif
-  #else
-      #ifdef NRG_DONGLE
-        #include "hw_profile_nrgd.h"
-      #else
-        #include "hw_profile_p1_pro.h"
-      #endif
-      #ifdef __Az__
-        #include "hw_az.h"
-      #endif
-  #endif
-#endif
+#include "profile.h"
 
 #define WDT_FEED() do { esp_task_wdt_reset(); delay(0); } while(0)
 
@@ -72,6 +43,8 @@ mod_conf module_config[] = {
 };
 
 struct dev_conf {
+    const char* default_hostname;
+
     int8_t button;
     int8_t rgb;
     int8_t led;
@@ -96,18 +69,18 @@ struct dev_conf {
 
 dev_conf device_config[] = {
   // -- GENERAL --  ----------- P1/HAN ------------  -------- ETH --------- 
-  { -1, -1, -1, -1,  -1, -1, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // UNDETECTED
-  {  9,  8,  7,  5,  10,  6, -1,  -1,  1,  0,  -1, -1, -1, -1, -1, -1 }, // P1P (ESP32C3 - P1 Dongle Pro)
-  {  9, -1,  3, -1,  20, -1, -1,  10,  1,  0,  -1, -1, -1, -1, -1, -1 }, // NRGD (ESP32C3 - NRG Dongle Pro)
-  {  9,  8,  3, -1,   7,  0, -1,  -1, -1, -1,   1,  5,  6,  4, 10, -1 }, // P1E (ETH)
-  {  9, -1,  8, -1,   0, -1, -1,   7,  3, -1,   6,  4,  5, 10,  1, -1 }, // P1EP (ETH)
-  {  0, 42, -1, 46,  18, -1, -1,  21, 15, 16,  14, 13, 11, 12, 10, -1 }, // P1UM (Ultra V1 and Mini)
-  {  0,  9, -1, -1,  18, 17, -1,  21, 15, 16,  14, 13, 11, 12, 10, -1 }, // P1U V2 (Ultra V2)
-  { -1, -1, -1, -1,  -1, -1, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // NRGM (onbekend in jouw snippets → alles -1)
-  { -1, -1, -1, -1,  -1, -1, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // P1S (Splitter Pro)
-  {  0,  9, -1, -1,  12, -1, -1,  21, 10, 11,  18, 15, 16, 14, 13, 17 }, // P1UX2 (Ultra X2 – aangepaste ETH pinout)
-  {  9,  8, -1, -1,  20, -1, 10,   4,  1, -1,  -1, -1, -1, -1, -1, -1 }, // NRGDH
-  {  9,  8, -1, -1,   7, -1,  5,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // D1MC
+  { _DEFAULT_HOSTNAME,-1, -1, -1, -1,  -1, -1, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // UNDETECTED
+  { "P1-Dongle-Pro",   9, -1,  7,  5,  10,  6, -1,  -1,  1,  0,  -1, -1, -1, -1, -1, -1 }, // P1P (ESP32C3 - P1 Dongle Pro)
+  { "NRG-Dongle-Pro",  9, -1,  3, -1,  20, -1, -1,  10,  1,  0,  -1, -1, -1, -1, -1, -1 }, // NRGD (ESP32C3 - NRG Dongle Pro)
+  { "Eth-Dongle-Pro",  9,  8,  3, -1,   7,  0, -1,  -1, -1, -1,   1,  5,  6,  4, 10, -1 }, // P1E (ETH)
+  { "Eth-Dongle-Pro",  9, -1,  8, -1,   0, -1, -1,   7,  3, -1,   6,  4,  5, 10,  1, -1 }, // P1EP (ETH)
+  { "Ultra-Dongle",    0, 42, -1, 46,  18, -1, -1,  21, 15, 16,  14, 13, 11, 12, 10, -1 }, // P1UM (Ultra V1 and Mini)
+  { "Ultra-Dongle",    0,  9, -1, -1,  18, 17, -1,  21, 15, 16,  14, 13, 11, 12, 10, -1 }, // P1U V2 (Ultra V2)
+  { _DEFAULT_HOSTNAME,-1, -1, -1, -1,  -1, -1, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // NRGM (onbekend in jouw snippets -> alles -1)
+  { _DEFAULT_HOSTNAME,-1, -1, -1, -1,  -1, -1, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // P1S (Splitter Pro)
+  { "Ultra-Dongle",    0,  9, -1, -1,  12, -1, -1,  21, 10, 11,  18, 15, 16, 14, 13, 17 }, // P1UX2 (Ultra X2 - aangepaste ETH pinout)
+  { "nrg-gateway",     9,  8, -1, -1,  20, -1, 10,   4,  1, -1,  -1, -1, -1, -1, -1, -1 }, // NRGDH
+  { "nrg-gateway",     9,  8, -1, -1,   7, -1,  5,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // D1MC
 };
 
 int8_t modType[2] = {-1,-1};

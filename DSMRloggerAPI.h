@@ -485,6 +485,7 @@ int8_t      DTR_out = O1_DTR_IO;
 int8_t      LED_out = P1_LED;
 int8_t      statusled = LED;
 int8_t      HanIO = -1;
+int8_t      button_io = IO_BUTTON;
 bool        bNRGMenabled = false;
 #ifdef NETSWITCH
 bool        bNETSWenabled = true;
@@ -514,6 +515,7 @@ float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
 uint16_t  settingOvervoltageThreshold = 253;
 uint16_t  settingMeentInterval = 300;
 // uint8_t   settingSmHasFaseInfo = 1;
+const char* activeDefaultHostname = _DEFAULT_HOSTNAME;
 char      settingHostname[32] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 enum tNetwState { NW_NONE, NW_WIFI, NW_ETH, NW_ETH_LINK };
