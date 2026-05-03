@@ -63,6 +63,12 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   let Meter_Source          = "DSMR"
   
   let locale 				= 'nl';  // standaard
+  const LS_ACT_WATT         = "dashboardActWatt";
+  const LS_PRESENTATION     = "presentationType";
+  const LS_DASH_WIDGETS     = "dashboardWidgets";
+  const DASHBOARD_WIDGET_IDS = ["dash_eid", "l1", "dash_solar", "dash_accu", "dash_peak", "l3", "l6", "l5", "l4", "l7", "l2", "l8"];
+  let dashboardEditMode     = false;
+  let dashboardWidgetPrefs  = {};
 
 // ---- DASH
 let TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wmax;
@@ -502,6 +508,123 @@ function hasHistoryData(data) {
 	return data && Array.isArray(data.data) && data.data.length > 0;
 }
 
+function localStorageBoolean(key) {
+	const value = localStorage.getItem(key);
+	if (value === null) return null;
+	return asBoolean(value, false);
+}
+
+function loadDashboardPreferences() {
+	const actWatt = localStorageBoolean(LS_ACT_WATT);
+	if (actWatt !== null) Act_Watt = actWatt;
+
+	const storedPresentationType = localStorage.getItem(LS_PRESENTATION);
+	if (storedPresentationType == "GRAPH" || storedPresentationType == "TAB") {
+		presentationType = storedPresentationType;
+	}
+	try {
+		dashboardWidgetPrefs = JSON.parse(localStorage.getItem(LS_DASH_WIDGETS) || "{}");
+	} catch (e) {
+		dashboardWidgetPrefs = {};
+	}
+	updateDashboardControls();
+}
+
+function updateDashboardControls() {
+	const editButton = document.getElementById("dashEditMode");
+	const wattButton = document.getElementById("dashActWatt");
+	if (editButton) editButton.classList.toggle("active", dashboardEditMode);
+	[wattButton].forEach(button => {
+		if (!button) return;
+		button.classList.toggle("active", Act_Watt);
+		button.textContent = Act_Watt ? "Watt" : "kW";
+	});
+	const dashTab = document.getElementById("DashTab");
+	if (dashTab) dashTab.classList.toggle("dashboard-editing", dashboardEditMode);
+}
+
+function widgetIsEnabled(id) {
+	return dashboardWidgetPrefs[id] !== false;
+}
+
+function saveDashboardWidgets() {
+	localStorage.setItem(LS_DASH_WIDGETS, JSON.stringify(dashboardWidgetPrefs));
+}
+
+function setDashboardWidgetAvailable(id, available) {
+	const widget = document.getElementById(id);
+	if (!widget) return;
+	widget.dataset.available = available ? "true" : "false";
+	applyDashboardWidgetState(id);
+}
+
+function applyDashboardWidgetState(id) {
+	const widget = document.getElementById(id);
+	if (!widget) return;
+	const available = widget.dataset.available === "true";
+	const enabled = widgetIsEnabled(id);
+	widget.classList.toggle("widget-hidden", available && !enabled);
+	const displayType = id == "dash_eid" ? "flex" : "block";
+	widget.style.display = available && (enabled || dashboardEditMode) ? displayType : "none";
+}
+
+function applyAllDashboardWidgetStates() {
+	DASHBOARD_WIDGET_IDS.forEach(applyDashboardWidgetState);
+}
+
+function resetDashboardWidgetAvailability() {
+	DASHBOARD_WIDGET_IDS.forEach(id => setDashboardWidgetAvailable(id, false));
+}
+
+function toggleDashboardEditMode() {
+	dashboardEditMode = !dashboardEditMode;
+	updateDashboardControls();
+	applyAllDashboardWidgetStates();
+}
+
+function handleDashboardWidgetClick(event) {
+	if (!dashboardEditMode) return;
+	if (event.target.closest("button, input, select, .dashboard-widget-option")) return;
+	const widget = event.target.closest("[data-widget]");
+	if (!widget || widget.dataset.available !== "true") return;
+	event.preventDefault();
+	event.stopPropagation();
+	const id = widget.dataset.widget;
+	dashboardWidgetPrefs[id] = !widgetIsEnabled(id);
+	saveDashboardWidgets();
+	applyDashboardWidgetState(id);
+}
+
+function formatPowerValue(value) {
+	if (Act_Watt) return Number(value * 1000).toFixed(0);
+	return Number(value).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3});
+}
+
+function powerUnit() {
+	return Act_Watt ? "Watt" : "kW";
+}
+
+function actualValueAndUnit(item, field) {
+	if (field?.unit == "kW") {
+		return {
+			value: formatPowerValue(asNumber(field.value)),
+			unit: powerUnit()
+		};
+	}
+	return {
+		value: formatValue(field?.value),
+		unit: field?.unit
+	};
+}
+
+function toggleDashboardWatt() {
+	Act_Watt = !Act_Watt;
+	localStorage.setItem(LS_ACT_WATT, Act_Watt ? "true" : "false");
+	updateDashboardControls();
+	if (activeTab == "bDashTab") UpdateDash();
+	if (activeTab == "bActualTab") refreshSmActual();
+}
+
 //============================================================================  
   
 function SetOnSettings(json) {
@@ -583,8 +706,9 @@ function SetOnSettings(json) {
 		  ['lastDaysTable', [1]],
 		]);
 		
-		["l1", "l3"].forEach(id => document.getElementById(id).style.display = "none");
-		document.getElementById("l8").style.display = "block";
+		setDashboardWidgetAvailable("l1", false);
+		setDashboardWidgetAvailable("l3", false);
+		setDashboardWidgetAvailable("l8", true);
 
 		document.querySelectorAll('.mbus-name').forEach(e => e.innerHTML = "Warmte<br>(GJ)");
 		document.querySelectorAll('.mbus-unit').forEach(e => e.innerHTML = "(GJ)");
@@ -605,9 +729,10 @@ function UpdateAccu(){
 		trend_accu.options.title.text = Number(json.chargeLevel).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" %";
 		trend_accu.update();
 		document.getElementById('dash_accu_p').innerHTML = formatValue(json.currentPower);
-		document.getElementById('dash_accu').style.display = 'block';
 		document.getElementById('accu-status').innerHTML = json.status;
-
+		setDashboardWidgetAvailable("dash_accu", true);
+	} else {
+		setDashboardWidgetAvailable("dash_accu", false);
 	}
  }
 
@@ -625,9 +750,11 @@ function UpdateSolar(){
 		trend_solar.data.datasets[0].data=[json.total.actual,json.Wp-json.total.actual];	
 		trend_solar.update();
 		document.getElementById('dash_solar_p').innerHTML = formatValue(json.total.daily/1000.0);
-		document.getElementById('dash_solar').style.display = 'block';
 		trend_solar.options.title.text = Number(json.total.actual).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" W";
 		refreshSolarSelfUse();
+		setDashboardWidgetAvailable("dash_solar", true);
+	} else {
+		setDashboardWidgetAvailable("dash_solar", false);
 	}
  }
 
@@ -765,7 +892,7 @@ function parseVersionManifest(json)
 }
 
 function refreshDashboard(json){
-	setPresentationType('TAB'); //zet grafische mode uit
+	updateDashboardControls();
 	
 	let Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
 
@@ -793,23 +920,28 @@ function refreshDashboard(json){
 		//-------TOON METERS
 		document.getElementById("w8api").style.display = "none"; //hide wait message
 		document.getElementById("inner-dash").style.display = "flex"; //unhide dashboard
+		resetDashboardWidgetAvailability();
+		setDashboardWidgetAvailable("l1", true);
+		setDashboardWidgetAvailable("l3", true);
 		if (Injection) {		
-			document.getElementById("l5").style.display = "block";
-			document.getElementById("l6").style.display = "block";
+			setDashboardWidgetAvailable("l5", true);
+			setDashboardWidgetAvailable("l6", true);
 			document.getElementById("Ph").innerHTML = "<span class='iconify' data-icon='mdi-lightning-bolt'></span>" + t('lbl-net-use');
 		}
-		if (HeeftGas && EnableHist && (Dongle_Config != "p1-q") && !IgnoreGas) document.getElementById("l4").style.display = "block";
+		if (HeeftGas && EnableHist && (Dongle_Config != "p1-q") && !IgnoreGas) setDashboardWidgetAvailable("l4", true);
 		if (HeeftWater && EnableHist) { 
-			document.getElementById("l7").style.display = "block";
-			document.getElementById("l2").style.display = "none";
+			setDashboardWidgetAvailable("l7", true);
 		}
 		const peakLast = meterValue(json.peak_pwr_last_q, NaN);
 		const peakHighest = meterValue(json.highest_peak_pwr, NaN);
 		const hasPeakData = !Number.isNaN(peakLast) && !Number.isNaN(peakHighest);
-		if (hasPeakData) document.getElementById("dash_peak").style.display = "block";
+		if (hasPeakData) setDashboardWidgetAvailable("dash_peak", true);
 
 		//------- EID Planner
-		if ( eid_planner_enabled ) objDAL.refreshEIDPlanner();
+		if ( eid_planner_enabled ) {
+			setDashboardWidgetAvailable("dash_eid", true);
+			objDAL.refreshEIDPlanner();
+		}
 		
 		//-------Kwartierpiek
 		if (hasPeakData) {
@@ -828,8 +960,9 @@ function refreshDashboard(json){
 		v3 = meterValue(json.voltage_l3, 0);
 
 
-		if ( ShowVoltage && v1 ) {
-			document.getElementById("l2").style.display = "block"
+		const voltageCardAvailable = !(HeeftWater && EnableHist);
+		if ( voltageCardAvailable && v1 ) {
+			setDashboardWidgetAvailable("l2", true);
 			document.getElementById("fases").innerHTML = Phases;
 			
       let Vmin_now = v1;
@@ -899,13 +1032,8 @@ function refreshDashboard(json){
 		gauge3f.update();
 
 		//update actuele vermogen			
-		if (Act_Watt) {
-			document.getElementById("power_delivered").innerHTML = Number(TotalKW  * 1000).toFixed(0);
-			document.getElementById("dsh-power").textContent = 'Watt';
-		} else {
-			document.getElementById("power_delivered").innerHTML = Number(TotalKW).toLocaleString("nl", {minimumFractionDigits: 3, maximumFractionDigits: 3} ) ;
-			document.getElementById("dsh-power").textContent = 'kW';
-		}
+		document.getElementById("power_delivered").innerHTML = formatPowerValue(TotalKW);
+		document.getElementById("dsh-power").textContent = powerUnit();
 
 		//vermogen min - max bepalen
 		let nvKW= TotalKW; 
@@ -1053,10 +1181,12 @@ function bootsTrapMain()
 	console.log("!-- localstorage: "+ locale);
 	loadTranslations(locale); 
 	document.getElementById("languageSelector").value = locale;
+	loadDashboardPreferences();
 
 	createDashboardGauges();
 
 	handle_menu_click();
+	document.getElementById("inner-dash").addEventListener("click", handleDashboardWidgetClick, true);
 	FrontendConfig();
 	
 	//init DAL
@@ -1065,7 +1195,7 @@ function bootsTrapMain()
     setMonthTableType();
     openTab();
     initActualGraph();
-    setPresentationType('TAB');
+    setPresentationType(presentationType);
 	
   //goto tab after reload FSExplorer
   	if ( location.hash ) {
@@ -1597,16 +1727,11 @@ function checkESPOnline() {
 		  data = json;
           AMPS = asNumber(json.Fuse);
           if (Number.isNaN(AMPS)) AMPS = 35;
-          ShowVoltage = asBoolean(json.ShowVoltage, true);
-          UseCDN = asBoolean(json.cdn, true);
-          Injection = asBoolean(json.Injection, false);
           Phases = asNumber(json.Phases);
           if (Number.isNaN(Phases)) Phases = 1;
-          HeeftGas = asBoolean(json.GasAvailable, false);
-		  Act_Watt = asBoolean(json.Act_Watt, false);
-		  AvoidSpikes = asBoolean(json.AvoidSpikes, false);
-          IgnoreInjection = asBoolean(json.IgnoreInjection, false);
-          IgnoreGas = asBoolean(json.IgnoreGas, false);
+          // UI flags in older Frontend.json files are intentionally ignored here.
+          // Those preferences now come from defaults, autodetection, or localStorage.
+          loadDashboardPreferences();
 // 		  "i18n" in json ? setLocale(json.i18n) : setLocale("nl");
 
           for (let item in data) 
@@ -2040,13 +2165,14 @@ function formatValue(value)
       switch(item)
       {
         case "gas_delivered":
+          const gasValue = actualValueAndUnit(item, data[item]);
           tableCells[0].innerHTML = data[item].humanName;
-          tableCells[2].innerHTML = data[item].unit;
+          tableCells[2].innerHTML = gasValue.unit;
           if(Dongle_Config == "p1-q"){
             tableCells[0].innerHTML = "Warmtemeter stand";            
       	    tableCells[2].innerHTML = "GJ";
           }
-          tableCells[1].innerHTML = formatValue(data[item].value);
+          tableCells[1].innerHTML = gasValue.value;
           break;
         
         case "gas_delivered_timestamp":
@@ -2057,9 +2183,10 @@ function formatValue(value)
           break;
 
         default:
+          const actualValue = actualValueAndUnit(item, data[item]);
           tableCells[0].innerHTML = data[item].humanName;
-          tableCells[1].innerHTML = formatValue(data[item].value);
-          if (data[item].hasOwnProperty('unit')) tableCells[2].innerHTML = data[item].unit;
+          tableCells[1].innerHTML = actualValue.value;
+          if (actualValue.unit !== undefined) tableCells[2].innerHTML = actualValue.unit;
       }//endswitch
     }
 
@@ -2403,7 +2530,7 @@ function formatValue(value)
         "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
 
         if ( eid_enabled ) document.getElementById("bEid").style.display = "block"; else document.getElementById("bEid").style.display = "none";
-        if ( eid_planner_enabled ) document.getElementById("dash_eid").style.display = "flex"; else document.getElementById("dash_eid").style.display = "none";
+        if ( eid_planner_enabled ) setDashboardWidgetAvailable("dash_eid", true); else setDashboardWidgetAvailable("dash_eid", false);
         if ( pairing_enabled ) document.getElementById("bNRGM").style.display = "block"; else document.getElementById("bNRGM").style.display = "none";
                 
         gas_netw_costs = json.gas_netw_costs.value;
@@ -2418,6 +2545,7 @@ function formatValue(value)
     if (pType == "GRAPH") {
       console.log("Set presentationType to GRAPHICS mode!");
       presentationType = pType;
+      localStorage.setItem(LS_PRESENTATION, presentationType);
       document.getElementById('aGRAPH').checked = true;
       document.getElementById('aTAB').checked   = false;
       initActualGraph();
@@ -2434,6 +2562,7 @@ function formatValue(value)
     } else if (pType == "TAB") {
       console.log("Set presentationType to Tabular mode!");
       presentationType = pType;
+      localStorage.setItem(LS_PRESENTATION, presentationType);
       document.getElementById('aTAB').checked   = true;
       document.getElementById('aGRAPH').checked = false;
       document.getElementById('hTAB').checked   = true;
@@ -2447,6 +2576,7 @@ function formatValue(value)
     } else {
       console.log("setPresentationType to ["+pType+"] is quite shitty! Set to TAB");
       presentationType = "TAB";
+      localStorage.setItem(LS_PRESENTATION, presentationType);
     }
 
 //    document.getElementById("APIdocTab").style.display = "none";

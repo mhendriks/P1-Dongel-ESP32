@@ -925,9 +925,10 @@
   <section id="DashTab" class="tabName default">
         <h2 data-i18n-key="dsh-dash">Dashboard</h2>
     <h3 id=w8api style="margin-top:50%" data-i18n-key="lbl-sm-data-wait">Wacht op gegevens van Slimme Meter</h3>
+    <button type="button" id="dashEditMode" class="dashboard-edit-toggle" onclick="toggleDashboardEditMode()" title="Dashboard muteren"><span class="iconify" data-icon="mdi-pencil"></span></button>
     <div class=outer id="inner-dash" style="display:none">
 
-        <div class=card id=dash_eid style="display:none;">
+        <div class=card id=dash_eid data-widget="dash_eid" style="display:none;">
             <h1 id=dash_eid_h style="background:green;"><span class="iconify" data-icon="mdi-calendar-check"></span><span data-i18n-key="dsh-eid">Stroomplanner<span></h1>
 		  <div id=eid-info>Vind de ideale momenten om stroom te verbruiken.</div>
 		  <div id="stroomplanner-hours"></div>
@@ -936,8 +937,9 @@
         </div>
 
         <a href="#ActualTab" style="display:flex">
-        <div class=card id=l1 style="display:block">
+        <div class=card id=l1 data-widget="l1" style="display:block">
 			<h1 id=power_delivered_l1h><span class="iconify" data-icon="mdi-gauge"></span><span data-i18n-key="dsh-actual">Actueel</span></h1>
+			<button type="button" id="dashActWatt" class="dashboard-widget-option" onclick="event.preventDefault(); event.stopPropagation(); toggleDashboardWatt()">kW</button>
 	        <canvas class="chart-container" id="gauge3f"></canvas>
 	        <div id=legenda>
 				<div id=f1 class="lblVerbuik vandaag">1<span class="tooltiptext">fase 1</span></div>
@@ -954,7 +956,7 @@
 
         </div>
 		</a>
-        <div class=card id=dash_solar style="display:none">
+        <div class=card id=dash_solar data-widget="dash_solar" style="display:none">
             <h1 id=dash_solar_h style="background:#f7b638"><span class="iconify" data-icon="mdi-solar-power-variant"></span><span data-i18n-key="dsh-solar-production">Productie<span></h1>
             <canvas class="chart-container" id="container-solar"></canvas>
 			<div id=legenda style="padding-top:25px">
@@ -967,7 +969,7 @@
 <!--             <div style="text-align:center">Wh/Wp: <b><span id="wpwh">-</span> <span>%</span></b></div> -->
         </div>
         
-        <div class=card id=dash_accu style="display:none">
+        <div class=card id=dash_accu data-widget="dash_accu" style="display:none">
             <h1 id=dash_solar_h style="background:#007700"><span class="iconify" data-icon="mdi-battery-low"></span><span data-i18n-key="dsh-accu">Opslag<span></h1>
             <canvas class="chart-container" id="container-accu"></canvas>
 			<div id=legenda style="padding-top:25px">
@@ -978,7 +980,7 @@
 			<div style="text-align:center" ><span data-i18n-key="lbl-accu-status">Status: </span><b><span id="accu-status">-</span></b></div>
         </div>	
 
-  <div class=card id=dash_peak style="display:none">
+  <div class=card id=dash_peak data-widget="dash_peak" style="display:none">
             <h1 id=dash_peak><span class="iconify" data-icon="mdi-format-vertical-align-top"></span><span data-i18n-key="dsh-peak">KwartierPiek<span></h1>
             <canvas class="chart-container" id="container-peak"></canvas>
 			<div id=legenda style="padding-top:25px">
@@ -991,7 +993,7 @@
         </div>
                 	
 		<a href="#HoursTab" style="display:flex">
-        <div class=card id=l3 style="display:block">
+        <div class=card id=l3 data-widget="l3" style="display:block">
             <h1 id=Ph><span class="iconify" data-icon="mdi-lightning-bolt"></span><span data-i18n-key="dsh-energy">Elektra</span></h1>
             <canvas class="chart-container" id="container-3"></canvas>
 			<div id=legenda>
@@ -1006,7 +1008,7 @@
             <h3>min: <span id="Pmin">0.0</span></h3-->
         </div>
     	</a>
-    	<div class=card id=l6 style="display:none">
+    	<div class=card id=l6 data-widget="l6" style="display:none">
             <h1 id=Ph><span class="iconify" data-icon="mdi-home-import-outline"></span><span data-i18n-key="dsh-delivered">Afname</span></h1>
             <canvas class="chart-container" id="container-6"></canvas>
 			<div id=legenda>
@@ -1020,7 +1022,7 @@
             <!--h3>max: <span id="Pamax">0.0</span></h3>
             <h3>min: <span id="Pamin">0.0</span></h3-->
         </div>
-        <div class=card id=l5 style="display:none">
+        <div class=card id=l5 data-widget="l5" style="display:none">
             <h1 id=Ph><span class="iconify" data-icon="mdi-home-export-outline"></span><span data-i18n-key="dsh-returned">Teruglevering<span></h1>
             <canvas class="chart-container" id="container-5"></canvas>
 			<div id=legenda>
@@ -1034,7 +1036,7 @@
             <!--h3>max: <span id="Pimax">0.0</span></h3>
             <h3>min: <span id="Pimin">0.0</span></h3-->
         </div>
-        <div class=card id=l4 style="display:none">
+        <div class=card id=l4 data-widget="l4" style="display:none">
             <h1 id=Gh ><span class="iconify" data-icon="mdi-fire"></span><span data-i18n-key="dsh-gas">Gas<span></h1>
             <canvas class="chart-container" id="container-4"></canvas>
 			<div id=legenda>
@@ -1046,7 +1048,7 @@
             <div style="text-align:center" data-i18n-key="lbl-today-m3">Vandaag [㎥]</div>
             <h2 id="G">0.0</h2>
         </div>
-                <div class=card id=l7 style="display:none">
+                <div class=card id=l7 data-widget="l7" style="display:none">
             <h1 id=Gh ><span class="iconify" data-icon="mdi-water"></span><span data-i18n-key="dsh-water">Water<span></h1>
             <canvas class="chart-container" id="container-7"></canvas>
 			<div id=legenda>
@@ -1058,8 +1060,8 @@
             <div style="text-align:center" data-i18n-key="lbl-today-l">Vandaag [liter]</div>
             <h2 id="W">0.0</h2>
         </div>
-        <div class=card id=l2 style="display:none">
-            <h1 id=power_delivered_l2h ><span class="iconify" data-icon="mdi-sine-wave"></span><span data-i18n-key="dsh-voltage">Spanning<span></h1>
+        <div class=card id=l2 data-widget="l2" style="display:none">
+            <h1 id=power_delivered_l2h ><span class="iconify" data-icon="mdi-sine-wave"></span><span data-i18n-key="dsh-voltage">Spanning</span></h1>
 	        <canvas class="chart-container" id="gauge-v"></canvas>
 	        <div id=legenda>
 				<div id=v1 class="lblVerbuik vandaag">1<span class="tooltiptext">fase 1</span></div>
@@ -1074,7 +1076,7 @@
             <h3>min: <span id="power_delivered_2min">0.0</span> Volt</h3>
  -->
         </div>
-         <div class=card id=l8 style="display:none">
+         <div class=card id=l8 data-widget="l8" style="display:none">
             <h1 id=Qh ><span class="iconify" data-icon="mdi-heat-wave"></span><span data-i18n-key="dsh-heat">Warmte<span></h1>
             <canvas class="chart-container" id="container-q"></canvas>
 			<div id=legenda>

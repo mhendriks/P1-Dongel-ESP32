@@ -502,6 +502,10 @@ body > div.bottom.right-0 {
 }
 
 /* DASH css */
+
+#DashTab {
+	position: relative;
+}
  
 #DashTab .outer {
 	display: flex;
@@ -565,7 +569,112 @@ body > div.bottom.right-0 {
 
 #messages::before {padding-right:5px}
 
+#dashEditMode.dashboard-edit-toggle {
+	position: fixed;
+	right: 14px;
+	top: 56px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	border: 0;
+	background: transparent!important;
+	cursor: pointer;
+	font-size: 1.5rem;
+	line-height: 1;
+	padding: 0;
+	z-index: 10;
+	outline: none!important;
+	box-shadow: none!important;
+	appearance: none;
+	-webkit-appearance: none;
+}
+
+#dashEditMode.dashboard-edit-toggle svg.iconify path {color: #aaa!important;}
+#dashEditMode.dashboard-edit-toggle.active svg.iconify path {color: #2f7d20!important;}
+
+.dashboard-edit-toggle::before {
+	content: none!important;
+}
+
+.dashboard-edit-toggle:focus,
+.dashboard-edit-toggle:focus-visible {
+	outline: none!important;
+	box-shadow: none!important;
+}
+
+.dashboard-edit-toggle .iconify {
+	display: block;
+	background: transparent!important;
+}
+
+#DashTab.dashboard-editing .card {
+	cursor: pointer;
+	outline: 2px dashed #9eb1cd;
+	outline-offset: -6px;
+}
+
+#DashTab.dashboard-editing .card.widget-hidden {
+	opacity: .35;
+}
+
+#DashTab.dashboard-editing .card.widget-hidden::after {
+	content: "hidden";
+	position: absolute;
+	right: 8px;
+	bottom: 8px;
+	background: #314b77;
+	border-radius: 6px;
+	color: white;
+	font-size: .75rem;
+	padding: 2px 7px;
+}
+
+.dashboard-widget-option {
+	display: none;
+	position: absolute;
+	right: 8px;
+	top: 46px;
+	z-index: 2;
+	border: 0;
+	border-radius: 6px;
+	background: #314b77!important;
+	box-shadow: none;
+	color: white!important;
+	cursor: pointer;
+	font-size: .8rem;
+	line-height: 1.1;
+	margin: 0;
+	padding: 4px 7px;
+}
+
+#DashTab.dashboard-editing .dashboard-widget-option {
+	display: block;
+}
+
+.dashboard-widget-option.active {
+	background: #2f7d20!important;
+}
+
+.actual-unit-toggle {
+	border: 1px solid #314b77;
+	border-radius: 6px;
+	background: white;
+	color: #314b77;
+	cursor: pointer;
+	font-size: .9rem;
+	line-height: 1.2;
+	padding: 4px 10px;
+}
+
+.actual-unit-toggle.active {
+	background: #314b77;
+	color: white;
+}
+
 .card {
+	position: relative;
 	padding-bottom: 10px;
 	margin: 1rem;
 	background: white;
@@ -613,6 +722,7 @@ section#DashTab .chart-container {
 h1::before{ padding-right:3px; }
 
 #DashTab .card h1 {
+	position: relative;
 	text-align: center;
 	padding: 0.5rem 1.1rem;
 	background: #314b77;
@@ -680,6 +790,7 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 /*** STROOMPLANNER ***/
 #dash_eid {
 	max-width: fit-content;
+	flex: 0 0 auto;
 	display: flex;
     flex-direction: column;
 	padding-bottom:0;

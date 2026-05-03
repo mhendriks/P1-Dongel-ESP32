@@ -20,13 +20,13 @@ const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff"
 
 JsonDocument jsonDoc;  // generic doc to return, clear() before use!
 
-static String jsonResponse(std::function<void(JsonDocument& doc)> fill) {
+static auto jsonResponse = [](auto fill) -> String {
   JsonDocument doc;
   fill(doc);
   String out;
   serializeJson(doc, out);
   return out;
-}
+};
 
 static ApiResponse jsonOkResponse(const String& body) {
   return {200, "application/json", body};

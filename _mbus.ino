@@ -164,12 +164,9 @@ struct ActiveRecipe {
   float valueFloat = NAN;
 };
 
-static constexpr size_t kMaxActiveRecipes = 64;
-
-static ActiveRecipe activeRecipes[kMaxActiveRecipes];
+static const ActiveRecipe* activeRecipes = nullptr;
 static size_t activeRecipeCount = 0;
 static uint16_t activeRecipeMaxReg = 0;
-static bool activeRecipeLoaded = false;
 
 #include "_mbus_mapping.h"
 
@@ -181,100 +178,6 @@ static uint32_t encodeActiveRecipeValue(const ActiveRecipe& recipe);
 static const ActiveRecipe* findActiveRecipe(uint16_t reg);
 static bool loadActiveRecipes(const ActiveRecipe* recipes, size_t recipeCount);
 static bool loadPresetRecipes(int mappingChoice);
-static bool parseMbSource(const char* sourceText, MbSource& outSource);
-static bool parseMbType(const char* typeText, ModbusDataType& outType);
-static bool loadActiveRecipesFromJsonText(const char* json);
-
-static bool parseMbSource(const char* sourceText, MbSource& outSource) {
-  struct SourceName {
-    const char* name;
-    MbSource source;
-  };
-
-  static const SourceName kSources[] = {
-    {"timestamp_epoch",         MbSource::timestamp_epoch},
-    {"energy_delivered_tariff1_kwh",MbSource::energy_delivered_tariff1_kwh},
-    {"energy_delivered_tariff2_kwh",MbSource::energy_delivered_tariff2_kwh},
-    {"energy_returned_tariff1_kwh", MbSource::energy_returned_tariff1_kwh},
-    {"energy_returned_tariff2_kwh", MbSource::energy_returned_tariff2_kwh},
-    {"energy_delivered_total_kwh",  MbSource::energy_delivered_total_kwh},
-    {"energy_returned_total_kwh",   MbSource::energy_returned_total_kwh},
-    {"energy_total_abs_kwh",        MbSource::energy_total_abs_kwh},
-    {"reactive_energy_total_varh",  MbSource::reactive_energy_total_varh},
-    {"energy_net_total_kwh",        MbSource::energy_net_total_kwh},
-    {"energy_net_tariff1_kwh",      MbSource::energy_net_tariff1_kwh},
-    {"energy_net_tariff2_kwh",      MbSource::energy_net_tariff2_kwh},
-    {"energy_net_avg_kwh",          MbSource::energy_net_avg_kwh},
-    {"energy_delivered_avg_kwh",    MbSource::energy_delivered_avg_kwh},
-    {"energy_returned_avg_kwh",     MbSource::energy_returned_avg_kwh},
-    {"power_delivered_kw",          MbSource::power_delivered_kw},
-    {"power_returned_kw",           MbSource::power_returned_kw},
-    {"net_power_total_kw",          MbSource::net_power_total_kw},
-    {"voltage_l1_v",                MbSource::voltage_l1_v},
-    {"voltage_l2_v",                MbSource::voltage_l2_v},
-    {"voltage_l3_v",                MbSource::voltage_l3_v},
-    {"current_l1_a",                MbSource::current_l1_a},
-    {"current_l2_a",                MbSource::current_l2_a},
-    {"current_l3_a",                MbSource::current_l3_a},
-    {"current_total_a",             MbSource::current_total_a},
-    {"signed_current_l1_a",         MbSource::signed_current_l1_a},
-    {"signed_current_l2_a",         MbSource::signed_current_l2_a},
-    {"signed_current_l3_a",         MbSource::signed_current_l3_a},
-    {"gas_timestamp_epoch",         MbSource::gas_timestamp_epoch},
-    {"gas_delivered_m3",            MbSource::gas_delivered_m3},
-    {"electricity_tariff",      MbSource::electricity_tariff},
-    {"peak_pwr_last_q_kw",      MbSource::peak_pwr_last_q_kw},
-    {"net_power_l1_kw",         MbSource::net_power_l1_kw},
-    {"net_power_l2_kw",         MbSource::net_power_l2_kw},
-    {"net_power_l3_kw",         MbSource::net_power_l3_kw},
-    {"apparent_power_total_va", MbSource::apparent_power_total_va},
-    {"direction_total",         MbSource::direction_total},
-    {"direction_l1",            MbSource::direction_l1},
-    {"direction_l2",            MbSource::direction_l2},
-    {"direction_l3",            MbSource::direction_l3},
-    {"line_voltage_l12_v",      MbSource::line_voltage_l12_v},
-    {"line_voltage_l23_v",      MbSource::line_voltage_l23_v},
-    {"line_voltage_l31_v",      MbSource::line_voltage_l31_v},
-    {"line_voltage_avg_v",      MbSource::line_voltage_avg_v},
-    {"water_delivered_m3",      MbSource::water_delivered_m3},
-    {"unavailable_float",       MbSource::unavailable_float},
-    {"constant",                MbSource::constant},
-    {"p1_device_id",            MbSource::p1_device_id},
-    {"device_serial_u32",       MbSource::device_serial_u32},
-    {"firmware_version_packed", MbSource::firmware_version_packed},
-    {"device_online",           MbSource::device_online},
-    {"uptime_seconds",          MbSource::uptime_seconds},
-  };
-
-  for (const SourceName& entry : kSources) {
-    if (strcmp(sourceText, entry.name) == 0) {
-      outSource = entry.source;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-static bool parseMbType(const char* typeText, ModbusDataType& outType) {
-  if (strcmp(typeText, "float") == 0) {
-    outType = ModbusDataType::FLOAT;
-    return true;
-  }
-  if (strcmp(typeText, "uint32") == 0) {
-    outType = ModbusDataType::UINT32;
-    return true;
-  }
-  if (strcmp(typeText, "int32") == 0) {
-    outType = ModbusDataType::INT32;
-    return true;
-  }
-  if (strcmp(typeText, "int16") == 0) {
-    outType = ModbusDataType::INT16;
-    return true;
-  }
-  return false;
-}
 
 static float mbSignedCurrent(float current, float returned) {
   return current * (returned ? -1.0f : 1.0f);
@@ -625,68 +528,20 @@ static const ActiveRecipe* findActiveRecipe(uint16_t reg) {
 }
 
 static bool loadActiveRecipes(const ActiveRecipe* recipes, size_t recipeCount) {
-  activeRecipeCount = 0;
+  activeRecipes = recipes;
+  activeRecipeCount = recipeCount;
   activeRecipeMaxReg = 0;
 
-  for (size_t i = 0; i < recipeCount && i < kMaxActiveRecipes; i++) {
+  for (size_t i = 0; i < activeRecipeCount; i++) {
     const ActiveRecipe& recipe = recipes[i];
-    if (activeRecipeCount >= kMaxActiveRecipes) break;
 
-    ActiveRecipe& active = activeRecipes[activeRecipeCount++];
-    active = recipe;
-
-    const ModbusDataType type = static_cast<ModbusDataType>(active.type);
+    const ModbusDataType type = static_cast<ModbusDataType>(recipe.type);
     const uint16_t regSize = (type == ModbusDataType::INT16) ? 1 : 2;
-    const uint16_t endReg = active.registerAddress + regSize;
+    const uint16_t endReg = recipe.registerAddress + regSize;
     if (endReg > activeRecipeMaxReg) activeRecipeMaxReg = endReg;
   }
 
-  activeRecipeLoaded = (activeRecipeCount > 0);
-  return activeRecipeLoaded;
-}
-
-static bool loadActiveRecipesFromJsonText(const char* json) {
-  JsonDocument doc;
-  if (deserializeJson(doc, json)) {
-    activeRecipeCount = 0;
-    activeRecipeMaxReg = 0;
-    activeRecipeLoaded = false;
-    return false;
-  }
-
-  JsonArray recipes = doc.as<JsonArray>();
-  activeRecipeCount = 0;
-  activeRecipeMaxReg = 0;
-
-  for (JsonObject recipe : recipes) {
-    if (activeRecipeCount >= kMaxActiveRecipes) break;
-
-    MbSource source;
-    ModbusDataType type;
-
-    if (!parseMbSource(recipe["source"] | "", source)) continue;
-    if (!parseMbType(recipe["type"] | "", type)) continue;
-
-    ActiveRecipe& active = activeRecipes[activeRecipeCount++];
-    active.registerAddress = recipe["register"] | 0;
-    active.scale = recipe["scale"] | 1;
-    active.source = static_cast<uint8_t>(source);
-    active.type = static_cast<uint8_t>(type);
-    active.value = recipe["value"] | 0;
-    active.valueFloat = NAN;
-    if (source == MbSource::constant && type == ModbusDataType::FLOAT && recipe["value"].is<float>()) {
-      active.valueFloat = recipe["value"].as<float>();
-    } else if (source == MbSource::constant && type == ModbusDataType::FLOAT && recipe["value"].is<double>()) {
-      active.valueFloat = (float)recipe["value"].as<double>();
-    }
-
-    const uint16_t regSize = (type == ModbusDataType::INT16) ? 1 : 2;
-    const uint16_t endReg = active.registerAddress + regSize;
-    if (endReg > activeRecipeMaxReg) activeRecipeMaxReg = endReg;
-  }
-
-  activeRecipeLoaded = (activeRecipeCount > 0);
-  return activeRecipeLoaded;
+  return activeRecipeCount > 0;
 }
 
 static bool loadPresetRecipes(int mappingChoice) {
@@ -720,15 +575,13 @@ static void initMbMapping(int mappingChoice) {
   loadPresetRecipes(mappingChoice);
 }
 
-static bool useMbRuntimeMapping() {
-  return activeRecipeLoaded;
-}
-
 static uint16_t getMbActiveMaxReg() {
+  if (!activeRecipes) initMbMapping(SelMap);
   return activeRecipeMaxReg;
 }
 
 static bool readMbActiveRegister(uint16_t reg, uint8_t& type, uint32_t& valueU32, int16_t& valueI16) {
+  if (!activeRecipes) initMbMapping(SelMap);
   const ActiveRecipe* recipe = findActiveRecipe(reg);
   if (!recipe) return false;
 

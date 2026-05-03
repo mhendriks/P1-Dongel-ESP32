@@ -70,17 +70,17 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - cleanup dead code
 - cleanup comments
 - small refactoring
-
-- 3 button control (a-pair, b-reboot, c=factory reset)
-- refactoring targets
-- kijken naar de frontend instellingen (in browser opslaan en alleen in browser houden anders in settings)
-- wallbox toevoegen 
+- optimise performance
+- add: Dashboard widget and W/kW toggle. Click change icon right top corner and click widget to hide/show. You could toggle kw/w on the actual tab.
 
 5.7.0
+- 3 button control (a-pair, b-reboot, c=factory reset)
+- refactoring targets
+- wallbox toevoegen 
+- move 2 last UI frontend configurable items from frontend.json to settings.
 - kWh meter als bron voor productie data gebruiken (Harrie)
 - Add remote Proxy
 - Virtual P1 feature in settings (Ethernet/Ultra only)
-- add: Ultra dongles are able to make custom modbus mappings via json file
 - refactor: asyncwebserver
 - update button in HA to trigger the update (mqtt based #70)
 
@@ -88,7 +88,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 /******************** compiler options  ********************************************/
 
-#define DEBUG  
+// #define DEBUG  
 // #define XTRA_LOG
 
 //---  PROFILES  ---
