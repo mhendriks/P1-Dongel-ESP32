@@ -63,15 +63,21 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
+5.6.3
+- 
+
 5.7.0
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - refactoring targets
-- wallbox toevoegen 
+- add wallbox mapping
+- api/v2/dash (combined request for dashboard)
 - move 2 last UI frontend configurable items from frontend.json to settings.
-- kWh meter als bron voor productie data gebruiken (Harrie)
-- Add remote Proxy
 - Virtual P1 feature in settings (Ethernet/Ultra only)
+
+5.8.0
+- kWh meter als bron voor productie data gebruiken (Harrie)
 - refactor: asyncwebserver
+- Add remote Proxy
 - update button in HA to trigger the update (mqtt based #70)
 
 */
