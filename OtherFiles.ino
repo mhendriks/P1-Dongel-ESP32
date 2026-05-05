@@ -137,10 +137,6 @@ void writeSettings() {
 
 #if REMOTE_PROXY
   docw["proxy-enabled"] = bProxyEnabled;
-  docw["proxy-tls"] = bProxyUseTLS;
-  docw["proxy-host"] = settingProxyHost;
-  docw["proxy-port"] = settingProxyPort;
-  docw["proxy-path"] = settingProxyPath;
   docw["proxy-interval"] = settingProxyInterval;
   docw["proxy-device-id"] = settingProxyDeviceId;
   docw["proxy-secret"] = settingProxySecret;
@@ -302,12 +298,7 @@ void readSettings(bool show)
 
 #if REMOTE_PROXY
   if (doc["proxy-enabled"].is<bool>()) bProxyEnabled = doc["proxy-enabled"];
-  if (doc["proxy-tls"].is<bool>()) bProxyUseTLS = doc["proxy-tls"];
-  if (doc["proxy-host"].is<const char*>()) strlcpy(settingProxyHost, doc["proxy-host"].as<const char*>(), sizeof(settingProxyHost));
-  if (doc["proxy-port"].is<int>()) settingProxyPort = doc["proxy-port"];
-  if (doc["proxy-path"].is<const char*>()) strlcpy(settingProxyPath, doc["proxy-path"].as<const char*>(), sizeof(settingProxyPath));
   if (doc["proxy-interval"].is<int>()) settingProxyInterval = constrain(doc["proxy-interval"].as<int>(), 5, 3600);
-  if (doc["proxy-device-id"].is<const char*>()) strlcpy(settingProxyDeviceId, doc["proxy-device-id"].as<const char*>(), sizeof(settingProxyDeviceId));
   if (doc["proxy-secret"].is<const char*>()) strlcpy(settingProxySecret, doc["proxy-secret"].as<const char*>(), sizeof(settingProxySecret));
   if (doc["proxy-token"].is<const char*>()) strlcpy(settingProxyToken, doc["proxy-token"].as<const char*>(), sizeof(settingProxyToken));
 #endif
@@ -527,28 +518,8 @@ void updateSetting(const char *field, const char *newValue)
     bProxyEnabled = (stricmp(newValue, "true") == 0 ? true : false);
     proxy_config_changed = true;
   }
-  if (!stricmp(field, "proxy_tls")) {
-    bProxyUseTLS = (stricmp(newValue, "true") == 0 ? true : false);
-    proxy_config_changed = true;
-  }
-  if (!stricmp(field, "proxy_host")) {
-    strCopy(settingProxyHost, sizeof(settingProxyHost), newValue);
-    proxy_config_changed = true;
-  }
-  if (!stricmp(field, "proxy_port")) {
-    settingProxyPort = constrain(String(newValue).toInt(), 1, 65535);
-    proxy_config_changed = true;
-  }
-  if (!stricmp(field, "proxy_path")) {
-    strCopy(settingProxyPath, sizeof(settingProxyPath), newValue);
-    proxy_config_changed = true;
-  }
   if (!stricmp(field, "proxy_interval")) {
     settingProxyInterval = constrain(String(newValue).toInt(), 5, 3600);
-    proxy_config_changed = true;
-  }
-  if (!stricmp(field, "proxy_device_id")) {
-    strCopy(settingProxyDeviceId, sizeof(settingProxyDeviceId), newValue);
     proxy_config_changed = true;
   }
   if (!stricmp(field, "proxy_secret")) {

@@ -82,7 +82,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //--- PROFILES -> NO PROFILE = WiFi Dongle  ---
-// #define ULTRA            //ultra (mini) dongle
+#define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       //+D1MC 
@@ -108,6 +108,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define HAN_TESTDATA
 // #define HAN_TESTDATA_RAW
 // #define HAN_TESTDATA_DYNAMIC
+#define REMOTE_PROXY 1
 
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>

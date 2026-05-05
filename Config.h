@@ -17,11 +17,12 @@
 #endif
 
 #define PROXY_REMOTE_DEFAULT_HOST        "proxy.smart-stuff.nl"
-#define PROXY_REMOTE_DEFAULT_PATH        "/api/v1/device/push"
+#define PROXY_REMOTE_DEFAULT_PATH        "/ws/device-ingest"
 #define PROXY_REMOTE_DEFAULT_PORT        443
-#define PROXY_REMOTE_DEFAULT_INTERVAL    15
+#define PROXY_REMOTE_DEFAULT_INTERVAL    60
 #define PROXY_REMOTE_RETRY_MIN_MS        15000UL
 #define PROXY_REMOTE_RETRY_MAX_MS        300000UL
+#define PROXY_REMOTE_DEFAULT_LIVE_MS     5000UL
 
 //LED STUFF
 #define LED_BLUE  0x07

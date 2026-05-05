@@ -1,52 +1,67 @@
 :root {
-  --proxy-sidebar-width: 290px;
-  --proxy-sidebar-collapsed: 78px;
-  --proxy-sidebar-bg: #232834;
-  --proxy-sidebar-bg-2: #2d3442;
-  --proxy-sidebar-text: #eef2f7;
-  --proxy-sidebar-muted: #a9b2c1;
-  --proxy-sidebar-accent: #314b77;
-  --proxy-page-bg: #eef1f5;
+  --proxy-drawer-width: 320px;
+  --proxy-handle-width: 64px;
+  --proxy-surface: rgba(35, 40, 52, 0.82);
+  --proxy-surface-2: rgba(45, 52, 66, 0.88);
+  --proxy-text: #eef2f7;
+  --proxy-muted: #a9b2c1;
+  --proxy-accent: #314b77;
+  --proxy-shadow: 0 24px 60px rgba(7, 12, 22, 0.28);
 }
 
-body.proxy-mode {
-  background: var(--proxy-page-bg);
-}
-
-.proxy-shell {
+body.proxy-mode,
+body.proxy-mode #proxy-app {
   min-height: 100vh;
 }
 
-.proxy-sidebar {
+.proxy-drawer {
   position: fixed;
-  inset: 0 auto 0 0;
-  width: var(--proxy-sidebar-width);
-  padding: 24px 18px;
-  color: var(--proxy-sidebar-text);
-  background: linear-gradient(180deg, var(--proxy-sidebar-bg) 0%, var(--proxy-sidebar-bg-2) 100%);
-  transition: width 0.2s ease, transform 0.2s ease;
-  z-index: 1200;
-  overflow: hidden;
+  top: 74px;
+  right: 0;
+  z-index: 1600;
+  width: var(--proxy-drawer-width);
+  transform: translateX(100%);
+  transition: transform 0.24s ease;
 }
 
-.proxy-sidebar-toggle {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 42px;
-  height: 42px;
-  margin: 0 0 18px 0;
+body.proxy-drawer-open .proxy-drawer {
+  transform: translateX(0);
+}
+
+.proxy-drawer-handle {
+  position: absolute;
+  top: 18px;
+  left: -45px;
+  width: 45px;
+  min-height: 150px;
+  padding: 12px 10px;
   border: none;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
+  border-radius: 18px 0 0 18px;
+  background: linear-gradient(180deg, var(--proxy-surface) 0%, var(--proxy-surface-2) 100%);
+  color: var(--proxy-text);
+  box-shadow: var(--proxy-shadow);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
-.proxy-sidebar-toggle span {
-  width: 18px;
-  height: 2px;
-  margin: 0 auto;
-  background: #fff;
+.proxy-drawer-handle-title {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.96rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.proxy-drawer-card {
+  padding: 22px 20px 18px;
+  color: var(--proxy-text);
+  background: linear-gradient(180deg, var(--proxy-surface) 0%, var(--proxy-surface-2) 100%);
+  border-radius: 24px 0 0 24px;
+  box-shadow: var(--proxy-shadow);
+  backdrop-filter: blur(14px);
 }
 
 .proxy-brand p {
@@ -54,24 +69,24 @@ body.proxy-mode {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   font-size: 0.78rem;
-  color: var(--proxy-sidebar-muted);
+  color: var(--proxy-muted);
 }
 
 .proxy-brand h1 {
   margin: 6px 0 0;
   color: #fff;
-  font-size: 2.2rem;
+  font-size: 2rem;
 }
 
 .proxy-device-picker {
-  margin-top: 24px;
+  margin-top: 20px;
   display: grid;
   gap: 10px;
 }
 
 .proxy-device-picker label,
 .proxy-meta-row span {
-  color: var(--proxy-sidebar-muted);
+  color: var(--proxy-muted);
   font-size: 0.9rem;
 }
 
@@ -91,31 +106,12 @@ body.proxy-mode {
 .proxy-device-picker button {
   border: none;
   color: #fff;
-  background: var(--proxy-sidebar-accent);
+  background: var(--proxy-accent);
   cursor: pointer;
 }
 
-.proxy-links {
-  margin-top: 24px;
-  display: grid;
-  gap: 8px;
-}
-
-.proxy-links a {
-  display: block;
-  padding: 11px 14px;
-  border-radius: 12px;
-  color: #fff;
-  text-decoration: none;
-}
-
-.proxy-links a:hover,
-.proxy-links a.active {
-  background: rgba(255, 255, 255, 0.12);
-}
-
 .proxy-meta {
-  margin-top: 24px;
+  margin-top: 22px;
   padding-top: 18px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -147,89 +143,20 @@ body.proxy-mode {
   font-weight: 600;
 }
 
-.proxy-content {
-  margin-left: var(--proxy-sidebar-width);
-  min-height: 100vh;
-}
-
-body.proxy-collapsed .proxy-sidebar {
-  width: var(--proxy-sidebar-collapsed);
-}
-
-body.proxy-collapsed .proxy-brand p,
-body.proxy-collapsed .proxy-brand h1,
-body.proxy-collapsed .proxy-device-picker,
-body.proxy-collapsed .proxy-meta,
-body.proxy-collapsed .proxy-links a {
-  opacity: 0;
-  pointer-events: none;
-}
-
-body.proxy-collapsed .proxy-content {
-  margin-left: var(--proxy-sidebar-collapsed);
-}
-
-body.proxy-mode nav {
-  left: var(--proxy-sidebar-width);
-  width: calc(100% - var(--proxy-sidebar-width));
-}
-
-body.proxy-collapsed nav {
-  left: var(--proxy-sidebar-collapsed);
-  width: calc(100% - var(--proxy-sidebar-collapsed));
-}
-
-body.proxy-mode section {
-  width: min(1160px, calc(100vw - var(--proxy-sidebar-width) - 36px));
-}
-
-body.proxy-collapsed section {
-  width: min(1160px, calc(100vw - var(--proxy-sidebar-collapsed) - 36px));
-}
-
-body.proxy-mode #mainPage {
-  padding-bottom: 32px;
-}
-
-body.proxy-mode #messages {
-  margin-left: 12px;
-  margin-right: 12px;
-  border-radius: 12px;
-}
-
-body.proxy-mode #DashTab .card {
-  max-width: 220px;
-  min-width: 220px;
-}
-
-body.proxy-mode #DaysTab,
-body.proxy-mode #InsightsTab,
-body.proxy-mode #DashTab {
-  padding-top: 72px;
-}
-
 @media screen and (max-width: 980px) {
-  .proxy-sidebar {
-    transform: translateX(calc(-1 * var(--proxy-sidebar-width)));
+  .proxy-drawer {
+    top: 62px;
+    width: min(320px, calc(100vw - 18px));
+    transform: translateX(100%);
   }
 
-  .proxy-content,
-  body.proxy-collapsed .proxy-content {
-    margin-left: 0;
+  .proxy-drawer-card {
+    border-radius: 20px 0 0 20px;
   }
 
-  body.proxy-mode nav,
-  body.proxy-collapsed nav {
-    left: 0;
-    width: 100%;
-  }
-
-  body.proxy-mode section,
-  body.proxy-collapsed section {
-    width: min(1160px, calc(100vw - 24px));
-  }
-
-  body.proxy-sidebar-open .proxy-sidebar {
-    transform: translateX(0);
+  .proxy-drawer-handle {
+    left: -45px;
+    width: 45px;
+    min-height: 150px;
   }
 }

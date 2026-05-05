@@ -7,14 +7,16 @@
 const DEBUG = false;
 
 const UPDATE_HIST = DEBUG ? 1000 * 10 : 1000 * 300;
-const UPDATE_ACTUAL = DEBUG ? 1000 * 5 : 1000 * 5;
+const UPDATE_ACTUAL = DEBUG ? 1000 * 5 : 1000 * 15;
 const UPDATE_SOLAR = DEBUG ? 1000 * 30 : 1000 * 60;
 const UPDATE_ACCU = DEBUG ? 1000 * 30 : 1000 * 60;
-const UPDATE_PLAN = DEBUG ? 1000 * 10 : 1000 * 60;
 
 if (!DEBUG) {
   console.log = function () {};
 }
+
+const APIHOST = window.location.protocol + "//" + window.location.host;
+const APIGW = APIHOST + "/api/";
 
 const PROXY_DEFAULT_SETTINGS = {
   hostname: { value: "proxy-device", type: "s", min: 0, max: 31 },
@@ -64,7 +66,7 @@ const PROXY_EMPTY_INSIGHTS = {
 };
 
 let ota_url = "ota.smart-stuff.nl/v5/";
-let objDAL = null;
+window.objDAL = window.objDAL || null;
 
 class dsmr_dal_main {
   constructor() {
@@ -91,13 +93,37 @@ class dsmr_dal_main {
     this.timerREFRESH_ACTUAL = 0;
     this.timerREFRESH_SOLAR = 0;
     this.timerREFRESH_ACCU = 0;
-    this.timerREFRESH_EIDPLAN = 0;
-    this.summaryPromise = null;
-    this.lastSummary = null;
+    this.liveSocket = null;
+    this.lastPayload = {
+      devinfo: this.devinfo,
+      time: this.time,
+      fields: this.fields,
+      actual: this.actual,
+      days: this.days,
+      insights: this.insights
+    };
   }
 
   setCallback(fnCB) {
     this.callback = fnCB;
+  }
+
+  endpoint(path) {
+    if (!window.PROXY_CONTEXT?.deviceId) return null;
+    const url = new URL(path, window.location.href);
+    url.searchParams.set("device_id", window.PROXY_CONTEXT.deviceId);
+    if (window.PROXY_CONTEXT?.viewerSessionId) {
+      url.searchParams.set("viewer_session", window.PROXY_CONTEXT.viewerSessionId);
+    }
+    return url.toString();
+  }
+
+  async fetchJson(path, fallback) {
+    const endpoint = this.endpoint(path);
+    if (!endpoint) return fallback;
+    const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
   }
 
   init() {
@@ -107,238 +133,55 @@ class dsmr_dal_main {
     this.refreshSolar();
     this.refreshAccu();
     this.refreshActual();
+    this.refreshInsights();
+    this.connectLiveSocket();
   }
 
-  async fetchSummary() {
-    if (!window.PROXY_CONTEXT?.deviceId) return this.demoSummary();
-    const response = await fetch(`/api/proxy/devices/${encodeURIComponent(window.PROXY_CONTEXT.deviceId)}/summary`, {
-      headers: { Accept: "application/json" }
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  }
-
-  demoSummary() {
-    const deviceId = window.PROXY_CONTEXT?.deviceId || "P1-001122334455";
-    return Promise.resolve({
-      device_id: deviceId,
-      hostname: "p1-dongle",
-      mac: "00:11:22:33:44:55",
-      fw_version: "5.5.0",
-      hardware: "P1P",
-      timestamp: "260418174500S",
-      online: true,
-      ip: "192.168.1.42",
-      live: {
-        power_delivered_kw: 2.34,
-        power_returned_kw: 0.41,
-        voltage_l1: 230.4,
-        voltage_l2: 229.8,
-        voltage_l3: 231.1,
-        current_l1: 5.9,
-        current_l2: 3.2,
-        current_l3: 2.1,
-        gas_m3: 1243.210,
-        water_m3: 81.440,
-        quarter_peak_kw: 3.8,
-        highest_peak_kw: 4.5
-      },
-      daily: {
-        import_kwh: 9.42,
-        export_kwh: 1.87,
-        gas_m3: 0.63,
-        water_m3: 0.18
-      },
-      daily_history: [
-        { date: "2026-04-16", import_kwh: 8.66, export_kwh: 2.11, gas_m3: 0.59, water_m3: 0.19 },
-        { date: "2026-04-17", import_kwh: 10.08, export_kwh: 1.53, gas_m3: 0.71, water_m3: 0.16 },
-        { date: "2026-04-18", import_kwh: 9.42, export_kwh: 1.87, gas_m3: 0.63, water_m3: 0.18 }
-      ],
-      insights: structuredClone(PROXY_EMPTY_INSIGHTS)
-    });
-  }
-
-  async syncSummary(force = false) {
-    if (this.summaryPromise && !force) return this.summaryPromise;
-
-    this.summaryPromise = this.fetchSummary()
-      .catch(() => this.demoSummary())
-      .then((summary) => {
-        this.lastSummary = summary;
-        this.applySummary(summary);
-        this.summaryPromise = null;
-        return summary;
-      });
-
-    return this.summaryPromise;
-  }
-
-  applySummary(summary) {
-    this.fields = this.summaryToFields(summary);
-    this.actual = structuredClone(this.fields);
-    this.time = this.summaryToTime(summary);
-    this.devinfo = this.summaryToDevInfo(summary);
-    this.dev_settings = this.summaryToDeviceSettings(summary);
-    this.insights = summary.insights || structuredClone(PROXY_EMPTY_INSIGHTS);
-    this.days = this.summaryToDays(summary);
-    this.hours = structuredClone(PROXY_EMPTY_RING);
-    this.months = structuredClone(PROXY_EMPTY_RING);
-    this.#addActualHistory(this.actual);
-
+  async refreshDeviceInformation() {
+    try {
+      this.devinfo = await this.fetchJson("./api/v2/dev/info", {});
+    } catch {
+      this.devinfo = {};
+    }
     this.callback?.("devinfo", this.devinfo);
-    this.callback?.("dev_settings", this.dev_settings);
-    this.callback?.("time", this.time);
-    this.callback?.("fields", this.fields);
-    this.callback?.("actual", this.actual);
-    this.callback?.("days", this.days);
-    this.callback?.("insights", this.insights);
-    this.callback?.("solar", this.solar);
-    this.callback?.("accu", this.accu);
-
-    if (window.proxyShellUpdateMeta) window.proxyShellUpdateMeta(summary);
+    if (window.proxyShellUpdateMeta) {
+      window.proxyShellUpdateMeta({
+        device_id: window.PROXY_CONTEXT?.deviceId || "-",
+        hostname: this.devinfo.hostname || "-",
+        fw_version: this.devinfo.fwversion || "-",
+        hardware: this.devinfo.hardware || "-",
+        online: this.devinfo.network !== "Offline",
+        timestamp: this.time?.timestamp || "-"
+      });
+    }
   }
 
-  summaryToTime(summary) {
-    const raw = this.normalizeRawTimestamp(summary.timestamp);
-    return {
-      timestamp: raw,
-      time: this.formatTimestamp(raw),
-      epoch: summary.epoch || Math.floor(Date.now() / 1000)
-    };
+  async refreshManifest() {}
+
+  async refreshTime() {
+    clearInterval(this.timerREFRESH_TIME);
+    await this.loadActualBundle();
+    this.timerREFRESH_TIME = setInterval(this.refreshTime.bind(this), UPDATE_ACTUAL);
   }
 
-  summaryToDevInfo(summary) {
-    return {
-      fwversion: summary.fw_version || "-",
-      hostname: summary.hostname || "-",
-      ipaddress: summary.ip || "-",
-      macaddress: summary.mac || "-",
-      hardware: summary.hardware || "-",
-      network: summary.online ? "Proxy" : "Offline",
-      compileoptions: "[PROXY]",
-      freeheap: { value: 0, unit: "bytes" }
-    };
-  }
-
-  summaryToDeviceSettings(summary) {
-    const settings = structuredClone(PROXY_DEFAULT_SETTINGS);
-    settings.hostname.value = summary.hostname || settings.hostname.value;
-    return settings;
-  }
-
-  summaryToFields(summary) {
-    const history = this.summaryToDays(summary);
-    const actSlot = history.actSlot;
-    const currentValues = history.data[actSlot]?.values || [0, 0, 0, 0, 0, 0, 0];
-    const live = summary.live || {};
-    const rawTimestamp = this.normalizeRawTimestamp(summary.timestamp);
-
-    return {
-      timestamp: { value: rawTimestamp },
-      electricity_tariff: { value: 1 },
-      energy_delivered_tariff1: { value: currentValues[0], unit: "kWh" },
-      energy_delivered_tariff2: { value: currentValues[1], unit: "kWh" },
-      energy_returned_tariff1: { value: currentValues[2], unit: "kWh" },
-      energy_returned_tariff2: { value: currentValues[3], unit: "kWh" },
-      power_delivered: { value: live.power_delivered_kw || 0, unit: "kW" },
-      power_returned: { value: live.power_returned_kw || 0, unit: "kW" },
-      voltage_l1: { value: live.voltage_l1 ?? "-", unit: "V" },
-      voltage_l2: { value: live.voltage_l2 ?? "-", unit: "V" },
-      voltage_l3: { value: live.voltage_l3 ?? "-", unit: "V" },
-      current_l1: { value: live.current_l1 ?? "-", unit: "A" },
-      current_l2: { value: live.current_l2 ?? "-", unit: "A" },
-      current_l3: { value: live.current_l3 ?? "-", unit: "A" },
-      peak_pwr_last_q: { value: live.quarter_peak_kw || 0, unit: "kW" },
-      highest_peak_pwr: { value: live.highest_peak_kw || 0, unit: "kW" },
-      gas_delivered: { value: live.gas_m3 ?? 0, unit: "m3" },
-      gas_delivered_timestamp: { value: rawTimestamp },
-      water: { value: live.water_m3 ?? 0, unit: "m3" }
-    };
-  }
-
-  summaryToDays(summary) {
-    const rows = Array.isArray(summary.daily_history) && summary.daily_history.length
-      ? [...summary.daily_history]
-      : [{
-          date: this.isoDateFromRaw(summary.timestamp),
-          import_kwh: summary.daily?.import_kwh || 0,
-          export_kwh: summary.daily?.export_kwh || 0,
-          gas_m3: summary.daily?.gas_m3 || 0,
-          water_m3: summary.daily?.water_m3 || 0
-        }];
-
-    rows.sort((a, b) => String(a.date).localeCompare(String(b.date)));
-
-    let importCum = 0;
-    let exportCum = 0;
-    let gasCum = 0;
-    let waterCum = 0;
-
-    const data = rows.map((row) => {
-      importCum += Number(row.import_kwh || 0);
-      exportCum += Number(row.export_kwh || 0);
-      gasCum += Number(row.gas_m3 || 0);
-      waterCum += Number(row.water_m3 || 0);
-
-      return {
-        date: this.isoToCompact(row.date),
-        values: [
-          Number(importCum.toFixed(3)),
-          0,
-          Number(exportCum.toFixed(3)),
-          0,
-          Number(gasCum.toFixed(3)),
-          Number(waterCum.toFixed(3)),
-          Number(row.solar_kwh || 0)
-        ]
-      };
-    });
-
-    return {
-      actSlot: Math.max(0, data.length - 1),
-      data: data.length ? data : structuredClone(PROXY_EMPTY_RING.data)
-    };
-  }
-
-  isoDateFromRaw(raw) {
-    if (typeof raw !== "string") return "2026-01-01";
-    if (raw.includes("-")) return raw.slice(0, 10);
-    if (raw.length < 6) return "2026-01-01";
-    return `20${raw.slice(0, 2)}-${raw.slice(2, 4)}-${raw.slice(4, 6)}`;
-  }
-
-  isoToCompact(value) {
-    if (typeof value !== "string") return "26010100";
-    const parts = value.split("-");
-    if (parts.length !== 3) return "26010100";
-    return `${parts[0].slice(2)}${parts[1]}${parts[2]}00`;
-  }
-
-  formatTimestamp(raw) {
-    if (typeof raw !== "string" || raw.length < 12) return "-";
-    return `20${raw.slice(0, 2)}-${raw.slice(2, 4)}-${raw.slice(4, 6)} ${raw.slice(6, 8)}:${raw.slice(8, 10)}:${raw.slice(10, 12)}`;
-  }
-
-  normalizeRawTimestamp(raw) {
-    if (typeof raw !== "string" || raw.length === 0) return "260101000000W";
-    if (!raw.includes("-")) return raw;
-
-    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
-    if (!match) return "260101000000W";
-
-    const [, year, month, day, hour, minute, second = "00"] = match;
-    return `${year.slice(2)}${month}${day}${hour}${minute}${second}W`;
-  }
-
-  refreshEIDPlanner() {
-    this.eid_planner = { h_start: 99, data: [] };
-    this.callback?.("eid_planner", this.eid_planner);
-  }
-
-  refreshHist() {
+  async refreshHist() {
     clearInterval(this.timerREFRESH_HIST);
-    this.syncSummary(true);
+    try {
+      this.days = await this.fetchJson("./api/v2/hist/days", structuredClone(PROXY_EMPTY_RING));
+    } catch {
+      this.days = structuredClone(PROXY_EMPTY_RING);
+    }
+    this.callback?.("days", this.days);
     this.timerREFRESH_HIST = setInterval(this.refreshHist.bind(this), UPDATE_HIST);
+  }
+
+  async refreshInsights() {
+    try {
+      this.insights = await this.fetchJson("./api/v2/insights", structuredClone(PROXY_EMPTY_INSIGHTS));
+    } catch {
+      this.insights = structuredClone(PROXY_EMPTY_INSIGHTS);
+    }
+    this.callback?.("insights", this.insights);
   }
 
   refreshNetSwitch() {
@@ -351,43 +194,184 @@ class dsmr_dal_main {
     this.callback?.("eid_claim", this.eid_claim);
   }
 
-  refreshInsights() {
-    this.syncSummary(false);
+  refreshEIDPlanner() {
+    this.eid_planner = { h_start: 99, data: [] };
+    this.callback?.("eid_planner", this.eid_planner);
   }
 
   refreshSolar() {
+    clearInterval(this.timerREFRESH_SOLAR);
     this.solar = { active: false };
     this.callback?.("solar", this.solar);
+    this.timerREFRESH_SOLAR = setInterval(this.refreshSolar.bind(this), UPDATE_SOLAR);
   }
 
   refreshAccu() {
+    clearInterval(this.timerREFRESH_ACCU);
     this.accu = { active: false };
     this.callback?.("accu", this.accu);
+    this.timerREFRESH_ACCU = setInterval(this.refreshAccu.bind(this), UPDATE_ACCU);
   }
 
-  refreshDeviceInformation() {
-    this.syncSummary(true);
+  async refreshActual() {
+    await this.loadActualBundle();
   }
 
-  refreshManifest() {}
+  async refreshFields() {
+    await this.loadActualBundle();
+  }
+
+  async loadActualBundle() {
+    try {
+      const [time, fields, settings] = await Promise.all([
+        this.fetchJson("./api/v2/dev/time", {}),
+        this.fetchJson("./api/v2/sm/actual", null),
+        this.fetchJson("./api/v2/dev/settings", structuredClone(PROXY_DEFAULT_SETTINGS))
+      ]);
+
+      this.time = time || {};
+      this.fields = fields || this.emptyFields();
+      this.actual = structuredClone(this.fields);
+      this.dev_settings = settings || structuredClone(PROXY_DEFAULT_SETTINGS);
+      this.#addActualHistory(this.actual);
+
+      this.callback?.("time", this.time);
+      this.callback?.("fields", this.fields);
+      this.callback?.("actual", this.actual);
+      this.callback?.("dev_settings", this.dev_settings);
+    } catch {
+      if (!this.fields) {
+        this.fields = this.emptyFields();
+        this.actual = structuredClone(this.fields);
+        this.callback?.("fields", this.fields);
+        this.callback?.("actual", this.actual);
+      }
+    }
+  }
+
+  emptyFields() {
+    return {
+      timestamp: { value: "260101000000W" },
+      electricity_tariff: { value: 1 },
+      energy_delivered_tariff1: { value: 0, unit: "kWh" },
+      energy_delivered_tariff2: { value: 0, unit: "kWh" },
+      energy_returned_tariff1: { value: 0, unit: "kWh" },
+      energy_returned_tariff2: { value: 0, unit: "kWh" },
+      power_delivered: { value: 0, unit: "kW" },
+      power_returned: { value: 0, unit: "kW" },
+      voltage_l1: { value: "-", unit: "V" },
+      voltage_l2: { value: "-", unit: "V" },
+      voltage_l3: { value: "-", unit: "V" },
+      current_l1: { value: "-", unit: "A" },
+      current_l2: { value: "-", unit: "A" },
+      current_l3: { value: "-", unit: "A" },
+      peak_pwr_last_q: { value: 0, unit: "kW" },
+      highest_peak_pwr: { value: 0, unit: "kW" },
+      gas_delivered: { value: 0, unit: "m3" },
+      gas_delivered_timestamp: { value: "260101000000W" },
+      water: { value: 0, unit: "m3" }
+    };
+  }
+
+  connectLiveSocket() {
+    if (!window.PROXY_CONTEXT?.deviceId) return;
+    if (this.liveSocket) this.liveSocket.close();
+
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const liveUrl = `${protocol}//${window.location.host}/ws/live?device_id=${encodeURIComponent(window.PROXY_CONTEXT.deviceId)}`;
+    this.liveSocket = new WebSocket(liveUrl);
+
+    this.liveSocket.addEventListener("open", () => {
+      this.liveSocket.send(JSON.stringify({
+        type_id: 8,
+        device_id: window.PROXY_CONTEXT.deviceId
+      }));
+    });
+
+    this.liveSocket.addEventListener("message", (event) => {
+      let message;
+      try {
+        message = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+
+      if (message.type_id === 11) {
+        this.applyLiveUpdate(message);
+        return;
+      }
+
+      if (message.type_id === 10 && window.proxyShellUpdateMeta) {
+        window.proxyShellUpdateMeta({
+          device_id: message.device_id,
+          hostname: this.devinfo.hostname || "-",
+          fw_version: this.devinfo.fwversion || "-",
+          hardware: this.devinfo.hardware || "-",
+          online: !!message.online,
+          timestamp: this.time?.timestamp || "-"
+        });
+      }
+    });
+
+    this.liveSocket.addEventListener("close", () => {
+      window.setTimeout(() => this.connectLiveSocket(), 3000);
+    });
+  }
+
+  applyLiveUpdate(update) {
+    if (!this.fields) this.fields = this.emptyFields();
+
+    this.fields.timestamp = { value: update.timestamp || this.fields.timestamp?.value || "260101000000W" };
+    this.fields.energy_delivered_tariff1 = { value: Number(update.energy_delivered_tariff1 || 0), unit: "kWh" };
+    this.fields.energy_delivered_tariff2 = { value: Number(update.energy_delivered_tariff2 || 0), unit: "kWh" };
+    this.fields.energy_returned_tariff1 = { value: Number(update.energy_returned_tariff1 || 0), unit: "kWh" };
+    this.fields.energy_returned_tariff2 = { value: Number(update.energy_returned_tariff2 || 0), unit: "kWh" };
+    this.fields.power_delivered = { value: Number(update.power_delivered || 0), unit: "kW" };
+    this.fields.power_returned = { value: Number(update.power_returned || 0), unit: "kW" };
+    this.fields.voltage_l1 = { value: update.voltage_l1 ?? "-", unit: "V" };
+    this.fields.voltage_l2 = { value: update.voltage_l2 ?? "-", unit: "V" };
+    this.fields.voltage_l3 = { value: update.voltage_l3 ?? "-", unit: "V" };
+    this.fields.current_l1 = { value: update.current_l1 ?? "-", unit: "A" };
+    this.fields.current_l2 = { value: update.current_l2 ?? "-", unit: "A" };
+    this.fields.current_l3 = { value: update.current_l3 ?? "-", unit: "A" };
+    this.fields.peak_pwr_last_q = { value: Number(update.peak_pwr_last_q || 0), unit: "kW" };
+    this.fields.highest_peak_pwr = { value: Number(update.highest_peak_pwr || 0), unit: "kW" };
+    this.fields.gas_delivered = { value: Number(update.gas_delivered || 0), unit: "m3" };
+    this.fields.gas_delivered_timestamp = { value: update.gas_delivered_timestamp || this.fields.timestamp.value };
+    this.fields.water = { value: Number(update.water || 0), unit: "m3" };
+
+    this.actual = structuredClone(this.fields);
+    this.time = {
+      timestamp: this.fields.timestamp.value,
+      time: this.formatTimestamp(this.fields.timestamp.value),
+      epoch: Math.floor(Date.now() / 1000)
+    };
+
+    this.#addActualHistory(this.actual);
+    this.callback?.("time", this.time);
+    this.callback?.("fields", this.fields);
+    this.callback?.("actual", this.actual);
+
+    if (window.proxyShellUpdateMeta) {
+      window.proxyShellUpdateMeta({
+        device_id: window.PROXY_CONTEXT.deviceId,
+        hostname: this.devinfo.hostname || "-",
+        fw_version: this.devinfo.fwversion || "-",
+        hardware: this.devinfo.hardware || "-",
+        online: true,
+        timestamp: this.fields.timestamp.value
+      });
+    }
+  }
+
+  formatTimestamp(raw) {
+    if (typeof raw !== "string" || raw.length < 12) return "-";
+    return `20${raw.slice(0, 2)}-${raw.slice(2, 4)}-${raw.slice(4, 6)} ${raw.slice(6, 8)}:${raw.slice(8, 10)}:${raw.slice(10, 12)}`;
+  }
 
   refreshTelegram() {
     this.telegram = "Proxy mode: raw telegram is not exposed in MVP.";
     this.callback?.("telegram", this.telegram);
-  }
-
-  refreshFields() {
-    this.syncSummary(false);
-  }
-
-  refreshTime() {
-    clearInterval(this.timerREFRESH_TIME);
-    this.syncSummary(false);
-    this.timerREFRESH_TIME = setInterval(this.refreshTime.bind(this), UPDATE_ACTUAL);
-  }
-
-  refreshActual() {
-    this.syncSummary(false);
   }
 
   #addActualHistory(json) {
@@ -441,7 +425,7 @@ function updateFromDAL(source, json) {
 }
 
 function initDAL(callbackFn) {
-  objDAL = new dsmr_dal_main();
-  objDAL.setCallback(callbackFn);
-  objDAL.init();
+  window.objDAL = new dsmr_dal_main();
+  window.objDAL.setCallback(callbackFn);
+  window.objDAL.init();
 }

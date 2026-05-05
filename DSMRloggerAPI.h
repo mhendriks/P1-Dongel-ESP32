@@ -42,6 +42,9 @@ struct {
 #include <WiFi.h>  
 // #include "Insights.h"
 #include <WiFiClientSecure.h>        
+#if REMOTE_PROXY
+  #include <WebSocketsClient.h>
+#endif
 #include <WebServer.h>
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
@@ -506,6 +509,7 @@ bool      allowSkipNetworkByButton = false;
 bool      try_calc_i = true;
 
 #if REMOTE_PROXY
+enum tProxyRemoteMode : uint8_t { PROXY_IDLE = 0, PROXY_LIVE = 1 };
 bool      bProxyEnabled = false;
 bool      bProxyUseTLS = true;
 char      settingProxyHost[80] = PROXY_REMOTE_DEFAULT_HOST;
@@ -522,6 +526,10 @@ uint32_t  proxySentCount = 0;
 uint32_t  proxyErrorCount = 0;
 uint16_t  proxyLastHttpCode = 0;
 bool      proxyConnected = false;
+bool      proxyAuthenticated = false;
+uint32_t  proxyHeartbeatInterval = PROXY_REMOTE_DEFAULT_INTERVAL;
+uint32_t  proxyLiveIntervalMs = PROXY_REMOTE_DEFAULT_LIVE_MS;
+tProxyRemoteMode proxyMode = PROXY_IDLE;
 #endif
 
 //MQTT

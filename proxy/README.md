@@ -1,79 +1,100 @@
-# Proxy frontend
+# Proxy frontend + server
 
-Deze map gebruikt nu Variant A:
+Deze map volgt nu het compatibiliteitsmodel:
 
-- gedeelde frontend-assets uit `dsmr-api/v5`
-- een proxy-specifieke `dal-proxy.js`
-- een kleine `proxy-shell.js` voor devicekeuze, linkerzijbalk en feature gating
+- dezelfde DSMR-frontendassets als de dongle
+- een kleine proxy-shell voor devicekeuze en feature gating
+- een proxy-DAL die alleen transport doet
+- een Python-proxyserver die de dongle-WS en browser-API/WS koppelt
+- de gedeelde frontendbestanden komen dynamisch van jsDelivr op basis van de firmwareversie van het gekozen device
 
-De proxy laadt dezelfde:
+## Structuur
 
-- `DSMRindex.css`
-- `DSMRindex_body.html`
-- `DSMRgraphics.js`
-- `DSMRindex.js`
-- `burnup.js`
+- `index.html`
+  is een lichte bootstrap-pagina
+- `proxy-shell.js`
+  regelt linkerzijbalk, devicekeuze, feature gating en de CDN-keuze
+- `dal-proxy.js`
+  haalt HTTP-data op en opent een live-WS naar de proxy
+- `server/app.py`
+  biedt de MVP proxyservice
 
-Alleen de DAL is anders.
+De proxy-shell kiest de gedeelde assetbasis zo:
 
-Verwacht proxy-endpoint:
+- `fw_version = 5.5.0` -> `https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@5.5/cdn/`
+- onbekend of leeg -> `https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/cdn/`
 
-- `GET /api/proxy/devices/:device_id/summary`
+Daardoor hoeft de server geen lokale `shared/v5` of `cdn` map meer te hebben.
 
-Minimale response:
+## Server starten
+
+```bash
+cd proxy/server
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+python app.py
+```
+
+Standaard draait de server op `http://localhost:8787`.
+
+## Frontend assetkeuze
+
+Bij openen van een device vraagt de proxy eerst device-meta op. Daarna wordt de frontend van jsDelivr geladen op basis van de firmwareversie van dat device. Zo blijft de externe UI zo dicht mogelijk bij de lokale dongleversie.
+
+## MVP-routes
+
+HTTP:
+
+- `GET /api/devices`
+- `GET /api/v2/dev/info?device_id=...`
+- `GET /api/v2/dev/time?device_id=...`
+- `GET /api/v2/sm/actual?device_id=...`
+- `GET /api/v2/hist/days?device_id=...`
+- `GET /api/v2/insights?device_id=...`
+- `POST /api/device/register`
+
+WebSocket:
+
+- `WS /ws/device-ingest`
+- `WS /ws/live`
+
+## Dongle ingest-berichten
+
+Eerste bericht:
 
 ```json
 {
-  "device_id": "P1-001122334455",
+  "type": "auth",
+  "device_id": "P1-AB12CD34",
+  "token": "devtok_...",
+  "secret": "P1PRO-4A1B",
   "hostname": "p1-dongle",
-  "mac": "00:11:22:33:44:55",
-  "fw_version": "5.5.0",
-  "hardware": "P1P",
-  "timestamp": "2026-04-18 15:45:12",
-  "online": true,
-  "ip": "192.168.1.42",
-  "live": {
-    "power_delivered_kw": 2.34,
-    "power_returned_kw": 0.41,
-    "voltage_l1": 230.4,
-    "voltage_l2": 229.8,
-    "voltage_l3": 231.1,
-    "current_l1": 5.9,
-    "current_l2": 3.2,
-    "current_l3": 2.1,
-    "gas_m3": 1243.21,
-    "water_m3": 81.44,
-    "quarter_peak_kw": 3.8,
-    "highest_peak_kw": 4.5
-  },
-  "daily": {
-    "import_kwh": 9.42,
-    "export_kwh": 1.87,
-    "gas_m3": 0.63,
-    "water_m3": 0.18
-  },
-  "daily_history": [
-    {
-      "date": "2026-04-18",
-      "import_kwh": 9.42,
-      "export_kwh": 1.87,
-      "gas_m3": 0.63,
-      "water_m3": 0.18
-    }
-  ],
-  "insights": {
-    "I1piek": 0,
-    "I2piek": 0,
-    "I3piek": 0
-  }
+  "fw_version": "5.8.1",
+  "hw_version": "P1P",
+  "mac_address": "AA:BB:CC:DD:EE:FF"
 }
 ```
 
-`dal-proxy.js` zet deze response om naar dezelfde frontend-shapes die de donglefrontend verwacht voor:
+Daarna:
 
-- `fields`
-- `dev/info`
-- `dev/settings`
-- `time`
-- `hist/days`
-- `stats`
+- `heartbeat`
+- `live`
+- `daily`
+
+## Browser live-WS
+
+Browser subscribe:
+
+```json
+{
+  "type": "subscribe",
+  "device_id": "P1-AB12CD34"
+}
+```
+
+Proxy events:
+
+- `sub_ack`
+- `device_status`
+- `live_update`
