@@ -320,7 +320,8 @@ static float readMbSourceValue(MbSource source) {
       return value / 3.0f;
     }
     case MbSource::water_delivered_m3:
-      return WtrMtr ? (float)(P1Status.wtr_m3 + (P1Status.wtr_l / 1000.0f)) : NAN;
+      return mbusWater ? (float)waterDelivered
+                       : (WtrMtr ? (float)(P1Status.wtr_m3 + (P1Status.wtr_l / 1000.0f)) : NAN);
     case MbSource::unavailable_float:
       return NAN;
     case MbSource::constant:
@@ -433,7 +434,8 @@ static float readScaledMbSourceValue(MbSource source, int16_t scale) {
     case MbSource::gas_delivered_m3:
       return mbusGas ? sign * (float)lroundf((float)gasDelivered * 1000.0f) : NAN;
     case MbSource::water_delivered_m3:
-      return WtrMtr ? sign * (float)(P1Status.wtr_m3 * 1000 + P1Status.wtr_l) : NAN;
+      return mbusWater ? sign * (float)lroundf(waterDelivered * 1000.0f)
+                       : (WtrMtr ? sign * (float)(P1Status.wtr_m3 * 1000 + P1Status.wtr_l) : NAN);
     default: {
       float value = readMbSourceValue(source);
       return isnan(value) ? NAN : value * scale;

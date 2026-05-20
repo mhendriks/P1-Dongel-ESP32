@@ -72,7 +72,9 @@
 #endif
 
 #ifndef OTAURL_PREFIX
-  #ifdef POST_POWERCH
+  #if DIRECT_AP_CONNECT
+    #define OTAURL_PREFIX     DIRECT_AP_OTAURL_PREFIX
+  #elif defined(POST_POWERCH)
     #define OTAURL_PREFIX     "pc/"
   #else
     #define OTAURL_PREFIX     ""

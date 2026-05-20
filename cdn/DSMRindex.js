@@ -175,6 +175,13 @@ let cfgDefaultGAUGE = {
       fontFamily: "Dosis",
     },
     responsive: true,
+    responsiveAnimationDuration: 0,
+    animation: {
+      duration: 0,
+    },
+    hover: {
+      animationDuration: 0,
+    },
     circumference: Math.PI,
     rotation: -Math.PI,
     plugins: {
@@ -239,6 +246,13 @@ let cfgGaugeSolar = {
       fontFamily: "Dosis",
     },
     responsive: true,
+    responsiveAnimationDuration: 0,
+    animation: {
+      duration: 0,
+    },
+    hover: {
+      animationDuration: 0,
+    },
     circumference: Math.PI,
     rotation: -Math.PI,
     plugins: {
@@ -573,7 +587,10 @@ function applyAllDashboardWidgetStates() {
 }
 
 function resetDashboardWidgetAvailability() {
-	DASHBOARD_WIDGET_IDS.forEach(id => setDashboardWidgetAvailable(id, false));
+	DASHBOARD_WIDGET_IDS.forEach(id => {
+		const widget = document.getElementById(id);
+		if (widget) widget.dataset.available = "false";
+	});
 }
 
 function toggleDashboardEditMode() {
@@ -748,9 +765,9 @@ function UpdateSolar(){
 		console.log("json.total.actual: "+ json.total.actual);
 		console.log("json.Wp: "+ json.Wp);
 		trend_solar.data.datasets[0].data=[json.total.actual,json.Wp-json.total.actual];	
+		trend_solar.options.title.text = Number(json.total.actual).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" W";
 		trend_solar.update();
 		document.getElementById('dash_solar_p').innerHTML = formatValue(json.total.daily/1000.0);
-		trend_solar.options.title.text = Number(json.total.actual).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" W";
 		refreshSolarSelfUse();
 		setDashboardWidgetAvailable("dash_solar", true);
 	} else {
@@ -1041,7 +1058,11 @@ function refreshDashboard(json){
 		if (nvKW> maxKW){ maxKW = nvKW; }
 				
     // stop here if there is no history enabled
-		if (!EnableHist) {Spinner(false);return;}
+		if (!EnableHist) {
+		  Spinner(false);
+		  applyAllDashboardWidgetStates();
+		  return;
+		}
 
 		if (!DailyHistoryReady) {
 		  Pi_today = 0;
@@ -1049,6 +1070,7 @@ function refreshDashboard(json){
 		  resetDashboardDailyValues();
 		  refreshSolarSelfUse();
 		  Spinner(false);
+		  applyAllDashboardWidgetStates();
 		  return;
 		}
 		
@@ -1112,6 +1134,7 @@ function refreshDashboard(json){
 	
 	if ( SolarActive ) UpdateSolar();
 	if ( AccuActive ) UpdateAccu();
+	applyAllDashboardWidgetStates();
 
 }
 

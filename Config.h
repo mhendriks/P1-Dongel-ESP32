@@ -12,6 +12,34 @@
   #define ENABLE_MIMICS 1
 #endif
 
+// Direct AP closed-network mode.
+// Optional local customer settings can be placed in ../../_secrets/direct_ap.h.
+#if __has_include("./../../_secrets/direct_ap.h")
+  #include "./../../_secrets/direct_ap.h"
+#endif
+
+#ifndef DIRECT_AP_CONNECT
+  #define DIRECT_AP_CONNECT 0
+#endif
+#ifndef DIRECT_AP_SSID_PREFIX
+  #define DIRECT_AP_SSID_PREFIX ""
+#endif
+#ifndef DIRECT_AP_TARGET_SERIAL
+  #define DIRECT_AP_TARGET_SERIAL ""
+#endif
+#ifndef DIRECT_AP_CONNECT_TIMEOUT_MS
+  #define DIRECT_AP_CONNECT_TIMEOUT_MS 45000
+#endif
+#ifndef DIRECT_AP_SCAN_INTERVAL_MS
+  #define DIRECT_AP_SCAN_INTERVAL_MS 5000
+#endif
+#ifndef DIRECT_AP_ENABLE_LOCAL_LOGS
+  #define DIRECT_AP_ENABLE_LOCAL_LOGS 0
+#endif
+#ifndef DIRECT_AP_OTAURL_PREFIX
+  #define DIRECT_AP_OTAURL_PREFIX "direct-ap/"
+#endif
+
 //LED STUFF
 #define LED_BLUE  0x07
 #define LED_RED   0x070000

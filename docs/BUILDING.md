@@ -14,6 +14,7 @@ That resolves (relative to this project) to a sibling folder outside the repo. T
 
 1. `../../_secrets/posts.h`
 2. `../../_secrets/energyid.h`
+3. `../../_secrets/direct_ap.h`
 
 The code now compiles without them (safe defaults are provided), but if you want the related features you should create them.
 
@@ -56,7 +57,30 @@ Notes:
 - If you do not use EnergyID, the project can still compile without this file.
 - When EnergyID is enabled in settings, these values must be valid.
 
-## 4) Profile selection
+## 4) Example `direct_ap.h`
+
+Create `../../_secrets/direct_ap.h` for a closed-network firmware that connects directly to a customer AP:
+
+```cpp
+#pragma once
+
+#define DIRECT_AP_CONNECT 1
+#define DIRECT_AP_SSID_PREFIX "Vendor-"
+#define DIRECT_AP_TARGET_SERIAL ""
+
+#define DIRECT_AP_CONNECT_TIMEOUT_MS 45000
+#define DIRECT_AP_SCAN_INTERVAL_MS 5000
+#define DIRECT_AP_ENABLE_LOCAL_LOGS 0
+
+#define DIRECT_AP_OTAURL_PREFIX "direct-ap/"
+```
+
+Notes:
+- `DIRECT_AP_SSID_PREFIX` and `DIRECT_AP_TARGET_SERIAL` are compile-time settings; no filesystem config file is needed.
+- `DIRECT_AP_TARGET_SERIAL` can be left empty to connect to the strongest matching AP.
+- `DIRECT_AP_OTAURL_PREFIX` is used when `DIRECT_AP_CONNECT` is enabled, unless `OTAURL_PREFIX` is explicitly defined elsewhere.
+
+## 5) Profile selection
 
 Do not hardcode hardware profile defines in `P1-Dongel-ESP32.ino` when using `build.sh`.
 
@@ -64,7 +88,7 @@ Use `build.sh` to compile all profiles. It injects profile-specific defines and 
 
 - `ULTRA` -> `ESP32S3`, `FlashSize=8M`, `PartitionScheme=default_8MB`
 
-## 5) Libraries used by this project
+## 6) Libraries used by this project
 
 The codebase uses a mix of libraries from the ESP32 Arduino core and a small set of external libraries that must be installed separately.
 

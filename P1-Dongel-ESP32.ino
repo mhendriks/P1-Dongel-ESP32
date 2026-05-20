@@ -63,15 +63,19 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.6.3
-- 
 
 5.7.0
+- add: dongle connect to Wifi AP directly.  
+- fix: frontend Windows/FF flashing dashboard widgets on update
+- fix: modbus mbus watermeter missing BE
+
+- removed Frontend.json; some settings locale other in the settings
+- move 2 last UI frontend configurable items from frontend.json to settings
+
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - refactoring targets
 - add wallbox mapping
 - api/v2/dash (combined request for dashboard)
-- move 2 last UI frontend configurable items from frontend.json to settings.
 - Virtual P1 feature in settings (Ethernet/Ultra only)
 
 5.8.0
@@ -79,6 +83,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - refactor: asyncwebserver
 - Add remote Proxy
 - update button in HA to trigger the update (mqtt based #70)
+
 
 */
 
@@ -89,14 +94,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //---  PROFILES  ---
 // #define ULTRA            //ultra (mini) dongle
-// #define ETHERNET         //ethernet dongle
-// #define ETH_P1EP         //ethernet pro+ dongle
+#define ETHERNET         //ethernet dongle
+#define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 
 //SPECIAL
 // #define __Az__
-// #define OTAURL_PREFIX "eb/"
+//#define OTAURL_PREFIX "az/"
 
 //FEATURES
 #define MBUS
@@ -112,6 +117,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define HAN_TESTDATA
 // #define HAN_TESTDATA_RAW
 // #define HAN_TESTDATA_DYNAMIC
+// #define DIRECT_AP_CONNECT 1
 
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>
@@ -143,6 +149,10 @@ void setup()
   LogFile("",false); // write reboot status to file
   if (!LittleFS.exists(SETTINGS_FILE)) writeSettingsDirect(); //otherwise the dongle crashes some times on the first boot
   else readSettings(true);
+#if DIRECT_AP_CONNECT
+  EnableHistory = false;
+  FSNotPopulated = false;
+#endif
   WDT_FEED();
 //=============start Networkstuff ==================================
   USBconfigBegin();
@@ -156,6 +166,7 @@ void setup()
   WDT_FEED();
 //================ Check necessary files ============================
   if ( !skipNetwork ) {
+#if !DIRECT_AP_CONNECT
   if (!DSMRfileExist(settingIndexPage, false) ) {
     DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
     GetFile(settingIndexPage, PATH_DATA_FILES); //download file from cdn
@@ -173,6 +184,7 @@ void setup()
     DebugTln(F("Frontend.json not pressent, try to download it!"));
     GetFile("/Frontend.json", PATH_DATA_FILES);
   }
+#endif
   
   setupFSexplorer();
   } //! skipNetwork

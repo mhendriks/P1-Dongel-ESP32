@@ -72,12 +72,19 @@ void serveStaticWithAuth(const char* uri, const char* fileName) {
 //=====================================================================================
 void setupFSexplorer() { 
 
-  if (FSNotPopulated) return;
-  DebugTln(F("FS correct populated -> normal operation!\r"));
-
-  httpServer.serveStatic("/", LittleFS, settingIndexPage);
+#if !DIRECT_AP_CONNECT
+  if (FSNotPopulated) {
+    DebugTln(F("FS not populated -> API operation only\r"));
+  } else {
+    DebugTln(F("FS correct populated -> normal operation!\r"));
+    httpServer.serveStatic("/", LittleFS, settingIndexPage);
+  }
+#else
+  DebugTln(F("DirectAP closed-network mode -> API only\r"));
+#endif
   
  // Serve static files with authentication
+#if !DIRECT_AP_CONNECT
   serveStaticWithAuth("/api/v2/hist/hours", RingFiles[RINGHOURS].filename);
   serveStaticWithAuth("/api/v2/hist/days", RingFiles[RINGDAYS].filename);
   serveStaticWithAuth("/api/v2/hist/months", RingFiles[RINGMONTHS].filename);
@@ -86,6 +93,7 @@ void setupFSexplorer() {
     if (!auth()) return;
     sendApiResponse(historyMonthsApiResponse(httpServer.arg(0)));
   });
+#endif
 
   httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
   httpServer.on("/login", HTTP_GET, []() { auth(); });
@@ -141,10 +149,12 @@ void setupFSexplorer() {
     sendApiResponse(JsonEIDplanner());
   });
 
+#if !DIRECT_AP_CONNECT
   httpServer.on("/api/listfiles", HTTP_GET, [](){
     if (!auth()) return;
     sendApiResponse(listFilesApiResponse());
   });
+#endif
   httpServer.on("/api/v2/gen", HTTP_GET, [](){
     if (!auth()) return;
     sendApiResponse(solarApiResponse());
@@ -153,6 +163,7 @@ void setupFSexplorer() {
     if (!auth()) return;
     sendApiResponse(accuApiResponse());
   });
+#if !DIRECT_AP_CONNECT
   httpServer.on("/FSformat", [](){
     if (!auth()) return;
     formatFS();
@@ -160,6 +171,7 @@ void setupFSexplorer() {
   httpServer.on("/upload", HTTP_POST, []() {
     if (!auth()) return;
   }, handleFileUpload );
+#endif
   httpServer.on("/ReBoot", [](){
     if (!auth()) return;
     reBootESP();
@@ -175,6 +187,11 @@ void setupFSexplorer() {
   httpServer.onNotFound([]() 
   {
     if (!auth()) return;
+
+#if DIRECT_AP_CONNECT
+    httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
+    return;
+#endif
     
     if (Verbose2) DebugTf("in 'onNotFound()'!! [%s] => \r\n", String(httpServer.uri()).c_str());
     DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
@@ -386,6 +403,10 @@ void doRedirect(String msg, int wait, const char* URL, bool reboot, bool resetWi
    {   
        WiFiManager manageWiFi;
        manageWiFi.resetSettings();
+#if DIRECT_AP_CONNECT
+       preferences.remove("direct_ap_ssid");
+       preferences.remove("direct_ap_psk");
+#endif
    }
     LogFile("reboot: doRedirect", false);
     P1Reboot();

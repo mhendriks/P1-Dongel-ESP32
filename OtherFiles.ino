@@ -504,6 +504,9 @@ size_t fileSizeOf(const char* path) {
 //=======================================================================
 void LogFileWriteDirect(const char* payload, bool toDebug) {
   if (toDebug) DebugTln(payload);
+#if DIRECT_AP_CONNECT && !DIRECT_AP_ENABLE_LOCAL_LOGS
+  return;
+#endif
   if (!FSmounted) return;
   size_t size = fileSizeOf("/littlefs/P1.log");
 

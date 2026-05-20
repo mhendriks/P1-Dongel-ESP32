@@ -48,6 +48,7 @@ struct {
 #include "safeTimers.h"
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include <Preferences.h>
 #include <dsmr2.h>               // https://github.com/mhendriks/dsmr2Lib
 #include "esp_chip_info.h"
 #include <esp_now.h>             //https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
@@ -400,6 +401,7 @@ void SetConfig();
 #ifndef MQTT_DISABLE 
   #include <PubSubClient.h>           // MQTT client publish and subscribe functionality
 #endif
+  extern Preferences preferences;
   WiFiClientSecure wifiClientTLS;
   WiFiClient wifiClient;
   PubSubClient MQTTclient(wifiClient);

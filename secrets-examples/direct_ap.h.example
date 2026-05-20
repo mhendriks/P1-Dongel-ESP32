@@ -1,0 +1,15 @@
+#pragma once
+
+// Optional closed-network Direct AP firmware settings.
+// Copy to ../../_secrets/direct_ap.h and adjust for the customer build.
+
+#define DIRECT_AP_CONNECT 1
+#define DIRECT_AP_SSID_PREFIX "Vendor-"
+#define DIRECT_AP_TARGET_SERIAL ""
+
+#define DIRECT_AP_CONNECT_TIMEOUT_MS 45000
+#define DIRECT_AP_SCAN_INTERVAL_MS 5000
+#define DIRECT_AP_ENABLE_LOCAL_LOGS 0
+
+// Optional OTA subdirectory for this firmware line.
+#define DIRECT_AP_OTAURL_PREFIX "direct-ap/"

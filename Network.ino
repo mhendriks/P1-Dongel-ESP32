@@ -142,6 +142,132 @@ static bool readPreferredEthMac(uint8_t *mac){
 
 WiFiManager manageWiFi;
 
+#if DIRECT_AP_CONNECT
+static bool directApIsHex(char c) {
+  return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+static String directApNormalizeSerial(const String& serial) {
+  String out;
+  out.reserve(serial.length());
+  for (size_t i = 0; i < serial.length(); i++) {
+    char c = serial.charAt(i);
+    if (c == ':' || c == '-') continue;
+    if (!directApIsHex(c)) return "";
+    out += (char)toupper(c);
+  }
+  return ((out.length() >= 8) && ((out.length() % 2) == 0)) ? out : "";
+}
+
+static String directApPasswordFromSerial(const String& serial) {
+  String normalized = directApNormalizeSerial(serial);
+  if (normalized.length() < 8) return "";
+
+  String password;
+  password.reserve(8);
+  for (int i = normalized.length() - 2; i >= (int)normalized.length() - 8; i -= 2) {
+    password += normalized.substring(i, i + 2);
+  }
+  return password;
+}
+
+static bool directApSsidAllowed(const String& ssid) {
+  const String ssidPrefix = DIRECT_AP_SSID_PREFIX;
+  if (!ssidPrefix.length()) {
+    DebugTln(F("DirectAP: ssid prefix missing"));
+    return false;
+  }
+  if (!ssid.startsWith(ssidPrefix)) return false;
+
+  const String targetSerial = DIRECT_AP_TARGET_SERIAL;
+  if (!targetSerial.length()) {
+    return directApPasswordFromSerial(ssid.substring(ssidPrefix.length())).length() == 8;
+  }
+
+  return directApNormalizeSerial(ssid.substring(ssidPrefix.length())) == directApNormalizeSerial(targetSerial);
+}
+
+static bool directApFindAccessPoint(String& ssid, String& password) {
+  int networkCount = WiFi.scanNetworks(false, true);
+  int bestIndex = -1;
+  int32_t bestRssi = INT32_MIN;
+
+  for (int i = 0; i < networkCount; i++) {
+    String candidate = WiFi.SSID(i);
+    if (!directApSsidAllowed(candidate)) continue;
+    if (bestIndex < 0 || WiFi.RSSI(i) > bestRssi) {
+      bestIndex = i;
+      bestRssi = WiFi.RSSI(i);
+    }
+  }
+
+  if (bestIndex < 0) {
+    WiFi.scanDelete();
+    return false;
+  }
+
+  ssid = WiFi.SSID(bestIndex);
+  password = directApPasswordFromSerial(ssid.substring(String(DIRECT_AP_SSID_PREFIX).length()));
+  WiFi.scanDelete();
+  return password.length() == 8;
+}
+
+static bool directApConnectTo(const String& ssid, const String& password, uint32_t timeoutMs) {
+  if (!ssid.length() || password.length() != 8) return false;
+
+  DebugTf("DirectAP: connecting to [%s]\n", ssid.c_str());
+  WiFi.persistent(true);
+  WiFi.begin(ssid.c_str(), password.c_str());
+
+  uint32_t startMs = millis();
+  while ((uint32_t)(millis() - startMs) < timeoutMs && !skipNetwork && !bEthUsage) {
+    if (WiFi.status() == WL_CONNECTED || netw_state == NW_WIFI) return true;
+    Debug("t");
+    delay(250);
+    esp_task_wdt_reset();
+    SwitchLED(((millis() / 500) % 2) ? LED_ON : LED_OFF, LED_BLUE);
+  }
+  Debugln();
+  return WiFi.status() == WL_CONNECTED || netw_state == NW_WIFI;
+}
+
+static bool directApStartWiFi() {
+  if (!String(DIRECT_AP_SSID_PREFIX).length()) {
+    DebugTln(F("DirectAP: DIRECT_AP_SSID_PREFIX missing"));
+    return false;
+  }
+
+  String ssid = preferences.getString("direct_ap_ssid", "");
+  String password = preferences.getString("direct_ap_psk", "");
+  if (ssid.length() && password.length() == 8 && directApSsidAllowed(ssid)) {
+    if (directApConnectTo(ssid, password, DIRECT_AP_CONNECT_TIMEOUT_MS)) return true;
+    DebugTln(F("DirectAP: stored AP did not connect, scanning again"));
+    WiFi.disconnect(true, false);
+    delay(250);
+  }
+
+  uint32_t lastScanMs = 0;
+  while (!skipNetwork && !bEthUsage) {
+    uint32_t now = millis();
+    if (lastScanMs == 0 || (uint32_t)(now - lastScanMs) >= DIRECT_AP_SCAN_INTERVAL_MS) {
+      lastScanMs = now;
+      DebugTln(F("DirectAP: scanning for access point"));
+      if (directApFindAccessPoint(ssid, password)) {
+        preferences.putString("direct_ap_ssid", ssid);
+        preferences.putString("direct_ap_psk", password);
+        return directApConnectTo(ssid, password, DIRECT_AP_CONNECT_TIMEOUT_MS);
+      }
+      DebugTln(F("DirectAP: no matching access point found"));
+    }
+    delay(250);
+    esp_task_wdt_reset();
+    SwitchLED(((millis() / 500) % 2) ? LED_ON : LED_OFF, LED_BLUE);
+  }
+
+  return false;
+}
+#endif
+
 void GetMacAddress(){
 
   uint8_t efuseMac[6] = {0};
@@ -315,6 +441,18 @@ void startWiFi(const char* hostname, int timeOut) {
   if ( bFixedIP ) WiFi.config(staticIP, gateway, subnet, dns);
   LogFile("Wifi Starting",true);
   SwitchLED( LED_OFF, LED_BLUE );  
+
+#if DIRECT_AP_CONNECT
+  if (!directApStartWiFi() && !skipNetwork && !bEthUsage) {
+    LogFile("reboot: DirectAP Wifi failed to connect", true);
+    P1Reboot();
+  }
+  if ( skipNetwork ) return;
+  esp_wifi_set_ps(WIFI_PS_NONE);
+  esp_wifi_set_max_tx_power(78);
+  SwitchLED( LED_ON, LED_BLUE );
+  return;
+#endif
   
   manageWiFi.setConnectTimeout(15);
   manageWiFi.setConfigPortalBlocking(false);
