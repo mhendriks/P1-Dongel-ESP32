@@ -43,13 +43,11 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   const spinner 			= document.getElementById("loader");
 
 //---- frontend settings
-  let AMPS					= 35 	//waarde zekering (meestal 35 of 25 ampere)
-  let ShowVoltage			= true 	//toon spannningsverloop op dashboard
-  let UseCDN				= true	//ophalen van hulpbestanden lokaal of via cdn //nog niet geimplementeerd
+  let AMPS					= 25 	//waarde zekering (meestal 16, 25 of 35 ampere)
   let Injection				= false	//teruglevering energie false = bepaalt door de data uit slimme meter, true = altijd aan
-  let Phases				= 1		//aantal fases (1,2,3) voor de berekening van de totale maximale stroom Imax = fases * AMPS
-  let HeeftGas				= false	//gasmeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
-  let HeeftWater			= false	//watermeter aanwezig. default=false => door de slimme meter te bepalen -> true door Frontend.json = altijd aan
+  let Phases				= 0		//aantal fases (0=auto, 1,2,3) voor de berekening van de totale maximale stroom Imax = fases * AMPS
+  let HeeftGas				= false	//gasmeter aanwezig, wordt door de slimme meter bepaald
+  let HeeftWater			= false	//watermeter aanwezig, wordt door de slimme meter bepaald
   let EnableHist			= true  //weergave historische gegevens
   let Act_Watt				= false  //display actual in Watt instead of kW
   let SettingsRead 			= false 
@@ -486,7 +484,7 @@ function applyShowCols(condition, tablesAndCols) {
 }
 
 //============================================================================
-// Normalize config values from Frontend.json (booleans can arrive as strings)
+// Normalize settings values (booleans can arrive as strings)
 function asBoolean(value, fallback = false) {
 	if (typeof value === "boolean") return value;
 	if (typeof value === "number") return value !== 0;
@@ -1210,8 +1208,6 @@ function bootsTrapMain()
 
 	handle_menu_click();
 	document.getElementById("inner-dash").addEventListener("click", handleDashboardWidgetClick, true);
-	FrontendConfig();
-	
 	//init DAL
 	initDAL(updateFromDAL);
 
@@ -1489,10 +1485,6 @@ function SendNetSwitchJson() {
 		case "bNRGM":
 			nrgm_getstatus();
 			break;			
-		case "bInfo_frontend":
-			data = {};
-			FrontendConfig();
-			break;
     }
   } // openTab()
   
@@ -1741,49 +1733,6 @@ function checkESPOnline() {
   } // refreshDevInfo()
 
 //============================================================================  
-  function FrontendConfig()  {
-    console.log("Read Frontend config");
-	Spinner(true);
-	fetch(APIGW+"../Frontend.json", {"setTimeout": 5000})
-      .then(response => response.json())
-      .then(json => {
-		  data = json;
-          AMPS = asNumber(json.Fuse);
-          if (Number.isNaN(AMPS)) AMPS = 35;
-          Phases = asNumber(json.Phases);
-          if (Number.isNaN(Phases)) Phases = 1;
-          // UI flags in older Frontend.json files are intentionally ignored here.
-          // Those preferences now come from defaults, autodetection, or localStorage.
-          loadDashboardPreferences();
-// 		  "i18n" in json ? setLocale(json.i18n) : setLocale("nl");
-
-          for (let item in data) 
-          {
-//           	console.log("config item: " +item);
-//           	console.log("config data[item].value: " +data[item].value);
-            let tableRef = document.getElementById('frontendTable').getElementsByTagName('tbody')[0];
-            if( ( document.getElementById("frontendTable_"+item)) == null )
-            {
-              let newRow   = tableRef.insertRow();
-              newRow.setAttribute("id", "frontendTable_"+item, 0);
-              // Insert a cell in the row at index 0
-              let newCell  = newRow.insertCell(0);                  // name
-              let newText  = document.createTextNode('');
-              newCell.appendChild(newText);
-              newCell  = newRow.insertCell(1);                      // humanName
-              newCell.appendChild(newText);
-              newCell  = newRow.insertCell(2);                      // value
-              newCell.appendChild(newText);
-            }
-            tableCells = document.getElementById("frontendTable_"+item).cells;
-            tableCells[0].innerHTML = item;
-            tableCells[1].innerHTML = td(item);
-            tableCells[2].innerHTML = data[item];
-          }
-         Spinner(false);
-      }) //json
-  }
-
   //============================================================================  
   function refreshTime( json ) {
   
@@ -2551,6 +2500,10 @@ function formatValue(value)
         "dev-pairing" in json ? pairing_enabled = json["dev-pairing"]: pairing_enabled = false;
         "eid-planner" in json ? eid_planner_enabled = json["eid-planner"]: eid_planner_enabled = false;
         "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
+        AMPS = asNumber(json.fuse?.value);
+        if (Number.isNaN(AMPS)) AMPS = 25;
+        Phases = asNumber(json.phases?.value);
+        if (Number.isNaN(Phases)) Phases = 0;
 
         if ( eid_enabled ) document.getElementById("bEid").style.display = "block"; else document.getElementById("bEid").style.display = "none";
         if ( eid_planner_enabled ) setDashboardWidgetAvailable("dash_eid", true); else setDashboardWidgetAvailable("dash_eid", false);
@@ -2958,6 +2911,51 @@ function initModbusMonitorControls() {
 			  const cur = parseInt(data[i].value ?? "0", 10);
 
 			  MIMICS.forEach(o => {
+				const opt = document.createElement("option");
+				opt.value = String(o.v);
+				opt.textContent = o.t;
+				if (o.v === cur) opt.selected = true;
+				sel.appendChild(opt);
+			  });
+
+			  sInput = sel;
+			}
+			else if (i === "fuse") {
+			  const FUSES = [
+				{ v: 16, t: "16A" },
+				{ v: 25, t: "25A" },
+				{ v: 35, t: "35A" }
+			  ];
+
+			  const sel = document.createElement("select");
+			  sel.setAttribute("id", fldId);
+
+			  const cur = parseInt(data[i].value ?? "25", 10);
+
+			  FUSES.forEach(o => {
+				const opt = document.createElement("option");
+				opt.value = String(o.v);
+				opt.textContent = o.t;
+				if (o.v === cur) opt.selected = true;
+				sel.appendChild(opt);
+			  });
+
+			  sInput = sel;
+			}
+			else if (i === "phases") {
+			  const PHASES = [
+				{ v: 0, t: "Auto" },
+				{ v: 1, t: "1" },
+				{ v: 2, t: "2" },
+				{ v: 3, t: "3" }
+			  ];
+
+			  const sel = document.createElement("select");
+			  sel.setAttribute("id", fldId);
+
+			  const cur = parseInt(data[i].value ?? "0", 10);
+
+			  PHASES.forEach(o => {
 				const opt = document.createElement("option");
 				opt.value = String(o.v);
 				opt.textContent = o.t;

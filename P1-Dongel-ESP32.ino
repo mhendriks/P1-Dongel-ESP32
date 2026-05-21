@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
 **  Program  : P1-Dongel-ESP32
-**  Copyright (c) 2025 Smartstuff / based on DSMR Api Willem Aandewiel
+**  Copyright (c) 2026 Smartstuff / based on DSMR Api Willem Aandewiel
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 
@@ -65,18 +65,20 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 
 5.7.0
+- fix: skipnetwork crash on reboot
 - add: dongle connect to Wifi AP directly.  
 - fix: frontend Windows/FF flashing dashboard widgets on update
 - fix: modbus mbus watermeter missing BE
+- deleted: Frontend.json; some settings locale other in the settings
+- add: move 2 last UI frontend configurable items from frontend.json to settings
 
-- removed Frontend.json; some settings locale other in the settings
-- move 2 last UI frontend configurable items from frontend.json to settings
-
+5.7.1
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - refactoring targets
 - add wallbox mapping
 - api/v2/dash (combined request for dashboard)
 - Virtual P1 feature in settings (Ethernet/Ultra only)
+- Netswitch in en uitschakel drempel (Willem Jaap)
 
 5.8.0
 - kWh meter als bron voor productie data gebruiken (Harrie)
@@ -84,28 +86,27 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - Add remote Proxy
 - update button in HA to trigger the update (mqtt based #70)
 
-
 */
 
 /******************** compiler options  ********************************************/
 
-// #define DEBUG  
+#define DEBUG
 // #define XTRA_LOG
 
 //---  PROFILES  ---
 // #define ULTRA            //ultra (mini) dongle
-#define ETHERNET         //ethernet dongle
-#define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE       // + D1MC and NRGDH
+// #define ETHERNET         //ethernet dongle
+// #define ETH_P1EP         //ethernet pro+ dongle
+#define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 
 //SPECIAL
 // #define __Az__
-//#define OTAURL_PREFIX "az/"
+// #define OTAURL_PREFIX "az/"
 
 //FEATURES
 #define MBUS
-//#define MQTT_DISABLE
+// #define MQTT_DISABLE
 // #define MB_RTU
 #define ESPNOW  
 // #define UDP_BCAST
@@ -149,6 +150,7 @@ void setup()
   LogFile("",false); // write reboot status to file
   if (!LittleFS.exists(SETTINGS_FILE)) writeSettingsDirect(); //otherwise the dongle crashes some times on the first boot
   else readSettings(true);
+  if (LittleFS.exists("/Frontend.json")) LittleFS.remove("/Frontend.json");
 #if DIRECT_AP_CONNECT
   EnableHistory = false;
   FSNotPopulated = false;
@@ -178,11 +180,6 @@ void setup()
       DebugTln(F("Index file still not pressent!\r"));
       FSNotPopulated = true;
       }
-  }
-  WDT_FEED();
-  if (!DSMRfileExist("/Frontend.json", false) ) {
-    DebugTln(F("Frontend.json not pressent, try to download it!"));
-    GetFile("/Frontend.json", PATH_DATA_FILES);
   }
 #endif
   

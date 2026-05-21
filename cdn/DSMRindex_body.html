@@ -36,7 +36,6 @@
 	  	<a id='bSysInfoTab' class='nav-img nav-item' href="#SysInfoTab" ><span class="iconify" data-icon="mdi-information-outline"></span></a>
 		<ul>
 			<li><a id='bInfo_SysInfo'   data-i18n-key="mnu-sysinfo" class='tabButton nav-item' href="#SysInfoTab" >Systeeminformatie</a></li>
-			<li><a id='bInfo_frontend'  data-i18n-key="mnu-frontend" class='tabButton nav-item' href="#FrontendTab" >Webpagina</a></li>
 			<li><a id='bInfo_Telegram'  data-i18n-key="mnu-telegram" class='tabButton nav-item' href="#TelegramTab" >Ruwe data</a></li>
 			<li><a id='bInfo_Fields'    data-i18n-key="mnu-fields" class='tabButton nav-item' href="#FieldsTab" >Alle Velden</a></li>
 			<li><a id='bInfo_APIdoc'    data-i18n-key="mnu-api" class='tabButton nav-item' href="#APIdocTab" >API Docs</a></li>
@@ -466,30 +465,6 @@
     </div>
   
   </section>  <!-- END fields Tab -->
-  <!-- START Frontend Tab -->
-  <section id="FrontendTab" class="tabName subTab">
-    <!-- START Frontend Dummy -->
-    <h2 data-i18n-key="tle-web-settings">Instellingen Webpagina</h2>
-    <div id='frontend'>
-      <table id="frontendTable">
-      <thead>
-        <tr>
-            <th>Onderdeel</th>
-			<th>Leesbare Naam</th>
-            <th>Instelling</th>
-        </tr>
-      </thead>
-      <tbody>
-      </tbody>
-      <tfoot>
-        <tr>
-            <td colspan=4>Instellingen zijn aanpasbaar in Frontend.json file op de dongel</td>
-        </tr>
-      <tfoot>
-       </table>
-    </div>
-  
-  </section>  <!-- END Frontend Tab -->
   <!-- START Api Docs Tab -->
   <section id="APIdocTab" class="tabName subTab">
     <!-- START APIdocTab Dummy -->
@@ -552,10 +527,6 @@
     <td><a href="api/v2/hist/months" target="_blank">api/v2/hist/months</a></td>
     <td>History data per month in JSON format</td>
   </tr>  
-  <tr>
-    <td><a href="/Frontend.json" target="_blank">/Frontend.json</a></td>
-    <td>Downloaden van een bestand. In dit geval Frontend.json</td>
-  </tr>
   <tr>
     <td><a href="/api/v1/data" target="_blank">/api/v1/data</a></td>
     <td>HW v1 data api format</td>

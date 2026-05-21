@@ -690,6 +690,7 @@ ModbusMessage MBusHandleRequestRTU(ModbusMessage request) {
 }
 
 void mbusSetup(){
+  if (skipNetwork) return;
   MBserver.registerWorker(mb_config.id, READ_HOLD_REGISTER, &MBusHandleRequestTCP);//FC03
   MBserver.registerWorker(mb_config.id, READ_INPUT_REGISTER, &MBusHandleRequestTCP);//FC04
   MBserver.start(mb_config.port, MBUS_CLIENTS, MBUS_TIMEOUT);

@@ -448,6 +448,8 @@ if ( !hideMQTTsettings) {
   ADD_SETTING("b_auth_user", "s", 0, sizeof(bAuthUser) - 1, bAuthUser);
   ADD_SETTING("b_auth_pw", "s", 0, sizeof(bAuthPW) - 1, bAuthPW);
   ADD_SETTING("overvoltage_threshold", "i", 200, 300, settingOvervoltageThreshold);
+  ADD_SETTING("fuse", "i", 16, 35, settingFuse);
+  ADD_SETTING("phases", "i", 0, 3, settingPhases);
 #ifdef POST_MEENT
   ADD_SETTING("meent_interval", "i", 1, 3600, settingMeentInterval);
 #endif

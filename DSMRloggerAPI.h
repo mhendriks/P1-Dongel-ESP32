@@ -516,6 +516,8 @@ float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 =
 float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
 uint16_t  settingOvervoltageThreshold = 253;
 uint16_t  settingMeentInterval = 300;
+uint8_t   settingFuse = 25;
+uint8_t   settingPhases = 0;
 // uint8_t   settingSmHasFaseInfo = 1;
 const char* activeDefaultHostname = _DEFAULT_HOSTNAME;
 char      settingHostname[32] = _DEFAULT_HOSTNAME;

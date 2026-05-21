@@ -3,7 +3,7 @@
 **  Program  : JsonCalls, part of DSMRloggerAPI
 **  Version  : v4.2.1
 **
-**  Copyright (c) 2025 Smartstuff
+**  Copyright (c) 2026 Smartstuff
 **
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      

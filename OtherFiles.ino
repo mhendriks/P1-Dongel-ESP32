@@ -97,6 +97,8 @@ void writeSettingsDirect() {
   docw["WaterVasteKosten"] = settingWNBK;
   docw["OverVoltageThreshold"] = settingOvervoltageThreshold;
   docw["MeentInterval"] = settingMeentInterval;
+  docw["Fuse"] = settingFuse;
+  docw["Phases"] = settingPhases;
   // docw["SmHasFaseInfo"] = settingSmHasFaseInfo;
   docw["IndexPage"] = settingIndexPage;
   yield();
@@ -245,6 +247,12 @@ void readSettings(bool show)
   if (doc["enableHistory"].is<bool>()) EnableHistory = doc["enableHistory"];
   if (doc["watermeter"].is<bool>() ) WtrMtr = doc["watermeter"];
   if (doc["waterfactor"].is<float>()) WtrFactor = doc["waterfactor"];
+  bool settingsBackfillNeeded = !doc["Fuse"].is<int>() || !doc["Phases"].is<int>();
+  if (doc["Fuse"].is<int>()) {
+    uint8_t newFuse = doc["Fuse"];
+    settingFuse = (newFuse == 16 || newFuse == 25 || newFuse == 35) ? newFuse : 25;
+  }
+  if (doc["Phases"].is<int>()) settingPhases = constrain(doc["Phases"].as<int>(), 0, 3);
 
   if (doc["HAdiscovery"].is<bool>()) EnableHAdiscovery = doc["HAdiscovery"];
   if (doc["auto-update"].is<bool>()) bAutoUpdate = doc["auto-update"];
@@ -295,6 +303,7 @@ void readSettings(bool show)
 
   SettingsFile.close();
   //end json
+  if (settingsBackfillNeeded) writeSettingsDirect();
 
     mdns_hostname_set(settingHostname);
     mdns_instance_name_set(activeDefaultHostname);
@@ -349,6 +358,13 @@ void updateSetting(const char *field, const char *newValue)
   }
   if (!stricmp(field, "meent_interval")) {
     settingMeentInterval = constrain(String(newValue).toInt(), 1, 3600);
+  }
+  if (!stricmp(field, "fuse")) {
+    uint8_t newFuse = String(newValue).toInt();
+    settingFuse = (newFuse == 16 || newFuse == 25 || newFuse == 35) ? newFuse : 25;
+  }
+  if (!stricmp(field, "phases")) {
+    settingPhases = constrain(String(newValue).toInt(), 0, 3);
   }
 
   if (!stricmp(field, "w_tariff"))          settingWDT          = String(newValue).toFloat();  
