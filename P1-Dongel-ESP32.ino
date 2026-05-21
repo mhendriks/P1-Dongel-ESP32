@@ -64,7 +64,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select port>
 
 5.6.3
-- 
+- fix: skipnetwork crash at reboot
 
 5.7.0
 - 3 button control (a-pair, b-reboot, c=factory reset)
