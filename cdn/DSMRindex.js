@@ -483,6 +483,10 @@ function applyShowCols(condition, tablesAndCols) {
   });
 }
 
+function settingsWaterEnabled(settings) {
+  return asBoolean(settings?.water_enabl, false);
+}
+
 //============================================================================
 // Normalize settings values (booleans can arrive as strings)
 function asBoolean(value, fallback = false) {
@@ -652,7 +656,7 @@ function SetOnSettings(json) {
 			json.gas_delivered_timestamp.value !== "-";
 		HeeftGas = hasGasValue || hasGasTimestamp;
 	}
-	if (!HeeftWater) HeeftWater = hasValidMeterValue(json.water);
+	HeeftWater = settingsWaterEnabled(json) || settingsWaterEnabled(objDAL?.getDeviceSettings?.());
 
 	if (!Injection) {
 		Injection = !isNaN(json.energy_returned_tariff1?.value) ? json.energy_returned_tariff1.value : false;
@@ -679,8 +683,7 @@ function SetOnSettings(json) {
 
 	applyShowCols(HeeftWater, [
 	  ['lastHoursTable', [4]],
-	  ['lastDaysTable', [4]],
-	  ['lastMonthsTable', [13, 14, 15, 16]]
+	  ['lastDaysTable', [4]]
 	]);
 
 // 	showCols('lastHoursTable',  [4], HeeftWater);
@@ -691,7 +694,6 @@ function SetOnSettings(json) {
 		applyShowCols(HeeftGas, [
 		  ['lastHoursTable', [3]],
 		  ['lastDaysTable', [3]],
-		  ['lastMonthsTable', [9,10,11,12]],
 		  ['lastMonthsTableCosts', [3,8]]
 		]);
 // 
@@ -703,8 +705,7 @@ function SetOnSettings(json) {
 
 	applyShowCols(Injection, [
 	  ['lastHoursTable', [2]],
-	  ['lastDaysTable', [2]],
-	  ['lastMonthsTable', [5, 6, 7, 8]]
+	  ['lastDaysTable', [2]]
 	]);
 
 // 	showCols('lastHoursTable',  [2], Injection);
@@ -2255,9 +2256,19 @@ function formatValue(value)
     //--- show table
     document.getElementById("lastHours").style.display = "block";
     document.getElementById("lastDays").style.display  = "block";
-    if (type == "Hours") show_hide_column('lastHoursTable', 4, HeeftWater);
-    if (type == "Days") show_hide_column('lastDaysTable', 4, HeeftWater);
-    if (type == "Days") show_hide_column2('lastDaysTable', 6, solarVisible);
+    if (type == "Hours") {
+      if (Dongle_Config == "p1-q") show_hide_column('lastHoursTable', 1, false);
+      show_hide_column('lastHoursTable', 2, Injection);
+      show_hide_column('lastHoursTable', 3, HeeftGas && (Dongle_Config != "p1-q"));
+      show_hide_column('lastHoursTable', 4, HeeftWater);
+    }
+    if (type == "Days") {
+      if (Dongle_Config == "p1-q") show_hide_column('lastDaysTable', 1, false);
+      show_hide_column('lastDaysTable', 2, Injection);
+      show_hide_column('lastDaysTable', 3, HeeftGas && (Dongle_Config != "p1-q"));
+      show_hide_column('lastDaysTable', 4, HeeftWater);
+      show_hide_column2('lastDaysTable', 6, solarVisible);
+    }
 
   } // showHistTable()
 
@@ -2274,6 +2285,11 @@ function formatValue(value)
     let stop = start - 12;
     let i;
     let slotyearbefore = 0;
+    const monthHasReturned = Dongle_Config != "p1-q";
+    const monthHasGas = (Dongle_Config != "p1-q") && (HeeftGas || data.data.some(row =>
+      Number(row?.p_gd) > 0 || Number(row?.values?.[4]) > 0
+    ));
+    const monthHasWater = settingsWaterEnabled(objDAL?.getDeviceSettings?.()) || HeeftWater;
   
     for (let index=start; index>stop; index--)
     {  i = index % data.data.length;
@@ -2322,7 +2338,7 @@ function formatValue(value)
     //--- hide canvas
     hideAllCharts();
     //--- show table
-	if (Dongle_Config == "p1-q") {
+    if (Dongle_Config == "p1-q") {
   		show_hide_column2('lastMonthsTable', 1,false);
 		show_hide_column2('lastMonthsTable', 2,false);
 		show_hide_column2('lastMonthsTable', 3,false);
@@ -2340,9 +2356,15 @@ function formatValue(value)
     	let rows = tbl.getElementsByTagName('tr');
 		rows[0].style.display = "none";
 	}	
-    const waterHeader = document.querySelector('#lastMonthsTable thead tr:first-child th:last-child');
-    if (waterHeader) waterHeader.style.display = HeeftWater ? "" : "none";
-    [13, 14, 15, 16].forEach(col => show_hide_column('lastMonthsTable', col, HeeftWater));
+    const returnedHeader = document.querySelector('#lastMonthsTable thead tr:first-child th[data-i18n-key="lbl-p-returned"]');
+    if (returnedHeader) returnedHeader.style.display = monthHasReturned ? "" : "none";
+    const gasHeader = document.querySelector('#lastMonthsTable thead tr:first-child th[data-i18n-key="lbl-gas-used"]');
+    if (gasHeader) gasHeader.style.display = monthHasGas ? "" : "none";
+    const waterHeader = document.querySelector('#lastMonthsTable thead tr:first-child th[data-i18n-key="lbl-water-used"]');
+    if (waterHeader) waterHeader.style.display = monthHasWater ? "" : "none";
+    [5, 6, 7, 8].forEach(col => show_hide_column('lastMonthsTable', col, monthHasReturned));
+    [9, 10, 11, 12].forEach(col => show_hide_column('lastMonthsTable', col, monthHasGas));
+    [13, 14, 15, 16].forEach(col => show_hide_column('lastMonthsTable', col, monthHasWater));
     document.getElementById("lastMonths").style.display = "block";
 
   } // showMonthsHist()
@@ -2500,6 +2522,7 @@ function formatValue(value)
         "dev-pairing" in json ? pairing_enabled = json["dev-pairing"]: pairing_enabled = false;
         "eid-planner" in json ? eid_planner_enabled = json["eid-planner"]: eid_planner_enabled = false;
         "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
+        HeeftWater = settingsWaterEnabled(json);
         AMPS = asNumber(json.fuse?.value);
         if (Number.isNaN(AMPS)) AMPS = 25;
         Phases = asNumber(json.phases?.value);
@@ -2512,6 +2535,7 @@ function formatValue(value)
         gas_netw_costs = json.gas_netw_costs.value;
         hostName = json.hostname.value;
         EnableHist =  "hist" in json ? json.hist : true;
+        if (activeTab == "bMonthsTab") refreshHistData("Months");
 
   } // ParseDevSettings()
   
