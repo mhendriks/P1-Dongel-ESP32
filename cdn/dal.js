@@ -6,7 +6,7 @@
 ***************************************************************************      
 */
 
-const DEBUG = true;
+const DEBUG = false;
 
 const UPDATE_HIST 		= DEBUG ? 1000 * 10 : 1000 * 300;
 const UPDATE_ACTUAL 	= DEBUG ? 1000 * 5 	: 1000 * 5;
