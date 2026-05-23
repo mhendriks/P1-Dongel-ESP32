@@ -1432,6 +1432,7 @@ function SendNetSwitchJson() {
 
     console.log("openTab : " + activeTab );
     document.getElementById("myTopnav").className = "main-navigation"; //close dropdown menu 
+    document.body.classList.remove("menu-open");
     clearInterval(tabTimer);  
     clearInterval(NRGStatusTimer);
     hideAllCharts();
@@ -3855,9 +3856,10 @@ function menu() {
   let x = document.getElementById("myTopnav");
   if (x.className === "main-navigation") {
     x.className += " responsive";
-    
+    document.body.classList.add("menu-open");
   } else {
     x.className = "main-navigation";
+    document.body.classList.remove("menu-open");
   }
 //change menu icon
     let menu = document.getElementById("menuid");
@@ -3876,6 +3878,7 @@ function handle_menu_click()
 			let menu = document.getElementById("menuid");
 			menu.classList.remove("mdi-close");
 			menu.classList.add("mdi-menu");
+			document.body.classList.remove("menu-open");
 	
 			//remove active classes
 			let current = document.getElementById("myTopnav").getElementsByClassName("active");	

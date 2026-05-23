@@ -69,7 +69,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - menu change : reports ipv NA salderen
 - add: Virtual P1 feature in settings (Ethernet/Ultra only)
 - update documentatie
-
+- change: move reboot/wifi reset to new power menu item
 
 5.7.3
 - MQTT total Energy from and to grid (Frans)

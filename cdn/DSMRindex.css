@@ -420,7 +420,17 @@ ul.main-navigation .icon {  display: none;}
 }
 
 @media screen and (max-width: 767px) {
+  body.menu-open {
+    overflow: hidden;
+    height: 100vh;
+  }
   ul.main-navigation.responsive , ul.main-navigation li ul {position: relative}
+  ul.main-navigation.responsive {
+    max-height: 100vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 20px;
+  }
   ul.main-navigation.responsive > li:last-child {
     position: absolute;
     right: 0;
