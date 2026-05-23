@@ -18,20 +18,20 @@ ApiResponse accuApiResponse() {
     return {200, "application/json", "{\"active\":false}"};
   }
 
-  String Json = "{\"active\":true,\"status\":\"";
-  Json += String(SolarEdgeAccu.status);
-  Json += "\",\"unit\":\"";
-  Json += String(SolarEdgeAccu.unit);
-  Json += "\", \"currentPower\":";
-  Json += String( SolarEdgeAccu.currentPower );
-  Json += ", \"chargeLevel\":";
-  Json += String( SolarEdgeAccu.chargeLevel );
-  Json += "}";
+  JsonDocument doc;
+  doc["active"] = true;
+  doc["status"] = SolarEdgeAccu.status;
+  doc["unit"] = SolarEdgeAccu.unit;
+  doc["currentPower"] = SolarEdgeAccu.currentPower;
+  doc["chargeLevel"] = SolarEdgeAccu.chargeLevel;
+
+  String body;
+  serializeJson(doc, body);
 
 #ifdef DEBUG
   DebugTln("SendAccuJson");
-  DebugT("Accu Json: ");Debugln(Json);
+  DebugT("Accu Json: ");Debugln(body);
 #endif
 
-  return {200, "application/json", Json};
+  return {200, "application/json", body};
 }

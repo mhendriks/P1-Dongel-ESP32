@@ -395,23 +395,23 @@ ApiResponse solarApiResponse() {
   uint32_t totalActual = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual + Omniksol.Actual;
   uint32_t totalWp     = Enphase.Wp     + SolarEdge.Wp     + SMAinv.Wp     + Omniksol.Wp;
 
-  String Json = "{\"active\":true,\"total\":{\"daily\":";
-  Json += String(totalDaily);
-  Json += ",\"actual\":";
-  Json += String(totalActual);
-  Json += "}, \"Wp\":";
-  Json += String(totalWp);
-  Json += ", \"perc\":{\"seue\":";
-  Json += String(0);
-  Json += ",\"scr\":";
-  Json += String(0);
-  Json += ",\"pres\":";
-  Json += String(0);
-  Json += "}}";
+  JsonDocument doc;
+  doc["active"] = true;
+  JsonObject total = doc["total"].to<JsonObject>();
+  total["daily"] = totalDaily;
+  total["actual"] = totalActual;
+  doc["Wp"] = totalWp;
+  JsonObject perc = doc["perc"].to<JsonObject>();
+  perc["seue"] = 0;
+  perc["scr"] = 0;
+  perc["pres"] = 0;
+
+  String body;
+  serializeJson(doc, body);
 
 #ifdef DEBUG
   DebugTln("SendSolarJson");
-  DebugT("Solar Json: "); Debugln(Json);
+  DebugT("Solar Json: "); Debugln(body);
 #endif
-  return {200, "application/json", Json};
+  return {200, "application/json", body};
 }

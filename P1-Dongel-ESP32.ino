@@ -65,22 +65,22 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 5.7.2
 - fix: uniq_id mqtt HA autodiscovery
-- refactoring
+- refactoring strings/logging
+- menu change : reports ipv NA salderen
+- Virtual P1 feature in settings (Ethernet/Ultra only)
 
-- reports ipv Einde salderen
-- reports plafont grafiek terug
 
 
 5.7.3
-- MQTT total Enmergy from and to grid (Frans)
-- 3 button control (a-pair, b-reboot, c=factory reset)
+- MQTT total Energy from and to grid (Frans)
 - refactoring targets
 - add wallbox mapping
 - api/v2/dash (combined request for dashboard)
-- Virtual P1 feature in settings (Ethernet/Ultra only)
 - Netswitch in en uitschakel drempel (Willem Jaap)
 
 5.8.0
+- reports plafont grafiek terug
+- 3 button control (a-pair, b-reboot, c=factory reset)
 - kWh meter als bron voor productie data gebruiken (Harrie)
 - refactor: asyncwebserver
 - Add remote Proxy

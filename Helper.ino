@@ -545,7 +545,7 @@ int8_t splitString(String inStrng, char delimiter, String wOut[], uint8_t maxWor
     // zero rest of the words
     for(int i=wordCount; i< maxWords; i++)
     {
-      wOut[wordCount][0] = 0;
+      wOut[i] = "";
     }
     // if not whole string processed place rest in last word
     if (inxS < inStrng.length()) 

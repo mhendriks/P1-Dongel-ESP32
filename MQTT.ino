@@ -49,16 +49,35 @@ void handleMQTT(){
   MQTTConnect();
 }
 
-String AddPayload(const char* key, const char* value ){
-  if ( strlen(value) == 0 ) return "";
-  return "\"" + String(key) + "\":\"" + String(value) + "\",";
+static void addIfNotEmpty(JsonDocument& doc, const char* key, const char* value) {
+  if (value && value[0]) doc[key] = value;
+}
+
+static void addIfNotEmpty(JsonObject doc, const char* key, const char* value) {
+  if (value && value[0]) doc[key] = value;
+}
+
+static void addHAExtraPayload(JsonDocument& doc, const char* extrapl) {
+  if (!extrapl || !extrapl[0]) return;
+
+  String extra = "{";
+  extra += extrapl;
+  extra += "\"_\":0}";
+
+  JsonDocument extraDoc;
+  if (deserializeJson(extraDoc, extra)) return;
+
+  for (JsonPair kv : extraDoc.as<JsonObject>()) {
+    if (strcmp(kv.key().c_str(), "_") != 0) doc[kv.key()] = kv.value();
+  }
 }
 
 void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char* dev_title, const char* dev_unit, const char* dev_payload, const char* state_class, const char* extrapl ){
   char msg_topic[120];
   char unique_id[50];
+  char state_topic[sizeof(MQTopTopic) + 25];
+  char chipId[24];
   const char* macSuffix = strlen(macID) > 8 ? macID + strlen(macID) - 8 : macID;
-  String msg_payload = "{";
   if (HAUniqueIds) {
     snprintf(msg_topic, sizeof(msg_topic), "homeassistant/sensor/%s-%s/%s/config", settingHostname, macSuffix, dev_name);
     snprintf(unique_id, sizeof(unique_id), "%s_%s", dev_name, macSuffix);
@@ -67,20 +86,27 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
     strlcpy(unique_id, dev_name, sizeof(unique_id));
   }
 //    Debugln(msg_topic);
-  msg_payload += AddPayload( "uniq_id"        , unique_id);
-  msg_payload += AddPayload( "dev_cla"        , dev_class);
-  msg_payload += AddPayload( "name"           , dev_title);
-  msg_payload += AddPayload( "stat_t"         , String((String)MQTopTopic + (String)dev_name).c_str() );
-  msg_payload += AddPayload( "unit_of_meas"   , dev_unit);
-  msg_payload += AddPayload( "val_tpl"        , dev_payload);
-  msg_payload += AddPayload( "stat_cla"       , state_class);
-  msg_payload += extrapl;
-  msg_payload += "\"dev\":{";
-  msg_payload += AddPayload("ids"             , String(_getChipId()).c_str() );
-  msg_payload += AddPayload("name"            , settingHostname);
-  msg_payload += "\"mdl\":\"";
-  msg_payload += settingHostname;
-  msg_payload += "\",\"mf\":\"Smartstuff\"}}";
+  snprintf(state_topic, sizeof(state_topic), "%s%s", MQTopTopic, dev_name);
+  snprintf(chipId, sizeof(chipId), "%llu", (unsigned long long)_getChipId());
+
+  JsonDocument doc;
+  addIfNotEmpty(doc, "uniq_id", unique_id);
+  addIfNotEmpty(doc, "dev_cla", dev_class);
+  addIfNotEmpty(doc, "name", dev_title);
+  addIfNotEmpty(doc, "stat_t", state_topic);
+  addIfNotEmpty(doc, "unit_of_meas", dev_unit);
+  addIfNotEmpty(doc, "val_tpl", dev_payload);
+  addIfNotEmpty(doc, "stat_cla", state_class);
+  addHAExtraPayload(doc, extrapl);
+
+  JsonObject dev = doc["dev"].to<JsonObject>();
+  addIfNotEmpty(dev, "ids", chipId);
+  addIfNotEmpty(dev, "name", settingHostname);
+  dev["mdl"] = settingHostname;
+  dev["mf"] = "Smartstuff";
+
+  String msg_payload;
+  serializeJson(doc, msg_payload);
 //  Debugln(msg_payload);
   if (!MQTTclient.publish(msg_topic, msg_payload.c_str(), true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", msg_topic, msg_payload, ( strlen(msg_topic) + msg_payload.length() ));
 }
@@ -421,30 +447,37 @@ void MQTTsendGas(){
 }
 
 void MQTTSendVictronData(){
-  String jsondata = "{\"grid\":{\"power\":";
-  jsondata += String( (DSMRdata.power_delivered.int_val() + DSMRdata.power_returned.int_val()) * (DSMRdata.power_returned?-1.0:1.0),0);
-  jsondata += ",\"L1\":{\"power\":";
-  jsondata += String((DSMRdata.power_delivered_l1.int_val() + DSMRdata.power_returned_l1.int_val()) * (DSMRdata.power_returned_l1?-1.0:1.0),0);
-  jsondata += ",\"voltage\":";
-  jsondata += String (DSMRdata.voltage_l1,1);
-  jsondata += ",\"current\":";
-  jsondata += String (DSMRdata.current_l1,0);
-  
-  jsondata += "},\"L2\":{\"power\":";
-  jsondata += String((DSMRdata.power_delivered_l2.int_val() + DSMRdata.power_returned_l2.int_val()) * (DSMRdata.power_returned_l2?-1.0:1.0),0);
-  jsondata += ",\"voltage\":";
-  jsondata += String (DSMRdata.voltage_l2,1);
-  jsondata += ",\"current\":";
-  jsondata += String (DSMRdata.current_l2,0);
+  auto gridPower = [](auto delivered, auto returned) -> int32_t {
+    return (int32_t)((delivered.int_val() + returned.int_val()) * (returned ? -1.0 : 1.0));
+  };
+  auto fixedValue = [](auto value, uint8_t decimals) -> float {
+    float scaled = value.int_val() / 1000.0f;
+    if (decimals == 0) return roundf(scaled);
+    if (decimals == 1) return roundf(scaled * 10.0f) / 10.0f;
+    return scaled;
+  };
 
-  jsondata += "},\"L3\":{\"power\":";
-  jsondata += String((DSMRdata.power_delivered_l3.int_val() + DSMRdata.power_returned_l3.int_val()) * (DSMRdata.power_returned_l3?-1.0:1.0),0);
-  jsondata += ",\"voltage\":";
-  jsondata += String (DSMRdata.voltage_l3,1);
-  jsondata += ",\"current\":";
-  jsondata += String (DSMRdata.current_l3,0);
+  JsonDocument doc;
+  JsonObject grid = doc["grid"].to<JsonObject>();
+  grid["power"] = gridPower(DSMRdata.power_delivered, DSMRdata.power_returned);
 
-  jsondata += "}}}";
+  JsonObject l1 = grid["L1"].to<JsonObject>();
+  l1["power"] = gridPower(DSMRdata.power_delivered_l1, DSMRdata.power_returned_l1);
+  l1["voltage"] = fixedValue(DSMRdata.voltage_l1, 1);
+  l1["current"] = fixedValue(DSMRdata.current_l1, 0);
+
+  JsonObject l2 = grid["L2"].to<JsonObject>();
+  l2["power"] = gridPower(DSMRdata.power_delivered_l2, DSMRdata.power_returned_l2);
+  l2["voltage"] = fixedValue(DSMRdata.voltage_l2, 1);
+  l2["current"] = fixedValue(DSMRdata.current_l2, 0);
+
+  JsonObject l3 = grid["L3"].to<JsonObject>();
+  l3["power"] = gridPower(DSMRdata.power_delivered_l3, DSMRdata.power_returned_l3);
+  l3["voltage"] = fixedValue(DSMRdata.voltage_l3, 1);
+  l3["current"] = fixedValue(DSMRdata.current_l3, 0);
+
+  String jsondata;
+  serializeJson(doc, jsondata);
   
   DebugTrace(F("Victron jsondata: ")); DebugTraceLn(jsondata);
 
