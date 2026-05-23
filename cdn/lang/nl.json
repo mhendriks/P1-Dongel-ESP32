@@ -432,5 +432,6 @@
   "tle-telegram": "Ruwe slimme meter data",
   "tle-web-settings": "Webpagina Instellingen",
   "txt-reboot": "Na het indrukken van de Reboot-knop zal de Dongle opnieuw opstarten.",
-  "txt-reset-wifi": "Na het indrukken van de RESET WIFI knop zal de module opnieuw opstarten en vragen om het wifi netwerk te resetten. Zie initiële installatie van de module."
+  "txt-reset-wifi": "Na het indrukken van de RESET WIFI knop zal de module opnieuw opstarten en vragen om het wifi netwerk te resetten. Zie initiële installatie van de module.",
+  "dict_virtual_p1_ip": "Virtual P1 IP-adres"
 }

@@ -368,6 +368,13 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "phases")) {
     settingPhases = constrain(String(newValue).toInt(), 0, 3);
   }
+#ifdef VIRTUAL_P1
+  if (!stricmp(field, "virtual_p1_ip")) {
+    bool changed = strncmp(virtual_p1_ip, newValue, sizeof(virtual_p1_ip)) != 0;
+    strCopy(virtual_p1_ip, sizeof(virtual_p1_ip), newValue);
+    if (changed) virtualP1ConfigChanged();
+  }
+#endif
 
   if (!stricmp(field, "w_tariff"))          settingWDT          = String(newValue).toFloat();  
   if (!stricmp(field, "water_netw_costs"))  settingWNBK         = String(newValue).toFloat(); 

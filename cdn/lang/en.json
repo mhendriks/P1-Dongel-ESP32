@@ -432,5 +432,6 @@
   "modbus-monitor-col-result": "Result",
   "dict_netsw-enabled": "NetSwitch enabled",
   "dict_nrgm-enabled": "Data to NRG Monitor",
-  "dict_udp": "UDP broadcast"
+  "dict_udp": "UDP broadcast",
+  "dict_virtual_p1_ip": "Virtual P1 IP address"
 }

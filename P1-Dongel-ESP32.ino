@@ -67,8 +67,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - fix: uniq_id mqtt HA autodiscovery
 - refactoring strings/logging
 - menu change : reports ipv NA salderen
-- Virtual P1 feature in settings (Ethernet/Ultra only)
-
+- add: Virtual P1 feature in settings (Ethernet/Ultra only)
+- update documentatie
 
 
 5.7.3

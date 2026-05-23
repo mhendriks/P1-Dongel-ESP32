@@ -407,6 +407,13 @@ void virtSetLastData(){
    vp1_last_data = millis();
 }
 
+void virtualP1ConfigChanged(){
+  if (vp1_client.connected()) vp1_client.stop();
+  bVirt_connected = false;
+  vp1_last_connect = 0;
+  smartMeter.ChangeStream(&Serial1);
+}
+
 void handleVirtualP1(){
   if ( skipNetwork ) return;
   if (strlen(virtual_p1_ip) == 0) {
@@ -414,7 +421,8 @@ void handleVirtualP1(){
       bVirt_connected = false;
       vp1_client.stop();
       smartMeter.ChangeStream(&Serial1);
-    } else return;
+    }
+    return;
   }
 
  if ( millis() - vp1_last_data > 20000) vp1_client.stop();
