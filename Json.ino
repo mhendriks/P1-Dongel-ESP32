@@ -433,6 +433,7 @@ if ( !hideMQTTsettings) {
   ADD_SETTING("mqtt_interval", "i", 0, 600, settingMQTTinterval);
   doc["act-json-mqtt"] = bActJsonMQTT;
   doc["macid-topic"] = MacIDinToptopic;
+  doc["ha_unique_ids"] = HAUniqueIds;
   doc["ha_disc_enabl"] = EnableHAdiscovery;
 }
 #endif

@@ -133,6 +133,7 @@ void writeSettingsDirect() {
   docw["mqtt-hide"] = hideMQTTsettings;
   docw["remove-index"] = RemoveIndexAfterUpdate;
   docw["macid-topic"] = MacIDinToptopic;
+  docw["ha_unique_ids"] = HAUniqueIds;
   docw["skip-network"] = skipNetwork;
   docw["try_calc_i"] = try_calc_i;
   docw["mimic"] = mimicsEnabled() ? mimicType : MIMIC_NONE;
@@ -224,6 +225,7 @@ void readSettings(bool show)
   if (doc["mqtt-hide"].is<bool>()) hideMQTTsettings = doc["mqtt-hide"];
   if (doc["remove-index"].is<bool>()) RemoveIndexAfterUpdate = doc["remove-index"];
   if (doc["macid-topic"].is<bool>()) MacIDinToptopic = doc["macid-topic"];
+  if (doc["ha_unique_ids"].is<bool>()) HAUniqueIds = doc["ha_unique_ids"];
   
 //  settingTelegramInterval = doc["TelegramInterval"];
 //  CHANGE_INTERVAL_SEC(nextTelegram, settingTelegramInterval);
@@ -463,6 +465,12 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "auto_update") || !stricmp(field, "auto-update")) bAutoUpdate = (stricmp(newValue, "true") == 0?true:false);
   if (!stricmp(field, "water_enabl")) WtrMtr = (stricmp(newValue, "true") == 0?true:false);  
   if (!stricmp(field, "ha_disc_enabl")) EnableHAdiscovery = (stricmp(newValue, "true") == 0?true:false);  
+  if (!stricmp(field, "ha_unique_ids")) {
+    HAUniqueIds = (stricmp(newValue, "true") == 0?true:false);
+#ifndef MQTT_DISABLE
+    if (bMQTTenabled && EnableHAdiscovery && MQTTclient.connected()) AutoDiscoverHA();
+#endif
+  }
   if (!stricmp(field, "pre40")) {
     bPre40 = (stricmp(newValue, "true") == 0?true:false);    
     SetupP1In();

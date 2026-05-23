@@ -552,6 +552,7 @@ bool      bMQTToverTLS = false;
 bool      hideMQTTsettings = false;
 bool      RemoveIndexAfterUpdate = true;
 bool      MacIDinToptopic = false;
+bool      HAUniqueIds = false;
 char      MQTopTopic[50+14] = "";
 
 enum MimicType : uint8_t {

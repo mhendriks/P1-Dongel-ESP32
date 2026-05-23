@@ -63,16 +63,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
+5.7.2
+- fix: add uniq_id multiple dongles mqtt HA connecion
+- reports ipv Einde salderen
+- reports plafont grafiek terug
 
-5.7.0
-- fix: skipnetwork crash on reboot
-- add: dongle connect to Wifi AP directly.  
-- fix: frontend Windows/FF flashing dashboard widgets on update
-- fix: modbus mbus watermeter missing BE
-- deleted: Frontend.json; some settings locale other in the settings
-- add: move 2 last UI frontend configurable items from frontend.json to settings
 
-5.7.1
+5.7.3
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - refactoring targets
 - add wallbox mapping
@@ -90,14 +87,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define XTRA_LOG
 
 //---  PROFILES  ---
 // #define ULTRA            //ultra (mini) dongle
-// #define ETHERNET         //ethernet dongle
-// #define ETH_P1EP         //ethernet pro+ dongle
-#define NRG_DONGLE       // + D1MC and NRGDH
+#define ETHERNET         //ethernet dongle
+#define ETH_P1EP         //ethernet pro+ dongle
+// #define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 
 //SPECIAL

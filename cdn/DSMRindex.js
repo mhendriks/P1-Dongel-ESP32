@@ -2661,9 +2661,9 @@ function splitSettingsUI() {
     "mqtt_toptopic",
     "mqtt_interval",
     "act-json-mqtt",
-	"ha_disc_enabl",
-	"act-json-mqtt",
-	"macid-topic"
+    "ha_disc_enabl",
+    "ha_unique_ids",
+    "macid-topic"
   ]);
 
   const TARIFF_KEYS = new Set([

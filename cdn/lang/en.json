@@ -7,6 +7,7 @@
   "dict_hardware": "Hardware type",
   "dict_act-json-mqtt": "Json data in all topic",
   "dict_macid-topic": "Macid in Topic",
+  "dict_ha_unique_ids": "Unique HA sensor IDs",
   "dict_water_l": "Water total liter",
   "dict_water_m3": "Water total m3",
   "dict_water_fact": "Water meter factor",

@@ -55,11 +55,19 @@ String AddPayload(const char* key, const char* value ){
 }
 
 void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char* dev_title, const char* dev_unit, const char* dev_payload, const char* state_class, const char* extrapl ){
-  char msg_topic[80];
+  char msg_topic[120];
+  char unique_id[50];
+  const char* macSuffix = strlen(macID) > 8 ? macID + strlen(macID) - 8 : macID;
   String msg_payload = "{";
-  sprintf(msg_topic,"homeassistant/sensor/%s/%s/config",settingHostname,dev_name);
+  if (HAUniqueIds) {
+    snprintf(msg_topic, sizeof(msg_topic), "homeassistant/sensor/%s-%s/%s/config", settingHostname, macSuffix, dev_name);
+    snprintf(unique_id, sizeof(unique_id), "%s_%s", dev_name, macSuffix);
+  } else {
+    snprintf(msg_topic, sizeof(msg_topic), "homeassistant/sensor/%s/%s/config", settingHostname, dev_name);
+    strlcpy(unique_id, dev_name, sizeof(unique_id));
+  }
 //    Debugln(msg_topic);
-  msg_payload += AddPayload( "uniq_id"        , dev_name);
+  msg_payload += AddPayload( "uniq_id"        , unique_id);
   msg_payload += AddPayload( "dev_cla"        , dev_class);
   msg_payload += AddPayload( "name"           , dev_title);
   msg_payload += AddPayload( "stat_t"         , String((String)MQTopTopic + (String)dev_name).c_str() );
