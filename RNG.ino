@@ -196,24 +196,24 @@ static bool ensureRNGdaysLayout() {
 
 void printRecordArray(const RingRecord* records, int slots, const char* label = nullptr) {
   if (label) {
-    Debug("=== ");
-    Debug(label);
-    Debugln(" ===");
+    DebugTrace(F("=== "));
+    DebugTrace(label);
+    DebugTraceLn(F(" ==="));
   }
 
   for (int i = 0; i < slots; i++) {
-    Debug("Slot ");
-    Debug(i);
-    Debug(" | Date: ");
-    Debug(records[i].date);
-    Debug(" | Values: ");
+    DebugTrace(F("Slot "));
+    DebugTrace(i);
+    DebugTrace(F(" | Date: "));
+    DebugTrace(records[i].date);
+    DebugTrace(F(" | Values: "));
 
     for (int j = 0; j < RNG_DAYS_VALUE_COUNT; j++) {
-      Debug(records[i].values[j], 3);
-      if (j < (RNG_DAYS_VALUE_COUNT - 1)) Debug(", ");
+      DebugTrace(records[i].values[j], 3);
+      if (j < (RNG_DAYS_VALUE_COUNT - 1)) DebugTrace(F(", "));
     }
 
-    Debugln();
+    DebugTraceLn();
   }
 }
 
@@ -443,7 +443,7 @@ bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
   // Parse an optional API record when supplied.
   bool hasJsonRec = (JsonRec && strlen(JsonRec) > 1);
   if (hasJsonRec) {
-    DebugTln(JsonRec);
+    DebugTraceTln(JsonRec);
     DeserializationError error = deserializeJson(rec, JsonRec);
     if (error) {
       DebugT(F("convert:Failed to deserialize RECORD: ")); Debugln(error.c_str());

@@ -103,30 +103,30 @@ static bool ebLoadOrCreateKeypair()
 
   size_t lpriv = preferences.getBytesLength(EB_NVS_PRIV);
   size_t lpub  = preferences.getBytesLength(EB_NVS_PUB);
-  Debugf("EB/NVS: len priv=%u pub=%u\n", (unsigned)lpriv, (unsigned)lpub);
+  DebugTracef("EB/NVS: len priv=%u pub=%u\n", (unsigned)lpriv, (unsigned)lpub);
 
   bool havePriv = (lpriv == 32) && (preferences.getBytes(EB_NVS_PRIV, g_ecPrivKey, 32) == 32);
   bool havePub  = (lpub  == 64) && (preferences.getBytes(EB_NVS_PUB,  g_ecPubKey,  64) == 64);
   // preferences.end();
 
-  Debugf("EB/NVS: read priv=%u pub=%u\n", havePriv, havePub);
+  DebugTracef("EB/NVS: read priv=%u pub=%u\n", havePriv, havePub);
 
   if (havePriv && havePub && ebKeysSanity(g_ecPrivKey, g_ecPubKey)) {
-    Debugln("EB: keypair loaded OK");
+    DebugVerboseLn(F("EB: keypair loaded OK"));
     g_ecKeyValid = true;
     return true;
   }
 
   // 2) GENERATE
-  Debugln("EB: keypair missing/invalid -> generating");
+  DebugVerboseLn(F("EB: keypair missing/invalid -> generating"));
   const struct uECC_Curve_t* curve = uECC_secp256r1();
 
   ebEnsureEccRng();
   #ifdef UDP_TEST
-    Debugf("esp_random test: %08lX\n", (unsigned long)esp_random());
+    DebugTracef("esp_random test: %08lX\n", (unsigned long)esp_random());
   #endif
   int mk = uECC_make_key(g_ecPubKey, g_ecPrivKey, curve);
-  Debugf("EB: uECC_make_key=%d\n", mk);
+  DebugVerbosef("EB: uECC_make_key=%d\n", mk);
 
   if (!mk) {
     Debugln("EB: make_key FAILED (likely RNG)");
@@ -143,7 +143,7 @@ static bool ebLoadOrCreateKeypair()
   size_t wpub  = preferences.putBytes(EB_NVS_PUB,  g_ecPubKey,  64);
   // preferences.end();
 
-  Debugf("EB/NVS: wrote priv=%u pub=%u\n", (unsigned)wpriv, (unsigned)wpub);
+  DebugTracef("EB/NVS: wrote priv=%u pub=%u\n", (unsigned)wpriv, (unsigned)wpub);
 
   if (wpriv != 32 || wpub != 64) {
     Debugln("EB: store FAILED");
@@ -151,7 +151,7 @@ static bool ebLoadOrCreateKeypair()
   }
 
   g_ecKeyValid = true;
-  Debugln("EB: keypair generated+stored OK");
+  DebugVerboseLn(F("EB: keypair generated+stored OK"));
   return true;
 } // END LOAD or create
 
@@ -299,18 +299,18 @@ void UdpBegin() {
   }
 
   const uint8_t* pk = ebGetPubKey64();
-  Debugf("ECPUBKEY loaded: %s\n", pk ? "YES" : "NO");
+  DebugVerbosef("ECPUBKEY loaded: %s\n", pk ? "YES" : "NO");
   if (!pk) {
     LogFile("UDP disabled: ECC public key missing", true);
     return;
   }
 
   if (pk) {
-    Debug("PUBKEY first 8 bytes: ");
+    DebugTrace(F("PUBKEY first 8 bytes: "));
     for (int i = 0; i < 8; i++) {
-      Debugf("%02X", g_ecPubKey[i]);
+      DebugTracef("%02X", g_ecPubKey[i]);
     }
-    Debugln();
+    DebugTraceLn();
   }
   
   ebInitStatic(g_payload,
@@ -351,7 +351,7 @@ void handleUDP() {
 
   if (!New_P1_UDP || !bUDPenabled || !g_udpCryptoReady ) return;
 
-  DebugTln("UDP -- PUSH");
+  DebugTraceTln(F("UDP -- PUSH"));
   New_P1_UDP = false;
   
   if ( !udpCheckOnce ) { 

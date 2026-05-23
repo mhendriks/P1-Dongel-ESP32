@@ -167,7 +167,7 @@ void ReadSolarConfig(SolarSource src) {
   SolarPwrSystems* solarSystem = (SolarPwrSystems*)solarSystemForSource(src);
 
   if (!FSmounted || !LittleFS.exists(solarSystem->file_name)) return;
-  DebugT("ReadSolarConfig: "); Debugln(solarSystem->file_name);
+  DebugVerboseT(F("ReadSolarConfig: ")); DebugVerboseLn(solarSystem->file_name);
 
   JsonDocument doc;
   File f = LittleFS.open(solarSystem->file_name, "r");
@@ -187,7 +187,7 @@ void ReadSolarConfig(SolarSource src) {
 
 #ifdef DEBUG
   Debug("url > "); Debugln(solarSystem->Url);
-  Debug("token > "); Debugln(solarSystem->Token);
+  Debug("token > "); Debugln(solarSystem->Token.length() ? F("<set>") : F("<empty>"));
   Debug("wp > "); Debugln(solarSystem->Wp);
   Debug("interval > "); Debugln(solarSystem->Interval);
   Debug("siteid > "); Debugln(solarSystem->SiteID);
@@ -252,12 +252,12 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
       http.begin(url.c_str());
       http.addHeader("Accept", "application/json");
       int rc = http.GET();
-      Debugf("Solaredge url: %s\n", url.c_str());
-      DebugT(F("HTTP Response code: ")); Debugln(rc);
+      DebugVerboseLn(F("Solaredge request"));
+      DebugVerboseT(F("HTTP Response code: ")); DebugVerboseLn(rc);
       if (rc != 200) {
         payload = http.getString();
         if (payload.length()) {
-          DebugT(F("Solaredge response body: ")); Debugln(payload);
+          DebugTraceT(F("Solaredge response body: ")); DebugTraceLn(payload);
         }
         http.end();
         return false;
@@ -336,7 +336,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   }
 
   int httpResponseCode = http.GET();
-  DebugT(F("HTTP Response code: ")); Debugln(httpResponseCode);
+  DebugVerboseT(F("HTTP Response code: ")); DebugVerboseLn(httpResponseCode);
   if (httpResponseCode <= 0) { http.end(); return; }
 
   String payload = http.getString();

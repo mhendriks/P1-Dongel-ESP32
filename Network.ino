@@ -76,8 +76,8 @@ void WifiWatchDog() {
     s_wifiRetryMs = now;
     s_wifiReconnectCnt = 0;
     bNoNetworkConn = true;
-    DebugT("WifiLost -> watchdog immediate reconnect attempt: ");
-    Debugln(s_wifiReconnectCnt + 1);
+    DebugVerboseT(F("WifiLost -> watchdog immediate reconnect attempt: "));
+    DebugVerboseLn(s_wifiReconnectCnt + 1);
     sprintf(cMsg, "Wifi reconnect attempt %d", s_wifiReconnectCnt + 1);
     LogFile(cMsg, true);
     attemptWifiReconnect();
@@ -93,11 +93,11 @@ void WifiWatchDog() {
   }
 
   if ( (uint32_t)(now - s_wifiRetryMs) >= WIFI_WATCHDOG_LOST_MS ) {
-    DebugT("WifiLost > ");
-    Debug(WIFI_WATCHDOG_LOST_MS);
-    Debugln(" ms, reconnect");
-    Debug("WifiReconnect attempt: ");
-    Debugln(s_wifiReconnectCnt + 1);
+    DebugVerboseT(F("WifiLost > "));
+    DebugVerbose(WIFI_WATCHDOG_LOST_MS);
+    DebugVerboseLn(F(" ms, reconnect"));
+    DebugVerbose(F("WifiReconnect attempt: "));
+    DebugVerboseLn(s_wifiReconnectCnt + 1);
     sprintf(cMsg, "Wifi reconnect attempt %d", s_wifiReconnectCnt + 1);
     LogFile(cMsg, true);
     s_wifiReconnectCnt++;
@@ -215,19 +215,19 @@ static bool directApFindAccessPoint(String& ssid, String& password) {
 static bool directApConnectTo(const String& ssid, const String& password, uint32_t timeoutMs) {
   if (!ssid.length() || password.length() != 8) return false;
 
-  DebugTf("DirectAP: connecting to [%s]\n", ssid.c_str());
+  DebugVerboseTf("DirectAP: connecting to [%s]\n", ssid.c_str());
   WiFi.persistent(true);
   WiFi.begin(ssid.c_str(), password.c_str());
 
   uint32_t startMs = millis();
   while ((uint32_t)(millis() - startMs) < timeoutMs && !skipNetwork && !bEthUsage) {
     if (WiFi.status() == WL_CONNECTED || netw_state == NW_WIFI) return true;
-    Debug("t");
+    DebugTrace(F("t"));
     delay(250);
     esp_task_wdt_reset();
     SwitchLED(((millis() / 500) % 2) ? LED_ON : LED_OFF, LED_BLUE);
   }
-  Debugln();
+  DebugTraceLn();
   return WiFi.status() == WL_CONNECTED || netw_state == NW_WIFI;
 }
 
@@ -283,7 +283,7 @@ void GetMacAddress(){
 
   strncpy(DongleID, macID + 6, 6);
   DongleID[6] = '\0';
-  Debug( "DongleID : " );Debugln( DongleID );
+  DebugVerbose(F("DongleID : ")); DebugVerboseLn(DongleID);
 }
 
 void PostMacIP() {
@@ -472,13 +472,13 @@ void startWiFi(const char* hostname, int timeOut) {
 
   uint16_t i = 0;
   while ( (i++ < 3000) && (netw_state == NW_NONE) && !bEthUsage && !skipNetwork ) {
-    Debug("*");
+    DebugTrace(F("*"));
     delay(100);
     manageWiFi.process();
     esp_task_wdt_reset();
     SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE);
   }
-  Debugln();
+  DebugTraceLn();
   allowSkipNetworkByButton = false;
   manageWiFi.stopWebPortal();
   if ( skipNetwork ) return; 
@@ -511,7 +511,7 @@ void WaitOnNetwork()
     return; 
     }
   while ( netw_state != NW_ETH && netw_state != NW_WIFI ) {
-    Debug(".");
+    DebugTrace(F("."));
     delay(200);
     esp_task_wdt_reset();
   }

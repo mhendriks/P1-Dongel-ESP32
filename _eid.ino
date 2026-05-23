@@ -156,7 +156,7 @@
       json_data += "\"localDeviceUrl\": \"http://" + _hostname + ".local\"";
       json_data += "}";
 
-      DebugT(F("Json data: ")); Debugln(json_data);
+      DebugTraceT(F("Json data: ")); DebugTraceLn(json_data);
       return json_data;
     }
 
@@ -179,7 +179,7 @@
       JsonDocument doc;
       String payload;
 
-      DebugT(F("Post URL: ")); Debugln(EID_PROV_URL);
+      DebugVerboseT(F("Post URL: ")); DebugVerboseLn(EID_PROV_URL);
       
       // HTTP setup
       http.begin(EID_PROV_URL);
@@ -188,11 +188,11 @@
       http.addHeader("X-Provisioning-Secret", EID_PROF_SECR);
 
       int httpResponseCode = http.POST( buildProvisioningPayload() );
-      Debug(F("httpResponseCode: ")); Debugln(httpResponseCode);
+      DebugVerbose(F("httpResponseCode: ")); DebugVerboseLn(httpResponseCode);
 
       if (httpResponseCode == 200) {
         payload = http.getString();
-        Debug(F("response body: ")); Debugln(payload);
+        DebugTrace(F("response body: ")); DebugTraceLn(payload);
 
         DeserializationError error = deserializeJson(doc, payload);
         if (error) {
@@ -224,12 +224,12 @@
               clearEIDPlannerData(true);
             }
 
-            Debug(F("webhookUrl      : ")); Debugln(eid_webhook);
-            Debug(F("authorization   : ")); Debugln(eid_header_auth);
-            Debug(F("x-twin-id       : ")); Debugln(eid_header_twinid);
-            Debug(F("eid_interval_sec: ")); Debugln(eid_interval_sec);
-            Debug(F("recordNumber    : ")); Debugln(recordNumber);
-            Debug(F("apiAccessToken  : ")); Debugln(apiAccessToken);
+            DebugVerbose(F("webhookUrl      : ")); DebugVerboseLn(eid_webhook.length() ? F("<set>") : F("<empty>"));
+            DebugVerbose(F("authorization   : ")); DebugVerboseLn(eid_header_auth.length() ? F("<set>") : F("<empty>"));
+            DebugVerbose(F("x-twin-id       : ")); DebugVerboseLn(eid_header_twinid.length() ? F("<set>") : F("<empty>"));
+            DebugVerbose(F("eid_interval_sec: ")); DebugVerboseLn(eid_interval_sec);
+            DebugVerbose(F("recordNumber    : ")); DebugVerboseLn(recordNumber.length() ? F("<set>") : F("<empty>"));
+            DebugVerbose(F("apiAccessToken  : ")); DebugVerboseLn(apiAccessToken.length() ? F("<set>") : F("<empty>"));
 
             P1Status.eid_state = EID_ENROLLED;
           }
@@ -256,17 +256,17 @@
       if (!isEIDNetworkAvailable()) return;
 
       String ApiURL = "https://api.energyid.eu/api/v1/records/"+recordNumber+"/directives";
-      DebugT(F("ApiURL:"));Debugln(ApiURL);
+      DebugVerboseT(F("ApiURL:")); DebugVerboseLn(ApiURL);
       
       HTTPClient http;
       http.begin( ApiURL );
       http.addHeader("Authorization", "device " + apiAccessToken);
 
       int httpResponseCode = http.GET();
-      Debug(F("httpResponseCode: "));Debugln(httpResponseCode);
+      DebugVerbose(F("httpResponseCode: ")); DebugVerboseLn(httpResponseCode);
       String payload = http.getString();
       #ifdef DEBUG
-        Debug(F("response body: "));Debugln(payload); 
+        DebugTrace(F("response body: ")); DebugTraceLn(payload); 
       #endif
       if ( httpResponseCode == 200 ) { 
         JsonDocument doc;
@@ -276,7 +276,7 @@
           const char* directiveId = doc[0]["id"].is<const char*>() ? doc[0]["id"].as<const char*>() : nullptr;
           if (directiveId && directiveId[0] != '\0') {
             EIDDirectiveID = directiveId;
-            DebugTf("Directive ID: %s", EIDDirectiveID.c_str());
+            DebugVerboseTln(F("Directive ID obtained"));
             bGetPlannerDetails = true;
           }
           else DebugTln(F("No directive id found in response"));
@@ -293,17 +293,17 @@
       if ( EIDDirectiveID.length() == 0 )  { DebugTln("No ID present"); bGetPlannerDetails = false; return; }
 
       String ApiURL = "https://api.energyid.eu/api/v1/records/"+recordNumber+"/directives/"+EIDDirectiveID+"?limit=14&offset=0";
-      DebugT(F("ApiURL:"));Debugln(ApiURL);
+      DebugVerboseT(F("ApiURL:")); DebugVerboseLn(ApiURL);
       
       HTTPClient http;
       http.begin( ApiURL );
       http.addHeader("Authorization", "device " + apiAccessToken);
 
       int httpResponseCode = http.GET();
-      Debug(F("httpResponseCode: "));Debugln(httpResponseCode);
+      DebugVerbose(F("httpResponseCode: ")); DebugVerboseLn(httpResponseCode);
       String payload = http.getString();
       #ifdef DEBUG
-        Debug(F("response body: "));Debugln(payload); 
+        DebugTrace(F("response body: ")); DebugTraceLn(payload); 
       #endif
       if ( httpResponseCode == 200 ) {
         // EIDDirectiveID = "";
@@ -314,11 +314,11 @@
         else {
           JsonArray dataArray = StroomPlanData["data"].as<JsonArray>();
           size_t plannerCount = dataArray.size();
-          Debugf("EID planner records parsed: %u\n", (unsigned)plannerCount);
+          DebugVerbosef("EID planner records parsed: %u\n", (unsigned)plannerCount);
           int maxRecords = plannerCount < 14 ? plannerCount : 14;
           for (int i = 0; i < maxRecords; i++) {
             const char* signal = dataArray[i]["signal"] | "<missing>";
-            Debugf("signal [%i] : ",i);Debugln(signal);
+            DebugTracef("signal [%i] : ",i); DebugTraceLn(signal);
           }
           #ifdef DEBUG
             ApiResponse planner = JsonEIDplanner();
@@ -413,7 +413,7 @@
       http.addHeader("authorization", eid_header_auth);
       http.addHeader("x-twin-id", eid_header_twinid);
 
-      DebugT(F("Post URL:"));Debugln(eid_webhook);
+      DebugVerboseTln(F("Post URL: <webhook>"));
       uint16_t utc_comp = 3600;
       if ( actTimestamp[12] == 'S') utc_comp = 7200;
       
@@ -457,12 +457,12 @@
       
       Json += "]";
       
-      Debug("Json payload: "); Debugln(Json);
+      DebugTrace(F("Json payload: ")); DebugTraceLn(Json);
 
       httpResponseCode = http.POST(Json);
-      Debug(F("httpResponseCode: "));Debugln(httpResponseCode);
+      DebugVerbose(F("httpResponseCode: ")); DebugVerboseLn(httpResponseCode);
       payload = http.getString();
-      Debug(F("response body: "));Debugln(payload); 
+      DebugTrace(F("response body: ")); DebugTraceLn(payload); 
         if ( httpResponseCode != 201 ) { 
           DebugTln(F("Response Error"));
           eid_webhook = "";

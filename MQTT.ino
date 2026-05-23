@@ -156,7 +156,7 @@ void MQTTsetServer(){
   }
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
   MQTTclient.setKeepAlive(60);
-  DebugTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
+  DebugVerboseTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
   MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
 
 //  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 1);
@@ -217,20 +217,20 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
   constexpr size_t MQTT_PAYLOAD_MAX = 1024;
   char StrPayload[MQTT_PAYLOAD_MAX + 1];
 
-  DebugTf("Message length: %d\n",len );
+  DebugTraceTf("Message length: %d\n",len );
   size_t copyLen = len;
   if (copyLen > MQTT_PAYLOAD_MAX) {
-    DebugTf("MQTT payload truncated from %u to %u bytes\n", (unsigned)len, (unsigned)MQTT_PAYLOAD_MAX);
+    DebugVerboseTf("MQTT payload truncated from %u to %u bytes\n", (unsigned)len, (unsigned)MQTT_PAYLOAD_MAX);
     copyLen = MQTT_PAYLOAD_MAX;
   }
   memcpy(StrPayload, payload, copyLen);
   StrPayload[copyLen] = '\0';
-  DebugT("Message arrived [" + StrTopic + "] ");Debugln(StrPayload);
+  DebugTraceT(F("Message arrived [")); DebugTrace(StrTopic); DebugTrace(F("] ")); DebugTraceLn(StrPayload);
 
   if ( StrTopic.indexOf("update") >= 0) {
     bUpdateSketch = true;
     strlcpy(UpdateVersion, StrPayload, sizeof(UpdateVersion));
-    DebugT("Message arrived [" + StrTopic + "] ");Debugln(UpdateVersion);
+    DebugVerboseT(F("MQTT update command received"));
     UpdateRequested = true;
   }
   if ( StrTopic.indexOf("interval") >= 0) {
@@ -275,7 +275,11 @@ void MQTTConnect() {
     char MqttID[30+13];
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
     snprintf( cMsg, 150, "%sLWT", MQTopTopic );
-    DebugTf("connect %s %s %s %s\n", MqttID, settingMQTTuser, settingMQTTpasswd, cMsg);
+    DebugVerboseTf("connect %s user=%s passwd=%s lwt=%s\n",
+                   MqttID,
+                   strlen(settingMQTTuser) ? "<set>" : "<empty>",
+                   strlen(settingMQTTpasswd) ? "<set>" : "<empty>",
+                   cMsg);
     
     // if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd, cMsg, 1, true, "Offline" ) ) {
     mqttConnectActive = true;
@@ -442,7 +446,7 @@ void MQTTSendVictronData(){
 
   jsondata += "}}}";
   
-  Debug("Victron jsondata: ");Debugln(jsondata);
+  DebugTrace(F("Victron jsondata: ")); DebugTraceLn(jsondata);
 
   MQTTSend( "victron/grid", jsondata, false);  
 }
@@ -461,7 +465,7 @@ void sendMQTTData() {
   if ( MQTTclient.connected() ) {   
   mqttPublishActive = true;
     
-  DebugTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
+  DebugVerboseTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
   
   if ( !StaticInfoSend )  MQTTSentStaticInfo();
     

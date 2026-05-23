@@ -49,6 +49,20 @@ uint64_t uptime();
                            Debugf(__VA_ARGS__);                \
                         })
 
+#define DebugVerbose(...)    do { if (Verbose1) Debug(__VA_ARGS__); } while (0)
+#define DebugVerboseLn(...)  do { if (Verbose1) Debugln(__VA_ARGS__); } while (0)
+#define DebugVerbosef(...)   do { if (Verbose1) Debugf(__VA_ARGS__); } while (0)
+#define DebugVerboseT(...)   do { if (Verbose1) DebugT(__VA_ARGS__); } while (0)
+#define DebugVerboseTln(...) do { if (Verbose1) DebugTln(__VA_ARGS__); } while (0)
+#define DebugVerboseTf(...)  do { if (Verbose1) DebugTf(__VA_ARGS__); } while (0)
+
+#define DebugTrace(...)      do { if (Verbose2) Debug(__VA_ARGS__); } while (0)
+#define DebugTraceLn(...)    do { if (Verbose2) Debugln(__VA_ARGS__); } while (0)
+#define DebugTracef(...)     do { if (Verbose2) Debugf(__VA_ARGS__); } while (0)
+#define DebugTraceT(...)     do { if (Verbose2) DebugT(__VA_ARGS__); } while (0)
+#define DebugTraceTln(...)   do { if (Verbose2) DebugTln(__VA_ARGS__); } while (0)
+#define DebugTraceTf(...)    do { if (Verbose2) DebugTf(__VA_ARGS__); } while (0)
+
 /*---- einde macro's ------------------------------------------------------------------*/
 
 char _bol[128];

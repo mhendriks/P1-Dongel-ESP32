@@ -64,12 +64,15 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select port>
 
 5.7.2
-- fix: add uniq_id multiple dongles mqtt HA connecion
+- fix: uniq_id mqtt HA autodiscovery
+- refactoring
+
 - reports ipv Einde salderen
 - reports plafont grafiek terug
 
 
 5.7.3
+- MQTT total Enmergy from and to grid (Frans)
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - refactoring targets
 - add wallbox mapping

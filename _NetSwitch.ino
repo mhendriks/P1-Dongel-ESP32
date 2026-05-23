@@ -76,14 +76,14 @@ void NetSwitchStateMngr(){
   if ( Phouse > docTriggers["value"].as<int>() ) {
     if ( !ShellyStateTrue ) {
       ShellyStateTrue = uptimeSEC();
-      Debug("State True: ");Debugln(ShellyStateTrue);
+      DebugTrace(F("State True: ")); DebugTraceLn(ShellyStateTrue);
       ShellyStateFalse = 0;
     }
   } else {
     if ( !ShellyStateFalse ) {
       ShellyStateTrue = 0;
       ShellyStateFalse = uptimeSEC();
-      Debug("State False: ");Debugln(ShellyStateFalse);
+      DebugTrace(F("State False: ")); DebugTraceLn(ShellyStateFalse);
     }
   }
   ShellyDevMngr();
@@ -101,7 +101,7 @@ void handleNetSwitch(){
 void toggleNetSwitchSocket(bool turnOn) {
   if ( !bNETSWenabled ) return;
   if ( docTriggers["device"]["dongle_io"].as<int>() > 0 ) {
-    Debugf("IO changed to %s \n",turnOn?"True":"False");
+    DebugVerbosef("IO changed to %s \n",turnOn?"True":"False");
     digitalWrite(docTriggers["device"]["dongle_io"].as<int>(), turnOn);
     return;
   }
@@ -111,7 +111,7 @@ void toggleNetSwitchSocket(bool turnOn) {
   if ( netw_state != NW_NONE && deviceName && deviceName[0] ) {
     HTTPClient http;
     String url = String("http://") + deviceName + String("/relay/") + relay + String("?turn=") + (turnOn ? "on" : "off");
-    Debug("url: ");Debugln(url);
+    DebugVerbose(F("url: ")); DebugVerboseLn(url);
     
     // API-aanroep
     http.begin(url);
@@ -120,7 +120,7 @@ void toggleNetSwitchSocket(bool turnOn) {
 
     if (httpResponseCode == 200) {
       String payload = http.getString();
-      Debug("response: ");Debugln(payload);
+      DebugTrace(F("response: ")); DebugTraceLn(payload);
       Debug("Succes - Shelly Power Plug is ");
       Debugln(turnOn ? "on" : "off");
     } else {
@@ -140,7 +140,7 @@ void ShellyDevMngr(){
   
   //only action if changed
   if ( newState != lastToggleState ){
-    Debugf("Shelly toggle to: %s\n",newState?"on":"off");
+    DebugVerbosef("Shelly toggle to: %s\n",newState?"on":"off");
     lastToggleState = newState;
     bShellySwitch = true;
   }
