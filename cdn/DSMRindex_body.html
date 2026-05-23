@@ -743,37 +743,51 @@
 		</div>
     </section>  
 	
-	<section id="NETSW" class="tabName">
-		<div id=eid-setup>
-		<h1 class=align-c>NetSwitch</h1>
-    <label class=ntsw ><span data-i18n-key="net-intro-1">Zodra het netvermogen boven (min = terugleveren)</span>
-    <input class=ntsw type="number" id="value" value="100" oninput="NetSwitchUpdateBar()">
-	</label>
+		<section id="NETSW" class="tabName">
+			<div id=eid-setup>
+			<h1 class=align-c>NetSwitch</h1>
+	    <label class=ntsw data-i18n-key="net-direction">Reageer op</label>
+	    <select class=ntsw id="direction" onchange="NetSwitchUpdateBar()">
+	      <option value="return" data-i18n-key="net-direction-return">Teruglevering</option>
+	      <option value="deliver" data-i18n-key="net-direction-deliver">Afname</option>
+	    </select>
+	    <div class="netsw-action">
+	      <h3 data-i18n-key="net-action-on">Schakelactie</h3>
+	      <label class=ntsw><span data-i18n-key="net-value-on">Vanaf</span>
+	      <div class="ntsw-input-unit"><input class=ntsw type="number" id="threshold_on" value="100" min="0" oninput="NetSwitchUpdateBar()"><span data-i18n-key="net-unit-watt">Watt</span></div>
+	      </label>
+	      <label class=ntsw data-i18n-key="net-intro-2">Shelly/IO wordt</label>
+	      <select class=ntsw id="switch_on" onchange="NetSwitchUpdateBar()">
+	        <option value="true" >ON</option>
+	        <option value="false" selected>OFF</option>
+	      </select>
+	      <label class=ntsw data-i18n-key="net-on-delay">Vertraging</label>
+	      <div class="ntsw-input-unit"><input class=ntsw type="number" id="time_true" min="10" max="3600" value="60" ><span data-i18n-key="net-unit-seconds">seconden</span></div>
+	    </div>
 
-    <label class=ntsw data-i18n-key="net-intro-2">Watt komt, gaat het Shelly toestel of IO </label>
-    <select class=ntsw id="switch_on" onchange="NetSwitchUpdateBar()">
-        <option value="true" >ON</option>
-        <option value="false" selected>OFF</option>
-    </select>
-    
-    <div class="bar-container" >
-        <div class="bar-container-inner" onclick="BarOnClick()">
-        <div class="bar-fill-left" id="barFillLeft">ON</div>
-        <div class="bar-divider"></div>
-        <div class="bar-fill-right" id="barFillRight">OFF</div>
-        </div>
-        <div class="bar-text" id="barText">100 Watt</div>
-    </div>
-    
-    <hr>
-    <label class=ntsw data-i18n-key="net-on-delay">Inschakelvertraging (seconden)</label>
-    <input class=ntsw type="number" id="time_true" min="10" max="3600" value="60" >
-
-    <label class=ntsw data-i18n-key="net-off-delay">Uitschakelvertraging (seconden)</label>
-    <input class=ntsw type="number" id="time_false" min="10" max="3600" value="120" >
-	
-	<label class=ntsw data-i18n-key="net-start-state">State on startup</label>
-	<select class=ntsw id="default">
+	    <div class="netsw-action">
+	      <h3 data-i18n-key="net-action-off">Terugschakelactie</h3>
+	      <label class=ntsw><span data-i18n-key="net-value-off">Onder</span>
+	      <div class="ntsw-input-unit"><input class=ntsw type="number" id="threshold_off" value="0" min="0" oninput="NetSwitchUpdateBar()"><span data-i18n-key="net-unit-watt">Watt</span></div>
+	      </label>
+	      <div class="netsw-readonly"><span data-i18n-key="net-off-state">Shelly/IO wordt</span> <b id="netSwitchOffState">ON</b></div>
+	      <label class=ntsw data-i18n-key="net-off-delay">Vertraging</label>
+	      <div class="ntsw-input-unit"><input class=ntsw type="number" id="time_false" min="10" max="3600" value="120" ><span data-i18n-key="net-unit-seconds">seconden</span></div>
+	    </div>
+	    <div class="netsw-scale">
+	      <div class="netsw-scale-bar">
+	        <div class="netsw-scale-segment" id="netSwitchScaleLow"></div>
+	        <div class="netsw-scale-segment netsw-scale-hold" id="netSwitchScaleHold"></div>
+	        <div class="netsw-scale-segment" id="netSwitchScaleHigh"></div>
+	        <div class="netsw-scale-marker" id="netSwitchMarkerOff"><span id="netSwitchMarkerOffValue"></span></div>
+	        <div class="netsw-scale-marker" id="netSwitchMarkerOn"><span id="netSwitchMarkerOnValue"></span></div>
+	      </div>
+	    </div>
+	    <div class="netsw-error" id="netSwitchValidation"></div>
+	    
+	    <hr>
+		<label class=ntsw data-i18n-key="net-start-state">State on startup</label>
+		<select class=ntsw id="default">
         <option value="true" >ON</option>
         <option value="false" selected>OFF</option>
     </select>

@@ -64,18 +64,21 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select port>
 
 5.7.3
+- Netswitch in en uitschakel drempel (Willem Jaap)
+
+
 - MQTT total Energy from and to grid (Frans)
 - refactoring targets
 - add wallbox mapping
 - api/v2/dash (combined request for dashboard)
-- Netswitch in en uitschakel drempel (Willem Jaap)
+
 
 5.8.0
+- Add remote Proxy
+- refactor: asyncwebserver
 - reports plafont grafiek terug
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - kWh meter als bron voor productie data gebruiken (Harrie)
-- refactor: asyncwebserver
-- Add remote Proxy
 - update button in HA to trigger the update (mqtt based #70)
 
 */
@@ -87,8 +90,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //---  PROFILES  ---
 // #define ULTRA            //ultra (mini) dongle
-// #define ETHERNET         //ethernet dongle
-// #define ETH_P1EP         //ethernet pro+ dongle
+#define ETHERNET         //ethernet dongle
+#define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 

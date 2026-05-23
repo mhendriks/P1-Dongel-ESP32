@@ -1333,40 +1333,65 @@ function show_hide_column2(table, col_no, do_show) {
   }
   
   
-  function BarOnClick() {
-    
-//     console.log("BaronClick");
-    if ( document.getElementById("switch_on").value === "true") document.getElementById("switch_on").value = "false";
-    else document.getElementById("switch_on").value = "true";
-    NetSwitchUpdateBar();
-    
-    }
-  
   //============================================================================  
-function NetSwitchUpdateBar() {
-	let switchOn = document.getElementById("switch_on").value === "true";
-	let barFillLeft = document.getElementById("barFillLeft");
-	let barFillRight = document.getElementById("barFillRight");
-	let barText = document.getElementById("barText");
-	let value = document.getElementById("value").value;
-	
-	barText.innerText = value + " Watt";
-	
-	if ( !switchOn ) {
-		barFillLeft.style.background = "green";
-		barFillRight.style.background = "red";
-		barFillLeft.innerHTML = "ON";
-		barFillRight.innerHTML = "OFF";
-	} else {
-		barFillLeft.style.background = "red";
-		barFillRight.style.background = "green";
-		barFillLeft.innerHTML = "OFF";
-		barFillRight.innerHTML = "ON";
+	function NetSwitchUpdateBar() {
+		if (!document.getElementById("switch_on")) return;
+		let switchOn = document.getElementById("switch_on").value === "true";
+		let actionLabel = switchOn ? "ON" : "OFF";
+		let oppositeLabel = switchOn ? "OFF" : "ON";
+		document.getElementById("netSwitchOffState").innerText = oppositeLabel;
+		let thresholdOn = Math.max(0, parseInt(document.getElementById("threshold_on").value) || 0);
+		let thresholdOff = Math.max(0, parseInt(document.getElementById("threshold_off").value) || 0);
+		let isValid = thresholdOff < thresholdOn;
+		document.getElementById("netSwitchValidation").innerText = isValid ? "" : t("net-threshold-error");
+		updateNetSwitchScale(thresholdOff, thresholdOn, oppositeLabel, actionLabel);
 	}
-}
+
+	function updateNetSwitchScale(thresholdOff, thresholdOn, offStateLabel, onStateLabel) {
+		let leftPadding = Math.max(25, Math.round(thresholdOn * 0.08));
+		let rightPadding = Math.max(50, Math.round(thresholdOn * 0.2));
+		let visualMin = -leftPadding;
+		let visualMax = Math.max(1, thresholdOn + rightPadding);
+		let visualRange = visualMax - visualMin;
+		let offPct = ((thresholdOff - visualMin) / visualRange) * 100;
+		let onPct = ((thresholdOn - visualMin) / visualRange) * 100;
+		let low = document.getElementById("netSwitchScaleLow");
+		let hold = document.getElementById("netSwitchScaleHold");
+		let high = document.getElementById("netSwitchScaleHigh");
+		let markerOff = document.getElementById("netSwitchMarkerOff");
+		let markerOn = document.getElementById("netSwitchMarkerOn");
+		low.style.width = offPct + "%";
+		hold.style.width = Math.max(0, onPct - offPct) + "%";
+		high.style.width = Math.max(0, 100 - onPct) + "%";
+		setNetSwitchStateSegment(low, offStateLabel);
+		setNetSwitchStateSegment(high, onStateLabel);
+		hold.innerText = "";
+		markerOff.style.left = offPct + "%";
+		markerOn.style.left = onPct + "%";
+		let markersClose = (onPct - offPct) < 18;
+		let offLabelRight = markersClose && offPct < 12;
+		markerOff.classList.toggle("label-right", offLabelRight);
+		markerOff.classList.toggle("label-left", markersClose && !offLabelRight);
+		markerOn.classList.toggle("label-right", markersClose);
+		document.getElementById("netSwitchMarkerOffValue").innerText = thresholdOff + " Watt";
+		document.getElementById("netSwitchMarkerOnValue").innerText = thresholdOn + " Watt";
+	}
+
+	function setNetSwitchStateSegment(element, stateLabel) {
+		element.classList.toggle("on-state", stateLabel === "ON");
+		element.classList.toggle("off-state", stateLabel === "OFF");
+		element.innerText = stateLabel;
+	}
 
 function refreshNetSwitch(data){
-	document.getElementById("value").value = data.value;
+	let legacyValueOn = data.value_on ?? data.value ?? 100;
+	let legacyValueOff = data.value_off ?? legacyValueOn;
+	let direction = data.direction ?? (legacyValueOn < 0 ? "return" : "deliver");
+	let thresholdOn = data.threshold_on ?? Math.abs(legacyValueOn);
+	let thresholdOff = data.threshold_off ?? Math.abs(legacyValueOff);
+	document.getElementById("direction").value = direction;
+	document.getElementById("threshold_on").value = thresholdOn;
+	document.getElementById("threshold_off").value = thresholdOff;
 	document.getElementById("switch_on").value = data.switch_on ? "true" : "false";
 	document.getElementById("time_true").value = data.time_true || 60;
 	document.getElementById("time_false").value = data.time_false || 120;
@@ -1400,8 +1425,22 @@ function NTSWupdateVisibility() {
 
 function SendNetSwitchJson() {
 // 	console.log("send data");
+		let direction = document.getElementById("direction").value;
+		let thresholdOn = Math.max(0, parseInt(document.getElementById("threshold_on").value) || 0);
+		let thresholdOff = Math.max(0, parseInt(document.getElementById("threshold_off").value) || 0);
+		if (thresholdOff >= thresholdOn) {
+			window.alert(t("net-threshold-error"));
+			return;
+		}
+		let valueOn = direction === "return" ? -thresholdOn : thresholdOn;
+		let valueOff = direction === "return" ? -thresholdOff : thresholdOff;
 		let data = {
-			value: parseInt(document.getElementById("value").value),
+			value: valueOn,
+			value_on: valueOn,
+			value_off: valueOff,
+			direction: direction,
+			threshold_on: thresholdOn,
+			threshold_off: thresholdOff,
 			switch_on: document.getElementById("switch_on").value === "true",
 			time_true: parseInt(document.getElementById("time_true")?.value || 60),
 			time_false: parseInt(document.getElementById("time_false")?.value || 120),
@@ -3905,12 +3944,94 @@ function handle_menu_click()
 //====== I18N.JS ====
 
 let translations = {};
+const FALLBACK_TRANSLATIONS = {
+  nl: {
+    "net-action-on": "Schakelactie",
+    "net-action-off": "Terugschakelactie",
+    "net-direction": "Reageer op",
+    "net-direction-return": "Teruglevering",
+    "net-direction-deliver": "Afname",
+    "net-value-on": "Vanaf",
+    "net-value-off": "Onder",
+    "net-intro-2": "Shelly/IO wordt",
+    "net-off-state": "Shelly/IO wordt",
+    "net-below-threshold": "Onder drempel",
+    "net-above-threshold": "Vanaf drempel",
+    "net-action-from": "Actie vanaf",
+    "net-action-under": "Actie onder",
+    "net-threshold-error": "De terugschakeldrempel moet lager zijn dan de schakeldrempel.",
+    "net-unit-watt": "Watt",
+    "net-unit-seconds": "seconden",
+    "net-on-delay": "Vertraging",
+    "net-off-delay": "Vertraging"
+  },
+  en: {
+    "net-action-on": "Switch action",
+    "net-action-off": "Switch-back action",
+    "net-direction": "Respond to",
+    "net-direction-return": "Export",
+    "net-direction-deliver": "Import",
+    "net-value-on": "From",
+    "net-value-off": "Below",
+    "net-intro-2": "Shelly/IO becomes",
+    "net-off-state": "Shelly/IO becomes",
+    "net-below-threshold": "Below threshold",
+    "net-above-threshold": "From threshold",
+    "net-action-from": "Action from",
+    "net-action-under": "Action below",
+    "net-threshold-error": "The switch-back threshold must be lower than the switch threshold.",
+    "net-unit-watt": "Watt",
+    "net-unit-seconds": "seconds",
+    "net-on-delay": "Delay",
+    "net-off-delay": "Delay"
+  },
+  de: {
+    "net-action-on": "Schaltaktion",
+    "net-action-off": "Zurückschaltaktion",
+    "net-direction": "Reagieren auf",
+    "net-direction-return": "Einspeisung",
+    "net-direction-deliver": "Bezug",
+    "net-value-on": "Ab",
+    "net-value-off": "Unter",
+    "net-intro-2": "Shelly/IO wird",
+    "net-off-state": "Shelly/IO wird",
+    "net-below-threshold": "Unter Schwelle",
+    "net-above-threshold": "Ab Schwelle",
+    "net-action-from": "Aktion ab",
+    "net-action-under": "Aktion unter",
+    "net-threshold-error": "Die Zurückschaltschwelle muss niedriger als die Schaltschwelle sein.",
+    "net-unit-watt": "Watt",
+    "net-unit-seconds": "Sekunden",
+    "net-on-delay": "Verzögerung",
+    "net-off-delay": "Verzögerung"
+  },
+  se: {
+    "net-action-on": "Växlingsåtgärd",
+    "net-action-off": "Återgångsåtgärd",
+    "net-direction": "Reagera på",
+    "net-direction-return": "Export",
+    "net-direction-deliver": "Import",
+    "net-value-on": "Från",
+    "net-value-off": "Under",
+    "net-intro-2": "Shelly/IO blir",
+    "net-off-state": "Shelly/IO blir",
+    "net-below-threshold": "Under gräns",
+    "net-above-threshold": "Från gräns",
+    "net-action-from": "Åtgärd från",
+    "net-action-under": "Åtgärd under",
+    "net-threshold-error": "Återgångsgränsen måste vara lägre än växlingsgränsen.",
+    "net-unit-watt": "Watt",
+    "net-unit-seconds": "sekunder",
+    "net-on-delay": "Fördröjning",
+    "net-off-delay": "Fördröjning"
+  }
+};
 const URL_I18N = typeof DEBUG !== 'undefined' && DEBUG
   ? "http://localhost/~martijn/dsmr-api/v5/lang"
   : "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/cdn/lang";
 
 function t(key) {
-  return translations[key] || key;
+  return translations[key] || FALLBACK_TRANSLATIONS[locale]?.[key] || FALLBACK_TRANSLATIONS.en[key] || key;
 }
 
 function td(key) {
@@ -3920,8 +4041,10 @@ function td(key) {
 function applyTranslations() {
   document.querySelectorAll('[data-i18n-key]').forEach(el => {
     const key = el.getAttribute('data-i18n-key');
-    if (translations[key]) el.innerHTML = translations[key];
+    const translation = t(key);
+    if (translation !== key) el.innerHTML = translation;
   });
+  NetSwitchUpdateBar();
 }
 
 function changeLanguage(lang) {

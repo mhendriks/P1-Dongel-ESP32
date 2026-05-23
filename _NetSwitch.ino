@@ -7,6 +7,15 @@ bool bShellySwitch = false;
 bool lastToggleState;
 bool bNetSwitchConfigRead = false;
 
+int32_t getNetSwitchValue(const char* key, int32_t defaultValue) {
+  return docTriggers[key].is<int>() ? docTriggers[key].as<int>() : defaultValue;
+}
+
+bool getNetSwitchExportMode() {
+  if ( docTriggers["direction"].is<const char*>() ) return strcmp(docTriggers["direction"].as<const char*>(), "return") == 0;
+  return getNetSwitchValue("value_on", docTriggers["value"].as<int>()) < 0;
+}
+
 void fNetSwitchProc( void * pvParameters ){
   DebugTln(F("Enable NetSwitch processing"));
   readtriggers();
@@ -55,7 +64,9 @@ void readtriggers(){
       digitalWrite(docTriggers["device"]["dongle_io"].as<int>(), docTriggers["device"]["default"].as<bool>());
     }
 #ifdef DEBUG
-    Debug("value           : ");Debugln(docTriggers["value"].as<int>());
+    Debug("direction       : ");Debugln(getNetSwitchExportMode() ? "return" : "deliver");
+    Debug("threshold on    : ");Debugln(getNetSwitchValue("threshold_on", abs(getNetSwitchValue("value_on", docTriggers["value"].as<int>()))));
+    Debug("threshold off   : ");Debugln(getNetSwitchValue("threshold_off", abs(getNetSwitchValue("value_off", docTriggers["value"].as<int>()))));
     Debug("switch_on       : ");Debugln(docTriggers["switch_on"].as<bool>());
     Debug("time-true (sec) : ");Debugln(docTriggers["time_true"].as<int>());
     Debug("time-false (sec): ");Debugln(docTriggers["time_false"].as<int>());
@@ -72,19 +83,29 @@ void NetSwitchStateMngr(){
   if ( !bNetSwitchConfigRead ) return;
   //every time new p1 values are available
   int32_t Phouse = DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val();
+  int32_t legacyValueOn = getNetSwitchValue("value_on", docTriggers["value"].as<int>());
+  int32_t legacyValueOff = getNetSwitchValue("value_off", legacyValueOn);
+  bool exportMode = getNetSwitchExportMode();
+  int32_t thresholdOn = getNetSwitchValue("threshold_on", abs(legacyValueOn));
+  int32_t thresholdOff = getNetSwitchValue("threshold_off", abs(legacyValueOff));
+  bool actionOnState = exportMode ? (Phouse <= -thresholdOn) : (Phouse >= thresholdOn);
+  bool actionOffState = exportMode ? (Phouse >= -thresholdOff) : (Phouse <= thresholdOff);
 
-  if ( Phouse > docTriggers["value"].as<int>() ) {
+  if ( actionOnState ) {
     if ( !ShellyStateTrue ) {
       ShellyStateTrue = uptimeSEC();
       DebugTrace(F("State True: ")); DebugTraceLn(ShellyStateTrue);
       ShellyStateFalse = 0;
     }
-  } else {
+  } else if ( actionOffState ) {
     if ( !ShellyStateFalse ) {
       ShellyStateTrue = 0;
       ShellyStateFalse = uptimeSEC();
       DebugTrace(F("State False: ")); DebugTraceLn(ShellyStateFalse);
     }
+  } else {
+    ShellyStateTrue = 0;
+    ShellyStateFalse = 0;
   }
   ShellyDevMngr();
 }
