@@ -51,12 +51,15 @@
 			<li><a id='bNETSW'   	  data-i18n-key="mnu-netsw" class='tabButton nav-item' href="#NETSW" style="display:none" onclick="fetchNetSwitchConfig()">NetSwitch</a></li>
 			<li><a id='bEditSettings' data-i18n-key="mnu-settings" class='tabButton nav-item' href="#Settings" >Settings</a></li>
 			<li><a id='bEditMonths'   data-i18n-key="mnu-editmonths" class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
-			<li><a id='bReset'   	  data-i18n-key="mnu-reset" class='tabButton nav-item' href="#Reset" >Reset/boot</a></li>
 			<li><a id='bSolar'   	  data-i18n-key="mnu-solar" class='tabButton nav-item' href="#Solar" >Solar Setup</a></li>
 			<li><a id='bESPHome'   	  data-i18n-key="mnu-esphome" class='tabButton nav-item' href="#ESPHome" >ESPHome</a></li>
 <!-- 			<li><a id='bAbout'   	  class='tabButton nav-item' href="#About" >About</a></li> -->
 		</ul></li>
-<!-- 	  <li><a id='bLogout'      class='nav-img nav-item' href="/logout" ><span class="iconify" data-icon="mdi-logout"></span></a>    		 -->
+	  <li><a id='bSystem' class='nav-img' href="javascript:void(0);" ><span class="iconify" data-icon="mdi-power"></span></a>
+		<ul>
+			<li><a id='bReset'   	  data-i18n-key="mnu-reset-wifi" class='nav-item' href="/ResetWifi" onclick="return showSystemActionDialog('resetWifi')" >Reset Wifi</a></li>
+			<li><a id='bReboot'   	  data-i18n-key="mnu-reboot" class='nav-item' href="/ReBoot" onclick="return showSystemActionDialog('reboot')" >Reboot</a></li>
+		</ul></li>
 	  <li><a href="javascript:void(0);" class="icon" onclick="menu()"><i id="menuid" class="iconify" data-icon="mdi-menu"></i></a></li>
    </ul>
    </nav> <!-- end nav-main -->  
@@ -1077,6 +1080,18 @@
             <button onclick="closeUpdate()" data-i18n-key="btn_update_close">Sluiten</button>
         </div>
     </div>  </div> <!-- update -->
+  <div id="systemAction">
+     <div class="overlay" id="systemActionPopup">
+        <div class="popup">
+            <h2 id="systemActionTitle"></h2>
+            <p id="systemActionText"></p>
+            <div hidden class="popup-spinner" id="systemActionSpinner"></div>
+            <div class="popup-actions">
+                <button type="button" id="systemActionCancel" class="button-secondary" onclick="closeSystemActionDialog()" data-i18n-key="btn_cancel">Annuleren</button>
+                <button type="button" id="systemActionContinue" onclick="confirmSystemActionDialog()" data-i18n-key="btn_continue">Doorgaan</button>
+            </div>
+        </div>
+    </div>  </div> <!-- systemAction -->
   </div>
   <!-- REST -->
   <div style="margin: 30px;">

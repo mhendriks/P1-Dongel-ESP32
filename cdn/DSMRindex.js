@@ -1575,6 +1575,7 @@ function parseDeviceInfo(obj) {
   // NETSW config
   const showNetSw = obj.compileoptions.includes("[NETSW]");
   document.getElementById("bNETSW").style.display = showNetSw ? "block" : "none";
+  updateSystemActionMenu(obj);
     
   // add version info 
   const manifest = objDAL.version_manifest;
@@ -1635,6 +1636,112 @@ function closeUpdate() {
 	document.location.href="/";
 	// location.reload();
 }    
+
+let systemActionUrl = "/";
+let systemActionCurrent = null;
+let systemActionCheckInterval = null;
+let systemActionTimeout = null;
+
+function deviceSupportsWifi(info) {
+	const network = String(info?.network || "").toUpperCase();
+	if (network) return !network.startsWith("ETHERNET");
+
+	const hardware = String(info?.hardware || "").toUpperCase();
+	const compileoptions = String(info?.compileoptions || "").toUpperCase();
+	return !(hardware === "P1E" || hardware === "P1EP" || (compileoptions.includes("[ETH]") || compileoptions.includes("[P1EP]")) && !compileoptions.includes("[ULTRA]"));
+}
+
+function updateSystemActionMenu(info) {
+	const resetWifi = document.getElementById("bReset");
+	if (resetWifi) resetWifi.style.display = deviceSupportsWifi(info) ? "block" : "none";
+}
+
+function showSystemActionDialog(action) {
+	if (action === "resetWifi" && !deviceSupportsWifi(objDAL?.getDeviceInfo?.())) return false;
+
+	const actions = {
+		resetWifi: {
+			url: "/ResetWifi",
+			title: t("tle-reset-wifi"),
+			text: t("txt-confirm-reset-wifi"),
+			waitText: t("txt-reset-wifi-wait"),
+			timeoutText: t("txt-reset-wifi-timeout")
+		},
+		reboot: {
+			url: "/ReBoot",
+			title: t("tle-reboot"),
+			text: t("txt-confirm-reboot"),
+			waitText: t("txt-reboot-wait"),
+			timeoutText: t("txt-reboot-timeout")
+		}
+	};
+	const selected = actions[action];
+	if (!selected) return false;
+
+	systemActionUrl = selected.url;
+	systemActionCurrent = selected;
+	document.getElementById("systemActionTitle").innerText = selected.title;
+	document.getElementById("systemActionText").innerText = selected.text;
+	document.getElementById("systemActionSpinner").setAttribute("hidden", "");
+	document.getElementById("systemActionCancel").innerText = t("btn_cancel");
+	document.getElementById("systemActionCancel").onclick = closeSystemActionDialog;
+	document.getElementById("systemActionCancel").removeAttribute("hidden");
+	document.getElementById("systemActionContinue").removeAttribute("hidden");
+	document.getElementById("systemActionPopup").style.visibility = "visible";
+	return false;
+}
+
+function closeSystemActionDialog() {
+	document.getElementById("systemActionPopup").style.visibility = "hidden";
+	clearSystemActionTimers();
+}
+
+function confirmSystemActionDialog() {
+	document.getElementById("systemActionText").innerText = systemActionCurrent?.waitText || "";
+	document.getElementById("systemActionSpinner").removeAttribute("hidden");
+	document.getElementById("systemActionCancel").setAttribute("hidden", "");
+	document.getElementById("systemActionContinue").setAttribute("hidden", "");
+
+	fetch(systemActionUrl, { cache: "no-store", redirect: "manual" }).catch(() => {});
+	systemActionTimeout = setTimeout(startSystemActionOnlineCheck, 8000);
+}
+
+function clearSystemActionTimers() {
+	if (systemActionCheckInterval) clearInterval(systemActionCheckInterval);
+	if (systemActionTimeout) clearTimeout(systemActionTimeout);
+	systemActionCheckInterval = null;
+	systemActionTimeout = null;
+}
+
+function startSystemActionOnlineCheck() {
+	clearSystemActionTimers();
+	systemActionCheckInterval = setInterval(checkSystemActionOnline, 2000);
+	systemActionTimeout = setTimeout(() => {
+		clearSystemActionTimers();
+		document.getElementById("systemActionSpinner").setAttribute("hidden", "");
+		document.getElementById("systemActionText").innerText = systemActionCurrent?.timeoutText || "";
+		document.getElementById("systemActionCancel").innerText = t("btn_update_close");
+		document.getElementById("systemActionCancel").removeAttribute("hidden");
+	}, 90000);
+	checkSystemActionOnline();
+}
+
+function checkSystemActionOnline() {
+	fetch("/api/v2/dev/time?dummy=" + Date.now(), { cache: "no-store" })
+		.then(response => {
+			if (!response.ok) throw new Error("offline");
+			return response.json();
+		})
+		.then(() => {
+			clearSystemActionTimers();
+			document.getElementById("systemActionSpinner").setAttribute("hidden", "");
+			document.getElementById("systemActionText").innerText = t("txt-reboot-done");
+			document.getElementById("systemActionCancel").innerText = t("btn_update_close");
+			document.getElementById("systemActionCancel").removeAttribute("hidden");
+			document.getElementById("systemActionCancel").onclick = () => { document.location.href = "/"; };
+		})
+		.catch(() => {});
+}
 
 let progress = 0;
 let progressBar, checkInterval, update_interval; 
