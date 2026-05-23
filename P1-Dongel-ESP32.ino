@@ -63,14 +63,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.7.2
-- fix: uniq_id mqtt HA autodiscovery
-- refactoring strings/logging
-- menu change : reports ipv NA salderen
-- add: Virtual P1 feature in settings (Ethernet/Ultra only)
-- update documentatie
-- change: move reboot/wifi reset to new power menu item
-
 5.7.3
 - MQTT total Energy from and to grid (Frans)
 - refactoring targets
@@ -95,8 +87,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //---  PROFILES  ---
 // #define ULTRA            //ultra (mini) dongle
-#define ETHERNET         //ethernet dongle
-#define ETH_P1EP         //ethernet pro+ dongle
+// #define ETHERNET         //ethernet dongle
+// #define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 
