@@ -23,6 +23,35 @@ void handleRemoteUpdate(){
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
 }
 
+void RemoteUpdate() {
+  if (httpServer.argName(0) != "version") {
+    LogFile("OTA ERROR: missing version argument", true);
+    httpServer.sendHeader("Location", "/#UpdateStart?error=missing_argument");
+    httpServer.send(303, "text/html", "");
+    setRemoteUpdateStatus("error", "missing_argument");
+    return;
+  }
+
+  const String requestedVersion = httpServer.arg(0);
+  String errorDetail;
+  if (!RemoteUpdateAvailable(requestedVersion.c_str(), &errorDetail)) {
+    httpServer.sendHeader("Location", "/#UpdateStart?error=" + errorDetail);
+    httpServer.send(303, "text/html", "");
+    setRemoteUpdateStatus("error", errorDetail.c_str());
+    return;
+  }
+
+  if (!QueueRemoteUpdate(requestedVersion.c_str(), true)) {
+    httpServer.sendHeader("Location", "/#UpdateStart?error=failed");
+    httpServer.send(303, "text/html", "");
+    setRemoteUpdateStatus("error", "failed");
+    return;
+  }
+
+  httpServer.sendHeader("Location", "/#UpdateStart");
+  httpServer.send(303, "text/html", "");
+}
+
 bool QueueRemoteUpdate(const char* versie, bool sketch) {
   if (!versie || !strlen(versie)) {
     LogFile("OTA ERROR: missing version argument", true);
@@ -80,27 +109,6 @@ bool RemoteUpdateAvailable(const char* versie, String* errorDetail) {
     else *errorDetail = "update_unreachable";
   }
   return false;
-}
-
-void handleRemoteUpdateRequest(AsyncWebServerRequest* request) {
-  const AsyncWebParameter* versionParam = request->getParam("version");
-  if (!versionParam || !versionParam->value().length()) {
-    request->redirect("/#UpdateStart?error=missing_argument");
-    return;
-  }
-
-  String errorDetail;
-  if (!RemoteUpdateAvailable(versionParam->value().c_str(), &errorDetail)) {
-    request->redirect("/#UpdateStart?error=" + errorDetail);
-    return;
-  }
-
-  if (!QueueRemoteUpdate(versionParam->value().c_str(), true)) {
-    request->redirect("/#UpdateStart?error=failed");
-    return;
-  }
-
-  request->redirect("/#UpdateStart");
 }
 
 bool RemoteUpdateNow(const char* versie, bool sketch, String* errorDetail) {

@@ -1483,6 +1483,9 @@ function SendNetSwitchJson() {
       		break;
 		case "bInsightsTab"	: objDAL.refreshInsights(); break;
 		case "bPlafondTab"	: refreshData(); break;
+		case "bPriceCapTab"	:
+			if (typeof refreshPriceCapData === "function") refreshPriceCapData();
+			break;
 		case "bHoursTab"	: refreshHistData("Hours"); break;
      	case "bDaysTab"		: refreshHistData("Days"); break;
       	case "bMonthsTab"	: refreshHistData("Months"); break;

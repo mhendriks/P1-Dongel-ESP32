@@ -34,6 +34,7 @@
       <li><a id='bReportsTab'   data-i18n-key="mnu-reports" href="javascript:void(0);" >Reports</a>
         <ul>
           <li><a id='bPlafondTab'   data-i18n-key="mnu-plafond" class='tabButton nav-item' href="#PlafondTab" >Na Salderen</a></li>
+          <li><a id='bPriceCapTab'  data-i18n-key="mnu-pricecap" class='tabButton nav-item' href="#PriceCapTab" >Plafond</a></li>
         </ul></li>
 	  <li>
 	  	<a id='bSysInfoTab' class='nav-img nav-item' href="#SysInfoTab" ><span class="iconify" data-icon="mdi-information-outline"></span></a>
@@ -408,6 +409,59 @@
       Deze pagina geeft een indicatieve simulatie op basis van historische data, bedoeld om extra inzicht te geven in het mogelijke effect vanaf 2027. De berekening gaat uit van een vast contract en gebruikt de ingestelde tarieven als benadering. De accusimulatie werkt op dagdata met 90% rendement en is daardoor vooral bedoeld als indicatie voor de maandweergave. Aan deze uitkomst kunnen geen rechten worden ontleend.
     </div>
   </section> <!-- END PLAFOND -->
+
+  <section id="PriceCapTab" class="tabName">
+    <style>
+      #PriceCapTab {
+        width: min(1120px, calc(100vw - 32px));
+        margin: 0 auto;
+      }
+      #PriceCapTab .pricecap-chart-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 18px;
+        margin-top: 18px;
+      }
+      #PriceCapTab .pricecap-chart-card {
+        background: linear-gradient(180deg,#ffffff,#f8fafc);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 10px 24px rgba(21,43,77,.07);
+        min-height: 300px;
+      }
+      #PriceCapTab .pricecap-chart-wrap {
+        position: relative;
+        min-height: 260px;
+      }
+      #PriceCapTab .pricecap-chart-wrap canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+    </style>
+	<h2 data-i18n-key="tle-pricecap">Prijsplafond (NL)</h2>
+	<p data-i18n-key="tle-pricecap-description">Deze grafiek laat verbruik zien t.o.v. prijsplafond om een idee te geven hoe het verbruik zich ontwikkelt.<br>
+	In de jaargrafieken is de seizoensinvloed meegenomen. In de maandgrafieken is de verdeling lineair.<br>
+	Het is een hulpmiddel om een beeld te krijgen van het gebruik ten opzichte van het prijsplafond.</p>
+    <div>
+      <b data-i18n-key="tle-graph-per">Grafiek per:</b>
+      <input type="radio" id="btnPriceCapYear" name=pricecap onchange="setPriceCapViewYEAR()"/>
+      <label data-i18n-key="lbl-year" for="btnPriceCapYear">Jaar</label>
+      <input type="radio" id="btnPriceCapMonth" name=pricecap onchange="setPriceCapViewMONTH()" checked/>
+      <label data-i18n-key="lbl-month" for="btnPriceCapMonth">Maand</label>
+    </div>
+    <div class="pricecap-chart-grid">
+      <div class="pricecap-chart-card">
+        <div class="pricecap-chart-wrap">
+		  <canvas id="priceCapElectricityChart" height="260"></canvas>
+        </div>
+      </div>
+      <div class="pricecap-chart-card">
+        <div class="pricecap-chart-wrap">
+		  <canvas id="priceCapGasChart" height="260"></canvas>
+        </div>
+      </div>
+	</div>
+  </section> <!-- END PRICECAP -->
 
   <!-- START SysInfo Tab -->
   <section id="SysInfoTab" class="tabName subTab">

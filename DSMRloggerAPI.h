@@ -42,8 +42,7 @@ struct {
 #include <WiFi.h>  
 // #include "Insights.h"
 #include <WiFiClientSecure.h>        
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
+#include <WebServer.h>
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
@@ -65,19 +64,11 @@ struct ApiResponse {
 };
 
 struct ApiRequestContext {
-  uint8_t method;
+  HTTPMethod method;
   String pathArg;
   String body;
   String uri;
 };
-
-static inline bool apiRequestIsPost(const ApiRequestContext& request) {
-  return request.method & AsyncWebRequestMethod::HTTP_POST;
-}
-
-static inline bool apiRequestIsPut(const ApiRequestContext& request) {
-  return request.method & AsyncWebRequestMethod::HTTP_PUT;
-}
 
 #ifdef MBUS
   #include "ModbusServerWiFi.h"
@@ -179,10 +170,10 @@ void writeRingFiles();
 void writeSettings();
 void writeSettingsDirect();
 void ManifestCheckFromWorker();
+void RemoteUpdate();
 bool QueueRemoteUpdate(const char* versie, bool sketch);
 bool RemoteUpdateAvailable(const char* versie, String* errorDetail = nullptr);
 bool RemoteUpdateNow(const char* versie, bool sketch, String* errorDetail = nullptr);
-void handleRemoteUpdateRequest(AsyncWebServerRequest* request);
 void AppendRemoteUpdateStatus(JsonDocument& doc);
 void P1Reboot();
 void EIDPostHello(ApiResponse* response = nullptr);
@@ -192,7 +183,7 @@ uint32_t actueleOverspanningSeconden(uint32_t overspanningTotaal, unsigned long 
 void ResetOvervoltageStats();
 String smActualJsonDebug();
 
-AsyncWebServer httpServer(80);
+WebServer httpServer(80);
 NetServer ws_raw(82);
 
 // time_t tWifiLost        = 0;
@@ -614,6 +605,10 @@ ApiResponse handleSmApiField(const ApiRequestContext& request);
 ApiResponse handleModbusMonitorApi(const ApiRequestContext& request);
 ApiResponse historyMonthsApiResponse(const String& body);
 ApiResponse listFilesApiResponse();
+void sendHWapiJson();
+void sendDeviceSettingsJson();
+void sendSmActualJson();
+void sendSmFieldJson(const String& field);
 ApiResponse solarApiResponse();
 ApiResponse accuApiResponse();
 ApiResponse EIDGetClaimApiResponse(const String& action);

@@ -64,11 +64,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select port>
 
 5.8.0
-- big refactor: asyncwebserver
-- reports plafond grafiek terug
+- rollback async webserver refactoring
 - MQTT total Energy from and to grid (Frans)
+- add: reports plafond report back
+
+- fix: EM330 mapping changes from p1 modbus v2
 
 5.9.0
+- tooltips bij de diverse settings (Gerben)
 - Add remote Proxy
 - refactoring targets
 - add wallbox mapping
@@ -210,6 +213,7 @@ void setup()
 
 void loop () { 
   esp_task_wdt_reset();
+  httpServer.handleClient();
   if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
     P1StatusWrite();
     MQTTSentStaticInfo();

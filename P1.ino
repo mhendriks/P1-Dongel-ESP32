@@ -104,6 +104,18 @@ struct showValues {
   }
 };
 
+static void normalizeEnergyTotals() {
+  if (!DSMRdata.energy_delivered_total_present) {
+    DSMRdata.energy_delivered_total._value = DSMRdata.energy_delivered_tariff1.int_val() + DSMRdata.energy_delivered_tariff2.int_val();
+    DSMRdata.energy_delivered_total_present = true;
+  }
+
+  if (!DSMRdata.energy_returned_total_present) {
+    DSMRdata.energy_returned_total._value = DSMRdata.energy_returned_tariff1.int_val() + DSMRdata.energy_returned_tariff2.int_val();
+    DSMRdata.energy_returned_total_present = true;
+  }
+}
+
 static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
   bP1offline = false;
   P1error_cnt_sequence = 0;
@@ -134,6 +146,8 @@ static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
       DSMRdata.p1_version_present     = true;
     }
   }
+
+  normalizeEnergyTotals();
 
   if (bUseEtotals) {
     DSMRdata.energy_delivered_tariff1_present = true;

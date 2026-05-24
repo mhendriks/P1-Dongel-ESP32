@@ -16,7 +16,7 @@ char Onefield[25];
 bool onlyIfPresent = false;
 
 const static PROGMEM char infoArray[][25]   = { "identification","p1_version","equipment_id" }; //waardes dient redelijk statisch zijn niet elke keer versturen
-const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3","peak_pwr_last_q", "highest_peak_pwr"};
+const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","energy_delivered_total","energy_returned_total","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3","peak_pwr_last_q", "highest_peak_pwr"};
 
 JsonDocument jsonDoc;  // generic doc to return, clear() before use!
 
@@ -166,9 +166,7 @@ String HWrootJson() {
   });
  }
 
-String HWapiJson(){
-
-  return jsonResponse([&](JsonDocument& jsonDoc){
+static void fillHWapiJson(JsonDocument& jsonDoc) {
 
     #define F3DEC(...) serialized(String(__VA_ARGS__,3))
     
@@ -197,10 +195,10 @@ String HWapiJson(){
 
     // Energieverbruik en teruglevering
     jsonDoc["active_tariff"] = DSMRdata.electricity_tariff.toInt();
-    jsonDoc["total_power_import_kwh"] = F3DEC(DSMRdata.energy_delivered_total + DSMRdata.energy_delivered_tariff1 + DSMRdata.energy_delivered_tariff2);
+    jsonDoc["total_power_import_kwh"] = F3DEC(DSMRdata.energy_delivered_total.val());
     jsonDoc["total_power_import_t1_kwh"] = F3DEC(DSMRdata.energy_delivered_tariff1.val());
     jsonDoc["total_power_import_t2_kwh"] = F3DEC(DSMRdata.energy_delivered_tariff2.val());
-    jsonDoc["total_power_export_kwh"] = F3DEC(DSMRdata.energy_returned_total + DSMRdata.energy_returned_tariff1 + DSMRdata.energy_returned_tariff2);
+    jsonDoc["total_power_export_kwh"] = F3DEC(DSMRdata.energy_returned_total.val());
     jsonDoc["total_power_export_t1_kwh"] = F3DEC(DSMRdata.energy_returned_tariff1.val());
     jsonDoc["total_power_export_t2_kwh"] = F3DEC(DSMRdata.energy_returned_tariff2.val());
 
@@ -274,7 +272,23 @@ String HWapiJson(){
       waterMeter["value"] = mbusWater ? F3DEC(waterDelivered) : F3DEC(P1Status.wtr_m3+P1Status.wtr_l/1000.0) ;
       waterMeter["unit"] = "m3";
     }
+}
+
+String HWapiJson(){
+  return jsonResponse([&](JsonDocument& doc){
+    fillHWapiJson(doc);
   });
+}
+
+void sendHWapiJson() {
+  JsonDocument doc;
+  fillHWapiJson(doc);
+
+  String body;
+  body.reserve(measureJson(doc) + 1);
+  serializeJson(doc, body);
+  httpServer.sendHeader("Access-Control-Allow-Origin", "*");
+  httpServer.send(200, "application/json", body);
 }
 
 struct buildJson {
@@ -394,9 +408,8 @@ String deviceInfoJson()
 } // deviceInfoJson()
 
 //=======================================================================
-String deviceSettingsJson() {
+static void fillDeviceSettingsJson(JsonDocument& doc) {
   DebugTln(F("sending device settings ...\r"));
-  JsonDocument doc;
 
   // Helper macro to add a setting to the JSON document
 #define ADD_SETTING(name, type, min, max, value) \
@@ -499,10 +512,62 @@ if ( !hideMQTTsettings) {
     ADD_SETTING("water_l", "i", 0, 999, P1Status.wtr_l);
     ADD_SETTING("water_fact", "f", 0, 10, WtrFactor);
   }
+#undef ADD_SETTING
+}
 
+String deviceSettingsJson() {
+  JsonDocument doc;
+  fillDeviceSettingsJson(doc);
   String out;
   serializeJson(doc, out);
   return out;
+}
+
+void sendDeviceSettingsJson() {
+  JsonDocument doc;
+  fillDeviceSettingsJson(doc);
+
+  String body;
+  body.reserve(measureJson(doc) + 1);
+  serializeJson(doc, body);
+  httpServer.sendHeader("Access-Control-Allow-Origin", "*");
+  httpServer.send(200, "application/json", body);
+}
+
+void sendSmActualJson() {
+  jsonDoc.clear();
+  fieldsElements = ACTUALELEMENTS;
+  onlyIfPresent = true;
+  DSMRdata.applyEach(buildJson());
+  JsonGas();
+  JsonWater();
+  JsonPP();
+
+  String body;
+  body.reserve(measureJson(jsonDoc) + 1);
+  serializeJson(jsonDoc, body);
+  httpServer.sendHeader("Access-Control-Allow-Origin", "*");
+  httpServer.send(200, "application/json", body);
+  jsonDoc.clear();
+}
+
+void sendSmFieldJson(const String& field) {
+  jsonDoc.clear();
+  if (field == "gas_delivered") JsonGas();
+  else if (field == "water") JsonWater();
+  else {
+    onlyIfPresent = false;
+    strCopy(Onefield, 24, field.c_str());
+    fieldsElements = FIELDELEMENTS;
+    DSMRdata.applyEach(buildJson());
+  }
+
+  String body;
+  body.reserve(measureJson(jsonDoc) + 1);
+  serializeJson(jsonDoc, body);
+  httpServer.sendHeader("Access-Control-Allow-Origin", "*");
+  httpServer.send(200, "application/json", body);
+  jsonDoc.clear();
 }
 
 //====================================================
@@ -591,7 +656,7 @@ ApiResponse handleDevApi(const ApiRequestContext& request)
   }
   else if (request.pathArg == "settings")
   {
-    if (apiRequestIsPut(request) || apiRequestIsPost(request))
+    if (request.method == HTTP_PUT || request.method == HTTP_POST)
     {
       String jsonIn  = request.body;
       DebugT("json in :");Debugln(jsonIn);
@@ -647,7 +712,7 @@ ApiResponse handleDevApi(const ApiRequestContext& request)
 } // handleDevApi()
 
 ApiResponse handleModbusMonitorApi(const ApiRequestContext& request) {
-  if (apiRequestIsPost(request)) {
+  if (request.method == HTTP_POST) {
     clearModbusMonitorEntries();
     JsonDocument doc;
     doc["cleared"] = true;
