@@ -926,11 +926,12 @@ function refreshDashboard(json){
 			resetDailyHistoryBuffers();
 			Pi_today = 0;
 			Pd_today = 0;
-			if (EnableHist) objDAL.refreshHist();
+			if (EnableHist) objDAL.ensureDashHist(true);
 			if (SolarActive) objDAL.refreshSolar();
 			DayEpoch = dayKey;
 		} else if (!DayEpoch && EnableHist) {
-			objDAL.refreshHist();
+			DayEpoch = dayKey;
+			objDAL.ensureDashHist();
 		}
 		
 		//-------TOON METERS
@@ -956,7 +957,6 @@ function refreshDashboard(json){
 		//------- EID Planner
 		if ( eid_planner_enabled ) {
 			setDashboardWidgetAvailable("dash_eid", true);
-			objDAL.refreshEIDPlanner();
 		}
 		
 		//-------Kwartierpiek
@@ -1141,7 +1141,67 @@ function refreshDashboard(json){
 function UpdateDash()
 {	
 	console.log("Update dash");
-	objDAL.refreshFields();
+	if (objDAL.getDashLive()?.timestamp) refreshDashboard(dashLiveToFields(objDAL.getDashLive()));
+}
+
+function dashLiveToFields(json) {
+	const out = {};
+	if (!json) return out;
+
+	const setValue = function(key, value) {
+		if (value === undefined || value === null || value === "") return;
+		out[key] = { value: value };
+	};
+
+	setValue("timestamp", json.timestamp);
+	setValue("power_delivered", json.power?.delivered);
+	setValue("power_returned", json.power?.returned);
+	setValue("power_delivered_l1", json.power?.delivered_l1);
+	setValue("power_delivered_l2", json.power?.delivered_l2);
+	setValue("power_delivered_l3", json.power?.delivered_l3);
+	setValue("power_returned_l1", json.power?.returned_l1);
+	setValue("power_returned_l2", json.power?.returned_l2);
+	setValue("power_returned_l3", json.power?.returned_l3);
+	setValue("current_l1", json.current?.l1);
+	setValue("current_l2", json.current?.l2);
+	setValue("current_l3", json.current?.l3);
+	setValue("voltage_l1", json.voltage?.l1);
+	setValue("voltage_l2", json.voltage?.l2);
+	setValue("voltage_l3", json.voltage?.l3);
+	setValue("energy_delivered_tariff1", json.energy?.delivered_t1);
+	setValue("energy_delivered_tariff2", json.energy?.delivered_t2);
+	setValue("energy_returned_tariff1", json.energy?.returned_t1);
+	setValue("energy_returned_tariff2", json.energy?.returned_t2);
+	setValue("energy_delivered_total", json.energy?.delivered_total);
+	setValue("energy_returned_total", json.energy?.returned_total);
+	setValue("gas_delivered", json.gas?.delivered);
+	setValue("gas_delivered_timestamp", json.gas?.timestamp);
+	setValue("water", json.water?.delivered);
+	setValue("water_delivered_ts", json.water?.timestamp);
+	setValue("peak_pwr_last_q", json.peak?.last_q);
+	setValue("highest_peak_pwr", json.peak?.highest);
+	return out;
+}
+
+function applyDashHistory(json) {
+	const days = json?.days || [];
+	if (!days.length) {
+		DailyHistoryReady = false;
+		return;
+	}
+
+	for (let i = 0; i < 4; i++) {
+		const values = days[i]?.values || [];
+		hist_arrG[i] = values[4] ?? 0;
+		hist_arrW[i] = values[5] ?? 0;
+		hist_arrPa[i] = (values[0] ?? 0) + (values[1] ?? 0);
+		hist_arrPi[i] = (values[2] ?? 0) + (values[3] ?? 0);
+	}
+	DailyHistoryReady = true;
+
+	if (activeTab === "bDashTab" && objDAL.getDashLive()?.timestamp) {
+		refreshDashboard(dashLiveToFields(objDAL.getDashLive()));
+	}
 }
 
 //bereken verschillen gas, afname, teruglevering en totaal
@@ -1212,12 +1272,11 @@ function bootsTrapMain()
 	//init DAL
 	initDAL(updateFromDAL);
 
-    setMonthTableType();
-    openTab();
-    initActualGraph();
-    setPresentationType(presentationType);
-	
-  //goto tab after reload FSExplorer
+	    setMonthTableType();
+	    initActualGraph();
+	    setPresentationType(presentationType);
+		
+	  //goto tab after reload FSExplorer
   	if ( location.hash ) {
 		const hashPart = location.hash.substring(1); // strip '#'
 		const [cmd, paramString] = hashPart.split("?");
@@ -1242,16 +1301,17 @@ function bootsTrapMain()
 				console.log("Updaten bezig...");
 				break;
 	
-			default:
-				//redirect to cmd
-				const btn = document.getElementById("b"+cmd);
-				if (btn) {
-					btn.click();
-					activeTab = btn.id;
-					openTab();
-				} else console.log("Button b"+cmd+" not found");
+				default:
+					//redirect to cmd
+					const btn = document.getElementById("b"+cmd);
+					if (btn) {
+						activeTab = btn.id;
+						openTab();
+					} else console.log("Button b"+cmd+" not found");
+			}
+		} else {
+			openTab();
 		}
-	}
     document.getElementById('dongle_io').addEventListener('input', NTSWupdateVisibility);
  	
  	BurnupBootstrap();
@@ -1474,22 +1534,27 @@ function SendNetSwitchJson() {
     document.body.classList.remove("menu-open");
     clearInterval(tabTimer);  
     clearInterval(NRGStatusTimer);
+	if (objDAL) {
+		objDAL.stopDashLivePolling();
+		objDAL.stopDashHistPolling();
+		objDAL.stopActualPolling();
+		objDAL.stopDeviceInformationPolling();
+	}
     hideAllCharts();
 
 	switch (activeTab) {
 		case "bActualTab" : 
-			refreshSmActual();
-			tabTimer = setInterval(refreshSmActual, UPDATE_ACTUAL );            // repeat every 10s
+			objDAL.startActualPolling();
       		break;
 		case "bInsightsTab"	: objDAL.refreshInsights(); break;
 		case "bPlafondTab"	: refreshData(); break;
 		case "bPriceCapTab"	:
 			if (typeof refreshPriceCapData === "function") refreshPriceCapData();
 			break;
-		case "bHoursTab"	: refreshHistData("Hours"); break;
-     	case "bDaysTab"		: refreshHistData("Days"); break;
-      	case "bMonthsTab"	: refreshHistData("Months"); break;
-      	case "bSysInfoTab"	: refreshDevInfo(); break;
+		case "bHoursTab"	: refreshHistData("Hours"); objDAL.refreshHistoryHours(); break;
+     	case "bDaysTab"		: refreshHistData("Days"); objDAL.refreshHistoryDays(); break;
+      	case "bMonthsTab"	: refreshHistData("Months"); objDAL.refreshHistoryMonths(); break;
+      	case "bSysInfoTab"	: objDAL.startDeviceInformationPolling(); break;
       	case "bFieldsTab":
       		refreshSmFields();      		
       		clearInterval(tabTimer);
@@ -1502,25 +1567,25 @@ function SendNetSwitchJson() {
       		break;
       	case "bInfo_APIdoc": // no action
       		break;
-      	case "bDashTab":
-			UpdateDash();
-			clearInterval(tabTimer);
-			tabTimer = setInterval(UpdateDash, UPDATE_ACTUAL); // repeat every 10s
+	      	case "bDashTab":
+			objDAL.startDashHistPolling();
+			objDAL.startDashLivePolling();
 			break;
 		case "bFSExplorer":
 		    FSExplorer();
 		    break;
-		case "bEditMonths":
-			document.getElementById('tabEditMonths').style.display = "block";
-			document.getElementById('tabEditSettings').style.display = "none";
-			EditMonths();
-			break;
+			case "bEditMonths":
+				document.getElementById('tabEditMonths').style.display = "block";
+				document.getElementById('tabEditSettings').style.display = "none";
+				EditMonths();
+				objDAL.refreshHistoryMonths();
+				break;
 		case "bSettings":
 		case "bEditSettings":
 			data = {};
 			document.getElementById('tabEditSettings').style.display = 'block';
 			document.getElementById('tabEditMonths').style.display = "none";
-			objDAL.refreshDeviceInformation();
+			objDAL.ensureDeviceInformation(true);
 			activeTab = "bEditSettings";
 			break;
 		case "bEID":
@@ -1879,7 +1944,7 @@ function checkESPOnline() {
   //get new devinfo==============================================================  
   function refreshDevInfo()
   { 
-	objDAL.refreshDeviceInformation();
+	objDAL.ensureDeviceInformation();
   } // refreshDevInfo()
 
 //============================================================================  
@@ -2221,10 +2286,10 @@ function refreshHistData(type) {
 			}
 			break;
 
-		case "Days":
-			if (activeTab === "bDaysTab") {
-				presentationType === "TAB" ? showHistTable(data, "Days") : showHistGraph(data, "Days");
-			}
+			case "Days":
+				if (activeTab === "bDaysTab") {
+					presentationType === "TAB" ? showHistTable(data, "Days") : showHistGraph(data, "Days");
+				}
 			// Extra logica voor dashboard
 			let act_slot = data.actSlot;
 			for (let i = 0; i < 4; i++) {
@@ -2234,12 +2299,12 @@ function refreshHistData(type) {
 				hist_arrW[i] = values[5];
 				hist_arrPa[i] = values[0] + values[1];
 				hist_arrPi[i] = values[2] + values[3];
-			}
-			DailyHistoryReady = true;
-			if (activeTab === "bDashTab" && objDAL.getFields()) {
-				refreshDashboard(objDAL.getFields());
-			}
-			break;
+				}
+				DailyHistoryReady = true;
+				if (activeTab === "bDashTab" && objDAL.getDashLive()?.timestamp) {
+					refreshDashboard(dashLiveToFields(objDAL.getDashLive()));
+				}
+				break;
 
 		case "Months":
 			if (activeTab === "bMonthsTab") {
@@ -2915,6 +2980,10 @@ function clearDirtySettings(){
     .forEach(row => row.classList.remove('is-dirty'));
 }
 
+function hasDirtySettings() {
+  return !!document.querySelector('#Settings .settingDiv.is-dirty');
+}
+
 function getModbusMonitorSetting() {
   return objDAL?.dev_settings?.mb_monitor;
 }
@@ -3484,9 +3553,9 @@ function initModbusMonitorControls() {
       console.log("undoReload(): reload Settings..");
 //       data = {};
 //       refreshSettings();
-		document.getElementById('settings_table').innerHTML = '';
-		objDAL.refreshDeviceInformation();
-		clearDirtySettings();
+			document.getElementById('settings_table').innerHTML = '';
+			objDAL.ensureDeviceInformation(true);
+			clearDirtySettings();
 
     } else {
       console.log("undoReload(): I don't knwo what to do ..");
@@ -3537,9 +3606,9 @@ function initModbusMonitorControls() {
     // delay refresh as all fetch functions are async!!
     setTimeout(function() {
 //       refreshSettings();
-		document.getElementById('settings_table').innerHTML = '';
-		objDAL.refreshDeviceInformation();
-    }, 1000);
+			document.getElementById('settings_table').innerHTML = '';
+			objDAL.ensureDeviceInformation(true);
+	    }, 1000);
 //     ParseDevSettings();
   } // saveSettings()
   

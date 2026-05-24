@@ -13,6 +13,8 @@ const UPDATE_ACTUAL 	= DEBUG ? 1000 * 5 	: 1000 * 5;
 const UPDATE_SOLAR		= DEBUG ? 1000 * 30 : 1000 * 60;
 const UPDATE_ACCU		= DEBUG ? 1000 * 30 : 1000 * 60;
 const UPDATE_PLAN		= DEBUG ? 1000 * 10 : 1000 * 60;
+const UPDATE_DASH_HIST  = DEBUG ? 1000 * 30 : 1000 * 3600;
+const UPDATE_DEVICE_INFO = DEBUG ? 1000 * 15 : 1000 * 60;
 	
 if (!DEBUG) {	//production
   	console.log = function () {};
@@ -25,6 +27,8 @@ const URL_HISTORY_HOURS 	= "/RNGhours.json";
 const URL_HISTORY_DAYS 		= "/RNGdays.json";
 const URL_HISTORY_MONTHS 	= "/RNGmonths.json";
 const URL_TIME    	 		= "/api/v2/dev/time";
+const URL_DASH_LIVE        = APIGW + "v2/dash/live";
+const URL_DASH_HIST        = APIGW + "v2/dash/hist";
 const URL_SM_ACTUAL    	 	= APIGW + "v2/sm/actual";
 const URL_SM_FIELDS			= APIGW + "v2/sm/fields";
 const URL_SM_TELEGRAM		= APIGW + "v2/sm/telegram";
@@ -53,9 +57,11 @@ let objDAL 					= null;
       this.devinfo=[];
       this.time=[];      
 	  this.dev_settings=[];
-	  this.version_manifest=[];
+	      this.version_manifest=[];
 	  this.insights=[];
-      this.actual=[];
+	      this.dash_live=[];
+	      this.dash_hist=[];
+	      this.actual=[];
 	  this.telegram=[];
       this.fields=[];
 	  this.solar=[];
@@ -66,17 +72,31 @@ let objDAL 					= null;
 	  this.eid_claim=[];
 	  this.netswitch=[];
 	  this.eid_planner=[];
-      this.actual_history = [];
-      this.timerREFRESH_TIME = 0;
-      this.timerREFRESH_HIST = 0;
-      this.timerREFRESH_ACTUAL = 0;  
-      this.timerREFRESH_DAYS = 0;  
-	  this.timerREFRESH_MANIFEST = 0; 
-	  this.timerREFRESH_SOLAR = 0;  	    
-	  this.timerREFRESH_ACCU = 0;  
-	  this.timerREFRESH_EIDPLAN = 0;  	  
-      this.callback=null;
-      }
+	      this.actual_history = [];
+	      this.timerREFRESH_TIME = 0;
+	      this.timerREFRESH_DASH_LIVE = 0;
+	      this.timerREFRESH_DASH_HIST = 0;
+	      this.timerREFRESH_ACTUAL = 0;  
+		  this.timerREFRESH_DEVICE_INFO = 0;
+		  this.timerREFRESH_MANIFEST = 0; 
+		  this.timerREFRESH_SOLAR = 0;  	    
+		  this.timerREFRESH_ACCU = 0;  
+		  this.timerREFRESH_EIDPLAN = 0;  	  
+	      this.dash_hist_fetched_at = 0;
+	      this.device_info_fetched_at = 0;
+	      this.callback=null;
+	      }
+
+		#setPollingTimer(timerName, fnRefresh, interval) {
+			this.stopPollingTimer(timerName);
+			this[timerName] = setInterval(fnRefresh, interval);
+		}
+
+		stopPollingTimer(timerName) {
+			if (!this[timerName]) return;
+			clearInterval(this[timerName]);
+			this[timerName] = 0;
+		}
   
     fetchDataJSON(url, fnHandleData) {
 	  Spinner(true);
@@ -111,39 +131,96 @@ let objDAL 					= null;
       this.callback = fnCB;
     }
   
-    init(){
-      this.refreshDeviceInformation();
-	  this.refreshTime();
-      this.refreshHist();
-      this.refreshSolar();
-	  this.refreshAccu();
-	  this.refreshActual();
-// 	  this.refreshFields(); //always called in initial call (dashboard)
+	    init(){
+	      this.ensureDeviceInformation(true);
+		  this.startTimePolling();
+	    } 
+		
+		refreshEIDPlanner(){
+			console.log("DAL::refreshEIDPlanner");
+	      	this.fetchDataJSON( URL_EID_PLAN, this.parseEIDplan.bind(this));
+		}
 
-    } 
-	
-	refreshEIDPlanner(){
-		console.log("DAL::refreshEIDPlanner");
-		clearInterval(this.timerREFRESH_EIDPLAN);
-      	this.fetchDataJSON( URL_EID_PLAN, this.parseEIDplan.bind(this));
-      	this.timerREFRESH_EIDPLAN = setInterval(this.refreshEIDPlanner.bind(this), UPDATE_PLAN);
-	}
-	
-	parseEIDplan(json){
-		this.eid_planner = json;
+		startEIDPlannerPolling(){
+			this.refreshEIDPlanner();
+			this.#setPollingTimer("timerREFRESH_EIDPLAN", this.refreshEIDPlanner.bind(this), UPDATE_PLAN);
+		}
+
+		stopEIDPlannerPolling(){
+			this.stopPollingTimer("timerREFRESH_EIDPLAN");
+		}
+		
+		parseEIDplan(json){
+			this.eid_planner = json;
 		console.log("DAL::parseEIDplan -> " + json );
 		this.callback?.('eid_planner', json);
 	}
 	
-	refreshHist()
-	{
-		console.log("DAL::refreshHist");
-		clearInterval(this.timerREFRESH_HIST);
-		this.fetchDataJSON( URL_HISTORY_MONTHS, this.parseMonths.bind(this));
-		this.fetchDataJSON( URL_HISTORY_DAYS, this.parseDays.bind(this));
-		this.fetchDataJSON( URL_HISTORY_HOURS, this.parseHours.bind(this));
-    	this.timerREFRESH_HIST = setInterval(this.refreshHist.bind(this), UPDATE_HIST);
-	}
+		refreshHist() {
+			console.log("DAL::refreshHist");
+			this.refreshHistoryHours();
+			this.refreshHistoryDays();
+			this.refreshHistoryMonths();
+		}
+
+		refreshHistoryHours() {
+			this.fetchDataJSON(URL_HISTORY_HOURS, this.parseHours.bind(this));
+		}
+
+		refreshHistoryDays() {
+			this.fetchDataJSON(URL_HISTORY_DAYS, this.parseDays.bind(this));
+		}
+
+		refreshHistoryMonths() {
+			this.fetchDataJSON(URL_HISTORY_MONTHS, this.parseMonths.bind(this));
+		}
+
+		refreshDashLive() {
+			console.log("DAL::refreshDashLive");
+			this.fetchDataJSON(URL_DASH_LIVE, this.parseDashLive.bind(this));
+		}
+
+		startDashLivePolling() {
+			this.refreshDashLive();
+			this.#setPollingTimer("timerREFRESH_DASH_LIVE", this.refreshDashLive.bind(this), UPDATE_ACTUAL);
+		}
+
+		stopDashLivePolling() {
+			this.stopPollingTimer("timerREFRESH_DASH_LIVE");
+		}
+
+		parseDashLive(json) {
+			this.dash_live = json;
+			this.solar = json?.solar ?? [];
+			this.accu = json?.accu ?? [];
+			this.eid_planner = json?.eid ?? [];
+			this.callback?.('dash_live', json);
+		}
+
+		refreshDashHist() {
+			console.log("DAL::refreshDashHist");
+			this.fetchDataJSON(URL_DASH_HIST, this.parseDashHist.bind(this));
+		}
+
+		startDashHistPolling() {
+			this.ensureDashHist(true);
+			this.#setPollingTimer("timerREFRESH_DASH_HIST", this.refreshDashHist.bind(this), UPDATE_DASH_HIST);
+		}
+
+		stopDashHistPolling() {
+			this.stopPollingTimer("timerREFRESH_DASH_HIST");
+		}
+
+		ensureDashHist(force=false) {
+			const isStale = !this.dash_hist_fetched_at || (Date.now() - this.dash_hist_fetched_at) >= UPDATE_DASH_HIST;
+			if (force || isStale || !this.dash_hist?.days?.length) this.refreshDashHist();
+		}
+
+		parseDashHist(json) {
+			this.dash_hist = json;
+			this.dash_hist_fetched_at = Date.now();
+			this.callback?.('dash_hist', json);
+		}
 	parseMonths(json)
 	{
 		console.log("parseMonths");
@@ -202,9 +279,16 @@ let objDAL 					= null;
 	
 	refreshSolar(){
 		console.log("DAL::refreshSolar");
-		clearInterval(this.timerREFRESH_SOLAR);
       	this.fetchDataJSON( URL_SOLAR, this.parseSolar.bind(this));
-      	this.timerREFRESH_SOLAR = setInterval(this.refreshSolar.bind(this), UPDATE_SOLAR);
+	}
+
+	startSolarPolling(){
+		this.refreshSolar();
+		this.#setPollingTimer("timerREFRESH_SOLAR", this.refreshSolar.bind(this), UPDATE_SOLAR);
+	}
+
+	stopSolarPolling(){
+		this.stopPollingTimer("timerREFRESH_SOLAR");
 	}
 	
 	parseSolar(json){
@@ -214,9 +298,16 @@ let objDAL 					= null;
 
 	refreshAccu(){
 		console.log("DAL::refreshAccu");
-		clearInterval(this.timerREFRESH_ACCU);
       	this.fetchDataJSON( URL_ACCU, this.parseAccu.bind(this));
-      	this.timerREFRESH_ACCU = setInterval(this.refreshAccu.bind(this), UPDATE_ACCU);
+	}
+
+	startAccuPolling(){
+		this.refreshAccu();
+		this.#setPollingTimer("timerREFRESH_ACCU", this.refreshAccu.bind(this), UPDATE_ACCU);
+	}
+
+	stopAccuPolling(){
+		this.stopPollingTimer("timerREFRESH_ACCU");
 	}
 	
 	parseAccu(json){
@@ -225,33 +316,53 @@ let objDAL 					= null;
 	}
 	
     //single call; no timer
-    refreshDeviceInformation(){
-      console.log("DAL::refreshDeviceInformation");
-      this.fetchDataJSON( URL_DEVICE_INFO, this.parseDeviceInfo.bind(this));
-      this.fetchDataJSON( URL_DEVICE_SETTINGS, this.parseDeviceSettings.bind(this));
-    }
+	    refreshDeviceInformation(){
+	      console.log("DAL::refreshDeviceInformation");
+	      this.fetchDataJSON( URL_DEVICE_INFO, this.parseDeviceInfo.bind(this));
+	      this.fetchDataJSON( URL_DEVICE_SETTINGS, this.parseDeviceSettings.bind(this));
+	    }
 
-    refreshManifest(){
-	  clearInterval(this.timerREFRESH_MANIFEST);
-	  this.fetchDataJSON( "http://" + ota_url + "version-manifest.json?dummy=" + Date.now() , this.parseVersionManifest.bind(this));
-	  this.timerREFRESH_MANIFEST = setInterval(this.refreshManifest.bind(this), 3600 * 12 * 1000); //every 12h
-    }
+		ensureDeviceInformation(force=false){
+			const isStale = !this.device_info_fetched_at || (Date.now() - this.device_info_fetched_at) >= UPDATE_DEVICE_INFO;
+			if (force || isStale || !Object.keys(this.devinfo || {}).length || !Object.keys(this.dev_settings || {}).length) {
+				this.refreshDeviceInformation();
+			}
+		}
+
+		startDeviceInformationPolling(){
+			this.ensureDeviceInformation(true);
+			this.#setPollingTimer("timerREFRESH_DEVICE_INFO", this.refreshDeviceInformation.bind(this), UPDATE_DEVICE_INFO);
+		}
+
+		stopDeviceInformationPolling(){
+			this.stopPollingTimer("timerREFRESH_DEVICE_INFO");
+		}
+
+	    refreshManifest(){
+		  this.fetchDataJSON( "http://" + ota_url + "version-manifest.json?dummy=" + Date.now() , this.parseVersionManifest.bind(this));
+	    }
+
+		startManifestPolling(){
+			this.refreshManifest();
+			this.#setPollingTimer("timerREFRESH_MANIFEST", this.refreshManifest.bind(this), 3600 * 12 * 1000);
+		}
 
     //store result and call callback if set
     parseDeviceSettings(json){
       this.dev_settings = json;
       
-      //because the manifest check uses the ota_url.value from the device settings
-      "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
-	  this.refreshManifest();      
-      this.callback?.('dev_settings', json);
-    }
+	      //because the manifest check uses the ota_url.value from the device settings
+	      "ota_url" in json ? ota_url = json.ota_url.value: ota_url = "ota.smart-stuff.nl/v5/";
+		  this.startManifestPolling();      
+	      this.callback?.('dev_settings', json);
+	    }
         
     //store result and call callback if set
-    parseDeviceInfo(json){
-      this.devinfo = json;
-      this.callback?.('devinfo', json);
-    }
+	    parseDeviceInfo(json){
+	      this.devinfo = json;
+	      this.device_info_fetched_at = Date.now();
+	      this.callback?.('devinfo', json);
+	    }
     
     //store result and call callback if set
 	parseVersionManifest(json){
@@ -280,12 +391,15 @@ let objDAL 					= null;
 		this.callback?.('fields', json);
     }
 
-	refreshTime(){
-      console.log("DAL::refreshTime");
-      clearInterval(this.timerREFRESH_TIME);      
-      this.fetchDataJSON( URL_TIME, this.parseTIME.bind(this));
-      this.timerREFRESH_TIME = setInterval(this.refreshTime.bind(this), UPDATE_ACTUAL);	
-	}
+		refreshTime(){
+	      console.log("DAL::refreshTime");
+	      this.fetchDataJSON( URL_TIME, this.parseTIME.bind(this));
+		}
+
+		startTimePolling(){
+			this.refreshTime();
+			this.#setPollingTimer("timerREFRESH_TIME", this.refreshTime.bind(this), UPDATE_ACTUAL);
+		}
 
     parseTIME(json){
 		this.time = json;
@@ -296,10 +410,17 @@ let objDAL 					= null;
     //refresh every 10 sec
     refreshActual(){
       console.log("DAL::refreshActual");
-//       clearInterval(this.timerREFRESH_ACTUAL);      
       this.fetchDataJSON( URL_SM_ACTUAL, this.parseActual.bind(this));
-//       this.timerREFRESH_ACTUAL = setInterval(this.refreshActual.bind(this), UPDATE_ACTUAL);
     }
+
+		startActualPolling(){
+			this.refreshActual();
+			this.#setPollingTimer("timerREFRESH_ACTUAL", this.refreshActual.bind(this), UPDATE_ACTUAL);
+		}
+
+		stopActualPolling(){
+			this.stopPollingTimer("timerREFRESH_ACTUAL");
+		}
     
     parseActual(json){
 		this.actual = json;
@@ -331,6 +452,14 @@ let objDAL 					= null;
 	getDays()
 	{
 		return this.days;
+	}
+	getDashHist()
+	{
+		return this.dash_hist;
+	}
+	getDashLive()
+	{
+		return this.dash_live;
 	}
 	getHours()
 	{
@@ -404,11 +533,27 @@ function updateFromDAL(source, json)
   {
     case "time": refreshTime(json); update_reconnected=true; break;
     case "devinfo": parseDeviceInfo(json); break;
-    case "dev_settings": ParseDevSettings(); refreshSettings();break;
+    case "dev_settings":
+		ParseDevSettings();
+		if (!(activeTab == "bEditSettings" && hasDirtySettings())) refreshSettings();
+		break;
     case "versionmanifest": parseVersionManifest(json); break;
     case "days": expandData(json);refreshHistData("Days");break;
 	case "hours": expandData(json);refreshHistData("Hours");break;
-	case "months": expandData(json);refreshHistData("Months");break;
+	case "months":
+		expandData(json);
+		refreshHistData("Months");
+		if (activeTab=="bEditMonths") EditMonths();
+		break;
+	case "dash_live":
+		if (activeTab=="bDashTab") {
+			refreshDashboard(dashLiveToFields(json));
+			UpdateSolar();
+			UpdateAccu();
+		}
+		if (json?.eid) ProcessEIDPlanner(json.eid);
+		break;
+	case "dash_hist": applyDashHistory(json); break;
 	case "actual": ProcesActual(json);break;
 	case "solar": UpdateSolar();break;
 	case "accu": UpdateAccu();break;
