@@ -7,6 +7,7 @@
 
 enum class ModbusDataType : uint8_t;
 enum class MbSource : uint8_t;
+struct ActiveRecipe;
 
 float calculateLineVoltage(float V1, float V2) {
   return sqrt(3) * (V1 + V2) / 2.0;
@@ -167,6 +168,7 @@ struct ActiveRecipe {
 static const ActiveRecipe* activeRecipes = nullptr;
 static size_t activeRecipeCount = 0;
 static uint16_t activeRecipeMaxReg = 0;
+static bool activeRecipeLswFirst = false;
 
 #include "_mbus_mapping.h"
 
@@ -547,6 +549,8 @@ static bool loadActiveRecipes(const ActiveRecipe* recipes, size_t recipeCount) {
 }
 
 static bool loadPresetRecipes(int mappingChoice) {
+  activeRecipeLswFirst = (mappingChoice == 4);
+
   switch (mappingChoice) {
     case 0:
       return loadActiveRecipes(kDefaultRecipes0, sizeof(kDefaultRecipes0) / sizeof(kDefaultRecipes0[0]));
@@ -597,6 +601,15 @@ static bool readMbActiveRegister(uint16_t reg, uint8_t& type, uint32_t& valueU32
   }
 
   return true;
+}
+
+static void addMbU32(ModbusMessage& response, uint32_t value) {
+  if (activeRecipeLswFirst) {
+    response.add((uint16_t)(value & 0xFFFFu), (uint16_t)(value >> 16));
+    return;
+  }
+
+  response.add(value);
 }
 
 
@@ -664,7 +677,7 @@ static ModbusMessage MBusHandleRequestInternal(ModbusMessage request, uint8_t tr
             case ModbusDataType::FLOAT: 
             case ModbusDataType::UINT32:
             case ModbusDataType::INT32: {                
-                response.add(val.u);
+                addMbU32(response, val.u);
                 currentAddr += 2;
                 break;
             }

@@ -415,3 +415,17 @@ ApiResponse solarApiResponse() {
 #endif
   return {200, "application/json", body};
 }
+
+bool fillDashSolarJson(JsonDocument& doc) {
+  bool any = Enphase.Available || SolarEdge.Available || SMAinv.Available || Omniksol.Available;
+  if (!any) return false;
+
+  JsonObject solar = doc["solar"].to<JsonObject>();
+  solar["active"] = true;
+  JsonObject total = solar["total"].to<JsonObject>();
+  total["daily"] = totalSolarDailyWh();
+  total["actual"] = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual + Omniksol.Actual;
+  solar["Wp"] = Enphase.Wp + SolarEdge.Wp + SMAinv.Wp + Omniksol.Wp;
+
+  return true;
+}

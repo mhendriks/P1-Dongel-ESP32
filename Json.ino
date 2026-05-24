@@ -52,6 +52,116 @@ static ApiResponse jsonDocResponse(const JsonDocument& doc) {
   return jsonOkResponse(body);
 }
 
+int signalToEnum(const char* signal);
+
+ApiResponse dashHistoryApiResponse() {
+  JsonDocument doc;
+  doc["ready"] = DashDayHistoryReady;
+  doc["source"] = "memory";
+
+  JsonArray days = doc["days"].to<JsonArray>();
+  for (uint8_t i = 0; i < 4; i++) {
+    JsonObject day = days.add<JsonObject>();
+    day["date"] = DashDayHistory[i].date;
+    JsonArray values = day["values"].to<JsonArray>();
+    for (uint8_t j = 0; j < RNG_DAYS_VALUE_COUNT; j++) values.add(DashDayHistory[i].values[j]);
+  }
+
+  return jsonDocResponse(doc);
+}
+
+static void addDashSolar(JsonDocument& doc) {
+  fillDashSolarJson(doc);
+}
+
+static void addDashAccu(JsonDocument& doc) {
+  fillDashAccuJson(doc);
+}
+
+static void addDashEidPlanner(JsonDocument& doc) {
+  if (!bEID_enabled || StroomPlanData.size() == 0) return;
+
+  JsonArray dataArray = StroomPlanData["data"].as<JsonArray>();
+  size_t plannerCount = dataArray.size();
+  if (plannerCount == 0) return;
+
+  const char* timestamp = dataArray[0]["timestamp"].is<const char*>() ? dataArray[0]["timestamp"].as<const char*>() : nullptr;
+  if (!timestamp || strlen(timestamp) < 13) return;
+
+  JsonObject planner = doc["eid"].to<JsonObject>();
+  planner["h_start"] = (timestamp[11] - '0') * 10 + (timestamp[12] - '0');
+  JsonArray outputSignals = planner["data"].to<JsonArray>();
+  for (int i = 0; i < 14; i++ ){
+    const char* signal = nullptr;
+    if (i < (int)plannerCount && dataArray[i]["signal"].is<const char*>()) signal = dataArray[i]["signal"].as<const char*>();
+    outputSignals.add(signalToEnum(signal));
+  }
+}
+
+ApiResponse dashLiveApiResponse() {
+  JsonDocument doc;
+  doc["timestamp"] = DSMRdata.timestamp_present ? DSMRdata.timestamp.c_str() : actTimestamp;
+
+  JsonObject power = doc["power"].to<JsonObject>();
+  if (DSMRdata.power_delivered_present) power["delivered"] = DSMRdata.power_delivered.val();
+  if (DSMRdata.power_returned_present) power["returned"] = DSMRdata.power_returned.val();
+  if (DSMRdata.power_delivered_l1_present) power["delivered_l1"] = DSMRdata.power_delivered_l1.val();
+  if (DSMRdata.power_delivered_l2_present) power["delivered_l2"] = DSMRdata.power_delivered_l2.val();
+  if (DSMRdata.power_delivered_l3_present) power["delivered_l3"] = DSMRdata.power_delivered_l3.val();
+  if (DSMRdata.power_returned_l1_present) power["returned_l1"] = DSMRdata.power_returned_l1.val();
+  if (DSMRdata.power_returned_l2_present) power["returned_l2"] = DSMRdata.power_returned_l2.val();
+  if (DSMRdata.power_returned_l3_present) power["returned_l3"] = DSMRdata.power_returned_l3.val();
+  if (power.size() == 0) doc.remove("power");
+
+  JsonObject current = doc["current"].to<JsonObject>();
+  if (DSMRdata.current_l1_present) current["l1"] = DSMRdata.current_l1.val();
+  if (DSMRdata.current_l2_present) current["l2"] = DSMRdata.current_l2.val();
+  if (DSMRdata.current_l3_present) current["l3"] = DSMRdata.current_l3.val();
+  if (current.size() == 0) doc.remove("current");
+
+  JsonObject voltage = doc["voltage"].to<JsonObject>();
+  if (DSMRdata.voltage_l1_present) voltage["l1"] = DSMRdata.voltage_l1.val();
+  if (DSMRdata.voltage_l2_present) voltage["l2"] = DSMRdata.voltage_l2.val();
+  if (DSMRdata.voltage_l3_present) voltage["l3"] = DSMRdata.voltage_l3.val();
+  if (voltage.size() == 0) doc.remove("voltage");
+
+  JsonObject energy = doc["energy"].to<JsonObject>();
+  if (DSMRdata.energy_delivered_tariff1_present) energy["delivered_t1"] = DSMRdata.energy_delivered_tariff1.val();
+  if (DSMRdata.energy_delivered_tariff2_present) energy["delivered_t2"] = DSMRdata.energy_delivered_tariff2.val();
+  if (DSMRdata.energy_returned_tariff1_present) energy["returned_t1"] = DSMRdata.energy_returned_tariff1.val();
+  if (DSMRdata.energy_returned_tariff2_present) energy["returned_t2"] = DSMRdata.energy_returned_tariff2.val();
+  if (DSMRdata.energy_delivered_total_present) energy["delivered_total"] = DSMRdata.energy_delivered_total.val();
+  if (DSMRdata.energy_returned_total_present) energy["returned_total"] = DSMRdata.energy_returned_total.val();
+  if (energy.size() == 0) doc.remove("energy");
+
+  if (gasDelivered) {
+    JsonObject gas = doc["gas"].to<JsonObject>();
+    gas["delivered"] = (int)(gasDelivered * 1000) / 1000.0;
+    gas["timestamp"] = gasDeliveredTimestamp;
+  }
+
+  if (WtrMtr || mbusWater) {
+    JsonObject water = doc["water"].to<JsonObject>();
+    water["delivered"] = mbusWater ? (int)(waterDelivered * 1000) / 1000.0
+                                   : (float)P1Status.wtr_m3 + (P1Status.wtr_l ? P1Status.wtr_l / 1000.0 : 0);
+    if (mbusWater) water["timestamp"] = waterDeliveredTimestamp;
+  }
+
+  JsonObject peak = doc["peak"].to<JsonObject>();
+  if (DSMRdata.peak_pwr_last_q_present) peak["last_q"] = DSMRdata.peak_pwr_last_q.val();
+  if (DSMRdata.highest_peak_pwr_present) {
+    peak["highest"] = DSMRdata.highest_peak_pwr.val();
+    peak["highest_timestamp"] = DSMRdata.highest_peak_pwr.timestamp;
+  }
+  if (peak.size() == 0) doc.remove("peak");
+
+  addDashSolar(doc);
+  addDashAccu(doc);
+  addDashEidPlanner(doc);
+
+  return jsonDocResponse(doc);
+}
+
 String apiStatsJson() {
   return jsonResponse([&](JsonDocument& doc){
     

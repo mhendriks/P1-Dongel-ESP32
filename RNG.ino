@@ -13,6 +13,8 @@ int actSlot = 0;
 
 static int16_t rngHeaderActSlot[3] = {-1, -1, -1};
 
+static float currentSolarDailyKwh();
+
 static uint8_t ringValueCount(E_ringfiletype type) {
   return RingFiles[type].valueCount;
 }
@@ -55,6 +57,56 @@ static void clearRingRecord(RingRecord& record) {
   for (int i = 0; i < RNG_DAYS_VALUE_COUNT; i++) {
     record.values[i] = 0.0f;
   }
+}
+
+static bool isEmptyRingRecord(const RingRecord& record) {
+  return strncmp(record.date, "20000000", 8) == 0 || record.date[0] == '\0';
+}
+
+static void copyRingRecord(RingRecord& dest, const RingRecord& src) {
+  strlcpy(dest.date, src.date, sizeof(dest.date));
+  for (int i = 0; i < RNG_DAYS_VALUE_COUNT; i++) dest.values[i] = src.values[i];
+}
+
+static void fillRingRecordFromCurrent(RingRecord& record) {
+  strlcpy(record.date, DSMRdata.timestamp.c_str(), sizeof(record.date));
+  record.date[8] = '\0';
+  record.values[0] = (float)DSMRdata.energy_delivered_tariff1;
+  record.values[1] = (float)DSMRdata.energy_delivered_tariff2;
+  record.values[2] = (float)DSMRdata.energy_returned_tariff1;
+  record.values[3] = (float)DSMRdata.energy_returned_tariff2;
+  record.values[4] = (float)gasDelivered;
+  record.values[5] = mbusWater ? (float)waterDelivered
+                               : (float)P1Status.wtr_m3 + (float)P1Status.wtr_l / 1000.0f;
+  record.values[6] = currentSolarDailyKwh();
+}
+
+static void loadDashDayHistoryFromRngDays(time_t now) {
+  const uint16_t daySlots = RingFiles[RINGDAYS].slots;
+  int currentSlot = (now / RingFiles[RINGDAYS].seconds) % daySlots;
+
+  DashDayHistoryReady = false;
+  for (int i = 0; i < 4; i++) {
+    int slot = (currentSlot - i + daySlots) % daySlots;
+    clearRingRecord(DashDayHistory[i]);
+    copyRingRecord(DashDayHistory[i], RNGDayRec[slot]);
+    if (!isEmptyRingRecord(DashDayHistory[i])) DashDayHistoryReady = true;
+  }
+}
+
+void updateDashDayHistoryFromCurrent() {
+  if (!EnableHistory) return;
+
+  RingRecord current;
+  clearRingRecord(current);
+  fillRingRecordFromCurrent(current);
+  if (isEmptyRingRecord(current)) return;
+
+  if (!isEmptyRingRecord(DashDayHistory[0]) && strncmp(DashDayHistory[0].date, current.date, 8) != 0) {
+    for (int i = 3; i > 0; i--) copyRingRecord(DashDayHistory[i], DashDayHistory[i - 1]);
+  }
+  copyRingRecord(DashDayHistory[0], current);
+  DashDayHistoryReady = true;
 }
 
 static uint32_t ringRecordNumber(E_ringfiletype type, time_t t1) {
@@ -262,6 +314,7 @@ bool loadRNGDaysHistory() {
     DebugTln(F("No valid system time available for RNGdays restore"));
     return false;
   }
+  loadDashDayHistoryFromRngDays(now);
 
   time_t yesterday = now - 86400;
   struct tm* tmYesterday = localtime(&yesterday);

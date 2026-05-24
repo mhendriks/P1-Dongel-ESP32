@@ -575,12 +575,14 @@ void processTelegram(){
   if ( ( minute(actT) != minute(newT) ) || P1Status.FirstUse || !dataYesterday.lastUpdDay ) {
     writeRingFiles(); //bWriteFiles = true; //handled in main flow
     UpdateYesterday();
+    updateDashDayHistoryFromCurrent();
   }
 #else
   DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
   if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse || !dataYesterday.lastUpdDay) {
     writeRingFiles(); //bWriteFiles = true; //handled in main flow
     UpdateYesterday();
+    updateDashDayHistoryFromCurrent();
     //check dag overgang
     if ( currentDay != (newT/(uint32_t)(3600*24)) ) {
       ResetStats();

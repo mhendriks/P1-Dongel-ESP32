@@ -35,3 +35,15 @@ ApiResponse accuApiResponse() {
 
   return {200, "application/json", body};
 }
+
+bool fillDashAccuJson(JsonDocument& doc) {
+  if (!SolarEdgeAccu.Available) return false;
+
+  JsonObject accu = doc["accu"].to<JsonObject>();
+  accu["active"] = true;
+  accu["status"] = SolarEdgeAccu.status;
+  accu["currentPower"] = SolarEdgeAccu.currentPower;
+  accu["chargeLevel"] = SolarEdgeAccu.chargeLevel;
+
+  return true;
+}

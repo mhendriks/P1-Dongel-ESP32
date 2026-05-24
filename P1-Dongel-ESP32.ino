@@ -67,8 +67,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - rollback async webserver refactoring
 - MQTT total Energy from and to grid (Frans)
 - add: reports plafond report back
-
-- fix: EM330 mapping changes from p1 modbus v2
+- fix: EM330 mapping lsw first
+- add: /api/v2/dash/hist
+- add: /api/v2/dash/live
 
 5.9.0
 - tooltips bij de diverse settings (Gerben)
@@ -88,10 +89,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //---  PROFILES  ---
-// #define ULTRA            //ultra (mini) dongle
+#define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-#define NRG_DONGLE       // + D1MC and NRGDH
+// #define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 
 //SPECIAL
@@ -163,18 +164,7 @@ void setup()
 //================ Check necessary files ============================
   if ( !skipNetwork ) {
 #if !DIRECT_AP_CONNECT
-  if (!DSMRfileExist(settingIndexPage, false) ) {
-    DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
-    GetFile(settingIndexPage, PATH_DATA_FILES); //download file from cdn
-    if (!DSMRfileExist(settingIndexPage, false) ) {
-      DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
-      GetFile(settingIndexPage, URL_INDEX_FALLBACK);
-    }
-    if (!DSMRfileExist(settingIndexPage, false) ) { //check again
-      DebugTln(F("Index file still not pressent!\r"));
-      FSNotPopulated = true;
-      }
-  }
+  if (!EnsureIndexFilePresent()) FSNotPopulated = true;
 #endif
   
   setupFSexplorer();

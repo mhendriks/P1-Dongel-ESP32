@@ -18,6 +18,23 @@ int32_t freeSpace()
 } // freeSpace()
 
 //===========================================================================================
+bool EnsureIndexFilePresent()
+{
+  if (DSMRfileExist(settingIndexPage, false)) return true;
+
+  DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
+  GetFile(settingIndexPage, PATH_DATA_FILES);
+  if (DSMRfileExist(settingIndexPage, false)) return true;
+
+  DebugTln(F("Oeps! Index file not pressent, try to download it!\r"));
+  GetFile(settingIndexPage, URL_INDEX_FALLBACK);
+  if (DSMRfileExist(settingIndexPage, false)) return true;
+
+  DebugTln(F("Index file still not pressent!\r"));
+  return false;
+}
+
+//===========================================================================================
 void listFS() 
 {
    typedef struct _fileMeta {

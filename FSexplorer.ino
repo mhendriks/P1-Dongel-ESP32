@@ -87,6 +87,20 @@ static void handleApiSmFieldGet() {
   sendSmFieldJson(httpServer.pathArg(0));
 }
 
+static void handleRootGet() {
+  if (!auth()) return;
+  EnsureIndexFilePresent();
+
+  File file = LittleFS.open(settingIndexPage, "r");
+  if (file) {
+    httpServer.streamFile(file, "text/html");
+    file.close();
+    return;
+  }
+
+  httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
+}
+
 static void handleHttpNotFound() {
   if (!auth()) return;
 
@@ -115,6 +129,7 @@ void setupFSexplorer() {
     DebugTln(F("FS not populated -> API operation only\r"));
   } else {
     DebugTln(F("FS correct populated -> normal operation!\r"));
+    httpServer.on("/", HTTP_GET, handleRootGet);
     httpServer.serveStatic("/", LittleFS, settingIndexPage);
   }
 #else
@@ -139,6 +154,8 @@ void setupFSexplorer() {
   httpServer.on("/api/v1/telegram", HTTP_GET, []() { if (!auth()) return; sendApiResponse({200, "text/plain", CapTelegram}); });
   httpServer.on("/api/v1/data",     HTTP_GET, handleApiV1DataGet);
   httpServer.on("/api/v2/stats",    HTTP_GET, []() { if (!auth()) return; sendApiResponse({200, "application/json", apiStatsJson()}); });
+  httpServer.on("/api/v2/dash/live", HTTP_GET, []() { if (!auth()) return; sendApiResponse(dashLiveApiResponse()); });
+  httpServer.on("/api/v2/dash/hist", HTTP_GET, []() { if (!auth()) return; sendApiResponse(dashHistoryApiResponse()); });
 
   httpServer.on("/api/v2/dev/settings", HTTP_GET, handleApiDevSettingsGet);
   httpServer.on("/api/v2/sm/actual",    HTTP_GET, handleApiSmActualGet);

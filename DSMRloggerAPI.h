@@ -162,6 +162,7 @@ SmartMeterHandle smartMeter(slimmeMeter, hanMeter);
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void LogFile(const char* payload, bool toDebug = false);
+bool EnsureIndexFilePresent();
 void P1StatusWrite();
 void P1StatusWriteDirect();
 bool RngWritePending();
@@ -235,10 +236,13 @@ struct RingRecord {
 #define RNG_MONTHS_SLOT_COUNT     (24 + 1)
 
 RingRecord RNGDayRec[RNG_DAYS_SLOT_COUNT];
+RingRecord DashDayHistory[4];
+bool DashDayHistoryReady = false;
 
 void printRecordArray(const RingRecord* records, int slots, const char* label);
 bool loadRingfile(E_ringfiletype type);
 bool loadRNGDaysHistory();
+void updateDashDayHistoryFromCurrent();
 uint32_t totalSolarDailyWh();
 
 typedef struct {
@@ -603,8 +607,12 @@ ApiResponse handleDevApi(const ApiRequestContext& request);
 ApiResponse handleSmApi(const ApiRequestContext& request);
 ApiResponse handleSmApiField(const ApiRequestContext& request);
 ApiResponse handleModbusMonitorApi(const ApiRequestContext& request);
+ApiResponse dashHistoryApiResponse();
+ApiResponse dashLiveApiResponse();
 ApiResponse historyMonthsApiResponse(const String& body);
 ApiResponse listFilesApiResponse();
+bool fillDashSolarJson(JsonDocument& doc);
+bool fillDashAccuJson(JsonDocument& doc);
 void sendHWapiJson();
 void sendDeviceSettingsJson();
 void sendSmActualJson();
