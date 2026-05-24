@@ -42,7 +42,8 @@ struct {
 #include <WiFi.h>  
 // #include "Insights.h"
 #include <WiFiClientSecure.h>        
-#include <WebServer.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
@@ -64,11 +65,19 @@ struct ApiResponse {
 };
 
 struct ApiRequestContext {
-  HTTPMethod method;
+  uint8_t method;
   String pathArg;
   String body;
   String uri;
 };
+
+static inline bool apiRequestIsPost(const ApiRequestContext& request) {
+  return request.method & AsyncWebRequestMethod::HTTP_POST;
+}
+
+static inline bool apiRequestIsPut(const ApiRequestContext& request) {
+  return request.method & AsyncWebRequestMethod::HTTP_PUT;
+}
 
 #ifdef MBUS
   #include "ModbusServerWiFi.h"
@@ -170,6 +179,11 @@ void writeRingFiles();
 void writeSettings();
 void writeSettingsDirect();
 void ManifestCheckFromWorker();
+bool QueueRemoteUpdate(const char* versie, bool sketch);
+bool RemoteUpdateAvailable(const char* versie, String* errorDetail = nullptr);
+bool RemoteUpdateNow(const char* versie, bool sketch, String* errorDetail = nullptr);
+void handleRemoteUpdateRequest(AsyncWebServerRequest* request);
+void AppendRemoteUpdateStatus(JsonDocument& doc);
 void P1Reboot();
 void EIDPostHello(ApiResponse* response = nullptr);
 void SendTariffData();
@@ -178,7 +192,7 @@ uint32_t actueleOverspanningSeconden(uint32_t overspanningTotaal, unsigned long 
 void ResetOvervoltageStats();
 String smActualJsonDebug();
 
-WebServer httpServer(80);
+AsyncWebServer httpServer(80);
 NetServer ws_raw(82);
 
 // time_t tWifiLost        = 0;

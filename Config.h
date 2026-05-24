@@ -5,7 +5,7 @@
 #define SETTINGS_FILE       "/DSMRsettings.json"
 #define HOST_DATA_FILES     "cdn.jsdelivr.net"
 // #define PATH_DATA_FILES     "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/data"
-#define PATH_DATA_FILES     "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@" STR(_VERSION_MAJOR) "." STR(_VERSION_MINOR) "/data"
+#define PATH_DATA_FILES     "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@" P1_STR(_VERSION_MAJOR) "." P1_STR(_VERSION_MINOR) "/data"
 #define URL_INDEX_FALLBACK  "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/data"
 
 #ifndef ENABLE_MIMICS

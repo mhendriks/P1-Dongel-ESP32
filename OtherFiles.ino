@@ -275,6 +275,7 @@ void readSettings(bool show)
   
   temp = doc["basic-auth"]["pass"];
   if (temp) strlcpy(bAuthPW, temp, sizeof(bAuthPW));
+  setupBasicAuthMiddleware();
   if (doc["mb_map"].is<int>()) setModbusMapping(doc["mb_map"]);
   if (doc["mb_id"].is<int>()) mb_config.id = doc["mb_id"];
   if (doc["mb_port"].is<int>()) mb_config.port = doc["mb_port"];
@@ -451,8 +452,16 @@ void updateSetting(const char *field, const char *newValue)
   CreateMacIDTopic();
 #endif
   
-  if (!stricmp(field, "b_auth_user")) strCopy(bAuthUser,25, newValue);  
-  if (!stricmp(field, "b_auth_pw")) strCopy(bAuthPW,25, newValue); 
+  bool basic_auth_changed = false;
+  if (!stricmp(field, "b_auth_user")) {
+    strCopy(bAuthUser,25, newValue);
+    basic_auth_changed = true;
+  }
+  if (!stricmp(field, "b_auth_pw")) {
+    strCopy(bAuthPW,25, newValue);
+    basic_auth_changed = true;
+  }
+  if (basic_auth_changed) setupBasicAuthMiddleware();
 
   if (!stricmp(field, "water_fact")) WtrFactor = String(newValue).toFloat(); 
   

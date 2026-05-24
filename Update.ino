@@ -1,12 +1,162 @@
 #include <HTTPUpdate.h>
-bool bWebUpdate = false;
 bool manifestBootCheckDone = false;
 bool manifestCheckPending = false;
 uint32_t manifestLastDailyCheckKey = 0;
 uint32_t manifestScheduleNextCheckMs = 0;
+static char remoteUpdateState[16] = "idle";
+static char remoteUpdateDetail[64] = "";
+static uint8_t remoteUpdateProgress = 0;
+
+static void setRemoteUpdateStatus(const char* state, const char* detail = "") {
+  strlcpy(remoteUpdateState, state ? state : "idle", sizeof(remoteUpdateState));
+  strlcpy(remoteUpdateDetail, detail ? detail : "", sizeof(remoteUpdateDetail));
+}
+
+void AppendRemoteUpdateStatus(JsonDocument& doc) {
+  JsonObject ota = doc["ota"].to<JsonObject>();
+  ota["state"] = remoteUpdateState;
+  ota["progress"] = remoteUpdateProgress;
+  ota["detail"] = remoteUpdateDetail;
+}
 
 void handleRemoteUpdate(){
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
+}
+
+bool QueueRemoteUpdate(const char* versie, bool sketch) {
+  if (!versie || !strlen(versie)) {
+    LogFile("OTA ERROR: missing version argument", true);
+    return false;
+  }
+
+  if (UpdateRequested) {
+    LogFile("OTA ERROR: update already queued", true);
+    return false;
+  }
+
+  strlcpy(UpdateVersion, versie, sizeof(UpdateVersion));
+  bUpdateSketch = sketch;
+  UpdateRequested = true;
+  remoteUpdateProgress = 0;
+  setRemoteUpdateStatus("queued", versie);
+  return true;
+}
+
+static bool BuildRemoteUpdatePath(const char* versie, String& path, String& otaFile) {
+  if (!versie || !strlen(versie)) return false;
+
+  const int flashSize = (ESP.getFlashChipSize() / 1024.0 / 1024.0);
+  otaFile = strcmp(versie, "4-sketch-latest") == 0 ? "" : "DSMR-API-V";
+  otaFile += String(versie) + "_" + flashSize + "Mb.bin";
+  path = String(BaseOTAurl) + otaFile;
+  return true;
+}
+
+bool RemoteUpdateAvailable(const char* versie, String* errorDetail) {
+  String path;
+  String otaFile;
+  if (!BuildRemoteUpdatePath(versie, path, otaFile)) {
+    if (errorDetail) *errorDetail = "missing_argument";
+    return false;
+  }
+
+  WiFiClient client;
+  HTTPClient http;
+  if (!http.begin(client, path.c_str())) {
+    if (errorDetail) *errorDetail = "begin_failed";
+    return false;
+  }
+
+  http.setConnectTimeout(4000);
+  http.setTimeout(5000);
+  const int httpResponseCode = http.sendRequest("HEAD");
+  http.end();
+
+  if (httpResponseCode == HTTP_CODE_OK) return true;
+
+  if (errorDetail) {
+    if (httpResponseCode == HTTP_CODE_NOT_FOUND) *errorDetail = "File Not Found (404)";
+    else if (httpResponseCode > 0) *errorDetail = "HTTP " + String(httpResponseCode);
+    else *errorDetail = "update_unreachable";
+  }
+  return false;
+}
+
+void handleRemoteUpdateRequest(AsyncWebServerRequest* request) {
+  const AsyncWebParameter* versionParam = request->getParam("version");
+  if (!versionParam || !versionParam->value().length()) {
+    request->redirect("/#UpdateStart?error=missing_argument");
+    return;
+  }
+
+  String errorDetail;
+  if (!RemoteUpdateAvailable(versionParam->value().c_str(), &errorDetail)) {
+    request->redirect("/#UpdateStart?error=" + errorDetail);
+    return;
+  }
+
+  if (!QueueRemoteUpdate(versionParam->value().c_str(), true)) {
+    request->redirect("/#UpdateStart?error=failed");
+    return;
+  }
+
+  request->redirect("/#UpdateStart");
+}
+
+bool RemoteUpdateNow(const char* versie, bool sketch, String* errorDetail) {
+  if (!versie || !strlen(versie)) {
+    LogFile("OTA ERROR: missing version argument", true);
+    if (errorDetail) *errorDetail = "missing_argument";
+    return false;
+  }
+
+  WiFiClient client;
+  String path, otaFile, _versie = versie;
+  t_httpUpdate_return ret;
+
+  Debugln(F("\n!!! OTA UPDATE !!!"));
+
+  if (!BuildRemoteUpdatePath(versie, path, otaFile)) {
+    if (errorDetail) *errorDetail = "missing_argument";
+    return false;
+  }
+
+  vTaskSuspend(tP1Reader);
+  esp_task_wdt_delete(tP1Reader);
+  
+  Debugf("OTA versie: %s | flashsize: %i Mb\n", _versie.c_str(), (ESP.getFlashChipSize() / 1024.0 / 1024.0));
+  Debugln("OTA path: " + path);
+
+  httpUpdate.onStart(update_started);
+  httpUpdate.onEnd(update_finished);
+  httpUpdate.onProgress(update_progress);
+  httpUpdate.onError(update_error);
+  httpUpdate.rebootOnUpdate(false); 
+  
+  ret = httpUpdate.update(client, path.c_str());
+  bool ok = false;
+  switch (ret) {
+      case HTTP_UPDATE_FAILED:
+        Debugf("OTA ERROR: (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
+        if (errorDetail) *errorDetail = httpUpdate.getLastErrorString();
+        break;
+
+      case HTTP_UPDATE_NO_UPDATES:
+        Debugln("OTA ERROR: HTTP_UPDATE_NO_UPDATES");
+        if (errorDetail) *errorDetail = "no_updates";
+        break;
+
+      case HTTP_UPDATE_OK:
+        ok = true;
+        if ( RemoveIndexAfterUpdate ) LittleFS.remove("/DSMRindexEDGE.html");
+        LogFile("reboot: after update OK",false);
+        P1Reboot();
+        break;
+    }
+  Debugln();
+  esp_task_wdt_add(tP1Reader);
+  vTaskResume(tP1Reader);
+  return ok;
 }
 
 bool ReadManifest(JsonDocument &manifest, const char* link) {
@@ -79,7 +229,7 @@ bool CheckNewVersion() {
 }
 
 void ManifestCheckFromWorker() {
-  if (skipNetwork || netw_state == NW_NONE || UpdateRequested || bWebUpdate) {
+  if (skipNetwork || netw_state == NW_NONE || UpdateRequested) {
     manifestCheckPending = false;
     return;
   }
@@ -96,12 +246,12 @@ void ManifestCheckFromWorker() {
   }
 
   LogFile("AutoUpdate: starting OTA install", true);
-  UpdateRequested = true;
+  QueueRemoteUpdate(UpdateVersion, true);
   manifestCheckPending = false;
 }
 
 void handleManifestCheckSchedule(bool runBootCheckNow) {
-  if (skipNetwork || netw_state == NW_NONE || UpdateRequested || bWebUpdate || manifestCheckPending) return;
+  if (skipNetwork || netw_state == NW_NONE || UpdateRequested || manifestCheckPending) return;
 
   const uint32_t nowMs = millis();
   if (!runBootCheckNow && nowMs < manifestScheduleNextCheckMs) return;
@@ -133,120 +283,38 @@ void handleManifestCheckSchedule(bool runBootCheckNow) {
 
 void update_finished() {
   LogFile("OTA UPDATE succesfull", true);
+  remoteUpdateProgress = 100;
+  setRemoteUpdateStatus("done", "success");
 }
 
 void update_started() {
   LogFile("OTA UPDATE started", true);
-  if (bWebUpdate) {
-    httpServer.sendHeader("Location", "/#UpdateStart");
-    httpServer.send ( 303, "text/html", "");
-    int cnt = 0;
-    while (cnt++ < 10) {
-      httpServer.handleClient();
-      esp_task_wdt_reset();
-      delay(100);
-    }
-  } 
+  if (remoteUpdateProgress < 1) remoteUpdateProgress = 1;
+  setRemoteUpdateStatus("running", UpdateVersion);
 }
 
 void update_progress(int cur, int total) {
   Debugf( "HTTP update process at %d of %d bytes = %d%%\r", cur, total, (cur * 100) / total );
+  if (total > 0) {
+    uint8_t actualProgress = (uint8_t)((cur * 90) / total);
+    remoteUpdateProgress = actualProgress > 90 ? 90 : actualProgress;
+  }
+  setRemoteUpdateStatus("running", UpdateVersion);
   esp_task_wdt_reset();
 }
 
 void update_error(int err) {
   Debugf("HTTP update fatal error code %d | %s\n", err, httpUpdate.getLastErrorString().c_str());
   LogFile("OTA ERROR: no update",false);
-}
-
-//---------------
-void RemoteUpdate(){
-    bWebUpdate = true;
-    RemoteUpdate("", true);
+  setRemoteUpdateStatus("error", httpUpdate.getLastErrorString().c_str());
 }
 
 //---------------
 void RemoteUpdate(const char* versie, bool sketch){
-/*
- * nodig bij de update:
- * - Flashsize
- * - versienummer + land 
- * voorbeeld aanroep : /remote-update?version=3.1.4
- * voorbeeld : invoer 2.3.7BE -> DMSR-API-V2.3.7BE_<FLASHSIZE>Mb.bin
- * voorbeeld : invoer 2.3.7 -> DMSR-API-V2.3.7_<FLASHSIZE>Mb.bin
- */
-  WiFiClient client;
-  int flashSize = (ESP.getFlashChipSize() / 1024.0 / 1024.0);
-  String path, otaFile, _versie;
-  t_httpUpdate_return ret;
-
-  Debugln(F("\n!!! OTA UPDATE !!!"));
-
-
-  if (bWebUpdate) {
-    if (httpServer.argName(0) != "version") {
-        LogFile("OTA ERROR: missing version argument",true );
-        httpServer.sendHeader("Location", "/#UpdateStart?error=no_argument");
-        httpServer.send ( 303, "text/html", "");
-        bWebUpdate = false;
-        return;
-    }
-    _versie = httpServer.arg(0);
-  } //bWebUpdate
-  else if ( strlen(versie) ) _versie = versie; 
-       else {   
-              LogFile("OTA ERROR: missing version argument", true);
-              httpServer.sendHeader("Location", "/#UpdateStart?error=missing_argument");
-              httpServer.send ( 303, "text/html", "");
-              bWebUpdate = false; 
-              return; 
-            }
-  
-  vTaskSuspend(tP1Reader);
-  esp_task_wdt_delete(tP1Reader);
-
-  otaFile = strcmp(versie,"4-sketch-latest") == 0 ? "" : "DSMR-API-V";
-  otaFile += _versie + "_" + flashSize + "Mb.bin"; 
-    
-  path = String(BaseOTAurl) + otaFile;
-  
-  Debugf("OTA versie: %s | flashsize: %i Mb\n", _versie.c_str(), flashSize);
-  Debugln("OTA path: " + path);
-
-  // Add optional callback notifiers
-  httpUpdate.onStart(update_started);
-  httpUpdate.onEnd(update_finished);
-  httpUpdate.onProgress(update_progress);
-  httpUpdate.onError(update_error);
-  httpUpdate.rebootOnUpdate(false); 
-  
-  //start update proces
-  ret = httpUpdate.update(client, path.c_str());
-  switch (ret) {
-      case HTTP_UPDATE_FAILED:
-        Debugf("OTA ERROR: (%d): %s\n", httpUpdate.getLastError(), httpUpdate.getLastErrorString().c_str());
-
-        if (bWebUpdate) {
-          httpServer.sendHeader("Location", "/#UpdateStart?error=failed");
-          httpServer.send ( 303, "text/html", "");
-        }
-        break;
-
-      case HTTP_UPDATE_NO_UPDATES:
-        Debugln("OTA ERROR: HTTP_UPDATE_NO_UPDATES");
-        break;
-
-      case HTTP_UPDATE_OK:
-        if ( RemoveIndexAfterUpdate ) LittleFS.remove("/DSMRindexEDGE.html");
-        LogFile("reboot: after update OK",false);
-        P1Reboot();
-        break;
-    }
-  Debugln();
+  (void)sketch;
+  String ignored;
+  RemoteUpdateNow(versie, sketch, &ignored);
   UpdateRequested = false;
-  bWebUpdate = false;
-  esp_task_wdt_add(tP1Reader);
-  vTaskResume(tP1Reader); //error -> start P1 proces 
 } //RemoteUpdate
 
 /***************************************************************************

@@ -86,6 +86,8 @@ Do not hardcode hardware profile defines in `P1-Dongel-ESP32.ino` when using `bu
 
 Use `build.sh` to compile all profiles. It injects profile-specific defines and board settings, including:
 
+- ESP32-C3 builds must always use the `Minimal SPIFFS` partition scheme (`OTA 1.9MB / 128KB SPIFFS`).
+- ESP32-S3 builds must always use the 8MB partition scheme (`FlashSize=8M`, `PartitionScheme=default_8MB`, OTA 3MB / matching 8MB layout).
 - `ULTRA` -> `ESP32S3`, `FlashSize=8M`, `PartitionScheme=default_8MB`
 
 ## 6) Libraries used by this project
@@ -96,7 +98,7 @@ The codebase uses a mix of libraries from the ESP32 Arduino core and a small set
 
 These headers come from the ESP32 board support package rather than a separate Arduino library install:
 
-- `WiFi.h`, `WiFiClientSecure.h`, `WebServer.h`, `HTTPClient.h`, `HTTPUpdate.h`, `Update.h`, `Preferences.h`, `LittleFS.h`, `ESPmDNS.h`, `AsyncUDP.h`, `uri/UriBraces.h`
+- `WiFi.h`, `WiFiClientSecure.h`, `HTTPClient.h`, `HTTPUpdate.h`, `Update.h`, `Preferences.h`, `LittleFS.h`, `ESPmDNS.h`, `AsyncUDP.h`
 - `esp_wifi.h`, `esp_now.h`, `esp_sntp.h`, `esp_timer.h`, `esp_mac.h`, `esp_task_wdt.h`, `esp_chip_info.h`, `esp_system.h`, `esp_efuse.h`, `esp_efuse_table.h`, `rom/rtc.h`
 - Repo: <https://github.com/espressif/arduino-esp32>
 
@@ -118,6 +120,10 @@ These headers come from the ESP32 board support package rather than a separate A
   Repo: <https://github.com/eModbus/eModbus>
 - `micro-ecc` (`uECC.h`)
   Repo: <https://github.com/kmackay/micro-ecc>
+- `ESPAsyncWebServer` (`ESPAsyncWebServer.h`)
+  Repo: <https://github.com/ESP32Async/ESPAsyncWebServer>
+- `AsyncTCP` (`AsyncTCP.h`)
+  Repo: <https://github.com/ESP32Async/AsyncTCP>
 
 ### Local project headers
 

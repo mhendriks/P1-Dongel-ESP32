@@ -63,20 +63,16 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.7.3
-- Netswitch in en uitschakel drempel (Willem Jaap)
-
-
+5.8.0
+- big refactor: asyncwebserver
+- reports plafond grafiek terug
 - MQTT total Energy from and to grid (Frans)
+
+5.9.0
+- Add remote Proxy
 - refactoring targets
 - add wallbox mapping
 - api/v2/dash (combined request for dashboard)
-
-
-5.8.0
-- Add remote Proxy
-- refactor: asyncwebserver
-- reports plafont grafiek terug
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - kWh meter als bron voor productie data gebruiken (Harrie)
 - update button in HA to trigger the update (mqtt based #70)
@@ -85,14 +81,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define XTRA_LOG
 
 //---  PROFILES  ---
 // #define ULTRA            //ultra (mini) dongle
-#define ETHERNET         //ethernet dongle
-#define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE       // + D1MC and NRGDH
+// #define ETHERNET         //ethernet dongle
+// #define ETH_P1EP         //ethernet pro+ dongle
+#define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 
 //SPECIAL
@@ -214,7 +210,6 @@ void setup()
 
 void loop () { 
   esp_task_wdt_reset();
-  httpServer.handleClient();      
   if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
     P1StatusWrite();
     MQTTSentStaticInfo();

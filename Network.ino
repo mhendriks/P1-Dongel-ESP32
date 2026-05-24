@@ -405,6 +405,8 @@ void configModeCallback (WiFiManager *myWiFiManager) {
   esp_task_wdt_reset();
 }
 
+bool wifiPortalWasUsed = false;
+
 #include <esp_wifi.h>
 
 void startWiFi(const char* hostname, int timeOut) {  
@@ -468,19 +470,24 @@ void startWiFi(const char* hostname, int timeOut) {
   
   esp_task_wdt_reset();
   allowSkipNetworkByButton = true;
+  wifiPortalWasUsed = false;
   manageWiFi.autoConnect(settingHostname);
 
   uint16_t i = 0;
   while ( (i++ < 3000) && (netw_state == NW_NONE) && !bEthUsage && !skipNetwork ) {
     DebugTrace(F("*"));
     delay(100);
+    if (WiFi.getMode() & WIFI_AP) wifiPortalWasUsed = true;
     manageWiFi.process();
     esp_task_wdt_reset();
     SwitchLED(i%4?LED_ON:LED_OFF,LED_BLUE);
   }
   DebugTraceLn();
   allowSkipNetworkByButton = false;
-  manageWiFi.stopWebPortal();
+  if (wifiPortalWasUsed && !skipNetwork && !bEthUsage && (WiFi.status() == WL_CONNECTED || netw_state == NW_WIFI)) {
+    LogFile("reboot: Wifi configured via captive portal", true);
+    P1Reboot();
+  }
   if ( skipNetwork ) return; 
   if ( netw_state == NW_NONE && !bEthUsage ) {
     LogFile("reboot: Wifi failed to connect and hit timeout",true);

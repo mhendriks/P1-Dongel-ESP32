@@ -314,6 +314,7 @@ String deviceTimeJson()
     doc["timestamp"] = actTimestamp;
     doc["time"] = buildDateTimeString(actTimestamp, sizeof(actTimestamp));
     doc["epoch"] = now();
+    AppendRemoteUpdateStatus(doc);
   });
 } // deviceTimeJson()
 
@@ -590,7 +591,7 @@ ApiResponse handleDevApi(const ApiRequestContext& request)
   }
   else if (request.pathArg == "settings")
   {
-    if (request.method == HTTP_PUT || request.method == HTTP_POST)
+    if (apiRequestIsPut(request) || apiRequestIsPost(request))
     {
       String jsonIn  = request.body;
       DebugT("json in :");Debugln(jsonIn);
@@ -646,7 +647,7 @@ ApiResponse handleDevApi(const ApiRequestContext& request)
 } // handleDevApi()
 
 ApiResponse handleModbusMonitorApi(const ApiRequestContext& request) {
-  if (request.method == HTTP_POST) {
+  if (apiRequestIsPost(request)) {
     clearModbusMonitorEntries();
     JsonDocument doc;
     doc["cleared"] = true;

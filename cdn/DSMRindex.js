@@ -1785,6 +1785,8 @@ function checkSystemActionOnline() {
 
 let progress = 0;
 let progressBar, checkInterval, update_interval; 
+let otaSeenRunning = false;
+let otaMonitorActive = false;
 
 function UpdateStart( msg ){
 // 	console.log("Updatestatus msg: " + msg );
@@ -1796,8 +1798,11 @@ function UpdateStart( msg ){
   	const [type, detail] = String(msg || '').split('=', 2);
 
 	if (type === "error") {
-		document.getElementById("updatestatus").innerText = "Error: " + (detail || "");
+		const decoded = decodeURIComponent(String(detail || "").replace(/\+/g, " "));
+		document.getElementById("updatestatus").innerText = "Error: " + (decoded || "");
 	} else {
+		otaSeenRunning = false;
+		otaMonitorActive = true;
 		progress = 0;
 		updateProgress();
 	}
@@ -1847,15 +1852,9 @@ async function startUpdateFlow( type ) {
 function updateProgress() {
   if (update_interval) clearInterval(update_interval);
   update_interval = setInterval(() => {
-    if (progress < 90) {
-      progress += 5;
-      progressBar.style.width = progress + "%";
-	  document.getElementById("updatestatus").innerText = t("lbl_update_start");
-    } else {
-      clearInterval(update_interval);
-      update_interval = null;
-      checkESPOnline();
-    }
+    objDAL.refreshTime();
+    progressBar.style.width = progress + "%";
+	document.getElementById("updatestatus").innerText = progress < 90 ? t("lbl_update_start") : t("lbl_update_wait");
   }, 1000);
 }
 
@@ -1886,6 +1885,33 @@ function checkESPOnline() {
   
 	document.getElementById('theTime').classList.remove("afterglow");
 	document.getElementById('theTime').innerHTML = json.time;//formatTimestamp(json.timestamp.value );
+	if (otaMonitorActive && document.getElementById("updatePopup").style.visibility === "visible" && json.ota) {
+		const state = String(json.ota.state || "");
+		const detail = String(json.ota.detail || "");
+		const otaProgress = Number(json.ota.progress || 0);
+
+		if (state === "queued" || state === "running") {
+			otaSeenRunning = true;
+			progress = Math.max(0, Math.min(90, otaProgress));
+			progressBar.style.width = progress + "%";
+			document.getElementById("updatestatus").innerText = progress < 90 ? t("lbl_update_start") : t("lbl_update_wait");
+		} else if (state === "error") {
+			if (update_interval) clearInterval(update_interval);
+			if (checkInterval) clearInterval(checkInterval);
+			update_interval = null;
+			checkInterval = null;
+			otaMonitorActive = false;
+			document.getElementById("updatestatus").innerText = "Error: " + (detail || "update_failed");
+		} else if ((state === "idle" || state === "done") && otaSeenRunning) {
+			clearInterval(checkInterval);
+			checkInterval = null;
+			clearInterval(update_interval);
+			update_interval = null;
+			otaMonitorActive = false;
+			progressBar.style.width = "100%";
+			document.getElementById("updatestatus").innerText = t("lbl_update_done");
+		}
+	}
 // 	console.log("time parsed .., data is ["+ JSON.stringify(json)+"]");
 	//after reboot checks of the server is up and running and redirects to home
 	if ((document.querySelector('#counter').textContent < 40) && (document.querySelector('#counter').textContent > 0)) window.location.replace("/");

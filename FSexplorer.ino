@@ -1,216 +1,233 @@
- /* 
-***************************************************************************  
+/**************************************************************************  
 **  Program  : FSexplorer, part of DSMRloggerAPI
 **
-**  Mostly stolen from https://www.arduinoforum.de/User-Fips
-**  For more information visit: https://fipsok.de
-**  See also https://www.arduinoforum.de/arduino-Thread-LITTLEFS-DOWNLOAD-UPLOAD-DELETE-Esp8266-NodeMCU
-**
-***************************************************************************      
-  Copyright (c) 2018 Jens Fleischer. All rights reserved.
+**************************************************************************/
 
-  This file is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-  This file is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-*******************************************************************
-*/
-#include <uri/UriBraces.h>
-const PROGMEM char Header[] = "HTTP/1.1 303 OK\r\nLocation:/#FSExplorer\r\nCache-Control: no-cache\r\n";
+#include <WebAuthentication.h>
+ApiResponse listFilesApiResponse();
 
-void sendApiResponse(const ApiResponse& response) {
-  httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-  if (response.body.length() == 0) {
-    httpServer.send(response.status);
+void sendApiResponse(AsyncWebServerRequest* request, const ApiResponse& response) {
+  AsyncWebServerResponse* out;
+  if (response.body.length() == 0) out = request->beginResponse(response.status);
+  else out = request->beginResponse(response.status, response.contentType, response.body);
+  out->addHeader("Access-Control-Allow-Origin", "*");
+  request->send(out);
+}
+
+static AsyncAuthenticationMiddleware basicAuth;
+
+void setupBasicAuthMiddleware() {
+  basicAuth.setAuthType(AsyncAuthType::AUTH_BASIC);
+  basicAuth.setRealm("P1 Dongle");
+  basicAuth.setAuthFailureMessage("Authentication failed");
+  basicAuth.setUsername(bAuthUser);
+  if (strlen(bAuthUser) && !strlen(bAuthPW)) basicAuth.setPasswordHash(generateBasicHash(bAuthUser, bAuthPW).c_str());
+  else {
+    basicAuth.setPassword(bAuthPW);
+    basicAuth.generateHash();
+  }
+}
+
+ApiRequestContext currentApiRequest(AsyncWebServerRequest* request, const String& pathArg = "", const String& body = "") {
+  ApiRequestContext context;
+  context.method = request->method();
+  context.pathArg = pathArg;
+  context.body = body;
+  context.uri = request->url();
+  return context;
+}
+
+static ApiResponse handleApiPost(AsyncWebServerRequest* request, const String& body) {
+  const String uri = request->url();
+  if (uri == "/api/v2/hist/months")     return historyMonthsApiResponse(body);
+  if (uri == "/api/v2/modbus/monitor") return handleModbusMonitorApi(currentApiRequest(request, "", body));
+  if (uri == "/api/v2/dev/settings")   return handleDevApi(currentApiRequest(request, "settings", body));
+  return {404, "text/plain", "Not Found"};
+}
+
+static void handleApiPostRequest(AsyncWebServerRequest* request) {
+  if (request->contentLength() == 0) {
+    sendApiResponse(request, handleApiPost(request, ""));
     return;
   }
-  httpServer.send(response.status, response.contentType, response.body);
+  if (!request->_tempObject) request->_tempObject = new String();
 }
 
-ApiRequestContext currentApiRequest(const String& pathArg = "") {
-  ApiRequestContext request;
-  request.method = httpServer.method();
-  request.pathArg = pathArg;
-  request.body = httpServer.arg(0);
-  request.uri = httpServer.uri();
-  return request;
-}
-
-// Function to check authentication
-bool auth() {
-  if (strlen(bAuthUser) && !httpServer.authenticate(bAuthUser, bAuthPW)) {
-    httpServer.requestAuthentication();
-    return false;
+static void handleApiPostBody(AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+  String* body = reinterpret_cast<String*>(request->_tempObject);
+  if (!body) {
+    body = new String();
+    request->_tempObject = body;
   }
+  if (index == 0) body->reserve(total);
+  body->concat(reinterpret_cast<const char*>(data), len);
+  if ((index + len) < total) return;
+
+  String fullBody = *body;
+  delete body;
+  request->_tempObject = nullptr;
+  sendApiResponse(request, handleApiPost(request, fullBody));
+}
+
+static bool pathArgFromUri(AsyncWebServerRequest* request, const char* prefix, String& pathArg) {
+  pathArg = request->url().substring(strlen(prefix));
+  return pathArg.length() > 0 && pathArg.indexOf('/') < 0;
+}
+
+static bool hasDeleteParam(AsyncWebServerRequest* request) {
+  return request->hasParam("delete");
+}
+
+static void handleFileDelete(AsyncWebServerRequest* request) {
+  const AsyncWebParameter* deleteParam = request->getParam("delete");
+  if (deleteParam && deleteParam->value().length()) {
+    DebugTf("Delete -> [%s]\n\r", deleteParam->value().c_str());
+    LittleFS.remove(deleteParam->value());
+  }
+  request->redirect("/#FSExplorer");
+}
+
+static bool serveFallbackFile(AsyncWebServerRequest* request, String filename) {
+  if (!LittleFS.exists(settingIndexPage)) GetFile(settingIndexPage, PATH_DATA_FILES);
+  if (filename.endsWith("/")) filename += "index.html";
+  if (!LittleFS.exists(filename)) return false;
+
+  request->send(LittleFS, filename);
   return true;
 }
 
-int shellyRpcRequestId() {
-  if (!httpServer.hasArg("id")) return 1;
-  return httpServer.arg("id").toInt();
+static void handleNotFound(AsyncWebServerRequest* request) {
+#if DIRECT_AP_CONNECT
+  request->send(404, "text/plain", F("FileNotFound\r\n"));
+#else
+  if (Verbose2) DebugTf("in 'onNotFound()'!! [%s] => \r\n", request->url().c_str());
+  DebugTf("next: handleFile(%s)\r\n", request->url().c_str());
+
+  String filename = request->url();
+  DebugT("Filename: "); Debugln(filename);
+
+  bool handled = serveFallbackFile(request, filename);
+  if (filename == "/" && !handled) {
+    request->redirect("/#DashTab");
+    return;
+  }
+  if (!handled) request->send(404, "text/plain", F("FileNotFound\r\n"));
+#endif
 }
 
-// Function to handle static file serving with authentication
-void serveStaticWithAuth(const char* uri, const char* fileName) {
-  httpServer.on(uri, HTTP_GET, [fileName]() {
-    if (!auth()) return;
-    File file = LittleFS.open(fileName, "r");
-    if (file) {
-      httpServer.sendHeader("Access-Control-Allow-Origin", "*");
-      httpServer.streamFile(file, "application/json");
-      file.close();
-    } else {
-      httpServer.send(404, "text/plain", "File Not Found");
+static String asyncUploadFilename(AsyncWebServerRequest* request, const String& filename) {
+  String decoded = request->urlDecode(filename);
+  if (decoded.length() > 30) decoded = decoded.substring(decoded.length() - 30);
+  return decoded;
+}
+
+static void handleUploadedFileConfig(const String& filename) {
+  RngInvalidateHeaderCache(filename.c_str());
+  if (filename == "DSMRsettings.json") readSettings(false);
+  if (filename == "enphase.json" || filename == "solaredge.json") ReadSolarConfigs();
+#ifdef NETSWITCH
+  if (filename == "netswitch.json") readtriggers();
+#endif
+}
+
+static void handleAsyncFileUpload(AsyncWebServerRequest* request, String filename, size_t index, uint8_t* data, size_t len, bool final) {
+  if (request->getResponse()) return;
+
+  if (index == 0) {
+    String* uploadName = new String(asyncUploadFilename(request, filename));
+    request->_tempObject = uploadName;
+    Debugln("FileUpload Name: " + *uploadName);
+    request->_tempFile = LittleFS.open("/" + *uploadName, "w");
+    if (!request->_tempFile) {
+      delete uploadName;
+      request->_tempObject = nullptr;
+      request->send(500, "text/plain", "File not available for writing");
+      return;
     }
-  });
+  }
+
+  if (len && request->_tempFile) {
+    Debugln("FileUpload Data: " + String(len));
+    request->_tempFile.write(data, len);
+  }
+
+  if (final) {
+    if (request->_tempFile) request->_tempFile.close();
+    String* uploadName = reinterpret_cast<String*>(request->_tempObject);
+    if (uploadName) {
+      Debugln("FileUpload Size: " + String(index + len));
+      handleUploadedFileConfig(*uploadName);
+      delete uploadName;
+      request->_tempObject = nullptr;
+    }
+  }
 }
 
-//=====================================================================================
-void setupFSexplorer() { 
+void setupFSexplorer() {
+  setupBasicAuthMiddleware();
 
 #if !DIRECT_AP_CONNECT
   if (FSNotPopulated) {
-    DebugTln(F("FS not populated -> API operation only\r"));
+    DebugTln(F("FS not populated -> async API operation only\r"));
   } else {
-    DebugTln(F("FS correct populated -> normal operation!\r"));
-    httpServer.serveStatic("/", LittleFS, settingIndexPage);
+    DebugTln(F("FS correct populated -> async normal operation!\r"));
+    httpServer.on(AsyncURIMatcher::prefix("/"), AsyncWebRequestMethod::HTTP_GET, handleFileDelete).setFilter(hasDeleteParam).addMiddleware(&basicAuth);
+    httpServer.serveStatic("/", LittleFS, "/").setDefaultFile(settingIndexPage[0] == '/' ? settingIndexPage + 1 : settingIndexPage).addMiddleware(&basicAuth);
+    #if !DIRECT_AP_CONNECT
+      httpServer.serveStatic("/api/v2/hist/hours",  LittleFS,  RingFiles[RINGHOURS].filename).addMiddleware(&basicAuth);
+      httpServer.serveStatic("/api/v2/hist/days" ,  LittleFS,   RingFiles[RINGDAYS].filename).addMiddleware(&basicAuth);
+      httpServer.serveStatic("/api/v2/hist/months", LittleFS, RingFiles[RINGMONTHS].filename).addMiddleware(&basicAuth);
+      httpServer.on("/api/v2/hist/months", AsyncWebRequestMethod::HTTP_POST, handleApiPostRequest, nullptr, handleApiPostBody).addMiddleware(&basicAuth);
+    #endif  
   }
 #else
-  DebugTln(F("DirectAP closed-network mode -> API only\r"));
-#endif
-  
- // Serve static files with authentication
-#if !DIRECT_AP_CONNECT
-  serveStaticWithAuth("/api/v2/hist/hours", RingFiles[RINGHOURS].filename);
-  serveStaticWithAuth("/api/v2/hist/days", RingFiles[RINGDAYS].filename);
-  serveStaticWithAuth("/api/v2/hist/months", RingFiles[RINGMONTHS].filename);
-
-  httpServer.on("/api/v2/hist/months", HTTP_POST, [](){
-    if (!auth()) return;
-    sendApiResponse(historyMonthsApiResponse(httpServer.arg(0)));
-  });
+  DebugTln(F("DirectAP closed-network mode -> async API only\r"));
 #endif
 
-  httpServer.on("/logout", HTTP_GET, []() { httpServer.send(401); });
-  httpServer.on("/login", HTTP_GET, []() { auth(); });
-
-  httpServer.on("/api/v1/telegram", HTTP_GET, []() { 
-    if ( !auth() ) return; 
-    sendApiResponse({200, "text/plain", CapTelegram});
-  });
-
-  httpServer.on("/api/v1/data", HTTP_GET, []() { 
-    if ( !auth() ) return; 
-    sendApiResponse({200, "application/json", HWapiJson()});
-  });
+  httpServer.on("/logout",            AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { request->send(401); });
+  httpServer.on("/login",             AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { request->send(200, "text/plain", "OK"); }).addMiddleware(&basicAuth);
   
-  httpServer.on("/api", HTTP_GET, []() { 
-    if ( !auth() ) return; 
-    sendApiResponse({200, "application/json", HWrootJson()});
-  });
+  //HW api calls
+  httpServer.on(AsyncURIMatcher::exact("/api"),               
+                                      AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { request->send(200, "application/json", HWrootJson()); }  ).addMiddleware(&basicAuth);
+  httpServer.on("/api/v1/telegram",   AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { request->send(200, "text/plain", CapTelegram); }).addMiddleware(&basicAuth);
+  httpServer.on("/api/v1/data",       AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { request->send(200, "application/json", HWapiJson()); }).addMiddleware(&basicAuth);
+  httpServer.on("/api/v2/stats",      AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { request->send(200, "application/json", apiStatsJson()); }).addMiddleware(&basicAuth);
   
-  httpServer.on("/api/v2/stats", HTTP_GET, []() { 
-    if ( !auth() ) return; 
-    sendApiResponse({200, "application/json", apiStatsJson()});
-  });
+  httpServer.on(AsyncURIMatcher::dir("/api/v2/sm/fields"),  AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { String pathArg; if (!pathArgFromUri(request, "/api/v2/sm/fields/", pathArg)) { request->send(404, "text/plain", "Not Found"); return; } sendApiResponse(request, handleSmApiField(currentApiRequest(request, pathArg))); }).addMiddleware(&basicAuth);
+  httpServer.on("/api/v2/sm",         AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { String pathArg; if (!pathArgFromUri(request, "/api/v2/sm/", pathArg)) { request->send(404, "text/plain", "Not Found"); return; } sendApiResponse(request, handleSmApi(currentApiRequest(request, pathArg))); }).addMiddleware(&basicAuth);
   
-  httpServer.on(UriBraces("/api/v2/dev/{}"),[]() {
-    if (!auth()) return;
-    sendApiResponse(handleDevApi(currentApiRequest(httpServer.pathArg(0))));
-  });
-  httpServer.on(UriBraces("/api/v2/sm/{}"),[](){
-    if (!auth()) return;
-    sendApiResponse(handleSmApi(currentApiRequest(httpServer.pathArg(0))));
-  });
-  httpServer.on(UriBraces("/api/v2/sm/fields/{}"),[](){
-    if (!auth()) return;
-    sendApiResponse(handleSmApiField(currentApiRequest(httpServer.pathArg(0))));
-  });
-  httpServer.on("/api/v2/modbus/monitor", HTTP_GET, [](){
-    if (!auth()) return;
-    sendApiResponse(handleModbusMonitorApi(currentApiRequest()));
-  });
-  httpServer.on("/api/v2/modbus/monitor", HTTP_POST, [](){
-    if (!auth()) return;
-    sendApiResponse(handleModbusMonitorApi(currentApiRequest()));
-  });
-
-  httpServer.on("/eid/getclaim",[](){
-    if (!auth()) return;
-    String action = httpServer.hasArg("action") ? httpServer.arg("action") : "";
-    sendApiResponse(EIDGetClaimApiResponse(action));
-  });
-  httpServer.on("/eid/planner",[](){
-    if (!auth()) return;
-    sendApiResponse(JsonEIDplanner());
-  });
+  httpServer.on("/api/v2/dev",        AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { String pathArg; if (!pathArgFromUri(request, "/api/v2/dev/", pathArg)) { request->send(404, "text/plain", "Not Found"); return; } sendApiResponse(request, handleDevApi(currentApiRequest(request, pathArg))); }).addMiddleware(&basicAuth);
+  httpServer.on("/eid/getclaim",      AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { const AsyncWebParameter* actionParam = request->getParam("action"); sendApiResponse(request, EIDGetClaimApiResponse(actionParam ? actionParam->value() : ""));}).addMiddleware(&basicAuth);
+  httpServer.on("/eid/planner",       AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { sendApiResponse(request, JsonEIDplanner()); }).addMiddleware(&basicAuth);
 
 #if !DIRECT_AP_CONNECT
-  httpServer.on("/api/listfiles", HTTP_GET, [](){
-    if (!auth()) return;
-    sendApiResponse(listFilesApiResponse());
-  });
+  httpServer.on("/api/listfiles",     AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { sendApiResponse(request, listFilesApiResponse()); }).addMiddleware(&basicAuth);
+  httpServer.on("/upload",            AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest* request) { if (request->getResponse()) return; request->redirect("/#FSExplorer"); }, handleAsyncFileUpload).addMiddleware(&basicAuth);
 #endif
-  httpServer.on("/api/v2/gen", HTTP_GET, [](){
-    if (!auth()) return;
-    sendApiResponse(solarApiResponse());
-  });
-  httpServer.on("/api/v2/accu", HTTP_GET, [](){
-    if (!auth()) return;
-    sendApiResponse(accuApiResponse());
-  });
-#if !DIRECT_AP_CONNECT
-  httpServer.on("/FSformat", [](){
-    if (!auth()) return;
-    formatFS();
-  });
-  httpServer.on("/upload", HTTP_POST, []() {
-    if (!auth()) return;
-  }, handleFileUpload );
-#endif
-  httpServer.on("/ReBoot", [](){
-    if (!auth()) return;
-    reBootESP();
-  });
-  httpServer.on("/ResetWifi", [](){
-    if (!auth()) return;
-    resetWifi();
-  });
-  httpServer.on("/remote-update", [](){
-    if (!auth()) return;
-    RemoteUpdate();
-  });
-  httpServer.onNotFound([]() 
-  {
-    if (!auth()) return;
+  httpServer.on("/api/v2/modbus/monitor", AsyncWebRequestMethod::HTTP_POST, handleApiPostRequest, nullptr, handleApiPostBody).addMiddleware(&basicAuth);
+  httpServer.on("/api/v2/dev/settings",   AsyncWebRequestMethod::HTTP_POST, handleApiPostRequest, nullptr, handleApiPostBody).addMiddleware(&basicAuth);
+  
+  httpServer.on("/api/v2/modbus/monitor", 
+                                      AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { sendApiResponse(request, handleModbusMonitorApi(ApiRequestContext{})); }).addMiddleware(&basicAuth);
+  httpServer.on("/api/v2/gen",        AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { sendApiResponse(request, solarApiResponse()); }).addMiddleware(&basicAuth);
+  httpServer.on("/api/v2/accu",       AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { sendApiResponse(request, accuApiResponse()); }).addMiddleware(&basicAuth);
+  httpServer.on("/ReBoot",            AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { request->send(200, "text/plain", ""); reBootESP(); }).addMiddleware(&basicAuth);
+  httpServer.on("/ResetWifi",         AsyncWebRequestMethod::HTTP_GET, [](AsyncWebServerRequest* request) { request->send(200, "text/plain", ""); resetWifi(); }).addMiddleware(&basicAuth);
+  httpServer.on("/remote-update",     AsyncWebRequestMethod::HTTP_GET, handleRemoteUpdateRequest).addMiddleware(&basicAuth);
+  
+  httpServer.onNotFound(handleNotFound);
+  httpServer.catchAllHandler().addMiddleware(&basicAuth);
 
-#if DIRECT_AP_CONNECT
-    httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
-    return;
-#endif
-    
-    if (Verbose2) DebugTf("in 'onNotFound()'!! [%s] => \r\n", String(httpServer.uri()).c_str());
-    DebugTf("next: handleFile(%s)\r\n", String(httpServer.urlDecode(httpServer.uri())).c_str());
-    String filename = httpServer.uri();
-    DebugT("Filename: ");Debugln(filename);
-    
-    bool handle = handleFile(filename.c_str());
-    if ( filename == "/" && !handle ) {
-      httpServer.sendHeader("Location", "/#DashTab", true);
-      httpServer.send ( 303, "text/plain", "");
-    }
-    if ( !handle ) httpServer.send(404, "text/plain", F("FileNotFound\r\n"));
-
-  });
   httpServer.begin();
-  // server.begin();
-  DebugTln( F("HTTP server started\r") );
-  
-} // setupFSexplorer()
+  DebugTln(F("Async HTTP server started\r"));
+}
+
+//=====================================================================================
+static String formatBytesCommon(size_t bytes)
+{
+  return (bytes < 1024) ? String(bytes) + " Byte" : (bytes < (1024 * 1024)) ? String(bytes / 1024.0) + " KB" : String(bytes / 1024.0 / 1024.0) + " MB";
+}
 
 //=====================================================================================
 ApiResponse listFilesApiResponse()             // Senden aller Daten an den Client
@@ -260,156 +277,34 @@ ApiResponse listFilesApiResponse()             // Senden aller Daten an den Clie
   {
     JsonObject item = files.add<JsonObject>();
     item["name"] = dirMap[f].Name;
-    item["size"] = formatBytes(dirMap[f].Size);
+    item["size"] = formatBytesCommon(dirMap[f].Size);
   }
   JsonObject fsStats = files.add<JsonObject>();
-  fsStats["usedBytes"] = formatBytes(LittleFS.usedBytes() * 1.05); // +5% veiligheidsmarge
-  fsStats["totalBytes"] = formatBytes(LittleFS.totalBytes());
-  fsStats["freeBytes"] = formatBytes(LittleFS.totalBytes() - (LittleFS.usedBytes() * 1.05));
+  fsStats["usedBytes"] = formatBytesCommon(LittleFS.usedBytes() * 1.05); // +5% veiligheidsmarge
+  fsStats["totalBytes"] = formatBytesCommon(LittleFS.totalBytes());
+  fsStats["freeBytes"] = formatBytesCommon(LittleFS.totalBytes() - (LittleFS.usedBytes() * 1.05));
   String body;
   serializeJson(doc, body);
   return {200, "application/json", body};
   
 } // listFilesApiResponse()
 
-//=====================================================================================
-bool handleFile(String&& path) 
-{
-//  Debugln("handleFile");
-  if ( !LittleFS.exists(settingIndexPage) ) GetFile(settingIndexPage, PATH_DATA_FILES); 
-  if (httpServer.hasArg("delete")) 
-  {
-    DebugTf("Delete -> [%s]\n\r",  httpServer.arg("delete").c_str());
-    LittleFS.remove(httpServer.arg("delete"));    // Datei löschen
-    httpServer.sendContent(Header);
-    return true;
-  }
-  if (path.endsWith("/")) path += "index.html";
-  return LittleFS.exists(path) ? ({File f = LittleFS.open(path, "r"); httpServer.streamFile(f, contentType(path)); f.close(); true;}) : false;
-
-} // handleFile()
-
-//=====================================================================================
-void handleFileUpload() 
-{
-  if (!auth()) return;
-  static File fsUploadFile;
-  HTTPUpload& upload = httpServer.upload();
-  if (upload.status == UPLOAD_FILE_START) 
-  {
-    if (upload.filename.length() > 30) 
-    {
-      upload.filename = upload.filename.substring(upload.filename.length() - 30, upload.filename.length());  // Dateinamen auf 30 Zeichen kürzen
-    }
-    Debugln("FileUpload Name: " + upload.filename);
-    fsUploadFile = LittleFS.open("/" + httpServer.urlDecode(upload.filename), "w");
-  } 
-  else if (upload.status == UPLOAD_FILE_WRITE) 
-  {
-    Debugln("FileUpload Data: " + (String)upload.currentSize);
-    if (fsUploadFile)
-      fsUploadFile.write(upload.buf, upload.currentSize);
-  } 
-  else if (upload.status == UPLOAD_FILE_END) {
-    if (fsUploadFile)
-      fsUploadFile.close();
-    Debugln("FileUpload Size: " + (String)upload.totalSize);
-    httpServer.sendContent(Header);
-    RngInvalidateHeaderCache(httpServer.urlDecode(upload.filename).c_str());
-    if (upload.filename == "DSMRsettings.json") readSettings(false);
-    if (upload.filename == "enphase.json" || upload.filename == "solaredge.json") ReadSolarConfigs();
-#ifdef NETSWITCH
-    if (upload.filename == "netswitch.json") readtriggers();
-#endif    
-  }
-} // handleFileUpload() 
-
-//=====================================================================================
-void formatFS() 
-{       //Formatiert den Speicher
-  if (!LittleFS.exists("/!format")) return;
-  DebugTln(F("Format FS"));
-  LittleFS.format();
-  httpServer.sendContent(Header);
-  
-} // formatFS()
-
-//=====================================================================================
-const String formatBytes(size_t const& bytes) 
-{ 
-  return (bytes < 1024) ? String(bytes) + " Byte" : (bytes < (1024 * 1024)) ? String(bytes / 1024.0) + " KB" : String(bytes / 1024.0 / 1024.0) + " MB";
-
-} //formatBytes()
-
-//=====================================================================================
-const String &contentType(String& filename) 
-{       
-  if (filename.endsWith(".htm") || filename.endsWith(".html")) filename = "text/html";
-  else if (filename.endsWith(".css")) filename = "text/css";
-  else if (filename.endsWith(".js")) filename = F("application/javascript");
-  else if (filename.endsWith(".json")) filename = F("application/json");
-//  else if (filename.endsWith(".png")) filename = F("image/png");
-//  else if (filename.endsWith(".gif")) filename = F("image/gif");
-//  else if (filename.endsWith(".jpg")) filename = F("image/jpeg");
-//  else if (filename.endsWith(".ico")) filename = F("image/x-icon");
-  else if (filename.endsWith(".xml")) filename = F("text/xml");
-//  else if (filename.endsWith(".pdf")) filename = F("application/x-pdf");
-//  else if (filename.endsWith(".zip")) filename = F("application/x-zip");
-//  else if (filename.endsWith(".gz")) filename = F("application/x-gzip");
-  else filename = "text/plain";
-  return filename;
-  
-} // &contentType()
-
-//=====================================================================================
-bool freeSpace(uint16_t const& printsize) 
-{    
-  Debugln(formatBytes(LittleFS.totalBytes() - (LittleFS.usedBytes() * 1.05)) + " in SPIFF free");
-  return (LittleFS.totalBytes() - (LittleFS.usedBytes() * 1.05) > printsize) ? true : false;
-  
-} // freeSpace()
-
-//=====================================================================================
 void resetWifi()
 {
-//  DebugTln(F("ResetWifi ..."));
   Debugf("\r\nConnect to AP [%s] and go to ip address shown in the AP-name\r\n", settingHostname);
-  doRedirect("RebootResetWifi", 500, "/", true, true);
+  WiFiManager manageWiFi;
+  manageWiFi.resetSettings();
+#if DIRECT_AP_CONNECT
+  preferences.remove("direct_ap_ssid");
+  preferences.remove("direct_ap_psk");
+#endif
+  LogFile("reboot: async resetWifi", false);
+  P1Reboot();
 }
-//=====================================================================================
+
 void reBootESP()
 {
-  DebugTln(F("Redirect and ReBoot .."));
-  doRedirect("RebootOnly", 500, "/", true,false);
-
-} // reBootESP()
-
-//=====================================================================================
-void doRedirect(String msg, int wait, const char* URL, bool reboot, bool resetWifi)
-{ 
-  DebugTln(msg);
-  delay(wait);
-  httpServer.sendHeader("Location", "/#Redirect?msg="+msg, true);
-  httpServer.send ( 303, "text/plain", "");
-
-  if (reboot) 
-  {
-    for( uint8_t i = 0; i < 100;i++) { 
-      //handle redirect requests first before rebooting so client processing can take place
-      delay(50); 
-      httpServer.handleClient();
-    }
-    if (resetWifi) 
-   {   
-       WiFiManager manageWiFi;
-       manageWiFi.resetSettings();
-#if DIRECT_AP_CONNECT
-       preferences.remove("direct_ap_ssid");
-       preferences.remove("direct_ap_psk");
-#endif
-   }
-    LogFile("reboot: doRedirect", false);
-    P1Reboot();
-  }
-  
-} // doRedirect()
+  DebugTln(F("Async ReBoot .."));
+  LogFile("reboot: async reBootESP", false);
+  P1Reboot();
+}
