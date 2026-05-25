@@ -63,13 +63,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.8.0
-- add: total Energy from and to grid json/mqtt (Frans)
-- add: reports plafond report back
-- fix: EM330 mapping lsw first
-- add: /api/v2/dash/hist
-- add: /api/v2/dash/live
-- refactor frontend code base incl new dash endpoints
 
 5.9.0
 - tooltips bij de diverse settings (Gerben)
@@ -84,11 +77,11 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define XTRA_LOG
 
 //---  PROFILES  ---
-#define ULTRA            //ultra (mini) dongle
+// #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       // + D1MC and NRGDH
@@ -193,6 +186,7 @@ void setup()
   StartMqttTask();
   EIDStart();
   ShellyEmuBegin();
+  setupApiWebSocket();
   
   DebugTf("Startup complete! actTimestamp[%s]\r\n", actTimestamp);  
   StartESPNOW();
@@ -203,6 +197,7 @@ void setup()
 void loop () { 
   esp_task_wdt_reset();
   httpServer.handleClient();
+  handleApiWebSocket();
   if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
     P1StatusWrite();
     MQTTSentStaticInfo();
@@ -215,6 +210,7 @@ void loop () {
   handleWater();
   handleEnergyID();  
   GetSolarDataN();
+  handleRawPort();
   handleVirtualP1();
   PrintHWMark(2);
   handleP2P();

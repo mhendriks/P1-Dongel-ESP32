@@ -282,11 +282,11 @@ ApiResponse listFilesApiResponse()
 
 bool handleFile(String&& path) 
 {
-  if (!LittleFS.exists(settingIndexPage)) GetFile(settingIndexPage, PATH_DATA_FILES); 
   if (httpServer.hasArg("delete")) 
   {
     DebugTf("Delete -> [%s]\n\r", httpServer.arg("delete").c_str());
     LittleFS.remove(httpServer.arg("delete"));
+    EnsureIndexFilePresent();
     httpServer.sendContent(Header);
     return true;
   }

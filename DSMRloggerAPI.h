@@ -43,6 +43,7 @@ struct {
 // #include "Insights.h"
 #include <WiFiClientSecure.h>        
 #include <WebServer.h>
+#include <WebSocketsServer.h>
 #include <TimeLib.h>            // https://github.com/PaulStoffregen/Time
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
@@ -185,6 +186,7 @@ void ResetOvervoltageStats();
 String smActualJsonDebug();
 
 WebServer httpServer(80);
+WebSocketsServer apiWs(81);
 NetServer ws_raw(82);
 
 // time_t tWifiLost        = 0;
@@ -482,6 +484,7 @@ bool        bPre40 = false;
 bool        bWarmteLink = false;
 bool        bActJsonMQTT = false;
 bool        bRawPort = false;
+volatile bool bRawPortTelegramPending = false;
 bool        bLED_PRT = true;
 bool        bModbusMonitor = false;
 bool        P1Out = false;
@@ -622,6 +625,10 @@ ApiResponse accuApiResponse();
 ApiResponse EIDGetClaimApiResponse(const String& action);
 String modbusMonitorJson();
 void clearModbusMonitorEntries();
+void setupApiWebSocket();
+void handleApiWebSocket();
+void apiWsMarkLiveDirty();
+void handleRawPort();
 
 #include "Debug.h"
 #include <ESPmDNS.h>

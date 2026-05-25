@@ -1,7 +1,7 @@
 /*
 ***************************************************************************  
-**  Copyright 2025 Smartstuff
-**  Authors  : Martijn Hendriks / Mar10us
+**  Copyright 2026 Smartstuff
+**  Authors  : Martijn Hendriks
 **  TERMS OF USE: MIT License.                                      
 ***************************************************************************      
 */
@@ -1314,6 +1314,7 @@ function bootsTrapMain()
 					//redirect to cmd
 					const btn = document.getElementById("b"+cmd);
 					if (btn) {
+					btn.click();
 						activeTab = btn.id;
 						openTab();
 					} else console.log("Button b"+cmd+" not found");
@@ -1929,9 +1930,15 @@ async function startUpdateFlow( type ) {
 function updateProgress() {
   if (update_interval) clearInterval(update_interval);
   update_interval = setInterval(() => {
-    objDAL.refreshTime();
-    progressBar.style.width = progress + "%";
-	document.getElementById("updatestatus").innerText = progress < 90 ? t("lbl_update_start") : t("lbl_update_wait");
+    if (progress < 90) {
+      progress += 5;
+      progressBar.style.width = progress + "%";
+	  document.getElementById("updatestatus").innerText = t("lbl_update_start");
+    } else {
+      clearInterval(update_interval);
+      update_interval = null;
+      checkESPOnline();
+    }
   }, 1000);
 }
 

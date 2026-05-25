@@ -19,6 +19,7 @@ if (!DEBUG) {	//production
 
 const APIHOST = window.location.protocol+'//'+window.location.host;
 const APIGW = APIHOST+'/api/';
+const API_WS_URL = (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.hostname + ":81/ws";
 
 // On-demand history payloads for the history and meter-reading views.
 const URL_HISTORY_HOURS 	= "/RNGhours.json";
@@ -46,6 +47,136 @@ const MAX_FILECOUNT     	= 30;   //maximum filecount on the device is 30
 
 var ota_url 				= "";  
 let objDAL 					= null;
+
+class ApiJsonStream {
+	constructor({name, url, interval, parser}) {
+		this.name = name;
+		this.url = url;
+		this.interval = interval;
+		this.parser = parser;
+		this.timer = 0;
+		this.controller = null;
+		this.running = false;
+		this.inflight = false;
+	}
+
+	start({force=false} = {}) {
+		if (this.running && !force) return;
+		this.stop();
+		this.running = true;
+		this.#schedule(0);
+	}
+
+	stop() {
+		this.running = false;
+		if (this.timer) clearTimeout(this.timer);
+		this.timer = 0;
+		if (this.controller) this.controller.abort();
+		this.controller = null;
+		this.inflight = false;
+	}
+
+	refresh() {
+		const singleShot = !this.running;
+		if (singleShot) this.running = true;
+		if (this.timer) clearTimeout(this.timer);
+		this.timer = 0;
+		this.#fetchOnce(singleShot);
+	}
+
+	#schedule(delay) {
+		if (!this.running) return;
+		if (this.timer) clearTimeout(this.timer);
+		this.timer = setTimeout(() => this.#fetchOnce(), delay);
+	}
+
+	#fetchOnce(singleShot=false) {
+		if (!this.running || this.inflight) return;
+		if (typeof PauseAPI !== "undefined" && PauseAPI) {
+			if (singleShot) {
+				this.running = false;
+				return;
+			}
+			this.#schedule(this.interval);
+			return;
+		}
+
+		this.inflight = true;
+		this.controller = new AbortController();
+		console.log("DAL::stream(" + this.name + ") " + this.url);
+		fetch(this.url, {cache: "no-store", signal: this.controller.signal})
+			.then(response => {
+				if (!response.ok) throw new Error("HTTP " + response.status);
+				return response.json();
+			})
+			.then(json => this.parser(json))
+			.catch(error => {
+				if (error.name !== "AbortError") console.error("DAL::stream(" + this.name + ") - " + error.message);
+			})
+			.finally(() => {
+				this.inflight = false;
+				this.controller = null;
+				if (singleShot) {
+					this.running = false;
+					return;
+				}
+				this.#schedule(this.interval);
+			});
+	}
+}
+
+class ApiWebSocketBridge {
+	constructor({url, onMessage, onOpen, onClose}) {
+		this.url = url;
+		this.onMessage = onMessage;
+		this.onOpen = onOpen;
+		this.onClose = onClose;
+		this.ws = null;
+		this.reconnectTimer = 0;
+		this.enabled = !!window.WebSocket;
+		this.connected = false;
+	}
+
+	start() {
+		if (!this.enabled || this.ws) return;
+		this.#connect();
+	}
+
+	#connect() {
+		if (!this.enabled) return;
+		console.log("DAL::ws connect " + this.url);
+		this.ws = new WebSocket(this.url);
+		this.ws.onopen = () => {
+			this.connected = true;
+			this.onOpen?.();
+		};
+		this.ws.onmessage = event => {
+			try {
+				this.onMessage?.(JSON.parse(event.data));
+			} catch (error) {
+				console.error("DAL::ws parse - " + error.message);
+			}
+		};
+		this.ws.onerror = () => {
+			this.connected = false;
+		};
+		this.ws.onclose = () => {
+			this.ws = null;
+			const wasConnected = this.connected;
+			this.connected = false;
+			this.onClose?.(wasConnected);
+			this.#scheduleReconnect();
+		};
+	}
+
+	#scheduleReconnect() {
+		if (!this.enabled || this.reconnectTimer) return;
+		this.reconnectTimer = setTimeout(() => {
+			this.reconnectTimer = 0;
+			this.#connect();
+		}, 10000);
+	}
+}
     
 // The Data Access Layer groups browser<->dongle traffic by role:
 // - global infra streams: time, device info/settings
@@ -80,9 +211,49 @@ class dsmr_dal_main{
 		  this.timerREFRESH_MANIFEST = 0; 
 	      
 	      // Cache timestamps.
-	      this.dash_hist_fetched_at = 0;
-	      this.device_info_fetched_at = 0;
-	      this.callback=null;
+		  this.dash_hist_fetched_at = 0;
+		  this.device_info_fetched_at = 0;
+		  this.callback=null;
+
+		  this.streams = {
+			time: new ApiJsonStream({
+				name: "time",
+				url: URL_TIME,
+				interval: UPDATE_ACTUAL,
+				parser: this.parseTIME.bind(this)
+			}),
+			dash_live: new ApiJsonStream({
+				name: "dash_live",
+				url: URL_DASH_LIVE,
+				interval: UPDATE_ACTUAL,
+				parser: this.parseDashLive.bind(this)
+			}),
+			dash_hist: new ApiJsonStream({
+				name: "dash_hist",
+				url: URL_DASH_HIST,
+				interval: UPDATE_DASH_HIST,
+				parser: this.parseDashHist.bind(this)
+			}),
+			actual: new ApiJsonStream({
+				name: "actual",
+				url: URL_SM_ACTUAL,
+				interval: UPDATE_ACTUAL,
+				parser: this.parseActual.bind(this)
+			})
+		  };
+
+		  this.streamDesired = {
+			time: false,
+			dash_live: false,
+			dash_hist: false,
+			actual: false
+		  };
+		  this.ws = new ApiWebSocketBridge({
+			url: API_WS_URL,
+			onMessage: this.#handleWsMessage.bind(this),
+			onOpen: this.#handleWsOpen.bind(this),
+			onClose: this.#handleWsClose.bind(this)
+		  });
 	    }
 
 		#setPollingTimer(timerName, fnRefresh, interval) {
@@ -131,8 +302,47 @@ class dsmr_dal_main{
   
 	    init(){
 	      this.ensureDeviceInformation(true);
+		  this.ws.start();
 		  this.startTimePolling();
 	    } 
+
+		#startLiveSource(source) {
+			this.streamDesired[source] = true;
+			if (this.ws.connected) {
+				this.streams[source].refresh();
+				return;
+			}
+			this.streams[source].start();
+		}
+
+		#stopLiveSource(source) {
+			this.streamDesired[source] = false;
+			this.streams[source].stop();
+		}
+
+		#handleWsOpen() {
+			console.log("DAL::ws connected");
+			Object.values(this.streams).forEach(stream => stream.stop());
+		}
+
+		#handleWsClose(wasConnected) {
+			if (wasConnected) console.log("DAL::ws disconnected; falling back to fetch streams");
+			Object.keys(this.streamDesired).forEach(source => {
+				if (this.streamDesired[source]) this.streams[source].start();
+			});
+		}
+
+		#handleWsMessage(message) {
+			const source = message?.source;
+			if (!source || !this.streamDesired[source]) return;
+			switch (source) {
+				case "time": this.parseTIME(message.data); break;
+				case "dash_live": this.parseDashLive(message.data); break;
+				case "dash_hist": this.parseDashHist(message.data); break;
+				case "actual": this.parseActual(message.data); break;
+				default: console.log("DAL::ws unknown source " + source);
+			}
+		}
 			
 		// Convenience helper for callers that want all history refreshed together.
 		refreshHist() {
@@ -156,16 +366,15 @@ class dsmr_dal_main{
 
 		refreshDashLive() {
 			console.log("DAL::refreshDashLive");
-			this.fetchDataJSON(URL_DASH_LIVE, this.parseDashLive.bind(this));
+			this.streams.dash_live.refresh();
 		}
 
 		startDashLivePolling() {
-			this.refreshDashLive();
-			this.#setPollingTimer("timerREFRESH_DASH_LIVE", this.refreshDashLive.bind(this), UPDATE_ACTUAL);
+			this.#startLiveSource("dash_live");
 		}
 
 		stopDashLivePolling() {
-			this.stopPollingTimer("timerREFRESH_DASH_LIVE");
+			this.#stopLiveSource("dash_live");
 		}
 
 		parseDashLive(json) {
@@ -175,16 +384,15 @@ class dsmr_dal_main{
 
 		refreshDashHist() {
 			console.log("DAL::refreshDashHist");
-			this.fetchDataJSON(URL_DASH_HIST, this.parseDashHist.bind(this));
+			this.streams.dash_hist.refresh();
 		}
 
 		startDashHistPolling() {
-			this.ensureDashHist(true);
-			this.#setPollingTimer("timerREFRESH_DASH_HIST", this.refreshDashHist.bind(this), UPDATE_DASH_HIST);
+			this.#startLiveSource("dash_hist");
 		}
 
 		stopDashHistPolling() {
-			this.stopPollingTimer("timerREFRESH_DASH_HIST");
+			this.#stopLiveSource("dash_hist");
 		}
 
 		ensureDashHist(force=false) {
@@ -331,12 +539,11 @@ class dsmr_dal_main{
 
 		refreshTime(){
 	      console.log("DAL::refreshTime");
-	      this.fetchDataJSON( URL_TIME, this.parseTIME.bind(this));
+	      this.streams.time.refresh();
 		}
 
 		startTimePolling(){
-			this.refreshTime();
-			this.#setPollingTimer("timerREFRESH_TIME", this.refreshTime.bind(this), UPDATE_ACTUAL);
+			this.#startLiveSource("time");
 		}
 
     parseTIME(json){
@@ -348,16 +555,15 @@ class dsmr_dal_main{
     //refresh every 10 sec
     refreshActual(){
       console.log("DAL::refreshActual");
-      this.fetchDataJSON( URL_SM_ACTUAL, this.parseActual.bind(this));
+      this.streams.actual.refresh();
     }
 
 		startActualPolling(){
-			this.refreshActual();
-			this.#setPollingTimer("timerREFRESH_ACTUAL", this.refreshActual.bind(this), UPDATE_ACTUAL);
+			this.#startLiveSource("actual");
 		}
 
 		stopActualPolling(){
-			this.stopPollingTimer("timerREFRESH_ACTUAL");
+			this.#stopLiveSource("actual");
 		}
     
     parseActual(json){

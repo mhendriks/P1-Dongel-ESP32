@@ -191,6 +191,7 @@ static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
   processTelegram();
   if (!isHan) WorkerNotifyP1TelegramOk();
   if (Verbose2) DSMRdata.applyEach(showValues());
+  apiWsMarkLiveDirty();
 }
 
 static void copyLogSafe(char* dst, size_t dstSize, const String& src) {
@@ -240,7 +241,7 @@ static void handleParsedMeter(P1Reader& meter, bool isHan) {
   ToggleLED(LED_ON);
   CapTelegram = meter.CompleteRaw();
   if (!isHan) Out1Avail = true;
-  if (bRawPort) ws_raw.println(CapTelegram);
+  if (bRawPort) bRawPortTelegramPending = true;
 
 #ifdef VIRTUAL_P1
   if (!isHan) virtSetLastData();
@@ -283,7 +284,7 @@ static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
   ToggleLED(LED_ON);
   CapTelegram = meter.CompleteRaw();
   if (!isHan) Out1Avail = true;
-  if (bRawPort) ws_raw.println(CapTelegram);
+  if (bRawPort) bRawPortTelegramPending = true;
 
   if (!isHan) {
 #ifdef VIRTUAL_P1
@@ -327,7 +328,7 @@ static void handleParsedMeter(han::HanReader& meter, bool isHan) {
   ToggleLED(LED_ON);
   CapTelegram = meter.CompleteRaw();
   if (!isHan) Out1Avail = true;
-  if (bRawPort) ws_raw.println(CapTelegram);
+  if (bRawPort) bRawPortTelegramPending = true;
 
   if (showRaw) {
     Debugf("Raw smart meter data (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
@@ -458,7 +459,19 @@ void handleVirtualP1(){
 }
 #else
 void handleVirtualP1(){}
-#endif  
+#endif
+
+void handleRawPort(){
+  if (!bRawPort) {
+    bRawPortTelegramPending = false;
+    return;
+  }
+
+  if (!bRawPortTelegramPending) return;
+
+  bRawPortTelegramPending = false;
+  ws_raw.println(CapTelegram);
+}
 
 //==================================================================================
 #ifdef HAN_READER

@@ -8,7 +8,7 @@
 ***************************************************************************      
 */
 
-void GetFile(String filename, String path ){
+bool GetFile(String filename, String path ){
   HTTPClient http;
   if(wifiClient.connect(HOST_DATA_FILES, 443)) {
     Debugln(path + filename);
@@ -20,7 +20,13 @@ void GetFile(String filename, String path ){
   //      Serial.println(payload);
         File file = LittleFS.open(filename, "w"); // open for reading and writing
         if (!file) DebugTln(F("open file FAILED!!!\r\n"));
-        else file.print(payload); 
+        else {
+          file.print(payload);
+          file.close();
+          http.end();
+          wifiClient.stop(); //end client connection to server
+          return true;
+        }
         file.close();
       }
       http.end(); 
@@ -28,6 +34,7 @@ void GetFile(String filename, String path ){
   } else {
     DebugTln(F("connection to server failed"));
   }
+  return false;
 }
 
 //refactor settingsfile
@@ -313,7 +320,7 @@ void readSettings(bool show)
 //  Debug(F(".. done\r"));
 
 
-  if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), "DSMRindexEDGE.html");
+  if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), _DEFAULT_HOMEPAGE);
   
   if (settingMQTTbrokerPort    < 1) settingMQTTbrokerPort   = 1883;
   settingMeentInterval = constrain(settingMeentInterval, 1, 3600);

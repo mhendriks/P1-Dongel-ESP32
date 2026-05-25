@@ -6,6 +6,7 @@ uint32_t manifestScheduleNextCheckMs = 0;
 static char remoteUpdateState[16] = "idle";
 static char remoteUpdateDetail[64] = "";
 static uint8_t remoteUpdateProgress = 0;
+static uint32_t remoteUpdateQueuedAt = 0;
 
 static void setRemoteUpdateStatus(const char* state, const char* detail = "") {
   strlcpy(remoteUpdateState, state ? state : "idle", sizeof(remoteUpdateState));
@@ -20,35 +21,36 @@ void AppendRemoteUpdateStatus(JsonDocument& doc) {
 }
 
 void handleRemoteUpdate(){
+  if (UpdateRequested && millis() - remoteUpdateQueuedAt < 750) return;
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
 }
 
 void RemoteUpdate() {
-  if (httpServer.argName(0) != "version") {
+  if (!httpServer.hasArg("version")) {
     LogFile("OTA ERROR: missing version argument", true);
-    httpServer.sendHeader("Location", "/#UpdateStart?error=missing_argument");
+    httpServer.sendHeader("Location", "/#UpdateStart?error=missing_argument", true);
     httpServer.send(303, "text/html", "");
     setRemoteUpdateStatus("error", "missing_argument");
     return;
   }
 
-  const String requestedVersion = httpServer.arg(0);
+  const String requestedVersion = httpServer.arg("version");
   String errorDetail;
   if (!RemoteUpdateAvailable(requestedVersion.c_str(), &errorDetail)) {
-    httpServer.sendHeader("Location", "/#UpdateStart?error=" + errorDetail);
+    httpServer.sendHeader("Location", "/#UpdateStart?error=" + errorDetail, true);
     httpServer.send(303, "text/html", "");
     setRemoteUpdateStatus("error", errorDetail.c_str());
     return;
   }
 
   if (!QueueRemoteUpdate(requestedVersion.c_str(), true)) {
-    httpServer.sendHeader("Location", "/#UpdateStart?error=failed");
+    httpServer.sendHeader("Location", "/#UpdateStart?error=failed", true);
     httpServer.send(303, "text/html", "");
     setRemoteUpdateStatus("error", "failed");
     return;
   }
 
-  httpServer.sendHeader("Location", "/#UpdateStart");
+  httpServer.sendHeader("Location", "/#UpdateStart", true);
   httpServer.send(303, "text/html", "");
 }
 
@@ -66,6 +68,7 @@ bool QueueRemoteUpdate(const char* versie, bool sketch) {
   strlcpy(UpdateVersion, versie, sizeof(UpdateVersion));
   bUpdateSketch = sketch;
   UpdateRequested = true;
+  remoteUpdateQueuedAt = millis();
   remoteUpdateProgress = 0;
   setRemoteUpdateStatus("queued", versie);
   return true;
