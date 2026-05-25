@@ -511,13 +511,59 @@ function asNumber(value) {
 }
 
 function hasValidMeterValue(field) {
-	if (!field || !Object.prototype.hasOwnProperty.call(field, "value")) return false;
-	return !Number.isNaN(asNumber(field.value));
+	if (field && typeof field === "object" && Object.prototype.hasOwnProperty.call(field, "value")) {
+		return !Number.isNaN(asNumber(field.value));
+	}
+	return !Number.isNaN(asNumber(field));
 }
 
 function meterValue(field, fallback = 0) {
-	const value = asNumber(field?.value);
+	const rawValue = (field && typeof field === "object" && Object.prototype.hasOwnProperty.call(field, "value"))
+		? field.value
+		: field;
+	const value = asNumber(rawValue);
 	return Number.isNaN(value) ? fallback : value;
+}
+
+function meterString(field, fallback = "") {
+	const rawValue = (field && typeof field === "object" && Object.prototype.hasOwnProperty.call(field, "value"))
+		? field.value
+		: field;
+	if (rawValue === undefined || rawValue === null) return fallback;
+	return String(rawValue);
+}
+
+function dashMetric(json, key) {
+	switch (key) {
+		case "timestamp": return json?.timestamp;
+		case "power_delivered": return json?.power?.delivered;
+		case "power_returned": return json?.power?.returned;
+		case "power_delivered_l1": return json?.power?.delivered_l1;
+		case "power_delivered_l2": return json?.power?.delivered_l2;
+		case "power_delivered_l3": return json?.power?.delivered_l3;
+		case "power_returned_l1": return json?.power?.returned_l1;
+		case "power_returned_l2": return json?.power?.returned_l2;
+		case "power_returned_l3": return json?.power?.returned_l3;
+		case "current_l1": return json?.current?.l1;
+		case "current_l2": return json?.current?.l2;
+		case "current_l3": return json?.current?.l3;
+		case "voltage_l1": return json?.voltage?.l1;
+		case "voltage_l2": return json?.voltage?.l2;
+		case "voltage_l3": return json?.voltage?.l3;
+		case "energy_delivered_tariff1": return json?.energy?.delivered_t1;
+		case "energy_delivered_tariff2": return json?.energy?.delivered_t2;
+		case "energy_returned_tariff1": return json?.energy?.returned_t1;
+		case "energy_returned_tariff2": return json?.energy?.returned_t2;
+		case "energy_delivered_total": return json?.energy?.delivered_total;
+		case "energy_returned_total": return json?.energy?.returned_total;
+		case "gas_delivered": return json?.gas?.delivered;
+		case "gas_delivered_timestamp": return json?.gas?.timestamp;
+		case "water": return json?.water?.delivered;
+		case "water_delivered_ts": return json?.water?.timestamp;
+		case "peak_pwr_last_q": return json?.peak?.last_q;
+		case "highest_peak_pwr": return json?.peak?.highest;
+		default: return undefined;
+	}
 }
 
 function hasHistoryData(data) {
@@ -649,26 +695,28 @@ function toggleDashboardWatt() {
 function SetOnSettings(json) {
 	// Initiele detectie: water, gas, teruglevering
 	if (!HeeftGas && !IgnoreGas) {
-		const hasGasValue = hasValidMeterValue(json.gas_delivered);
-		const hasGasTimestamp =
-			typeof json.gas_delivered_timestamp?.value === "string" &&
-			json.gas_delivered_timestamp.value.trim() !== "" &&
-			json.gas_delivered_timestamp.value !== "-";
+		const hasGasValue = hasValidMeterValue(dashMetric(json, "gas_delivered"));
+		const gasTimestamp = meterString(dashMetric(json, "gas_delivered_timestamp"), "");
+		const hasGasTimestamp = gasTimestamp.trim() !== "" && gasTimestamp !== "-";
 		HeeftGas = hasGasValue || hasGasTimestamp;
 	}
 	HeeftWater = settingsWaterEnabled(json) || settingsWaterEnabled(objDAL?.getDeviceSettings?.());
 
 	if (!Injection) {
-		Injection = !isNaN(json.energy_returned_tariff1?.value) ? json.energy_returned_tariff1.value : false;
-		if (!Injection) Injection = !isNaN(json.energy_returned_tariff2?.value) ? json.energy_returned_tariff2.value : false;
+		Injection = meterValue(dashMetric(json, "energy_returned_tariff1"), NaN);
+		Injection = Number.isNaN(Injection) ? false : Injection;
+		if (!Injection) {
+			const returnedT2 = meterValue(dashMetric(json, "energy_returned_tariff2"), NaN);
+			Injection = Number.isNaN(returnedT2) ? false : returnedT2;
+		}
 	}
 	Injection = Injection && !IgnoreInjection;
 
 	// Fasebepaling voor slimme meter
 	if (Dongle_Config !== "p1-q") {
 		Phases = 1;
-		if (!isNaN(json.current_l2?.value)) Phases++;
-		if (!isNaN(json.current_l3?.value)) Phases++;
+		if (hasValidMeterValue(dashMetric(json, "current_l2"))) Phases++;
+		if (hasValidMeterValue(dashMetric(json, "current_l3"))) Phases++;
 	}
 
 	// Verberg historische weergave indien uitgeschakeld
@@ -911,27 +959,27 @@ function refreshDashboard(json){
 	updateDashboardControls();
 	
 	let Parr=[3],Parra=[3],Parri=[3], Garr=[3],Warr=[3];
+	const dash = key => dashMetric(json, key);
 
 		//-------CHECKS
 
 		SetOnSettings(json);
-		const timestampValue = json.timestamp?.value ?? "-";
+		const timestampValue = meterString(dash("timestamp"), "-");
 		if (timestampValue == "-") {
 			console.log("timestamp missing : p1 data incorrect!");
 			return;
 		}
 
 		const dayKey = getTimestampDayKey(timestampValue);
-		if (dayKey && DayEpoch !== dayKey) {
+		if (!DayEpoch && dayKey) {
+			DayEpoch = dayKey;
+			if (EnableHist) objDAL.ensureDashHist();
+		} else if (dayKey && DayEpoch !== dayKey) {
 			resetDailyHistoryBuffers();
 			Pi_today = 0;
 			Pd_today = 0;
 			if (EnableHist) objDAL.ensureDashHist(true);
-			if (SolarActive) objDAL.refreshSolar();
 			DayEpoch = dayKey;
-		} else if (!DayEpoch && EnableHist) {
-			DayEpoch = dayKey;
-			objDAL.ensureDashHist();
 		}
 		
 		//-------TOON METERS
@@ -949,8 +997,8 @@ function refreshDashboard(json){
 		if (HeeftWater && EnableHist) { 
 			setDashboardWidgetAvailable("l7", true);
 		}
-		const peakLast = meterValue(json.peak_pwr_last_q, NaN);
-		const peakHighest = meterValue(json.highest_peak_pwr, NaN);
+		const peakLast = meterValue(dash("peak_pwr_last_q"), NaN);
+		const peakHighest = meterValue(dash("highest_peak_pwr"), NaN);
 		const hasPeakData = !Number.isNaN(peakLast) && !Number.isNaN(peakHighest);
 		if (hasPeakData) setDashboardWidgetAvailable("dash_peak", true);
 
@@ -971,9 +1019,9 @@ function refreshDashboard(json){
 		
 		//-------VOLTAGE
 		let v1 = 0, v2 = 0, v3 = 0;
-		v1 = meterValue(json.voltage_l1, 0); 
-		v2 = meterValue(json.voltage_l2, 0);
-		v3 = meterValue(json.voltage_l3, 0);
+		v1 = meterValue(dash("voltage_l1"), 0); 
+		v2 = meterValue(dash("voltage_l2"), 0);
+		v3 = meterValue(dash("voltage_l3"), 0);
 
 
 		const voltageCardAvailable = !(HeeftWater && EnableHist);
@@ -1000,7 +1048,7 @@ function refreshDashboard(json){
 		}
 		//-------ACTUAL
 		//afname of teruglevering bepalen en signaleren
-		let TotalKW	= meterValue(json.power_delivered, 0) - meterValue(json.power_returned, 0);
+		let TotalKW	= meterValue(dash("power_delivered"), 0) - meterValue(dash("power_returned"), 0);
 
 		if ( TotalKW <= 0 ) { 
 // 			TotalKW = -1.0 * json.power_returned.value;
@@ -1017,9 +1065,9 @@ function refreshDashboard(json){
 		}
 		
 		//update gauge
-		const currentL1 = meterValue(json.current_l1, NaN);
-		const currentL2 = meterValue(json.current_l2, 0);
-		const currentL3 = meterValue(json.current_l3, 0);
+		const currentL1 = meterValue(dash("current_l1"), NaN);
+		const currentL2 = meterValue(dash("current_l2"), 0);
+		const currentL3 = meterValue(dash("current_l3"), 0);
 		if ( !Number.isNaN(currentL1) ) {
 		TotalAmps = currentL1 + currentL2 + currentL3;
 
@@ -1077,8 +1125,8 @@ function refreshDashboard(json){
 		if (Dongle_Config != "p1-q") {
 
       //bereken verschillen afname, teruglevering en totaal
-      let nPA = meterValue(json.energy_delivered_tariff1, 0) + meterValue(json.energy_delivered_tariff2, 0);
-      let nPI = meterValue(json.energy_returned_tariff1, 0) + meterValue(json.energy_returned_tariff2, 0);
+      let nPA = meterValue(dash("energy_delivered_tariff1"), 0) + meterValue(dash("energy_delivered_tariff2"), 0);
+      let nPI = meterValue(dash("energy_returned_tariff1"), 0) + meterValue(dash("energy_returned_tariff2"), 0);
       Parra = calculateDifferences( nPA, hist_arrPa, 1);
       Parri = calculateDifferences( nPI, hist_arrPi, 1);
       for(let i=0;i<3;i++){ Parr[i]=Parra[i] - Parri[i]; }
@@ -1108,17 +1156,17 @@ function refreshDashboard(json){
 		} //!= p1-q
 		
     //-------GAS	
-			if ( HeeftGas && hasValidMeterValue(json.gas_delivered) && (Dongle_Config != "p1-q") ) 
+			if ( HeeftGas && hasValidMeterValue(dash("gas_delivered")) && (Dongle_Config != "p1-q") ) 
 		{
-      Garr = calculateDifferences(meterValue(json.gas_delivered, 0), hist_arrG, 1);
+      Garr = calculateDifferences(meterValue(dash("gas_delivered"), 0), hist_arrG, 1);
       updateGaugeTrend(trend_g, Garr);
 			document.getElementById("G").innerHTML = formatValue(Garr[0]);
 		}
 		
 		//-------WATER	
-			if (HeeftWater && hasValidMeterValue(json.water)) 
+			if (HeeftWater && hasValidMeterValue(dash("water"))) 
 		{
-      Warr = calculateDifferences(meterValue(json.water, 0), hist_arrW, 1000);
+      Warr = calculateDifferences(meterValue(dash("water"), 0), hist_arrW, 1000);
       updateGaugeTrend(trend_w, Warr);
 			document.getElementById("W").innerHTML = Number(Warr[0]).toLocaleString();
 		}
@@ -1126,7 +1174,7 @@ function refreshDashboard(json){
 		//-------HEAT
 		if (Dongle_Config == "p1-q") 
 		{
-      Garr = calculateDifferences(meterValue(json.gas_delivered, 0), hist_arrG, 1000);
+      Garr = calculateDifferences(meterValue(dash("gas_delivered"), 0), hist_arrG, 1000);
       updateGaugeTrend(trend_q, Garr);
 			document.getElementById("Q").innerHTML = Number(Garr[0]).toLocaleString("nl", {minimumFractionDigits: 0, maximumFractionDigits: 0} );
 		}
@@ -1141,46 +1189,7 @@ function refreshDashboard(json){
 function UpdateDash()
 {	
 	console.log("Update dash");
-	if (objDAL.getDashLive()?.timestamp) refreshDashboard(dashLiveToFields(objDAL.getDashLive()));
-}
-
-function dashLiveToFields(json) {
-	const out = {};
-	if (!json) return out;
-
-	const setValue = function(key, value) {
-		if (value === undefined || value === null || value === "") return;
-		out[key] = { value: value };
-	};
-
-	setValue("timestamp", json.timestamp);
-	setValue("power_delivered", json.power?.delivered);
-	setValue("power_returned", json.power?.returned);
-	setValue("power_delivered_l1", json.power?.delivered_l1);
-	setValue("power_delivered_l2", json.power?.delivered_l2);
-	setValue("power_delivered_l3", json.power?.delivered_l3);
-	setValue("power_returned_l1", json.power?.returned_l1);
-	setValue("power_returned_l2", json.power?.returned_l2);
-	setValue("power_returned_l3", json.power?.returned_l3);
-	setValue("current_l1", json.current?.l1);
-	setValue("current_l2", json.current?.l2);
-	setValue("current_l3", json.current?.l3);
-	setValue("voltage_l1", json.voltage?.l1);
-	setValue("voltage_l2", json.voltage?.l2);
-	setValue("voltage_l3", json.voltage?.l3);
-	setValue("energy_delivered_tariff1", json.energy?.delivered_t1);
-	setValue("energy_delivered_tariff2", json.energy?.delivered_t2);
-	setValue("energy_returned_tariff1", json.energy?.returned_t1);
-	setValue("energy_returned_tariff2", json.energy?.returned_t2);
-	setValue("energy_delivered_total", json.energy?.delivered_total);
-	setValue("energy_returned_total", json.energy?.returned_total);
-	setValue("gas_delivered", json.gas?.delivered);
-	setValue("gas_delivered_timestamp", json.gas?.timestamp);
-	setValue("water", json.water?.delivered);
-	setValue("water_delivered_ts", json.water?.timestamp);
-	setValue("peak_pwr_last_q", json.peak?.last_q);
-	setValue("highest_peak_pwr", json.peak?.highest);
-	return out;
+	if (objDAL.getDashLive()?.timestamp) refreshDashboard(objDAL.getDashLive());
 }
 
 function applyDashHistory(json) {
@@ -1200,7 +1209,7 @@ function applyDashHistory(json) {
 	DailyHistoryReady = true;
 
 	if (activeTab === "bDashTab" && objDAL.getDashLive()?.timestamp) {
-		refreshDashboard(dashLiveToFields(objDAL.getDashLive()));
+		refreshDashboard(objDAL.getDashLive());
 	}
 }
 
@@ -2302,7 +2311,7 @@ function refreshHistData(type) {
 				}
 				DailyHistoryReady = true;
 				if (activeTab === "bDashTab" && objDAL.getDashLive()?.timestamp) {
-					refreshDashboard(dashLiveToFields(objDAL.getDashLive()));
+					refreshDashboard(objDAL.getDashLive());
 				}
 				break;
 

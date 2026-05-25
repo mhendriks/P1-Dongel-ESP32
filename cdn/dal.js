@@ -10,9 +10,6 @@ const DEBUG = false;
 
 const UPDATE_HIST 		= DEBUG ? 1000 * 10 : 1000 * 300;
 const UPDATE_ACTUAL 	= DEBUG ? 1000 * 5 	: 1000 * 5;
-const UPDATE_SOLAR		= DEBUG ? 1000 * 30 : 1000 * 60;
-const UPDATE_ACCU		= DEBUG ? 1000 * 30 : 1000 * 60;
-const UPDATE_PLAN		= DEBUG ? 1000 * 10 : 1000 * 60;
 const UPDATE_DASH_HIST  = DEBUG ? 1000 * 30 : 1000 * 3600;
 const UPDATE_DEVICE_INFO = DEBUG ? 1000 * 15 : 1000 * 60;
 	
@@ -23,22 +20,24 @@ if (!DEBUG) {	//production
 const APIHOST = window.location.protocol+'//'+window.location.host;
 const APIGW = APIHOST+'/api/';
 
+// On-demand history payloads for the history and meter-reading views.
 const URL_HISTORY_HOURS 	= "/RNGhours.json";
 const URL_HISTORY_DAYS 		= "/RNGdays.json";
 const URL_HISTORY_MONTHS 	= "/RNGmonths.json";
+
+// Live/global API streams.
 const URL_TIME    	 		= "/api/v2/dev/time";
 const URL_DASH_LIVE        = APIGW + "v2/dash/live";
 const URL_DASH_HIST        = APIGW + "v2/dash/hist";
 const URL_SM_ACTUAL    	 	= APIGW + "v2/sm/actual";
+
+// Legacy/special-purpose endpoints that stay request/response based.
 const URL_SM_FIELDS			= APIGW + "v2/sm/fields";
 const URL_SM_TELEGRAM		= APIGW + "v2/sm/telegram";
 const URL_DEVICE_INFO   	= APIGW + "v2/dev/info";
 const URL_DEVICE_SETTINGS   = APIGW + "v2/dev/settings";
-const URL_SOLAR				= APIGW + "v2/gen";
-const URL_ACCU				= APIGW + "v2/accu";
 const URL_INSIGHTS			= APIGW + "v2/stats";
 const URL_EID_CLAIM			= "/eid/getclaim";
-const URL_EID_PLAN			= "/eid/planner";
 const URL_NETSWITCH			= "/netswitch.json";
 const URL_VERSION_MANIFEST 	= "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
 
@@ -48,44 +47,43 @@ const MAX_FILECOUNT     	= 30;   //maximum filecount on the device is 30
 var ota_url 				= "";  
 let objDAL 					= null;
     
-   //The Data Access Layer for the DSMR
-  // - acts as an cache between frontend and server
-  // - schedules refresh to keep data fresh
-  // - stores data for the history functions
-  class dsmr_dal_main{
-    constructor() {
-      this.devinfo=[];
-      this.time=[];      
-	  this.dev_settings=[];
-	      this.version_manifest=[];
-	  this.insights=[];
-	      this.dash_live=[];
-	      this.dash_hist=[];
-	      this.actual=[];
-	  this.telegram=[];
-      this.fields=[];
-	  this.solar=[];
-	  this.accu=[];
-  	  this.months=[];
-	  this.days=[];
-	  this.hours=[];
-	  this.eid_claim=[];
-	  this.netswitch=[];
-	  this.eid_planner=[];
-	      this.actual_history = [];
+// The Data Access Layer groups browser<->dongle traffic by role:
+// - global infra streams: time, device info/settings
+// - tab-specific streams: dash live, dash hist, actual
+// - on-demand data: hours/days/months, telegram, fields, insights, claim
+class dsmr_dal_main{
+	    constructor() {
+	      // Cached payloads.
+	      this.devinfo=[];
+	      this.time=[];      
+		  this.dev_settings=[];
+		  this.version_manifest=[];
+		  this.insights=[];
+		  this.dash_live=[];
+		  this.dash_hist=[];
+		  this.actual=[];
+		  this.telegram=[];
+	      this.fields=[];
+	  	  this.months=[];
+		  this.days=[];
+		  this.hours=[];
+		  this.eid_claim=[];
+		  this.netswitch=[];
+		  this.actual_history = [];
+
+	      // Polling timers.
 	      this.timerREFRESH_TIME = 0;
 	      this.timerREFRESH_DASH_LIVE = 0;
 	      this.timerREFRESH_DASH_HIST = 0;
 	      this.timerREFRESH_ACTUAL = 0;  
 		  this.timerREFRESH_DEVICE_INFO = 0;
 		  this.timerREFRESH_MANIFEST = 0; 
-		  this.timerREFRESH_SOLAR = 0;  	    
-		  this.timerREFRESH_ACCU = 0;  
-		  this.timerREFRESH_EIDPLAN = 0;  	  
+	      
+	      // Cache timestamps.
 	      this.dash_hist_fetched_at = 0;
 	      this.device_info_fetched_at = 0;
 	      this.callback=null;
-	      }
+	    }
 
 		#setPollingTimer(timerName, fnRefresh, interval) {
 			this.stopPollingTimer(timerName);
@@ -135,27 +133,8 @@ let objDAL 					= null;
 	      this.ensureDeviceInformation(true);
 		  this.startTimePolling();
 	    } 
-		
-		refreshEIDPlanner(){
-			console.log("DAL::refreshEIDPlanner");
-	      	this.fetchDataJSON( URL_EID_PLAN, this.parseEIDplan.bind(this));
-		}
-
-		startEIDPlannerPolling(){
-			this.refreshEIDPlanner();
-			this.#setPollingTimer("timerREFRESH_EIDPLAN", this.refreshEIDPlanner.bind(this), UPDATE_PLAN);
-		}
-
-		stopEIDPlannerPolling(){
-			this.stopPollingTimer("timerREFRESH_EIDPLAN");
-		}
-		
-		parseEIDplan(json){
-			this.eid_planner = json;
-		console.log("DAL::parseEIDplan -> " + json );
-		this.callback?.('eid_planner', json);
-	}
-	
+			
+		// Convenience helper for callers that want all history refreshed together.
 		refreshHist() {
 			console.log("DAL::refreshHist");
 			this.refreshHistoryHours();
@@ -191,9 +170,6 @@ let objDAL 					= null;
 
 		parseDashLive(json) {
 			this.dash_live = json;
-			this.solar = json?.solar ?? [];
-			this.accu = json?.accu ?? [];
-			this.eid_planner = json?.eid ?? [];
 			this.callback?.('dash_live', json);
 		}
 
@@ -277,45 +253,7 @@ let objDAL 					= null;
       	this.callback?.('insights', json);
 	}
 	
-	refreshSolar(){
-		console.log("DAL::refreshSolar");
-      	this.fetchDataJSON( URL_SOLAR, this.parseSolar.bind(this));
-	}
-
-	startSolarPolling(){
-		this.refreshSolar();
-		this.#setPollingTimer("timerREFRESH_SOLAR", this.refreshSolar.bind(this), UPDATE_SOLAR);
-	}
-
-	stopSolarPolling(){
-		this.stopPollingTimer("timerREFRESH_SOLAR");
-	}
-	
-	parseSolar(json){
-		this.solar = json;
-      	this.callback?.('solar', json);
-	}
-
-	refreshAccu(){
-		console.log("DAL::refreshAccu");
-      	this.fetchDataJSON( URL_ACCU, this.parseAccu.bind(this));
-	}
-
-	startAccuPolling(){
-		this.refreshAccu();
-		this.#setPollingTimer("timerREFRESH_ACCU", this.refreshAccu.bind(this), UPDATE_ACCU);
-	}
-
-	stopAccuPolling(){
-		this.stopPollingTimer("timerREFRESH_ACCU");
-	}
-	
-	parseAccu(json){
-		this.accu = json;
-      	this.callback?.('accu', json);
-	}
-	
-    //single call; no timer
+	    // Device info/settings stay request/response based and share one cache age.
 	    refreshDeviceInformation(){
 	      console.log("DAL::refreshDeviceInformation");
 	      this.fetchDataJSON( URL_DEVICE_INFO, this.parseDeviceInfo.bind(this));
@@ -503,12 +441,12 @@ let objDAL 					= null;
 		});
 		return ret;
 	}  
-    getSolar(){
-      return this.solar;
-    }
-    getAccu(){
-      return this.accu;
-    }
+	    getSolar(){
+	      return this.dash_live?.solar ?? [];
+	    }
+	    getAccu(){
+	      return this.dash_live?.accu ?? [];
+	    }
     
     getFields(){
       return this.fields;
@@ -547,7 +485,7 @@ function updateFromDAL(source, json)
 		break;
 	case "dash_live":
 		if (activeTab=="bDashTab") {
-			refreshDashboard(dashLiveToFields(json));
+			refreshDashboard(json);
 			UpdateSolar();
 			UpdateAccu();
 		}
@@ -555,13 +493,10 @@ function updateFromDAL(source, json)
 		break;
 	case "dash_hist": applyDashHistory(json); break;
 	case "actual": ProcesActual(json);break;
-	case "solar": UpdateSolar();break;
-	case "accu": UpdateAccu();break;
 	case "insights": InsightData(json);break;
 	case "fields": SetOnSettings(json); if (activeTab=="bDashTab") refreshDashboard(json);else parseSmFields(json); break;
 	case "telegram": document.getElementById("TelData").textContent = json; break;
 	case "eid_claim":ProcessEIDClaim(json); break;
-	case "eid_planner":ProcessEIDPlanner(json); break;
 	case "netswitch": refreshNetSwitch(json);break;
     default:
       console.error("missing handler; source="+source);

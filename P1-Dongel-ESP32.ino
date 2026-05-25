@@ -64,19 +64,18 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select port>
 
 5.8.0
-- rollback async webserver refactoring
-- MQTT total Energy from and to grid (Frans)
+- add: total Energy from and to grid json/mqtt (Frans)
 - add: reports plafond report back
 - fix: EM330 mapping lsw first
 - add: /api/v2/dash/hist
 - add: /api/v2/dash/live
+- refactor frontend code base incl new dash endpoints
 
 5.9.0
 - tooltips bij de diverse settings (Gerben)
 - Add remote Proxy
 - refactoring targets
 - add wallbox mapping
-- api/v2/dash (combined request for dashboard)
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - kWh meter als bron voor productie data gebruiken (Harrie)
 - update button in HA to trigger the update (mqtt based #70)
