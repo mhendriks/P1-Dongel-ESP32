@@ -885,6 +885,14 @@ function ProcessEIDClaim(json){
 function ProcessEIDPlanner(jsonData){
 	console.log("process EID Planner");
 // 	jsonData = {"h_start":21,"data":[1,1,1,1,2,2,2,2,2,1]}
+	if (!jsonData || !Array.isArray(jsonData.data) || jsonData.data.length == 0) {
+		eid_planner_enabled = false;
+		setDashboardWidgetAvailable("dash_eid", false);
+		return;
+	}
+
+	eid_planner_enabled = true;
+	setDashboardWidgetAvailable("dash_eid", true);
 	
 	const kleurMapping = [
 	{ kleur: "red", tekst: "ZEER SLECHT MOMENT" },

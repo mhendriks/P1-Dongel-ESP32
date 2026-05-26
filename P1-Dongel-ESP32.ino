@@ -53,8 +53,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 5.8.1
 - fix: /dash/hist data incorrect
-
-- indien EID wordt geactiveerd wordt de data wel mee teruggegeven maar niet automatisch de widget getoond. pas na refresh van de pagina
+- fix: display stroomplanner withhout page refresh
 
 - verbruik - teruglevering lijn door maandgrafiek (Erik)
 - temperatuur ook opnemen in grafieken (A van Dijken)
