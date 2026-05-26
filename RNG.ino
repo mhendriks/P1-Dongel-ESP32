@@ -81,6 +81,12 @@ static void fillRingRecordFromCurrent(RingRecord& record) {
   record.values[6] = currentSolarDailyKwh();
 }
 
+static void fillRingRecordFromSnapshot(RingRecord& record, const char* timestamp, const float* values) {
+  strlcpy(record.date, timestamp ? timestamp : "", sizeof(record.date));
+  record.date[8] = '\0';
+  for (int i = 0; i < RNG_DAYS_VALUE_COUNT; i++) record.values[i] = values[i];
+}
+
 static void loadDashDayHistoryFromRngDays(time_t now) {
   const uint16_t daySlots = RingFiles[RINGDAYS].slots;
   int currentSlot = (now / RingFiles[RINGDAYS].seconds) % daySlots;
@@ -88,24 +94,36 @@ static void loadDashDayHistoryFromRngDays(time_t now) {
   DashDayHistoryReady = false;
   for (int i = 0; i < 4; i++) {
     int slot = (currentSlot - i + daySlots) % daySlots;
-    clearRingRecord(DashDayHistory[i]);
     copyRingRecord(DashDayHistory[i], RNGDayRec[slot]);
     if (!isEmptyRingRecord(DashDayHistory[i])) DashDayHistoryReady = true;
   }
 }
 
-void updateDashDayHistoryFromCurrent() {
-  if (!EnableHistory) return;
+void updateDashDayHistoryFromSnapshot(const char* prevTimestamp, const char* currentTimestamp, const float* values) {
+  if (!EnableHistory || !values) return;
 
-  RingRecord current;
-  clearRingRecord(current);
-  fillRingRecordFromCurrent(current);
-  if (isEmptyRingRecord(current)) return;
+  RingRecord previousDay;
+  RingRecord currentDay;
+  fillRingRecordFromSnapshot(previousDay, prevTimestamp, values);
+  fillRingRecordFromSnapshot(currentDay, currentTimestamp, values);
+  if (isEmptyRingRecord(currentDay)) return;
 
-  if (!isEmptyRingRecord(DashDayHistory[0]) && strncmp(DashDayHistory[0].date, current.date, 8) != 0) {
-    for (int i = 3; i > 0; i--) copyRingRecord(DashDayHistory[i], DashDayHistory[i - 1]);
+  if (isEmptyRingRecord(DashDayHistory[0])) {
+    copyRingRecord(DashDayHistory[0], currentDay);
+    DashDayHistoryReady = true;
+    return;
   }
-  copyRingRecord(DashDayHistory[0], current);
+
+  if (strncmp(DashDayHistory[0].date, currentDay.date, 6) == 0) {
+    copyRingRecord(DashDayHistory[0], currentDay);
+    DashDayHistoryReady = true;
+    return;
+  }
+
+  copyRingRecord(DashDayHistory[3], DashDayHistory[2]);
+  copyRingRecord(DashDayHistory[2], DashDayHistory[1]);
+  copyRingRecord(DashDayHistory[1], previousDay);
+  copyRingRecord(DashDayHistory[0], currentDay);
   DashDayHistoryReady = true;
 }
 
@@ -806,6 +824,7 @@ void writeRingFiles() {
   snapshot.values[5] = mbusWater ? (float)waterDelivered
                                  : (float)P1Status.wtr_m3 + (float)P1Status.wtr_l / 1000.0f;
   snapshot.values[6] = currentSolarDailyKwh();
+  updateDashDayHistoryFromSnapshot(snapshot.actTimestamp, snapshot.dsmrTimestamp, snapshot.values);
 
   RngWorkerMode modes[7];
   uint8_t jobCount = 0;

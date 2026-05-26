@@ -7,33 +7,21 @@
 
 BACKLOG
 - detailgegevens voor korte tijd opslaan in werkgeheugen (eens per 10s voor bv 1 uur)
-- verbruik - teruglevering lijn door maandgrafiek (Erik)
-- temperatuur ook opnemen in grafieken (A van Dijken)
-- SSE of websockets voor de communicatie tussen client / dongle ( P. van Bennekom )
 - 90 dagen opslaan van uur gegevens ( R de Grijs )
-- grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
-- Consistentie tijd-assen, links oud, rechts nieuw
-- in Actueel staat de laatste meting rechts en de oudste meting links
 - in de uurstaat loopt de tijd van rechts (oudst) naar links (laatste uurmeting)
 - Harold B: Dark-mode frontend
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
-- Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
 - front-end: issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering )
 - RNGhours files vergroten (nu 48h -> 336h) (Broes)
 - eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
-- HA auto update ala : https://www.zigbee2mqtt.io/guide/usage/ota_updates.html#automatic-checking-for-available-updates
 - Daily Insights: Inzichten vanaf opstarten dongle / 00:00 reset
     - loadbalancing over de fases heen
     - detail P per fase afgelopen uur (sample eens per 10s)
 - kwartierpiek historie opnemen (wanneer nieuwe piek ontstaat)
-- dynamische prijzen inl
 - Huawei FusionSolar integratie ( Francis )
 - inlezen van solar config in frontend
-- default mqtt : mqtt://core-mosquitto:1883 en addons als user
 - issue cost gas 4.16/5.2 (Karel)
-- ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
-- De daily insights kunnen downloaden zoals RNGhours (Harrie)
 - De waarden in daily insights labelen met het datum/tijdstip waarop gemeten (Harrie)
 - one hostname for all dongles (V6)
 
@@ -63,6 +51,21 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
+5.8.1
+- fix: /dash/hist data incorrect
+
+- indien EID wordt geactiveerd wordt de data wel mee teruggegeven maar niet automatisch de widget getoond. pas na refresh van de pagina
+
+- verbruik - teruglevering lijn door maandgrafiek (Erik)
+- temperatuur ook opnemen in grafieken (A van Dijken)
+- Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
+- ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
+- De daily insights kunnen downloaden zoals RNGhours (Harrie)
+
+browser settings
+-- grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
+-- Consistentie tijd-assen, links oud, rechts nieuw
+-- in Actueel staat de laatste meting rechts en de oudste meting links
 
 5.9.0
 - tooltips bij de diverse settings (Gerben)
@@ -71,7 +74,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - add wallbox mapping
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - kWh meter als bron voor productie data gebruiken (Harrie)
-- update button in HA to trigger the update (mqtt based #70)
+- update button in HA to trigger the update (mqtt based #70) 
+   - HA auto update ala : https://www.zigbee2mqtt.io/guide/usage/ota_updates.html#automatic-checking-for-available-updates
 
 */
 
@@ -82,8 +86,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //---  PROFILES  ---
 // #define ULTRA            //ultra (mini) dongle
-// #define ETHERNET         //ethernet dongle
-// #define ETH_P1EP         //ethernet pro+ dongle
+#define ETHERNET         //ethernet dongle
+#define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 

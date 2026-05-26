@@ -55,19 +55,21 @@ static ApiResponse jsonDocResponse(const JsonDocument& doc) {
 int signalToEnum(const char* signal);
 
 ApiResponse dashHistoryApiResponse() {
-  JsonDocument doc;
-  doc["ready"] = DashDayHistoryReady;
-  doc["source"] = "memory";
+  char body[640];
+  int len = snprintf(body, sizeof(body),
+                     "{\"ready\":%s,\"source\":\"memory\",\"days\":["
+                     "{\"date\":\"%.8s\",\"values\":[%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f]},"
+                     "{\"date\":\"%.8s\",\"values\":[%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f]},"
+                     "{\"date\":\"%.8s\",\"values\":[%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f]},"
+                     "{\"date\":\"%.8s\",\"values\":[%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f]}]}",
+                     DashDayHistoryReady ? "true" : "false",
+                     DashDayHistory[0].date, DashDayHistory[0].values[0], DashDayHistory[0].values[1], DashDayHistory[0].values[2], DashDayHistory[0].values[3], DashDayHistory[0].values[4], DashDayHistory[0].values[5], DashDayHistory[0].values[6],
+                     DashDayHistory[1].date, DashDayHistory[1].values[0], DashDayHistory[1].values[1], DashDayHistory[1].values[2], DashDayHistory[1].values[3], DashDayHistory[1].values[4], DashDayHistory[1].values[5], DashDayHistory[1].values[6],
+                     DashDayHistory[2].date, DashDayHistory[2].values[0], DashDayHistory[2].values[1], DashDayHistory[2].values[2], DashDayHistory[2].values[3], DashDayHistory[2].values[4], DashDayHistory[2].values[5], DashDayHistory[2].values[6],
+                     DashDayHistory[3].date, DashDayHistory[3].values[0], DashDayHistory[3].values[1], DashDayHistory[3].values[2], DashDayHistory[3].values[3], DashDayHistory[3].values[4], DashDayHistory[3].values[5], DashDayHistory[3].values[6]);
 
-  JsonArray days = doc["days"].to<JsonArray>();
-  for (uint8_t i = 0; i < 4; i++) {
-    JsonObject day = days.add<JsonObject>();
-    day["date"] = DashDayHistory[i].date;
-    JsonArray values = day["values"].to<JsonArray>();
-    for (uint8_t j = 0; j < RNG_DAYS_VALUE_COUNT; j++) values.add(DashDayHistory[i].values[j]);
-  }
-
-  return jsonDocResponse(doc);
+  if (len < 0 || len >= (int)sizeof(body)) return {500, "application/json", "{}"};
+  return jsonOkResponse(String(body));
 }
 
 static void addDashSolar(JsonDocument& doc) {

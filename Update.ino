@@ -21,7 +21,7 @@ void AppendRemoteUpdateStatus(JsonDocument& doc) {
 }
 
 void handleRemoteUpdate(){
-  if (UpdateRequested && millis() - remoteUpdateQueuedAt < 750) return;
+  if (UpdateRequested && millis() - remoteUpdateQueuedAt < 1500) return;
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
 }
 

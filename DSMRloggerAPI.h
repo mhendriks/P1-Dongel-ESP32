@@ -244,7 +244,7 @@ bool DashDayHistoryReady = false;
 void printRecordArray(const RingRecord* records, int slots, const char* label);
 bool loadRingfile(E_ringfiletype type);
 bool loadRNGDaysHistory();
-void updateDashDayHistoryFromCurrent();
+void updateDashDayHistoryFromSnapshot(const char* prevTimestamp, const char* currentTimestamp, const float* values);
 uint32_t totalSolarDailyWh();
 
 typedef struct {
