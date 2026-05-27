@@ -68,6 +68,32 @@ function createDatasetLINE(fill, color, label)
 	return ds;
 }
 
+function createNetDataset(label)
+{
+  var ds = createDatasetLINE(false, '#111111', label);
+  ds.order = -1;
+  ds.borderWidth = 2;
+  ds.pointRadius = 0;
+  ds.pointHoverRadius = 3;
+  ds.spanGaps = true;
+  return ds;
+}
+
+function netValueFromParts(delivered, returned)
+{
+  delivered = Number(delivered);
+  returned = Number(returned);
+  if (!isFinite(delivered)) delivered = 0;
+  if (!isFinite(returned)) returned = 0;
+  return delivered + returned;
+}
+
+function hasValue(value)
+{
+  value = Number(value);
+  return isFinite(value) && value > 0;
+}
+
 var optionsGLOBAL = {
   plugins: {labels: false},
   responsive: true,
@@ -238,6 +264,7 @@ function ensureChartsReady()
     var dsED2 = createDatasetBAR('false', 'orange', t("lbl_from_net")+" T2", "STACK");
     var dsER1 = createDatasetBAR('false', 'green',  t("lbl_to_net")+" T1", "STACK");
     var dsER2 = createDatasetBAR('false', 'lightgreen', t("lbl_to_net")+" T2", "STACK");
+    var dsNET = createNetDataset(t("lbl-net-use"));
     
     // GAS
     var dsG1 = createDatasetLINE('false', 'blue', t("lbl-gas-used"));
@@ -250,6 +277,7 @@ function ensureChartsReady()
     var p = 0;
     var fTarif1 = false;
     var fTarif2 = false;
+    var fReturned = false;
     //copy all data from entries to correct dataset
     for (let y=data.data.length + data.actSlot; y > data.actSlot+1; y--)
     {	
@@ -266,8 +294,15 @@ function ensureChartsReady()
       if (type == "Hours") nFactor = 1000.0;
       if (data.data[i].p_edt1 >= 0){dsED1.data[p] = (data.data[i].p_edt1 * nFactor); fTarif1 = true;}
       if (data.data[i].p_edt2 >= 0){dsED2.data[p] = (data.data[i].p_edt2 * nFactor); fTarif2 = true;}
-      if (data.data[i].p_ert1 >= 0) dsER1.data[p] = (data.data[i].p_ert1 * nFactor * -1.0);
-      if (data.data[i].p_ert2 >= 0) dsER2.data[p] = (data.data[i].p_ert2 * nFactor * -1.0);
+      if (data.data[i].p_ert1 >= 0) {
+        dsER1.data[p] = (data.data[i].p_ert1 * nFactor * -1.0);
+        if (hasValue(data.data[i].p_ert1)) fReturned = true;
+      }
+      if (data.data[i].p_ert2 >= 0) {
+        dsER2.data[p] = (data.data[i].p_ert2 * nFactor * -1.0);
+        if (hasValue(data.data[i].p_ert2)) fReturned = true;
+      }
+      dsNET.data[p] = netValueFromParts(dsED1.data[p], dsER1.data[p]) + netValueFromParts(dsED2.data[p], dsER2.data[p]);
       if (data.data[i].p_gd   >= 0)  dsG1.data[p] = (data.data[i].p_gd   * 1000.0);
       if (data.data[i].water  >= 0)  dsW1.data[p] = (data.data[i].water  * 1000.0);
       if (type == "Days" && data.data[i].solar >= 0) dsS1.data[p] = data.data[i].solar;
@@ -279,18 +314,20 @@ function ensureChartsReady()
     applyArrayFixedDecimals(dsED2.data, 3);
     applyArrayFixedDecimals(dsER1.data, 3);
     applyArrayFixedDecimals(dsER2.data, 3);
+    applyArrayFixedDecimals(dsNET.data, 3);
     applyArrayFixedDecimals(dsG1.data, 0);
     applyArrayFixedDecimals(dsW1.data, 0);
     applyArrayFixedDecimals(dsS1.data, 3);
 
     //push all the datasets to the container
     electrData.datasets.push(dsED1);
-    if( Injection) electrData.datasets.push(dsER1);
+    if( Injection || fReturned) electrData.datasets.push(dsER1);
     if( fTarif1 && fTarif2)
     {
       electrData.datasets.push(dsED2);
-      if( Injection) electrData.datasets.push(dsER2);
+      if( Injection || fReturned) electrData.datasets.push(dsER2);
     }
+    electrData.datasets.push(dsNET);
     gasData.datasets.push(dsG1);
     waterData.datasets.push(dsW1);
     if (type == "Days") solarData.datasets.push(dsS1);
@@ -321,6 +358,7 @@ function ensureChartsReady()
     var dsER2 = createDatasetBAR('false', 'rgba(0, 255,0,.5)', t("lbl-mth-to-net") + "T1" + t("lbl-mth-prev"),"RP");
     var dsER3 = createDatasetBAR('false', 'rgba(74,240,0, 1)', t("lbl-mth-to-net") + "T2" + t("lbl-mth-current"),  "DP");
     var dsER4 = createDatasetBAR('false', 'rgba(74,240,0,.5)', t("lbl-mth-to-net") + "T2" + t("lbl-mth-prev"),"RP");
+    var dsNET = createNetDataset(t("lbl-net-use") + t("lbl-mth-current"));
 
     // GD this & prev
     var dsGD1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", t("lbl-mth-gas") + t("lbl-mth-current"));
@@ -342,6 +380,7 @@ function ensureChartsReady()
     var i;
     var slotyearbefore = 0;
     var p        = 0;
+    var fReturned = false;
   	for (let index=start; index>stop; index--)
     {  
       i = index % data.data.length;
@@ -362,14 +401,17 @@ function ensureChartsReady()
 		    dsED4.data[p] = (data.data[slotyearbefore].p_edt2 *  1.0);
 	    }
       
-	    if (data.data[i].p_ert1 >= 0) {
+      if (data.data[i].p_ert1 >= 0) {
 	  	  dsER1.data[p] = (data.data[i].p_ert1 * -1.0);
       	dsER2.data[p] = (data.data[slotyearbefore].p_ert1 * -1.0);
+        if (hasValue(data.data[i].p_ert1) || hasValue(data.data[slotyearbefore].p_ert1)) fReturned = true;
       }
       if (data.data[i].p_ert2 >= 0) {
 	  	  dsER3.data[p] = (data.data[i].p_ert2 * -1.0);
       	dsER4.data[p] = (data.data[slotyearbefore].p_ert2 * -1.0);
+        if (hasValue(data.data[i].p_ert2) || hasValue(data.data[slotyearbefore].p_ert2)) fReturned = true;
       }
+      dsNET.data[p] = netValueFromParts(dsED1.data[p], dsER1.data[p]) + netValueFromParts(dsED3.data[p], dsER3.data[p]);
       
       if (data.data[i].p_gd >= 0) {
 		    dsGD1.data[p] = data.data[i].p_gd;
@@ -391,6 +433,7 @@ function ensureChartsReady()
     applyArrayFixedDecimals( dsER2.data, 3);
     applyArrayFixedDecimals( dsER3.data, 3);
     applyArrayFixedDecimals( dsER4.data, 3);
+    applyArrayFixedDecimals( dsNET.data, 3);
 
     //add datasets to the container, order is also display order
     electrData.datasets.push(dsED1);
@@ -399,7 +442,7 @@ function ensureChartsReady()
       electrData.datasets.push(dsED3);
       electrData.datasets.push(dsED4);
     }
-    if(Injection){
+    if(Injection || fReturned){
       electrData.datasets.push(dsER1);
       electrData.datasets.push(dsER2);
       if(fDoubleTarif) {
@@ -407,6 +450,7 @@ function ensureChartsReady()
         electrData.datasets.push(dsER4);
       }
     }
+    electrData.datasets.push(dsNET);
     gasData.datasets.push(dsGD1);
     gasData.datasets.push(dsGD2);
     waterData.datasets.push(dsW1);
@@ -426,7 +470,7 @@ function ensureChartsReady()
     var objTelegram = parseTelegramData(data);
 
     //add to smart meter data history
-    if(listTELEGRAMS.length >= MAX_ACTUAL_HISTORY) listTELEGRAMS.shift();
+    if(listTELEGRAMS.length >= MAX_TELEGRAM_HISTORY) listTELEGRAMS.shift();
     listTELEGRAMS.push(objTelegram);
   }
  
@@ -577,6 +621,8 @@ function ensureChartsReady()
     var dsER1 = createDatasetBAR('false', 'yellowgreen', "Teruglevering L1", "A");
     var dsER2 = createDatasetBAR('false', 'springgreen', "Teruglevering L2", "A");
     var dsER3 = createDatasetBAR('false', 'green',       "Teruglevering L3", "A");
+    var dsNET = createNetDataset(t("lbl-net-use"));
+    var fReturned = false;
     
     //GD
     var dsG1 = createDatasetLINE('false', 'blue', "Gasverbruik");
@@ -586,9 +632,15 @@ function ensureChartsReady()
     // Fill datasets
     var gd_prev = "";
     var ts_prev = "";
+    var hasPhase2 = false;
+    var hasPhase3 = false;
     for( var i=0; i<listTELEGRAMS.length; i++)
     {
       telegram = listTELEGRAMS[i];
+      var telegramHasPhase2 = telegram.has("pdl2") || telegram.has("prl2");
+      var telegramHasPhase3 = telegram.has("pdl3") || telegram.has("prl3");
+      hasPhase2 = hasPhase2 || telegramHasPhase2;
+      hasPhase3 = hasPhase3 || telegramHasPhase3;
 
       dcEX.labels.push(telegram.get("timestamp"));
 
@@ -599,6 +651,18 @@ function ensureChartsReady()
       dsER1.data.push( telegram.get("prl1") );
       dsER2.data.push( telegram.get("prl2") );
       dsER3.data.push( telegram.get("prl3") );
+      if (hasValue(Math.abs(telegram.get("pr"))) ||
+          hasValue(Math.abs(telegram.get("prl1"))) ||
+          hasValue(Math.abs(telegram.get("prl2"))) ||
+          hasValue(Math.abs(telegram.get("prl3")))) {
+        fReturned = true;
+      }
+
+      var netPower = netValueFromParts(telegram.get("pdl1"), telegram.get("prl1"));
+      if( telegramHasPhase2) netPower += netValueFromParts(telegram.get("pdl2"), telegram.get("prl2"));
+      if( telegramHasPhase3) netPower += netValueFromParts(telegram.get("pdl3"), telegram.get("prl3"));
+      if (netPower == 0) netPower = netValueFromParts(telegram.get("pd"), telegram.get("pr"));
+      dsNET.data.push(netPower);
       
       if(i==0){        
         gd_prev = telegram.get("gd");
@@ -627,13 +691,14 @@ function ensureChartsReady()
 
     //add datasets
     dcEX.datasets.push(dsED1);
-    if( Phases > 1) dcEX.datasets.push(dsED2);
-    if( Phases > 2) dcEX.datasets.push(dsED3);
-    if (Injection) {
+    if( hasPhase2) dcEX.datasets.push(dsED2);
+    if( hasPhase3) dcEX.datasets.push(dsED3);
+    if (Injection || fReturned) {
       dcEX.datasets.push(dsER1);
-      if( Phases > 1) dcEX.datasets.push(dsER2);
-      if( Phases > 2) dcEX.datasets.push(dsER3);
+      if( hasPhase2) dcEX.datasets.push(dsER2);
+      if( hasPhase3) dcEX.datasets.push(dsER3);
     }
+    dcEX.datasets.push(dsNET);
     dcGX.datasets.push(dsG1);
 
     return [dcEX, dcGX];

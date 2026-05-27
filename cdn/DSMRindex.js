@@ -315,71 +315,114 @@ function ShowHidePV(){
 	}
 }
   
-function InsightData(data){			
-            const eenheden = {
-                "U1piek": "V",
-                "U2piek": "V",
-                "U3piek": "V",
-                "U1min": "V",
-                "U2min": "V",
-                "U3min": "V",
-                "I1piek": "A",
-                "I2piek": "A",
-                "I3piek": "A",
-                "Psluip": "W",
-                "P1max": "W",
-                "P2max": "W",
-                "P3max": "W",
-                "P1min": "W",
-                "P2min": "W",
-                "P3min": "W",
-                "TU1over": "sec",
-                "TU2over": "sec",
-                "TU3over": "sec",
-                "start_time": "uu:mm"
-            };
+let latestInsightData = null;
 
-            const insightRows = [
-                { labelKey: "ins-current-peak", keys: ["I1piek", "I2piek", "I3piek"] },
-                { labelKey: "ins-power-peak", keys: ["P1max", "P2max", "P3max"] },
-                { labelKey: "ins-power-minimum", keys: ["P1min", "P2min", "P3min"] },
-                { labelKey: "ins-voltage-peak", keys: ["U1piek", "U2piek", "U3piek"] },
-                { labelKey: "ins-voltage-minimum", keys: ["U1min", "U2min", "U3min"] },
-                { labelKey: "ins-time-overvoltage", keys: ["TU1over", "TU2over", "TU3over"] },
-                { labelKey: "lbl-Psluip", keys: ["Psluip", null, null] },
-                { labelKey: "lbl-start_time", keys: ["start_time", null, null] }
-            ];
+const insightUnits = {
+    "U1piek": "V",
+    "U2piek": "V",
+    "U3piek": "V",
+    "U1min": "V",
+    "U2min": "V",
+    "U3min": "V",
+    "I1piek": "A",
+    "I2piek": "A",
+    "I3piek": "A",
+    "Psluip": "W",
+    "P1max": "W",
+    "P2max": "W",
+    "P3max": "W",
+    "P1min": "W",
+    "P2min": "W",
+    "P3min": "W",
+    "TU1over": "sec",
+    "TU2over": "sec",
+    "TU3over": "sec",
+    "start_time": "uu:mm"
+};
 
-            function formatInsightValue(key, value) {
-                if (value === undefined || value === null) return "";
+const insightRows = [
+    { labelKey: "ins-current-peak", keys: ["I1piek", "I2piek", "I3piek"] },
+    { labelKey: "ins-power-peak", keys: ["P1max", "P2max", "P3max"] },
+    { labelKey: "ins-power-minimum", keys: ["P1min", "P2min", "P3min"] },
+    { labelKey: "ins-voltage-peak", keys: ["U1piek", "U2piek", "U3piek"] },
+    { labelKey: "ins-voltage-minimum", keys: ["U1min", "U2min", "U3min"] },
+    { labelKey: "ins-time-overvoltage", keys: ["TU1over", "TU2over", "TU3over"] },
+    { labelKey: "lbl-Psluip", keys: ["Psluip", null, null] },
+    { labelKey: "lbl-start_time", keys: ["start_time", null, null] }
+];
 
-                if (key.startsWith("U")) {
-                    return formatValueLocale(value / 1000, 1, 1);
-                }
+function formatInsightValue(key, value) {
+    if (value === undefined || value === null) return "";
 
-                if (key.startsWith("I")) {
-                    return formatValueLocale(value / 1000, 3, 3);
-                }
+    if (key.startsWith("U")) {
+        return formatValueLocale(value / 1000, 1, 1);
+    }
 
-                if (key === "start_time") {
-                    const uur = Math.trunc(value / 3600 % 24);
-                    const minuten = Math.trunc(value / 60 % 60);
-                    return String(uur).padStart(2, '0') + ":" + String(minuten).padStart(2, '0');
-                }
+    if (key.startsWith("I")) {
+        return formatValueLocale(value / 1000, 3, 3);
+    }
 
-                if (key.startsWith("Psl") && value == 0xFFFFFFFF) {
-                    return "-";
-                }
+    if (key === "start_time") {
+        const uur = Math.trunc(value / 3600 % 24);
+        const minuten = Math.trunc(value / 60 % 60);
+        return String(uur).padStart(2, '0') + ":" + String(minuten).padStart(2, '0');
+    }
 
-                return value;
-            }
+    if (key.startsWith("Psl") && value == 0xFFFFFFFF) {
+        return "-";
+    }
 
-            function rowTitle(keys) {
-                return keys
-                    .filter(key => key)
-                    .map(key => t("tip-" + key))
-                    .filter(text => text && !text.startsWith("tip-"))
-                    .join("\n");
+    return value;
+}
+
+function insightRowTitle(keys) {
+    return keys
+        .filter(key => key)
+        .map(key => t("tip-" + key))
+        .filter(text => text && !text.startsWith("tip-"))
+        .join("\n");
+}
+
+function insightCsvCell(value) {
+    return '"' + String(value ?? "").replace(/"/g, '""') + '"';
+}
+
+function downloadInsightsCsv() {
+    if (!latestInsightData) {
+        alert(t("lbl-no-insights-download"));
+        return;
+    }
+
+    const rows = [[t("lbl-metric"), "L1", "L2", "L3", t("lbl-unit")]];
+    for (const rowData of insightRows) {
+        const [l1Key, l2Key, l3Key] = rowData.keys;
+        rows.push([
+            t(rowData.labelKey),
+            l1Key ? formatInsightValue(l1Key, latestInsightData[l1Key]) : "",
+            l2Key ? formatInsightValue(l2Key, latestInsightData[l2Key]) : "",
+            l3Key ? formatInsightValue(l3Key, latestInsightData[l3Key]) : "",
+            insightUnits[l1Key] || ""
+        ]);
+    }
+
+    const csv = rows.map(row => row.map(insightCsvCell).join(";")).join("\r\n") + "\r\n";
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const today = new Date().toISOString().slice(0, 10);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "daily-insights-" + today + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 0);
+    a.remove();
+}
+
+function InsightData(data){
+            latestInsightData = data;
+            const downloadButton = document.getElementById("downloadInsightsCsv");
+            if (downloadButton) {
+                downloadButton.disabled = false;
+                downloadButton.title = t("lbl-download-insights");
             }
 
             const tbody = document.getElementById("InsightsTableBody");
@@ -394,13 +437,13 @@ function InsightData(data){
                 const eenheidCell = document.createElement("td");
 
                 naamCell.textContent = t(rowData.labelKey);
-                naamCell.title = rowTitle(rowData.keys);
+                naamCell.title = insightRowTitle(rowData.keys);
 
                 const [l1Key, l2Key, l3Key] = rowData.keys;
                 l1Cell.textContent = l1Key ? formatInsightValue(l1Key, data[l1Key]) : "";
                 l2Cell.textContent = l2Key ? formatInsightValue(l2Key, data[l2Key]) : "";
                 l3Cell.textContent = l3Key ? formatInsightValue(l3Key, data[l3Key]) : "";
-                eenheidCell.textContent = eenheden[l1Key] || "";
+                eenheidCell.textContent = insightUnits[l1Key] || "";
                 eenheidCell.style.textAlign = "center";
 
                 row.appendChild(naamCell);
@@ -2201,6 +2244,7 @@ function formatFailureLog(svalue) {
   {
     let i;
     let slotbefore;
+    let hasReturned = false;
     for (let x=data.data.length + data.actSlot; x > data.actSlot; x--)
     {
       i = x % data.data.length;
@@ -2234,6 +2278,7 @@ function formatFailureLog(svalue) {
         //sums of T1 & T2
 		data.data[i].p_ed  = (data.data[i].p_edt1 + data.data[i].p_edt2);
         data.data[i].p_er  = (data.data[i].p_ert1 + data.data[i].p_ert2);
+        if (data.data[i].p_er > 0) hasReturned = true;
         
         //sums in watts
         data.data[i].p_edw = (data.data[i].p_ed * 1000);
@@ -2265,6 +2310,7 @@ function formatFailureLog(svalue) {
         data.data[i].solar     = (data.data[i].values.length > 6) ? Number(data.data[i].values[6]) : -1;
         data.data[i].p_ed      = (data.data[i].p_edt1 + data.data[i].p_edt2);
         data.data[i].p_er      = (data.data[i].p_ert1 + data.data[i].p_ert2);        
+        if (data.data[i].p_er > 0) hasReturned = true;
         data.data[i].p_edw     = (data.data[i].p_ed * 1000);
         data.data[i].p_erw     = (data.data[i].p_er * 1000);
         data.data[i].costs_e   = 0.0;
@@ -2273,6 +2319,7 @@ function formatFailureLog(svalue) {
         data.data[i].costs_tt  = 0.0;
       }
     } // for i ..
+    if (!IgnoreInjection && hasReturned) Injection = true;
   } // expandData()
 
   //limit every value in the array to n decimals

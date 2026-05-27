@@ -24,6 +24,7 @@ BACKLOG
 - issue cost gas 4.16/5.2 (Karel)
 - De waarden in daily insights labelen met het datum/tijdstip waarop gemeten (Harrie)
 - one hostname for all dongles (V6)
+- add tempature  in price cap (A van Dijken) = lat / long of location selection 
 
 Default checks
 - wifi
@@ -54,12 +55,11 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 5.8.1
 - fix: /dash/hist data incorrect
 - fix: display stroomplanner withhout page refresh
+- add: netto line in the graphs (thanks Erik)
+- add: download option daily insights (thanks Harrie)
+- change: price cap graphs
 
-- verbruik - teruglevering lijn door maandgrafiek (Erik)
-- temperatuur ook opnemen in grafieken (A van Dijken)
-- Idee voor een toekomstige release: hergebruik de Prijsplafond grafieken voor een vergelijk tussen Afname en Levering gedurende het jaar. Ik zit steeds uit te rekenen of ik overschot aan kWh heb of inmiddels een tekort. De grafieken maken dat wel helder. ( Leo B )
 - ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
-- De daily insights kunnen downloaden zoals RNGhours (Harrie)
 
 browser settings
 -- grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
@@ -75,6 +75,7 @@ browser settings
 - kWh meter als bron voor productie data gebruiken (Harrie)
 - update button in HA to trigger the update (mqtt based #70) 
    - HA auto update ala : https://www.zigbee2mqtt.io/guide/usage/ota_updates.html#automatic-checking-for-available-updates
+- extra report "jaarbalans": op basis van nog te verwachten maandnw ( Leo B )
 
 */
 

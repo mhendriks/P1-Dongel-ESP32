@@ -440,14 +440,14 @@
     </style>
 	<h2 data-i18n-key="tle-pricecap">Prijsplafond (NL)</h2>
 	<p data-i18n-key="tle-pricecap-description">Deze grafiek laat verbruik zien t.o.v. prijsplafond om een idee te geven hoe het verbruik zich ontwikkelt.<br>
-	In de jaargrafieken is de seizoensinvloed meegenomen. In de maandgrafieken is de verdeling lineair.<br>
+	In de jaargrafieken is de seizoensinvloed meegenomen. In de 31-dagengrafieken wordt het plafond per dag opgebouwd op basis van de datum.<br>
 	Het is een hulpmiddel om een beeld te krijgen van het gebruik ten opzichte van het prijsplafond.</p>
     <div>
       <b data-i18n-key="tle-graph-per">Grafiek per:</b>
       <input type="radio" id="btnPriceCapYear" name=pricecap onchange="setPriceCapViewYEAR()"/>
       <label data-i18n-key="lbl-year" for="btnPriceCapYear">Jaar</label>
       <input type="radio" id="btnPriceCapMonth" name=pricecap onchange="setPriceCapViewMONTH()" checked/>
-      <label data-i18n-key="lbl-month" for="btnPriceCapMonth">Maand</label>
+      <label data-i18n-key="pricecap-last31days" for="btnPriceCapMonth">Laatste 31 dagen</label>
     </div>
     <div class="pricecap-chart-grid">
       <div class="pricecap-chart-card">
@@ -922,7 +922,12 @@
 		</tbody>
       <tfoot>
         <tr>
-            <td colspan=5 data-i18n-key="lbl-footer-ins">Ga met de muis over de naam heen om meer info te krijgen</td>
+            <td colspan=5>
+              <span data-i18n-key="lbl-footer-ins">Ga met de muis over de naam heen om meer info te krijgen</span>
+              <button id="downloadInsightsCsv" class="insights-download" onclick="downloadInsightsCsv()" title="Download CSV" disabled>
+                <span class="iconify" data-icon="mdi-download"></span>
+              </button>
+            </td>
         </tr>
       <tfoot>
       </table>

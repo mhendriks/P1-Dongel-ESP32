@@ -42,9 +42,27 @@ function priceCapAccumulateArray(values) {
   return accumulated;
 }
 
+function priceCapAccumulateEndArray(values) {
+  const accumulated = [];
+  let total = 0;
+
+  for (let i = 0; i < values.length; i++) {
+    const value = values[i];
+    if (typeof value !== "number" || isNaN(value)) {
+      accumulated.push(null);
+      continue;
+    }
+
+    total += value;
+    accumulated.push(total);
+  }
+
+  return accumulated;
+}
+
 function priceCapFormatArrayDecimals(data, decimals) {
   for (let i = 0; i < data.length; i++) {
-    if (!isNaN(data[i])) data[i] = Number(data[i].toFixed(decimals));
+    if (typeof data[i] === "number" && !isNaN(data[i])) data[i] = Number(data[i].toFixed(decimals));
   }
 }
 
@@ -132,108 +150,149 @@ function priceCapCreateCharts() {
 }
 
 function priceCapBuildMonthHistory(data) {
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-  const labels = [PRICECAP_MONTHS_SHORT[currentMonth], PRICECAP_MONTHS_SHORT[previousMonth], ""];
+  const labels = [priceCapText("pricecap-last31days", "Laatste 31 dagen"), "", ""];
   const electricity = priceCapHistoryContainer(labels);
   const gas = priceCapHistoryContainer(labels);
-  electricity.current.data = new Array(31);
-  electricity.previous.data = new Array(31);
-  gas.current.data = new Array(31);
-  gas.previous.data = new Array(31);
+  const points = [];
+  const start = data.data.length + data.actSlot;
+  const stop = data.actSlot;
 
-  data.data.forEach((item, index) => {
-    if (!item || !item.date || item.date === "20000000") return;
-    if (index === ((data.actSlot + 1) % data.data.length)) return;
+  for (let cursor = start; cursor > stop && points.length < 31; cursor--) {
+    const index = cursor % data.data.length;
+    const item = data.data[index];
+    if (!item || !item.date || item.date === "20000000") continue;
 
-    const month = parseInt(item.date.substring(2, 4), 10) - 1;
-    const day = parseInt(item.date.substring(4, 6), 10) - 1;
-    if (day < 0 || day > 30) return;
+    points.push({
+      date: item.date,
+      electricity: Number(item.p_ed) || 0,
+      gas: Number(item.p_gd) || 0
+    });
+  }
 
-    if (month === currentMonth) {
-      electricity.current.data[day] = Number(item.p_ed) || 0;
-      gas.current.data[day] = Number(item.p_gd) || 0;
-      electricity.current.valid = true;
-      gas.current.valid = true;
-    } else if (month === previousMonth) {
-      electricity.previous.data[day] = Number(item.p_ed) || 0;
-      gas.previous.data[day] = Number(item.p_gd) || 0;
-      electricity.previous.valid = true;
-      gas.previous.valid = true;
-    }
-  });
+  points.reverse();
+  electricity.current.data = priceCapAccumulateArray(points.map(point => point.electricity));
+  gas.current.data = priceCapAccumulateArray(points.map(point => point.gas));
+  electricity.current.valid = points.length > 0;
+  gas.current.valid = points.length > 0;
 
-  electricity.current.data = priceCapAccumulateArray(electricity.current.data);
-  electricity.previous.data = priceCapAccumulateArray(electricity.previous.data);
-  gas.current.data = priceCapAccumulateArray(gas.current.data);
-  gas.previous.data = priceCapAccumulateArray(gas.previous.data);
-  return [electricity, gas];
+  return {
+    histories: [electricity, gas],
+    labels: [""].concat(points.map(point => `${parseInt(point.date.substring(4, 6), 10)}/${parseInt(point.date.substring(2, 4), 10)}`)),
+    ceilingElectricity: priceCapAccumulateArray(points.map(point => priceCapDailyCeiling(point.date, PRICECAP_CEILING_ELECTRICITY))),
+    ceilingGas: priceCapAccumulateArray(points.map(point => priceCapDailyCeiling(point.date, PRICECAP_CEILING_GAS)))
+  };
 }
 
 function priceCapBuildYearHistory(data) {
-  const currentYear = new Date().getFullYear();
-  const currentYY = currentYear - 2000;
-  const labels = [currentYear, currentYear - 1, currentYear - 2];
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentAbsMonth = (now.getFullYear() * 12) + currentMonth;
+  const currentStartAbsMonth = currentAbsMonth - 11;
+  const previousStartAbsMonth = currentAbsMonth - 23;
+  const labels = [
+    priceCapFormatWindowLabel(currentStartAbsMonth, currentAbsMonth),
+    priceCapFormatWindowLabel(previousStartAbsMonth, currentStartAbsMonth - 1),
+    ""
+  ];
   const electricity = priceCapHistoryContainer(labels);
   const gas = priceCapHistoryContainer(labels);
-  electricity.current.data = new Array(12);
-  electricity.previous.data = new Array(12);
-  electricity.preprevious.data = new Array(12);
-  gas.current.data = new Array(12);
-  gas.previous.data = new Array(12);
-  gas.preprevious.data = new Array(12);
+  electricity.current.data = new Array(12).fill(null);
+  electricity.previous.data = new Array(12).fill(null);
+  electricity.preprevious.data = [];
+  gas.current.data = new Array(12).fill(null);
+  gas.previous.data = new Array(12).fill(null);
+  gas.preprevious.data = [];
 
   data.data.forEach((item, index) => {
     if (!item || !item.date || item.date === "20000000") return;
     if (index === ((data.actSlot + 1) % data.data.length)) return;
 
-    const year = parseInt(item.date.substring(0, 2), 10);
+    const year = 2000 + parseInt(item.date.substring(0, 2), 10);
     const month = parseInt(item.date.substring(2, 4), 10) - 1;
     if (month < 0 || month > 11) return;
+    const absMonth = (year * 12) + month;
 
-    let targetElectricity;
-    let targetGas;
-    if (year === currentYY) {
+    let slot = -1;
+    let targetElectricity = null;
+    let targetGas = null;
+    if (absMonth >= currentStartAbsMonth && absMonth <= currentAbsMonth) {
+      slot = absMonth - currentStartAbsMonth;
       targetElectricity = electricity.current;
       targetGas = gas.current;
-    } else if (year === currentYY - 1) {
+    } else if (absMonth >= previousStartAbsMonth && absMonth < currentStartAbsMonth) {
+      slot = absMonth - previousStartAbsMonth;
       targetElectricity = electricity.previous;
       targetGas = gas.previous;
-    } else if (year === currentYY - 2) {
-      targetElectricity = electricity.preprevious;
-      targetGas = gas.preprevious;
     }
 
-    if (!targetElectricity || !targetGas) return;
-    targetElectricity.data[month] = Number(item.p_ed) || 0;
-    targetGas.data[month] = Number(item.p_gd) || 0;
+    if (!targetElectricity || !targetGas || slot < 0 || slot > 11) return;
+    targetElectricity.data[slot] = Number(item.p_ed) || 0;
+    targetGas.data[slot] = Number(item.p_gd) || 0;
     targetElectricity.valid = true;
     targetGas.valid = true;
   });
 
-  electricity.current.data = priceCapAccumulateArray(electricity.current.data);
-  electricity.previous.data = priceCapAccumulateArray(electricity.previous.data);
-  electricity.preprevious.data = priceCapAccumulateArray(electricity.preprevious.data);
-  gas.current.data = priceCapAccumulateArray(gas.current.data);
-  gas.previous.data = priceCapAccumulateArray(gas.previous.data);
-  gas.preprevious.data = priceCapAccumulateArray(gas.preprevious.data);
-  return [electricity, gas];
+  electricity.current.data = priceCapAccumulateEndArray(electricity.current.data);
+  electricity.previous.data = priceCapAccumulateEndArray(electricity.previous.data);
+  gas.current.data = priceCapAccumulateEndArray(gas.current.data);
+  gas.previous.data = priceCapAccumulateEndArray(gas.previous.data);
+
+  return {
+    histories: [electricity, gas],
+    labels: priceCapBuildRollingYearLabels(currentMonth),
+    ceilingElectricity: priceCapAccumulateEndArray(priceCapBuildRollingYearCeiling(currentMonth, PRICECAP_CEILING_ELECTRICITY)),
+    ceilingGas: priceCapAccumulateEndArray(priceCapBuildRollingYearCeiling(currentMonth, PRICECAP_CEILING_GAS))
+  };
 }
 
-function priceCapBuildChartData(labels, history, ceilingValues, yearView) {
+function priceCapDailyCeiling(date, ceilingValues) {
+  const year = 2000 + parseInt(date.substring(0, 2), 10);
+  const month = parseInt(date.substring(2, 4), 10) - 1;
+  if (month < 0 || month >= ceilingValues.length) return 0;
+  const dayCount = new Date(year, month + 1, 0).getDate();
+  return ceilingValues[month] / dayCount;
+}
+
+function priceCapBuildRollingYearLabels(currentMonth) {
+  const labels = [];
+  const startMonth = (currentMonth + 1) % 12;
+
+  for (let offset = 0; offset < 12; offset++) {
+    labels.push(PRICECAP_MONTHS_SHORT[(startMonth + offset) % 12]);
+  }
+
+  return labels;
+}
+
+function priceCapBuildRollingYearCeiling(currentMonth, ceilingValues) {
+  const values = [];
+  const startMonth = (currentMonth + 1) % 12;
+
+  for (let offset = 0; offset < 12; offset++) {
+    values.push(ceilingValues[(startMonth + offset) % 12]);
+  }
+
+  return values;
+}
+
+function priceCapFormatWindowLabel(startAbsMonth, endAbsMonth) {
+  const startYear = Math.floor(startAbsMonth / 12);
+  const startMonth = startAbsMonth % 12;
+  const endYear = Math.floor(endAbsMonth / 12);
+  const endMonth = endAbsMonth % 12;
+
+  return `${PRICECAP_MONTHS_SHORT[startMonth]} '${String(startYear).slice(-2)} - ${PRICECAP_MONTHS_SHORT[endMonth]} '${String(endYear).slice(-2)}`;
+}
+
+function priceCapBuildChartData(labels, history, ceilingValues, yearView, rollingCeilingData) {
   const current = priceCapCreateDataset(false, "rgba(0, 0, 139, 1)", history.current.name);
   const previous = priceCapCreateDataset(false, "rgba(0, 0, 139, .25)", history.previous.name);
   const preprevious = priceCapCreateDataset(false, "rgba(0, 0, 139, .0625)", history.preprevious.name);
   const plafond = priceCapCreateDataset("start", "red", priceCapText("mnu-pricecap", "Plafond"));
-  const ceiling = yearView ? priceCapAccumulateArray(ceilingValues) : new Array(32).fill(null);
+  const ceiling = rollingCeilingData || priceCapAccumulateArray(ceilingValues);
 
   if (!yearView) {
-    const month = new Date().getMonth();
-    const year = new Date().getFullYear();
-    const dayCount = new Date(year, month + 1, 0).getDate();
-    ceiling[0] = 0;
-    ceiling[dayCount] = ceilingValues[month];
+    plafond.spanGaps = false;
   }
 
   current.data = history.current.data;
@@ -241,8 +300,8 @@ function priceCapBuildChartData(labels, history, ceilingValues, yearView) {
   preprevious.data = history.preprevious.data;
   plafond.data = ceiling;
   plafond.backgroundColor = "rgba(0, 255, 0, .125)";
-  plafond.spanGaps = true;
-  previous.hidden = true;
+  if (yearView) plafond.spanGaps = true;
+  previous.hidden = !yearView;
   preprevious.hidden = true;
 
   priceCapFormatArrayDecimals(current.data, 3);
@@ -261,16 +320,28 @@ function priceCapRenderData(json) {
 
   const data = priceCapExpandData(json);
   const yearView = priceCapCurrentChart === "YEAR";
-  const labels = yearView
-    ? ["0"].concat(PRICECAP_MONTHS_SHORT)
-    : Array.from({ length: 32 }, (_, index) => String(index));
-  const histories = yearView ? priceCapBuildYearHistory(data) : priceCapBuildMonthHistory(data);
-  const axisLabel = yearView ? "Maanden" : "Dagen";
+  const monthView = yearView ? null : priceCapBuildMonthHistory(data);
+  const yearData = yearView ? priceCapBuildYearHistory(data) : null;
+  const labels = yearView ? yearData.labels : monthView.labels;
+  const histories = yearView ? yearData.histories : monthView.histories;
+  const axisLabel = yearView ? "Maanden" : priceCapText("pricecap-last31days", "Laatste 31 dagen");
 
   priceCapElectricityChart.options.scales.xAxes[0].scaleLabel.labelString = axisLabel;
   priceCapGasChart.options.scales.xAxes[0].scaleLabel.labelString = axisLabel;
-  priceCapElectricityChart.data = priceCapBuildChartData(labels, histories[0], PRICECAP_CEILING_ELECTRICITY, yearView);
-  priceCapGasChart.data = priceCapBuildChartData(labels, histories[1], PRICECAP_CEILING_GAS, yearView);
+  priceCapElectricityChart.data = priceCapBuildChartData(
+    labels,
+    histories[0],
+    PRICECAP_CEILING_ELECTRICITY,
+    yearView,
+    yearView ? yearData.ceilingElectricity : monthView.ceilingElectricity
+  );
+  priceCapGasChart.data = priceCapBuildChartData(
+    labels,
+    histories[1],
+    PRICECAP_CEILING_GAS,
+    yearView,
+    yearView ? yearData.ceilingGas : monthView.ceilingGas
+  );
   priceCapElectricityChart.update();
   priceCapGasChart.update();
 }
