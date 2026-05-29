@@ -54,19 +54,23 @@ const SQUARE_M_CUBED 	   = "\u33A5";
   let AvoidSpikes			= false 
   let IgnoreInjection		= false 
   let IgnoreGas				= false 
-  let Dongle_Config			= ""
-  let eid_enabled			= false
-  let eid_planner_enabled	= false
-  let pairing_enabled    	= false
-  let Meter_Source          = "DSMR"
+	  let Dongle_Config			= ""
+	  let eid_enabled			= false
+	  let eid_planner_enabled	= false
+	  let pairing_enabled    	= false
+	  let Meter_Source          = "DSMR"
+	  let esphomeManifestRequested = false;
+	  let esphomeMigrationTarget = null;
   
   let locale 				= 'nl';  // standaard
   const LS_ACT_WATT         = "dashboardActWatt";
   const LS_PRESENTATION     = "presentationType";
   const LS_DASH_WIDGETS     = "dashboardWidgets";
+  const LS_HIST_GRAPH_ORDER  = "historyGraphOrder";
   const DASHBOARD_WIDGET_IDS = ["dash_eid", "l1", "dash_solar", "dash_accu", "dash_peak", "l3", "l6", "l5", "l4", "l7", "l2", "l8"];
   let dashboardEditMode     = false;
   let dashboardWidgetPrefs  = {};
+  let historyGraphOrder      = "NEW_TO_OLD";
 
 // ---- DASH
 let TotalAmps=0.0,minKW = 0.0, maxKW = 0.0,minV = 0.0, maxV = 0.0, Pmax,Gmax, Wmax;
@@ -527,7 +531,36 @@ function applyShowCols(condition, tablesAndCols) {
 }
 
 function settingsWaterEnabled(settings) {
-  return asBoolean(settings?.water_enabl, false);
+  const value = settings?.water_enabl;
+  if (value && typeof value === "object" && "value" in value) return asBoolean(value.value, false);
+  return asBoolean(value, false);
+}
+
+function historyHasWater(data) {
+  if (!data || !Array.isArray(data.data)) return false;
+  return data.data.some(row => {
+    const waterValue = row?.water ?? row?.values?.[5];
+    const value = Number(waterValue);
+    return isFinite(value) && value > 0;
+  });
+}
+
+function historyHasGas(data) {
+  if (!data || !Array.isArray(data.data)) return false;
+  return data.data.some(row => {
+    const gasValue = row?.p_gd ?? row?.values?.[4];
+    const value = Number(gasValue);
+    return isFinite(value) && value > 0;
+  });
+}
+
+function historyShowsWater(data) {
+  const waterEnabled = settingsWaterEnabled(objDAL?.getDeviceSettings?.()) || HeeftWater;
+  return waterEnabled && (HeeftWater || historyHasWater(data));
+}
+
+function historyShowsGas(data) {
+  return (Dongle_Config == "p1-q") || (!IgnoreGas && (HeeftGas || historyHasGas(data)));
 }
 
 //============================================================================
@@ -627,12 +660,17 @@ function loadDashboardPreferences() {
 	if (storedPresentationType == "GRAPH" || storedPresentationType == "TAB") {
 		presentationType = storedPresentationType;
 	}
+	const storedHistoryGraphOrder = localStorage.getItem(LS_HIST_GRAPH_ORDER);
+	if (storedHistoryGraphOrder == "NEW_TO_OLD" || storedHistoryGraphOrder == "OLD_TO_NEW") {
+		historyGraphOrder = storedHistoryGraphOrder;
+	}
 	try {
 		dashboardWidgetPrefs = JSON.parse(localStorage.getItem(LS_DASH_WIDGETS) || "{}");
 	} catch (e) {
 		dashboardWidgetPrefs = {};
 	}
 	updateDashboardControls();
+	updateBrowserSettingsControls();
 }
 
 function updateDashboardControls() {
@@ -733,6 +771,37 @@ function toggleDashboardWatt() {
 	if (activeTab == "bActualTab") refreshSmActual();
 }
 
+function setHistoryGraphOrder(order) {
+	if (order != "OLD_TO_NEW") order = "NEW_TO_OLD";
+	historyGraphOrder = order;
+	localStorage.setItem(LS_HIST_GRAPH_ORDER, historyGraphOrder);
+	updateBrowserSettingsControls();
+	if (presentationType == "GRAPH") {
+		if (activeTab == "bHoursTab") refreshHistData("Hours");
+		if (activeTab == "bDaysTab") refreshHistData("Days");
+		if (activeTab == "bMonthsTab") refreshHistData("Months");
+	}
+}
+
+function toggleHistoryGraphOrder() {
+	setHistoryGraphOrder(historyGraphOrder == "OLD_TO_NEW" ? "NEW_TO_OLD" : "OLD_TO_NEW");
+}
+
+function updateBrowserSettingsControls() {
+	document.querySelectorAll(".history-order-toggle").forEach(button => {
+		const oldToNew = historyGraphOrder == "OLD_TO_NEW";
+		button.style.display = presentationType == "GRAPH" ? "inline-flex" : "none";
+		button.classList.toggle("active", oldToNew);
+		button.title = oldToNew
+			? t("tip-history-graph-old-to-new")
+			: t("tip-history-graph-new-to-old");
+		const label = button.querySelector(".history-order-label");
+		if (label) label.textContent = oldToNew
+			? t("lbl-history-order-old-to-new-short")
+			: t("lbl-history-order-new-to-old-short");
+	});
+}
+
 //============================================================================  
   
 function SetOnSettings(json) {
@@ -743,7 +812,7 @@ function SetOnSettings(json) {
 		const hasGasTimestamp = gasTimestamp.trim() !== "" && gasTimestamp !== "-";
 		HeeftGas = hasGasValue || hasGasTimestamp;
 	}
-	HeeftWater = settingsWaterEnabled(json) || settingsWaterEnabled(objDAL?.getDeviceSettings?.());
+	HeeftWater = settingsWaterEnabled(objDAL?.getDeviceSettings?.()) || settingsWaterEnabled(json);
 
 	if (!Injection) {
 		Injection = meterValue(dashMetric(json, "energy_returned_tariff1"), NaN);
@@ -1798,18 +1867,90 @@ function parseDeviceInfo(obj) {
   if (manifest.version) {
     const latest = manifest.major * 10000 + manifest.minor * 100 + manifest.fix;
   }
+
+  if (!esphomeManifestRequested || !Object.keys(objDAL?.getESPHomeManifest?.()?.targets || {}).length) {
+    esphomeManifestRequested = true;
+    objDAL?.refreshESPHomeManifest?.();
+  }
+  renderESPHomeMigrationCard();
 }
     
 function closeUpdate() {
 	document.getElementById("updatePopup").style.visibility = "hidden";
+	const progressWrap = document.querySelector("#updatePopup .progress");
+	if (progressWrap) progressWrap.style.display = "block";
+	document.getElementById("updateSpinner")?.setAttribute("hidden", "");
+	sessionStorage.removeItem(SESSION_UPDATE_KIND);
 	document.location.href="/";
 	// location.reload();
 }    
+
+function showUpdateOverlay(statusText, progressWidth = 0, useSpinner = false) {
+	document.getElementById("updatePopup").style.visibility = "visible";
+	progressBar = document.getElementById("progressBar");
+	const progressWrap = document.querySelector("#updatePopup .progress");
+	if (progressWrap) progressWrap.style.display = useSpinner ? "none" : "block";
+	const updateSpinner = document.getElementById("updateSpinner");
+	if (updateSpinner) {
+		if (useSpinner) updateSpinner.removeAttribute("hidden");
+		else updateSpinner.setAttribute("hidden", "");
+	}
+	if (progressBar) progressBar.style.width = progressWidth + "%";
+	document.getElementById("updatestatus").innerText = statusText || "";
+}
 
 let systemActionUrl = "/";
 let systemActionCurrent = null;
 let systemActionCheckInterval = null;
 let systemActionTimeout = null;
+let systemActionStep = 1;
+
+function setSystemActionText(text) {
+	const normalized = String(text || "").replace(/\n/g, "<br>");
+	document.getElementById("systemActionText").innerHTML = normalized;
+}
+
+function buildESPHomeStepOneText(target) {
+	return t("txt-esphome-step1")
+		.replace("{version}", String(target?.version || "-"));
+}
+
+function buildESPHomeStepTwoText(target) {
+	const docsUrl = target?.doc_url || target?.help_url || "";
+	const docsLink = docsUrl ? `<a target="_blank" href="${docsUrl}" style="color:#0b57d0;text-decoration:underline;word-break:break-all;">${docsUrl}</a>` : "-";
+	return t("txt-esphome-step2")
+		.replace("{url}", docsLink)
+		.replace("{erase_note}", target?.erase_settings === false ? t("txt-esphome-erase-note-soft") : t("txt-esphome-erase-note-hard"));
+}
+
+function getESPHomeManifestEntry(hardware) {
+	const manifest = objDAL?.getESPHomeManifest?.();
+	const targets = manifest?.targets || {};
+	const manifestKeyMap = {
+		NRGD: "nrgd-h2o",
+		P1EP: "P1EP"
+	};
+	const manifestKey = manifestKeyMap[hardware] || hardware;
+	return targets[hardware] || targets[manifestKey] || targets[String(hardware || "").toLowerCase()] || null;
+}
+
+function getESPHomeMigrationTarget(info) {
+	const hardware = String(info?.hardware || "").toUpperCase();
+	const target = getESPHomeManifestEntry(hardware);
+	if (!target) return null;
+	if ("available" in target && !target.available) return null;
+	return { hardware, ...target };
+}
+
+function hardwareSupportsESPHomeMigration(info) {
+	return !!getESPHomeMigrationTarget(info);
+}
+
+function openESPHomeMigrationFromMenu(event) {
+	if (event?.preventDefault) event.preventDefault();
+	if (!hardwareSupportsESPHomeMigration(objDAL?.getDeviceInfo?.())) return false;
+	return showSystemActionDialog("esphome");
+}
 
 function deviceSupportsWifi(info) {
 	const network = String(info?.network || "").toUpperCase();
@@ -1823,10 +1964,12 @@ function deviceSupportsWifi(info) {
 function updateSystemActionMenu(info) {
 	const resetWifi = document.getElementById("bReset");
 	if (resetWifi) resetWifi.style.display = deviceSupportsWifi(info) ? "block" : "none";
+	renderESPHomeMigrationCard();
 }
 
 function showSystemActionDialog(action) {
 	if (action === "resetWifi" && !deviceSupportsWifi(objDAL?.getDeviceInfo?.())) return false;
+	if (action === "esphome" && !hardwareSupportsESPHomeMigration(objDAL?.getDeviceInfo?.())) return false;
 
 	const actions = {
 		resetWifi: {
@@ -1842,19 +1985,37 @@ function showSystemActionDialog(action) {
 			text: t("txt-confirm-reboot"),
 			waitText: t("txt-reboot-wait"),
 			timeoutText: t("txt-reboot-timeout")
+		},
+		esphome: {
+			url: "/remote-update?version=esphome",
+			title: t("tle-esphome-confirm"),
+			text: t("txt-esphome-confirm"),
+			waitText: t("txt-esphome-wait"),
+			timeoutText: t("txt-esphome-timeout"),
+			doneText: t("txt-esphome-done")
 		}
 	};
 	const selected = actions[action];
 	if (!selected) return false;
+	if (action === "esphome") {
+		esphomeMigrationTarget = getESPHomeMigrationTarget(objDAL?.getDeviceInfo?.());
+		if (!esphomeMigrationTarget) return false;
+		selected.step1Text = buildESPHomeStepOneText(esphomeMigrationTarget);
+		selected.step2Text = buildESPHomeStepTwoText(esphomeMigrationTarget);
+		selected.waitText = t("txt-esphome-wait").replace("{seconds}", String(esphomeMigrationTarget.estimated_seconds || 30));
+		selected.timeoutText = t("txt-esphome-timeout");
+	}
 
 	systemActionUrl = selected.url;
 	systemActionCurrent = selected;
+	systemActionStep = 1;
 	document.getElementById("systemActionTitle").innerText = selected.title;
-	document.getElementById("systemActionText").innerText = selected.text;
+	setSystemActionText(action === "esphome" ? selected.step1Text : selected.text);
 	document.getElementById("systemActionSpinner").setAttribute("hidden", "");
 	document.getElementById("systemActionCancel").innerText = t("btn_cancel");
 	document.getElementById("systemActionCancel").onclick = closeSystemActionDialog;
 	document.getElementById("systemActionCancel").removeAttribute("hidden");
+	document.getElementById("systemActionContinue").innerText = action === "esphome" ? t("btn_next") : t("btn_continue");
 	document.getElementById("systemActionContinue").removeAttribute("hidden");
 	document.getElementById("systemActionPopup").style.visibility = "visible";
 	return false;
@@ -1863,13 +2024,30 @@ function showSystemActionDialog(action) {
 function closeSystemActionDialog() {
 	document.getElementById("systemActionPopup").style.visibility = "hidden";
 	clearSystemActionTimers();
+	systemActionStep = 1;
 }
 
 function confirmSystemActionDialog() {
-	document.getElementById("systemActionText").innerText = systemActionCurrent?.waitText || "";
+	if (systemActionCurrent?.url === "/remote-update?version=esphome" && systemActionStep === 1) {
+		systemActionStep = 2;
+		setSystemActionText(systemActionCurrent?.step2Text || "");
+		document.getElementById("systemActionContinue").innerText = t("btn_start_migration");
+		return;
+	}
+
+	setSystemActionText(systemActionCurrent?.waitText || "");
 	document.getElementById("systemActionSpinner").removeAttribute("hidden");
 	document.getElementById("systemActionCancel").setAttribute("hidden", "");
 	document.getElementById("systemActionContinue").setAttribute("hidden", "");
+
+	if (systemActionUrl.indexOf("/remote-update?") === 0) {
+		closeSystemActionDialog();
+		const isESPHomeUpdate = systemActionUrl.indexOf("version=esphome") >= 0;
+		if (isESPHomeUpdate) sessionStorage.setItem(SESSION_UPDATE_KIND, "esphome");
+		showUpdateOverlay(t("txt-esphome-overlay-start"), 0, isESPHomeUpdate);
+		document.location.href = systemActionUrl;
+		return;
+	}
 
 	fetch(systemActionUrl, { cache: "no-store", redirect: "manual" }).catch(() => {});
 	systemActionTimeout = setTimeout(startSystemActionOnlineCheck, 8000);
@@ -1888,7 +2066,7 @@ function startSystemActionOnlineCheck() {
 	systemActionTimeout = setTimeout(() => {
 		clearSystemActionTimers();
 		document.getElementById("systemActionSpinner").setAttribute("hidden", "");
-		document.getElementById("systemActionText").innerText = systemActionCurrent?.timeoutText || "";
+		setSystemActionText(systemActionCurrent?.timeoutText || "");
 		document.getElementById("systemActionCancel").innerText = t("btn_update_close");
 		document.getElementById("systemActionCancel").removeAttribute("hidden");
 	}, 90000);
@@ -1901,14 +2079,14 @@ function checkSystemActionOnline() {
 			if (!response.ok) throw new Error("offline");
 			return response.json();
 		})
-		.then(() => {
-			clearSystemActionTimers();
-			document.getElementById("systemActionSpinner").setAttribute("hidden", "");
-			document.getElementById("systemActionText").innerText = t("txt-reboot-done");
-			document.getElementById("systemActionCancel").innerText = t("btn_update_close");
-			document.getElementById("systemActionCancel").removeAttribute("hidden");
-			document.getElementById("systemActionCancel").onclick = () => { document.location.href = "/"; };
-		})
+			.then(() => {
+				clearSystemActionTimers();
+				document.getElementById("systemActionSpinner").setAttribute("hidden", "");
+				setSystemActionText(systemActionCurrent?.doneText || t("txt-reboot-done"));
+				document.getElementById("systemActionCancel").innerText = t("btn_update_close");
+				document.getElementById("systemActionCancel").removeAttribute("hidden");
+				document.getElementById("systemActionCancel").onclick = () => { document.location.href = "/"; };
+			})
 		.catch(() => {});
 }
 
@@ -1916,24 +2094,32 @@ let progress = 0;
 let progressBar, checkInterval, update_interval; 
 let otaSeenRunning = false;
 let otaMonitorActive = false;
+let currentUpdateKind = "firmware";
+const SESSION_UPDATE_KIND = "pendingUpdateKind";
 
 function UpdateStart( msg ){
 // 	console.log("Updatestatus msg: " + msg );
 // 	console.log("Updatestatus error: " + msg.split('=')[1] );
 
-	document.getElementById("updatePopup").style.visibility = "visible";
-	progressBar = document.getElementById("progressBar");
-  	
-  	const [type, detail] = String(msg || '').split('=', 2);
+	const params = new URLSearchParams(String(msg || ""));
+	const pendingKind = sessionStorage.getItem(SESSION_UPDATE_KIND) || "";
+	currentUpdateKind = params.get("kind") === "esphome" || pendingKind === "esphome" ? "esphome" : "firmware";
+	const detail = params.get("error") || "";
 
-	if (type === "error") {
+	if (detail) {
+		sessionStorage.removeItem(SESSION_UPDATE_KIND);
 		const decoded = decodeURIComponent(String(detail || "").replace(/\+/g, " "));
-		document.getElementById("updatestatus").innerText = "Error: " + (decoded || "");
+		showUpdateOverlay("Error: " + (decoded || ""), 0, currentUpdateKind === "esphome");
 	} else {
 		otaSeenRunning = false;
 		otaMonitorActive = true;
-		progress = 0;
-		updateProgress();
+		if (currentUpdateKind === "esphome") {
+			showUpdateOverlay(t("txt-esphome-progress").replace("{seconds}", String(esphomeMigrationTarget?.estimated_seconds || 20)), 0, true);
+		} else {
+			showUpdateOverlay(t("lbl_update_start"), 0, false);
+			progress = 0;
+			updateProgress();
+		}
 	}
 }
         
@@ -1943,6 +2129,47 @@ function RemoteUpdate(type) {
     document.location.href = "/remote-update?version=" + objDAL.version_manifest.beta;
   else
     document.location.href = "/remote-update?version=" + objDAL.version_manifest.version;
+}
+
+function renderESPHomeMigrationCard() {
+	const menuEntry = document.getElementById("bESPHome");
+	const targetLabel = document.getElementById("esphomeTargetLabel");
+	const helpText = document.getElementById("esphomeManifestHelp");
+	const migrateButton = document.getElementById("esphomeMigrateButton");
+	const unsupportedText = document.getElementById("esphomeUnsupportedText");
+	if (!menuEntry || !targetLabel || !helpText || !migrateButton || !unsupportedText) return;
+
+	const info = objDAL?.getDeviceInfo?.();
+	const target = getESPHomeMigrationTarget(info);
+	esphomeMigrationTarget = target;
+
+	if (!target) {
+		menuEntry.style.display = "none";
+		migrateButton.style.display = "none";
+		targetLabel.innerText = "";
+		helpText.style.display = "none";
+		unsupportedText.style.display = "block";
+		return;
+	}
+
+	menuEntry.style.display = "block";
+	migrateButton.style.display = "inline-block";
+	unsupportedText.style.display = "none";
+	targetLabel.innerHTML = t("lbl-esphome-target")
+		.replace("{hardware}", info?.hardware || "-")
+		.replace("{target}", target.label || target.hardware)
+		.replace(/\n/g, "<br>");
+
+	const helpParts = [];
+	if (target.estimated_seconds) helpParts.push(t("txt-esphome-estimate").replace("{seconds}", String(target.estimated_seconds)));
+	const docsUrl = target.doc_url || target.help_url;
+	if (docsUrl) helpParts.push(`<a target="_blank" href="${docsUrl}">${t("lbl-esphome-docs")}</a>`);
+	if (helpParts.length) {
+		helpText.innerHTML = helpParts.join("<br>");
+		helpText.style.display = "block";
+	} else {
+		helpText.style.display = "none";
+	}
 }
 
 // klein hulpfunctietje om even te pauzeren
@@ -1985,12 +2212,16 @@ function updateProgress() {
       progress += 5;
       progressBar.style.width = progress + "%";
 	  document.getElementById("updatestatus").innerText = t("lbl_update_start");
-    } else {
-      clearInterval(update_interval);
-      update_interval = null;
-      checkESPOnline();
-    }
-  }, 1000);
+	    } else {
+	      clearInterval(update_interval);
+	      update_interval = null;
+	      if (currentUpdateKind === "esphome") {
+	      	document.getElementById("updatestatus").innerText = t("txt-esphome-progress").replace("{seconds}", String(esphomeMigrationTarget?.estimated_seconds || 20));
+	      } else {
+	      	checkESPOnline();
+	      }
+	    }
+	  }, 1000);
 }
 
 function checkESPOnline() {
@@ -2020,27 +2251,31 @@ function checkESPOnline() {
   
 	document.getElementById('theTime').classList.remove("afterglow");
 	document.getElementById('theTime').innerHTML = json.time;//formatTimestamp(json.timestamp.value );
-	if (otaMonitorActive && document.getElementById("updatePopup").style.visibility === "visible" && json.ota) {
-		const state = String(json.ota.state || "");
-		const detail = String(json.ota.detail || "");
-		const otaProgress = Number(json.ota.progress || 0);
+		if (otaMonitorActive && document.getElementById("updatePopup").style.visibility === "visible" && json.ota) {
+			const state = String(json.ota.state || "");
+			const detail = String(json.ota.detail || "");
+			const otaProgress = Number(json.ota.progress || 0);
 
-		if (state === "queued" || state === "running") {
-			otaSeenRunning = true;
-			progress = Math.max(0, Math.min(90, otaProgress));
-			progressBar.style.width = progress + "%";
-			document.getElementById("updatestatus").innerText = progress < 90 ? t("lbl_update_start") : t("lbl_update_wait");
-		} else if (state === "error") {
-			if (update_interval) clearInterval(update_interval);
-			if (checkInterval) clearInterval(checkInterval);
-			update_interval = null;
-			checkInterval = null;
-			otaMonitorActive = false;
-			document.getElementById("updatestatus").innerText = "Error: " + (detail || "update_failed");
-		} else if ((state === "idle" || state === "done") && otaSeenRunning) {
-			clearInterval(checkInterval);
-			checkInterval = null;
-			clearInterval(update_interval);
+			if (state === "queued" || state === "running") {
+				otaSeenRunning = true;
+				if (currentUpdateKind === "esphome") {
+					document.getElementById("updatestatus").innerText = t("txt-esphome-progress").replace("{seconds}", String(esphomeMigrationTarget?.estimated_seconds || 20));
+				} else {
+					progress = Math.max(0, Math.min(90, otaProgress));
+					progressBar.style.width = progress + "%";
+					document.getElementById("updatestatus").innerText = progress < 90 ? t("lbl_update_start") : t("lbl_update_wait");
+				}
+			} else if (state === "error") {
+				if (update_interval) clearInterval(update_interval);
+				if (checkInterval) clearInterval(checkInterval);
+				update_interval = null;
+				checkInterval = null;
+				otaMonitorActive = false;
+				document.getElementById("updatestatus").innerText = "Error: " + (detail || "update_failed");
+			} else if ((state === "idle" || state === "done") && otaSeenRunning && currentUpdateKind !== "esphome") {
+				clearInterval(checkInterval);
+				checkInterval = null;
+				clearInterval(update_interval);
 			update_interval = null;
 			otaMonitorActive = false;
 			progressBar.style.width = "100%";
@@ -2349,6 +2584,7 @@ function refreshHistData(type) {
 		console.log(`refresh${type} : NO DATA`);
 		return;
 	}
+	if (historyHasGas(data)) HeeftGas = true;
 
 	switch (type) {
 		case "Hours":
@@ -2500,6 +2736,8 @@ function formatValue(value)
     console.log("showHistTable("+type+")");
     if (!hasHistoryData(data)) return;
     const solarVisible = (type == "Days") && hasSolarHistory(data);
+    const hasGas = historyShowsGas(data);
+    const hasWater = historyShowsWater(data);
     // the last element has the metervalue, so skip it
     let stop = data.actSlot + 1;
     let start = data.data.length + data.actSlot ;
@@ -2571,14 +2809,14 @@ function formatValue(value)
     if (type == "Hours") {
       if (Dongle_Config == "p1-q") show_hide_column('lastHoursTable', 1, false);
       show_hide_column('lastHoursTable', 2, Injection);
-      show_hide_column('lastHoursTable', 3, HeeftGas && (Dongle_Config != "p1-q"));
-      show_hide_column('lastHoursTable', 4, HeeftWater);
+      show_hide_column('lastHoursTable', 3, hasGas && (Dongle_Config != "p1-q"));
+      show_hide_column('lastHoursTable', 4, hasWater);
     }
     if (type == "Days") {
       if (Dongle_Config == "p1-q") show_hide_column('lastDaysTable', 1, false);
       show_hide_column('lastDaysTable', 2, Injection);
-      show_hide_column('lastDaysTable', 3, HeeftGas && (Dongle_Config != "p1-q"));
-      show_hide_column('lastDaysTable', 4, HeeftWater);
+      show_hide_column('lastDaysTable', 3, hasGas && (Dongle_Config != "p1-q"));
+      show_hide_column('lastDaysTable', 4, hasWater);
       show_hide_column2('lastDaysTable', 6, solarVisible);
     }
 
@@ -2598,10 +2836,8 @@ function formatValue(value)
     let i;
     let slotyearbefore = 0;
     const monthHasReturned = Dongle_Config != "p1-q";
-    const monthHasGas = (Dongle_Config != "p1-q") && (HeeftGas || data.data.some(row =>
-      Number(row?.p_gd) > 0 || Number(row?.values?.[4]) > 0
-    ));
-    const monthHasWater = settingsWaterEnabled(objDAL?.getDeviceSettings?.()) || HeeftWater;
+    const monthHasGas = (Dongle_Config != "p1-q") && historyShowsGas(data);
+    const monthHasWater = historyShowsWater(data);
   
     for (let index=start; index>stop; index--)
     {  i = index % data.data.length;
@@ -2847,6 +3083,14 @@ function formatValue(value)
         gas_netw_costs = json.gas_netw_costs.value;
         hostName = json.hostname.value;
         EnableHist =  "hist" in json ? json.hist : true;
+        applyShowCols(HeeftWater, [
+          ['lastHoursTable', [4]],
+          ['lastDaysTable', [4]]
+        ]);
+        updateDashboardControls();
+        updateBrowserSettingsControls();
+        if (activeTab == "bHoursTab") refreshHistData("Hours");
+        if (activeTab == "bDaysTab") refreshHistData("Days");
         if (activeTab == "bMonthsTab") refreshHistData("Months");
 
   } // ParseDevSettings()
@@ -2890,6 +3134,7 @@ function formatValue(value)
       presentationType = "TAB";
       localStorage.setItem(LS_PRESENTATION, presentationType);
     }
+    updateBrowserSettingsControls();
 
 //    document.getElementById("APIdocTab").style.display = "none";
 
@@ -3220,6 +3465,7 @@ function initModbusMonitorControls() {
 				{ v: 7, t: "Default 2 - floats" },
 				{ v: 8, t: "KLEFR / INEPRO / Webasto Unite" },
 				{ v: 9, t: "Phoenix Contact EEM-XM3xx" },
+				{ v: 15, t: "Fronius SunSpec 203" },
 			  ];
 			
 			  const sel = document.createElement("select");
@@ -3417,6 +3663,7 @@ function initModbusMonitorControls() {
 
   initSettingsSubTabsOnce();
   splitSettingsUI();
+  updateBrowserSettingsControls();
   initModbusMonitorControls();
   refreshModbusMonitorView();
 
@@ -4132,7 +4379,16 @@ const FALLBACK_TRANSLATIONS = {
     "net-unit-watt": "Watt",
     "net-unit-seconds": "seconden",
     "net-on-delay": "Vertraging",
-    "net-off-delay": "Vertraging"
+    "net-off-delay": "Vertraging",
+    "tle-web-settings": "Webpagina Instellingen",
+    "lbl-history-graph-order": "X-as historische grafieken",
+    "lbl-history-graph-order-short": "X-as",
+    "lbl-history-order-new-to-old-short": "nieuw→oud",
+    "lbl-history-order-old-to-new-short": "oud→nieuw",
+    "opt-history-graph-new-to-old": "Nieuw naar oud (standaard)",
+    "opt-history-graph-old-to-new": "Oud naar nieuw",
+    "tip-history-graph-new-to-old": "X-as: nieuw naar oud. Klik voor oud naar nieuw.",
+    "tip-history-graph-old-to-new": "X-as: oud naar nieuw. Klik voor nieuw naar oud."
   },
   en: {
     "net-action-on": "Switch action",
@@ -4152,7 +4408,16 @@ const FALLBACK_TRANSLATIONS = {
     "net-unit-watt": "Watt",
     "net-unit-seconds": "seconds",
     "net-on-delay": "Delay",
-    "net-off-delay": "Delay"
+    "net-off-delay": "Delay",
+    "tle-web-settings": "Web Page Settings",
+    "lbl-history-graph-order": "Historical graph x-axis",
+    "lbl-history-graph-order-short": "X-axis",
+    "lbl-history-order-new-to-old-short": "new→old",
+    "lbl-history-order-old-to-new-short": "old→new",
+    "opt-history-graph-new-to-old": "Newest to oldest (default)",
+    "opt-history-graph-old-to-new": "Oldest to newest",
+    "tip-history-graph-new-to-old": "X-axis: newest to oldest. Click for oldest to newest.",
+    "tip-history-graph-old-to-new": "X-axis: oldest to newest. Click for newest to oldest."
   },
   de: {
     "net-action-on": "Schaltaktion",
@@ -4172,7 +4437,16 @@ const FALLBACK_TRANSLATIONS = {
     "net-unit-watt": "Watt",
     "net-unit-seconds": "Sekunden",
     "net-on-delay": "Verzögerung",
-    "net-off-delay": "Verzögerung"
+    "net-off-delay": "Verzögerung",
+    "tle-web-settings": "Webseiten Einstellungen",
+    "lbl-history-graph-order": "X-Achse historischer Grafiken",
+    "lbl-history-graph-order-short": "X-Achse",
+    "lbl-history-order-new-to-old-short": "neu→alt",
+    "lbl-history-order-old-to-new-short": "alt→neu",
+    "opt-history-graph-new-to-old": "Neu nach alt (Standard)",
+    "opt-history-graph-old-to-new": "Alt nach neu",
+    "tip-history-graph-new-to-old": "X-Achse: neu nach alt. Klicken fur alt nach neu.",
+    "tip-history-graph-old-to-new": "X-Achse: alt nach neu. Klicken fur neu nach alt."
   },
   se: {
     "net-action-on": "Växlingsåtgärd",
@@ -4192,7 +4466,16 @@ const FALLBACK_TRANSLATIONS = {
     "net-unit-watt": "Watt",
     "net-unit-seconds": "sekunder",
     "net-on-delay": "Fördröjning",
-    "net-off-delay": "Fördröjning"
+    "net-off-delay": "Fördröjning",
+    "tle-web-settings": "Inställningar för webbsida",
+    "lbl-history-graph-order": "X-axel for historiska grafer",
+    "lbl-history-graph-order-short": "X-axel",
+    "lbl-history-order-new-to-old-short": "ny→gammal",
+    "lbl-history-order-old-to-new-short": "gammal→ny",
+    "opt-history-graph-new-to-old": "Nyast till aldst (standard)",
+    "opt-history-graph-old-to-new": "Aldst till nyast",
+    "tip-history-graph-new-to-old": "X-axel: nyast till aldst. Klicka for aldst till nyast.",
+    "tip-history-graph-old-to-new": "X-axel: aldst till nyast. Klicka for nyast till aldst."
   }
 };
 const URL_I18N = typeof DEBUG !== 'undefined' && DEBUG
@@ -4213,6 +4496,7 @@ function applyTranslations() {
     const translation = t(key);
     if (translation !== key) el.innerHTML = translation;
   });
+  updateBrowserSettingsControls();
   NetSwitchUpdateBar();
 }
 

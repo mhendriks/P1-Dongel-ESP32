@@ -14,9 +14,9 @@ namespace P1 {
   inline float importTotalkWh()  { return DSMRdata.energy_delivered_tariff1.val() + DSMRdata.energy_delivered_tariff2.val(); } // DSMR 1-0:1.8.0
   inline float exportTotalkWh()  { return DSMRdata.energy_returned_tariff1.val() + DSMRdata.energy_returned_tariff2.val(); }  // DSMR 1-0:2.8.0
 
-  inline float pL1()             { return DSMRdata.power_delivered_l1_present ? 1.0 * ( DSMRdata.power_delivered_l1.int_val() - DSMRdata.power_returned_l1.int_val()) : NAN; }
-  inline float pL2()             { return DSMRdata.power_delivered_l2_present ? 1.0 * ( DSMRdata.power_delivered_l2.int_val() - DSMRdata.power_returned_l2.int_val()) : NAN; }
-  inline float pL3()             { return DSMRdata.power_delivered_l3_present ? 1.0 * ( DSMRdata.power_delivered_l3.int_val() - DSMRdata.power_returned_l3.int_val()) : NAN; }
+  inline float pL1()             { return DSMRdata.power_delivered_l1_present ? (float)((int32_t)DSMRdata.power_delivered_l1.int_val() - (int32_t)DSMRdata.power_returned_l1.int_val()) : NAN; }
+  inline float pL2()             { return DSMRdata.power_delivered_l2_present ? (float)((int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val()) : NAN; }
+  inline float pL3()             { return DSMRdata.power_delivered_l3_present ? (float)((int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val()) : NAN; }
   
   inline float uL1()             { return DSMRdata.voltage_l1_present?DSMRdata.voltage_l1.val():NAN; }    // DSMR 32.7.0 (V)
   inline float iL1()             { return  DSMRdata.current_l1_present?DSMRdata.current_l1.val():NAN; }    // DSMR 31.7.0 (A)
@@ -90,7 +90,6 @@ private:
 
     doc["id"] = requestId;
     doc["src"] = _id.length() ? _id : makeId();
-    doc["dst"] = "unknown";
 
     JsonObject result = doc["result"].to<JsonObject>();
     setJsonNumber(result, "a_act_power", astraDecimalEnforcedPower(phaseA), 1);
@@ -116,7 +115,6 @@ private:
 
     doc["id"] = requestId;
     doc["src"] = _id.length() ? _id : makeId();
-    doc["dst"] = "unknown";
 
     JsonObject result = doc["result"].to<JsonObject>();
     setJsonNumber(result, "act_power", astraTotalPower(phaseA + phaseB + phaseC), 3);

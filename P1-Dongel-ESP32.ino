@@ -52,21 +52,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.8.1
-- fix: /dash/hist data incorrect
-- fix: display stroomplanner withhout page refresh
-- add: netto line in the graphs (thanks Erik)
-- add: download option daily insights (thanks Harrie)
-- change: price cap graphs
-
-- ESPHome migratie voor de Ultra / Ultra V2 en Ultra X2 gaat niet goed. Wijst naar 1 esphome versie. -> oplossen in de updata routine omdat in de dongle duidelijk is welke hw versie het is.
-
-browser settings
--- grafische weergave als standaardoptie weergave en cijferlijsten als tweede keuze. Nu is het andersom. 
--- Consistentie tijd-assen, links oud, rechts nieuw
--- in Actueel staat de laatste meting rechts en de oudste meting links
-
 5.9.0
+- remove shelly EM1 -- not used with em pro3
 - tooltips bij de diverse settings (Gerben)
 - Add remote Proxy
 - refactoring targets
@@ -86,8 +73,8 @@ browser settings
 
 //---  PROFILES  ---
 // #define ULTRA            //ultra (mini) dongle
-#define ETHERNET         //ethernet dongle
-#define ETH_P1EP         //ethernet pro+ dongle
+// #define ETHERNET         //ethernet dongle
+// #define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 

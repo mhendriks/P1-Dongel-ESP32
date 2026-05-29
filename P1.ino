@@ -1,11 +1,6 @@
 /*
 ***************************************************************************
-**  Program  : handleSlimmeMeter - part of DSMRloggerAPI
-**  Version  : v4.2.1
-**
-**  Copyright (c) 2023 Martijn Hendriks
-**
-**  TERMS OF USE: MIT License. See bottom of file.                                                            
+**  Copyright (c) 2026 Martijn Hendriks
 ***************************************************************************
 */
 
@@ -13,40 +8,34 @@ volatile bool dtr1         = false;
 bool          Out1Avail    = false;
 uint32_t      SerialLastChecked = 0;
 
-// portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
-
 //P1 reader task
 void fP1Reader( void * pvParameters ){
-  DebugTln(F("Enable slimme meter..."));
+  DebugTln(F("Enable smart meter..."));
   SetupP1In();
-#ifndef HAN_READER
-  SetupP1Out();
-#endif
+  #ifndef HAN_READER
+    SetupP1Out();
+  #endif
   esp_task_wdt_add(nullptr);
   smartMeter.enable(false);
-// #ifdef ULTRA
-//   // digitalWrite(17, LOW); //default on
-// #endif   
   while(true) {
     PrintHWMark(0);
-#ifndef HAN_READER
-    CheckP1Signal();
-    handleSlimmemeter();
-    P1OutBridge();
-#else
-    handleHanReader();
-#endif
+    #ifndef HAN_READER
+      CheckP1Signal();
+      handleSlimmemeter();
+      P1OutBridge();
+    #else
+      handleHanReader();
+    #endif
     esp_task_wdt_reset();
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
-  LogFile("P1 reader: unexpected task exit", true);
+  LogFile("reader: unexpected task exit", true);
   vTaskDelete(NULL);
 }
 
 void StartP1Task(){
-    if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 10, &tP1Reader, /*core*/ 0 ) == pdPASS ) 
-
-    DebugTln(F("Task tP1Reader succesfully created"));
+  if( xTaskCreatePinnedToCore( fP1Reader, "p1-reader", 1024*8, NULL, 10, &tP1Reader, /*core*/ 0 ) == pdPASS ) 
+  DebugTln(F("Task tP1Reader succesfully created"));
 }
 
 //===========================================================================================
@@ -104,17 +93,6 @@ struct showValues {
   }
 };
 
-static void normalizeEnergyTotals() {
-  if (!DSMRdata.energy_delivered_total_present) {
-    DSMRdata.energy_delivered_total._value = DSMRdata.energy_delivered_tariff1.int_val() + DSMRdata.energy_delivered_tariff2.int_val();
-    DSMRdata.energy_delivered_total_present = true;
-  }
-
-  if (!DSMRdata.energy_returned_total_present) {
-    DSMRdata.energy_returned_total._value = DSMRdata.energy_returned_tariff1.int_val() + DSMRdata.energy_returned_tariff2.int_val();
-    DSMRdata.energy_returned_total_present = true;
-  }
-}
 
 static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
   bP1offline = false;
@@ -147,7 +125,15 @@ static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
     }
   }
 
-  normalizeEnergyTotals();
+  if (!DSMRdata.energy_delivered_total_present) {
+    DSMRdata.energy_delivered_total._value = DSMRdata.energy_delivered_tariff1.int_val() + DSMRdata.energy_delivered_tariff2.int_val();
+    DSMRdata.energy_delivered_total_present = true;
+  }
+
+  if (!DSMRdata.energy_returned_total_present) {
+    DSMRdata.energy_returned_total._value = DSMRdata.energy_returned_tariff1.int_val() + DSMRdata.energy_returned_tariff2.int_val();
+    DSMRdata.energy_returned_total_present = true;
+  }
 
   if (bUseEtotals) {
     DSMRdata.energy_delivered_tariff1_present = true;
@@ -359,7 +345,7 @@ static void handleParsedMeter(han::HanReader& meter, bool isHan) {
 
   ToggleLED(LED_OFF);
 }
-#endif
+#endif //HAN
 
 void SetDTR(bool val){
   //  portENTER_CRITICAL_ISR(&mux);

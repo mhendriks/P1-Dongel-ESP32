@@ -129,6 +129,7 @@ void fWorker(void* pvParameters) {
   esp_task_wdt_add(nullptr);
 
   while (true) {
+    PrintHWMark(2);
     WorkerJob job;
     if (workerReceiveNext(job)) {
       if (workerRngShouldDefer(job)) {
@@ -165,7 +166,7 @@ bool WorkerBegin() {
     return false;
   }
 
-  if (xTaskCreate(fWorker, "worker", 1024 * 4, NULL, 4, &tWorker) != pdPASS) {
+  if (xTaskCreate(fWorker, "worker", WORKER_STACK_BYTES, NULL, 4, &tWorker) != pdPASS) {
     DebugTln(F("Worker: task creation failed"));
     return false;
   }

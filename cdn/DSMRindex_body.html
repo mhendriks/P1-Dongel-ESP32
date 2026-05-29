@@ -53,7 +53,7 @@
 			<li><a id='bEditSettings' data-i18n-key="mnu-settings" class='tabButton nav-item' href="#Settings" >Settings</a></li>
 			<li><a id='bEditMonths'   data-i18n-key="mnu-editmonths" class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
 			<li><a id='bSolar'   	  data-i18n-key="mnu-solar" class='tabButton nav-item' href="#Solar" >Solar Setup</a></li>
-			<li><a id='bESPHome'   	  data-i18n-key="mnu-esphome" class='tabButton nav-item' href="#ESPHome" >ESPHome</a></li>
+				<li><a id='bESPHome'   	  data-i18n-key="mnu-esphome" class='nav-item' href="javascript:void(0);" onclick="return openESPHomeMigrationFromMenu(event)" style="display:none">ESPHome</a></li>
 <!-- 			<li><a id='bAbout'   	  class='tabButton nav-item' href="#About" >About</a></li> -->
 		</ul></li>
 	  <li><a id='bSystem' class='nav-img' href="javascript:void(0);" ><span class="iconify" data-icon="mdi-power"></span></a>
@@ -78,6 +78,10 @@
       <span data-i18n-key="lbl-graphical">Grafisch</span>
       <input type="radio" id="hGRAPH" onchange="setPresentationType('GRAPH')"/>
       &nbsp;&nbsp;
+      <button type="button" class="history-order-toggle" onclick="toggleHistoryGraphOrder()" title="X-as omdraaien">
+        <span class="iconify" data-icon="mdi-swap-horizontal"></span>
+        <span class="history-order-label">X-as</span>
+      </button>
     </div>
     <div id="lastHours">
       <table id="lastHoursTable">
@@ -114,6 +118,10 @@
 	  <span data-i18n-key="lbl-graphical">Grafisch</span>
       <input type="radio" id="dGRAPH" onchange="setPresentationType('GRAPH')"/>
       &nbsp;&nbsp;
+      <button type="button" class="history-order-toggle" onclick="toggleHistoryGraphOrder()" title="X-as omdraaien">
+        <span class="iconify" data-icon="mdi-swap-horizontal"></span>
+        <span class="history-order-label">X-as</span>
+      </button>
     </div>
     <div id='lastDays'>
       <table id="lastDaysTable">
@@ -157,6 +165,10 @@
      <span data-i18n-key="lbl-graphical">Grafisch</span>
       <input type="radio" id="mGRAPH" onchange="setPresentationType('GRAPH')"/>
       &nbsp;&nbsp;
+      <button type="button" class="history-order-toggle" onclick="toggleHistoryGraphOrder()" title="X-as omdraaien">
+        <span class="iconify" data-icon="mdi-swap-horizontal"></span>
+        <span class="history-order-label">X-as</span>
+      </button>
     </div>
     <div id='lastMonths'>
       <table id="lastMonthsTable" style="display:none">
@@ -740,12 +752,15 @@
   
   <section id="ESPHome" class="tabName">
       <!-- START Tabbladen -->
-	<div id=eid-setup>
-  		<h2 class=align-c data-i18n-key="tle-esphome">ESPHome</h2>
-      	<div id="btnResetWifi" class="act_btn">
-		<p data-i18n-key="txt-esphome-migrate"></p></br>
-		<div class=align-c><button type="button" onclick='RemoteUpdate("esphome");' data-i18n-key="btn-migrate">MIGREER</button></div>
-    </div> 
+		<div id=eid-setup>
+	  		<h2 class=align-c data-i18n-key="tle-esphome">ESPHome</h2>
+	      	<div id="esphomeMigrationCard" class="act_btn">
+			<p id="esphomeTargetLabel"></p>
+			<p data-i18n-key="txt-esphome-migrate"></p>
+			<p id="esphomeManifestHelp" style="display:none"></p>
+			<div class=align-c><button id="esphomeMigrateButton" type="button" onclick='return showSystemActionDialog("esphome")' data-i18n-key="btn-migrate">MIGREER</button></div>
+			<p id="esphomeUnsupportedText" data-i18n-key="txt-esphome-unsupported" style="display:none"></p>
+	    </div> 
   </section> <!-- end Settings Page -->
   
 <section id="About" class="tabName">
@@ -1149,6 +1164,7 @@
             <div class="progress">
                 <div class="progress-bar" id="progressBar"></div>
             </div>
+            <div hidden class="popup-spinner" id="updateSpinner"></div>
             <p id="updatestatus"></p>
             <button onclick="closeUpdate()" data-i18n-key="btn_update_close">Sluiten</button>
         </div>

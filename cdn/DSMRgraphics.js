@@ -160,6 +160,19 @@ function ensureChartsReady()
   if( !fGraphsReady) createChartsGRAPH();
 }
 
+function applyHistoryGraphOrder(chartData)
+{
+  if (typeof historyGraphOrder === "undefined" || historyGraphOrder != "OLD_TO_NEW") return;
+  if (!chartData) return;
+
+  if (Array.isArray(chartData.labels)) chartData.labels.reverse();
+  if (!Array.isArray(chartData.datasets)) return;
+
+  chartData.datasets.forEach(ds => {
+    if (Array.isArray(ds.data)) ds.data.reverse();
+  });
+}
+
 
   
   
@@ -176,7 +189,7 @@ function ensureChartsReady()
     myElectrChart.data = electrData;
     myElectrChart.update();
     
-    if (HeeftGas) {           
+    if (historyShowsGas(data)) {
       myGasChart.data = gasData;
       labelString = "dm3";
       if( type == "Hours") labelString = "dm3";
@@ -186,7 +199,7 @@ function ensureChartsReady()
       document.getElementById("gasChart").style.display   = "block";
     } else document.getElementById("gasChart").style.display   = "none";
 
-    if (HeeftWater) {
+    if (historyShowsWater(data)) {
       myWaterChart.data = waterData;
       labelString = "m3";
       if( type == "Hours") labelString = "dm3";
@@ -223,7 +236,7 @@ function ensureChartsReady()
     myElectrChart.data = electrData;
     myElectrChart.update();
 
-    if (HeeftGas) {
+    if (historyShowsGas(data)) {
       myGasChart.data = gasData;
       var labelString = SQUARE_M_CUBED;
       if ( Dongle_Config == "p1-q") labelString = "kJ";
@@ -232,12 +245,12 @@ function ensureChartsReady()
       document.getElementById("gasChart").style.display = "block";
     } else document.getElementById("gasChart").style.display   = "none";
 
-    if (HeeftWater) {
+    if (historyShowsWater(data)) {
       myWaterChart.data = waterData;
       myWaterChart.options.scales.yAxes[0].scaleLabel.labelString = SQUARE_M_CUBED;
       myWaterChart.update();
       document.getElementById("waterChart").style.display = "block";
-    }
+    } else document.getElementById("waterChart").style.display = "none";
   
     //--- hide table
     document.getElementById("lastHours").style.display  = "none";
@@ -331,6 +344,11 @@ function ensureChartsReady()
     gasData.datasets.push(dsG1);
     waterData.datasets.push(dsW1);
     if (type == "Days") solarData.datasets.push(dsS1);
+
+    applyHistoryGraphOrder(electrData);
+    applyHistoryGraphOrder(gasData);
+    applyHistoryGraphOrder(waterData);
+    applyHistoryGraphOrder(solarData);
 
   } // copyDataToChart()
   
@@ -455,6 +473,10 @@ function ensureChartsReady()
     gasData.datasets.push(dsGD2);
     waterData.datasets.push(dsW1);
     waterData.datasets.push(dsW2); 
+
+    applyHistoryGraphOrder(electrData);
+    applyHistoryGraphOrder(gasData);
+    applyHistoryGraphOrder(waterData);
 
     //--- hide months Table
     document.getElementById("lastMonths").style.display = "none";

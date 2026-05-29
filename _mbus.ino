@@ -123,6 +123,7 @@ enum class MbSource : uint8_t {
   voltage_l1_v,
   voltage_l2_v,
   voltage_l3_v,
+  phase_voltage_avg_v,
   current_l1_a,
   current_l2_a,
   current_l3_a,
@@ -169,6 +170,7 @@ static const ActiveRecipe* activeRecipes = nullptr;
 static size_t activeRecipeCount = 0;
 static uint16_t activeRecipeMaxReg = 0;
 static bool activeRecipeLswFirst = false;
+static constexpr int kModbusMappingFroniusSunSpec203 = 15;
 
 #include "_mbus_mapping.h"
 
@@ -266,6 +268,14 @@ static float readMbSourceValue(MbSource source) {
       return DSMRdata.voltage_l2_present ? (float)DSMRdata.voltage_l2.val() : NAN;
     case MbSource::voltage_l3_v:
       return DSMRdata.voltage_l3_present ? (float)DSMRdata.voltage_l3.val() : NAN;
+    case MbSource::phase_voltage_avg_v: {
+      float value = 0.0f;
+      uint8_t count = 0;
+      if (DSMRdata.voltage_l1_present) { value += (float)DSMRdata.voltage_l1.val(); count++; }
+      if (DSMRdata.voltage_l2_present) { value += (float)DSMRdata.voltage_l2.val(); count++; }
+      if (DSMRdata.voltage_l3_present) { value += (float)DSMRdata.voltage_l3.val(); count++; }
+      return count ? (value / (float)count) : NAN;
+    }
     case MbSource::current_l1_a:
       return DSMRdata.current_l1_present ? (float)DSMRdata.current_l1.val() : NAN;
     case MbSource::current_l2_a:
@@ -405,6 +415,14 @@ static float readScaledMbSourceValue(MbSource source, int16_t scale) {
       return DSMRdata.voltage_l2_present ? sign * (float)DSMRdata.voltage_l2.int_val() : NAN;
     case MbSource::voltage_l3_v:
       return DSMRdata.voltage_l3_present ? sign * (float)DSMRdata.voltage_l3.int_val() : NAN;
+    case MbSource::phase_voltage_avg_v: {
+      int32_t value = 0;
+      uint8_t count = 0;
+      if (DSMRdata.voltage_l1_present) { value += DSMRdata.voltage_l1.int_val(); count++; }
+      if (DSMRdata.voltage_l2_present) { value += DSMRdata.voltage_l2.int_val(); count++; }
+      if (DSMRdata.voltage_l3_present) { value += DSMRdata.voltage_l3.int_val(); count++; }
+      return count ? sign * (float)(value / count) : NAN;
+    }
     case MbSource::current_l1_a:
       return DSMRdata.current_l1_present ? sign * (float)DSMRdata.current_l1.int_val() : NAN;
     case MbSource::current_l2_a:
@@ -572,6 +590,8 @@ static bool loadPresetRecipes(int mappingChoice) {
       return loadActiveRecipes(kKlefrRecipes, sizeof(kKlefrRecipes) / sizeof(kKlefrRecipes[0]));
     case 9:
       return loadActiveRecipes(kPhoenixEemXm3xxRecipes, sizeof(kPhoenixEemXm3xxRecipes) / sizeof(kPhoenixEemXm3xxRecipes[0]));
+    case kModbusMappingFroniusSunSpec203:
+      return loadActiveRecipes(kFroniusSunSpec203Recipes, sizeof(kFroniusSunSpec203Recipes) / sizeof(kFroniusSunSpec203Recipes[0]));
     default:
       return loadActiveRecipes(kDefaultRecipes0, sizeof(kDefaultRecipes0) / sizeof(kDefaultRecipes0[0]));
   }
@@ -657,7 +677,9 @@ static ModbusMessage MBusHandleRequestInternal(ModbusMessage request, uint8_t tr
 
     while (currentAddr < (address + words)) {
         
-        uint8_t typeId = static_cast<uint8_t>(ModbusDataType::UINT32);
+        uint8_t typeId = static_cast<uint8_t>(
+          SelMap == kModbusMappingFroniusSunSpec203 ? ModbusDataType::INT16 : ModbusDataType::UINT32
+        );
         bool hasValue = readMbActiveRegister(currentAddr, typeId, val.u, val.w);
         ModbusDataType type = static_cast<ModbusDataType>(typeId);
 

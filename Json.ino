@@ -585,7 +585,7 @@ if ( !hideMQTTsettings) {
 #endif
   
   //MODBUS TCP settings
-  ADD_SETTING("mb_map", "i", 0, 9, SelMap); //RTU+TCP
+    ADD_SETTING("mb_map", "i", 0, 15, SelMap); //RTU+TCP
   ADD_SETTING("mb_id", "i", 1, 255, mb_config.id); //RTU+TCP
   ADD_SETTING("mb_port", "i", 0, 65535, mb_config.port); //TCP
   if ( mb_rx != -1 ){ //check if modbus rtu hardware is available

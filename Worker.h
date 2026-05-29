@@ -15,6 +15,7 @@
 #define WORKER_QUEUE_NORMAL_LEN 16
 #define WORKER_QUEUE_LOW_LEN    16
 #define WORKER_HIGH_BUDGET       5
+#define WORKER_STACK_BYTES    (1024 * 8)
 
 enum WorkerPriority : uint8_t {
   WORKER_PRIO_HIGH = 0,

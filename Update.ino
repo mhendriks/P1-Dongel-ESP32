@@ -7,6 +7,7 @@ static char remoteUpdateState[16] = "idle";
 static char remoteUpdateDetail[64] = "";
 static uint8_t remoteUpdateProgress = 0;
 static uint32_t remoteUpdateQueuedAt = 0;
+static const char* const ESPHOME_OTA_ROOT = "http://ota.smart-stuff.nl/esphome/";
 
 static void setRemoteUpdateStatus(const char* state, const char* detail = "") {
   strlcpy(remoteUpdateState, state ? state : "idle", sizeof(remoteUpdateState));
@@ -35,22 +36,23 @@ void RemoteUpdate() {
   }
 
   const String requestedVersion = httpServer.arg("version");
+  const bool isESPHomeMigration = requestedVersion == "esphome";
   String errorDetail;
   if (!RemoteUpdateAvailable(requestedVersion.c_str(), &errorDetail)) {
-    httpServer.sendHeader("Location", "/#UpdateStart?error=" + errorDetail, true);
+    httpServer.sendHeader("Location", String("/#UpdateStart?kind=") + (isESPHomeMigration ? "esphome" : "firmware") + "&error=" + errorDetail, true);
     httpServer.send(303, "text/html", "");
     setRemoteUpdateStatus("error", errorDetail.c_str());
     return;
   }
 
   if (!QueueRemoteUpdate(requestedVersion.c_str(), true)) {
-    httpServer.sendHeader("Location", "/#UpdateStart?error=failed", true);
+    httpServer.sendHeader("Location", String("/#UpdateStart?kind=") + (isESPHomeMigration ? "esphome" : "firmware") + "&error=failed", true);
     httpServer.send(303, "text/html", "");
     setRemoteUpdateStatus("error", "failed");
     return;
   }
 
-  httpServer.sendHeader("Location", "/#UpdateStart", true);
+  httpServer.sendHeader("Location", String("/#UpdateStart?kind=") + (isESPHomeMigration ? "esphome" : "firmware"), true);
   httpServer.send(303, "text/html", "");
 }
 
@@ -74,8 +76,31 @@ bool QueueRemoteUpdate(const char* versie, bool sketch) {
   return true;
 }
 
-static bool BuildRemoteUpdatePath(const char* versie, String& path, String& otaFile) {
+static bool ResolveESPHomeTargetFile(String& otaFile, String* errorDetail) {
+  switch (HardwareType) {
+    case NRGD:
+      otaFile = "nrgd-h2o.bin";
+      return true;
+    case P1EP:
+      otaFile = "p1ep.bin";
+      return true;
+    case P1UX2:
+      otaFile = "p1ux2.bin";
+      return true;      
+    default:
+      if (errorDetail) *errorDetail = "unsupported_hardware";
+      return false;
+  }
+}
+
+static bool BuildRemoteUpdatePath(const char* versie, String& path, String& otaFile, String* errorDetail = nullptr) {
   if (!versie || !strlen(versie)) return false;
+
+  if (strcmp(versie, "esphome") == 0) {
+    if (!ResolveESPHomeTargetFile(otaFile, errorDetail)) return false;
+    path = String(ESPHOME_OTA_ROOT) + otaFile;
+    return true;
+  }
 
   const int flashSize = (ESP.getFlashChipSize() / 1024.0 / 1024.0);
   otaFile = strcmp(versie, "4-sketch-latest") == 0 ? "" : "DSMR-API-V";
@@ -87,8 +112,8 @@ static bool BuildRemoteUpdatePath(const char* versie, String& path, String& otaF
 bool RemoteUpdateAvailable(const char* versie, String* errorDetail) {
   String path;
   String otaFile;
-  if (!BuildRemoteUpdatePath(versie, path, otaFile)) {
-    if (errorDetail) *errorDetail = "missing_argument";
+  if (!BuildRemoteUpdatePath(versie, path, otaFile, errorDetail)) {
+    if (errorDetail && !errorDetail->length()) *errorDetail = "missing_argument";
     return false;
   }
 
@@ -127,8 +152,8 @@ bool RemoteUpdateNow(const char* versie, bool sketch, String* errorDetail) {
 
   Debugln(F("\n!!! OTA UPDATE !!!"));
 
-  if (!BuildRemoteUpdatePath(versie, path, otaFile)) {
-    if (errorDetail) *errorDetail = "missing_argument";
+  if (!BuildRemoteUpdatePath(versie, path, otaFile, errorDetail)) {
+    if (errorDetail && !errorDetail->length()) *errorDetail = "missing_argument";
     return false;
   }
 

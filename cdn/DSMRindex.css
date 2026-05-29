@@ -752,6 +752,39 @@ section#DashTab .chart-container {
     position:inherit;
 }
 
+.history-order-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  margin-left: 8px;
+  margin-right: 0;
+  border-radius: 0;
+  font-size: 0.9rem;
+  line-height: 1.2;
+  vertical-align: middle;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: #666;
+  cursor: pointer;
+}
+
+.history-order-toggle.active {
+  background: transparent;
+  color: rgb(112,172,77);
+}
+
+.history-order-toggle .iconify {
+  margin: 0;
+}
+
+.history-order-toggle:hover {
+  filter: none;
+  color: #111;
+  text-decoration: underline;
+}
+
 #DashTab .lblVerbuik {
 	text-align: center;
     color: white;

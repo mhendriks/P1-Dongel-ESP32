@@ -41,6 +41,7 @@ const URL_INSIGHTS			= APIGW + "v2/stats";
 const URL_EID_CLAIM			= "/eid/getclaim";
 const URL_NETSWITCH			= "/netswitch.json";
 const URL_VERSION_MANIFEST 	= "http://ota.smart-stuff.nl/v5/version-manifest.json?dummy=" + Date.now();
+const URL_ESPHOME_MANIFEST  = "http://ota.smart-stuff.nl/esphome/esphome-manifest.json?dummy=" + Date.now();
 
 const MAX_SM_ACTUAL     	= 15*60/5; //store the last 15 minutes (each interval is 10sec)
 const MAX_FILECOUNT     	= 30;   //maximum filecount on the device is 30
@@ -189,6 +190,7 @@ class dsmr_dal_main{
 	      this.time=[];      
 		  this.dev_settings=[];
 		  this.version_manifest=[];
+		  this.esphome_manifest=[];
 		  this.insights=[];
 		  this.dash_live=[];
 		  this.dash_hist=[];
@@ -209,6 +211,7 @@ class dsmr_dal_main{
 	      this.timerREFRESH_ACTUAL = 0;  
 		  this.timerREFRESH_DEVICE_INFO = 0;
 		  this.timerREFRESH_MANIFEST = 0; 
+		  this.esphome_manifest_fetched_at = 0;
 	      
 	      // Cache timestamps.
 		  this.dash_hist_fetched_at = 0;
@@ -488,13 +491,17 @@ class dsmr_dal_main{
 		  this.fetchDataJSON( "http://" + ota_url + "version-manifest.json?dummy=" + Date.now() , this.parseVersionManifest.bind(this));
 	    }
 
+		refreshESPHomeManifest(){
+		  this.fetchDataJSON(URL_ESPHOME_MANIFEST, this.parseESPHomeManifest.bind(this));
+		}
+
 		startManifestPolling(){
 			this.refreshManifest();
 			this.#setPollingTimer("timerREFRESH_MANIFEST", this.refreshManifest.bind(this), 3600 * 12 * 1000);
 		}
 
     //store result and call callback if set
-    parseDeviceSettings(json){
+	    parseDeviceSettings(json){
       this.dev_settings = json;
       
 	      //because the manifest check uses the ota_url.value from the device settings
@@ -515,6 +522,13 @@ class dsmr_dal_main{
 	  console.log("DAL::parseVersionManifest");
 	  this.version_manifest = json;
       this.callback?.('versionmanifest', json);
+	}
+
+	parseESPHomeManifest(json){
+	  console.log("DAL::parseESPHomeManifest");
+	  this.esphome_manifest = json;
+	  this.esphome_manifest_fetched_at = Date.now();
+	  this.callback?.('esphomemanifest', json);
 	}
 
 	refreshTelegram(){
@@ -588,6 +602,9 @@ class dsmr_dal_main{
     }
 	getVersionManifest(){
 		return this.version_manifest;
+	}
+	getESPHomeManifest(){
+		return this.esphome_manifest;
 	}
 	getMonths()
 	{
@@ -682,6 +699,7 @@ function updateFromDAL(source, json)
 		if (!(activeTab == "bEditSettings" && hasDirtySettings())) refreshSettings();
 		break;
     case "versionmanifest": parseVersionManifest(json); break;
+	case "esphomemanifest": renderESPHomeMigrationCard(); break;
     case "days": expandData(json);refreshHistData("Days");break;
 	case "hours": expandData(json);refreshHistData("Hours");break;
 	case "months":
