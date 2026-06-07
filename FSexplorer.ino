@@ -318,7 +318,12 @@ void handleFileUpload()
     if (fsUploadFile) fsUploadFile.close();
     Debugln("FileUpload Size: " + (String)upload.totalSize);
     httpServer.sendContent(Header);
-    RngInvalidateHeaderCache(httpServer.urlDecode(upload.filename).c_str());
+    String uploadedFilename = httpServer.urlDecode(upload.filename);
+    RngInvalidateHeaderCache(uploadedFilename.c_str());
+    if (uploadedFilename == "RNGdays.json" || uploadedFilename == "/RNGdays.json") {
+      if (loadRNGDaysHistory()) DebugTln(F("Day history reloaded after RNGdays upload"));
+      else DebugTln(F("Day history reload after RNGdays upload failed"));
+    }
     if (upload.filename == "DSMRsettings.json") readSettings(false);
     if (upload.filename == "enphase.json" || upload.filename == "solaredge.json") ReadSolarConfigs();
 #ifdef NETSWITCH

@@ -159,21 +159,16 @@ time_t epoch(const char *timeStamp, int8_t len, bool syncTime)
                        );
    
  
-  time_t nT;
-  time_t savEpoch = now();
-  
-  setTime(HourFromTimestamp(fullTimeStamp)
-         ,MinuteFromTimestamp(fullTimeStamp)
-         ,SecondFromTimestamp(fullTimeStamp)
-         ,DayFromTimestamp(fullTimeStamp)
-         ,MonthFromTimestamp(fullTimeStamp)
-         ,YearFromTimestamp(fullTimeStamp));
+  tmElements_t elements = {};
+  elements.Hour = HourFromTimestamp(fullTimeStamp);
+  elements.Minute = MinuteFromTimestamp(fullTimeStamp);
+  elements.Second = SecondFromTimestamp(fullTimeStamp);
+  elements.Day = DayFromTimestamp(fullTimeStamp);
+  elements.Month = MonthFromTimestamp(fullTimeStamp);
+  elements.Year = y2kYearToTm(YearFromTimestamp(fullTimeStamp));
 
-  nT = now();
-  if (!syncTime)
-  {
-    setTime(savEpoch);
-  }
+  time_t nT = makeTime(elements);
+  if (syncTime) setTime(nT);
   return nT;
 
 } // epoch()

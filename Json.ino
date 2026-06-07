@@ -582,6 +582,7 @@ if ( !hideMQTTsettings) {
 #endif
 #ifdef POST_MEENT
   ADD_SETTING("meent_interval", "i", 1, 3600, settingMeentInterval);
+  ADD_SETTING("meent_token", "s", 0, sizeof(settingMeentToken) - 1, settingMeentToken);
 #endif
   
   //MODBUS TCP settings
@@ -758,12 +759,16 @@ String smActualJsonDebug() {
 
 ApiResponse handleDevApi(const ApiRequestContext& request)
 {
-   if ( request.pathArg == "info" )
+	  if ( request.pathArg == "info" )
+	  {
+	    return jsonOkResponse(deviceInfoJson());
+	  }
+  else if ( request.pathArg == "p1errors" )
   {
-    return jsonOkResponse(deviceInfoJson());
+    return jsonOkResponse(p1ParseErrorLogJson());
   }
-  else if ( request.pathArg == "time")
-  {
+	  else if ( request.pathArg == "time")
+	  {
     return jsonOkResponse(deviceTimeJson());
   }
   else if (request.pathArg == "settings")

@@ -92,8 +92,12 @@ enum class SmartMeterSource : uint8_t {
 
 class SmartMeterHandle {
  public:
-  SmartMeterHandle(P1Reader& dsmr, han::HanReader& han, SmartMeterSource source = SmartMeterSource::HAN)
+ 
+ SmartMeterHandle(P1FixedReader<2500>& dsmr, han::HanReader& han, SmartMeterSource source = SmartMeterSource::HAN)
       : dsmr_(dsmr), han_(han), source_(source) {}
+
+  // SmartMeterHandle(P1Reader& dsmr, han::HanReader& han, SmartMeterSource source = SmartMeterSource::HAN)
+  //     : dsmr_(dsmr), han_(han), source_(source) {}
 
   void setSource(SmartMeterSource source) { source_ = source; }
   SmartMeterSource source() const { return source_; }
@@ -130,6 +134,10 @@ class SmartMeterHandle {
     return isHan() ? han_.raw() : dsmr_.raw();
   }
 
+  size_t rawLength() {
+    return isHan() ? han_.raw().length() : dsmr_.rawLength();
+  }
+
   void clear() {
     if (isHan()) han_.clear();
     else dsmr_.clear();
@@ -151,7 +159,8 @@ class SmartMeterHandle {
   }
 
  private:
-  P1Reader& dsmr_;
+  // P1Reader& dsmr_;
+  P1FixedReader<2500>& dsmr_;
   han::HanReader& han_;
   SmartMeterSource source_;
 };
@@ -466,6 +475,40 @@ time_t      actT, newT;
 char        actTimestamp[20] = "";
 char        newTimestamp[20] = "";
 uint32_t    telegramCount = 0, telegramErrors = 0, mqttCount = 0;
+struct P1ParseErrorLogEntry {
+  uint32_t ms;
+  uint32_t telegramCount;
+  uint32_t telegramErrors;
+  uint16_t rawLen;
+  uint16_t dtPrevSec;
+  uint8_t sequence;
+  uint8_t burst;
+  uint8_t eidState;
+  bool eidEnabled;
+  bool rngPending;
+  bool mqttBusy;
+  uint8_t wsClients;
+  bool p1outDtr;
+  bool out1Avail;
+  uint16_t serialAvailable;
+  uint16_t enphaseAgeSec;
+  uint16_t solarLastDurationMs;
+  uint32_t freeHeap;
+  uint32_t maxAllocHeap;
+  char detail[64];
+};
+
+#define P1_PARSE_ERROR_LOG_SIZE 16
+P1ParseErrorLogEntry P1ParseErrorLog[P1_PARSE_ERROR_LOG_SIZE];
+uint8_t P1ParseErrorLogNext = 0;
+uint8_t P1ParseErrorLogCount = 0;
+
+void RecordP1ParseError(bool isHan, size_t rawLen, const String& DSMRerror);
+void AppendP1ParseErrorLog(JsonDocument& doc);
+String p1ParseErrorLogJson();
+void PrintP1ParseErrorLog();
+uint16_t SolarEnphaseAgeSec();
+uint16_t SolarLastFetchDurationMs();
 extern unsigned long startTijdL1;
 extern unsigned long startTijdL2;
 extern unsigned long startTijdL3;
@@ -528,6 +571,7 @@ float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 =
 float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
 uint16_t  settingOvervoltageThreshold = 253;
 uint16_t  settingMeentInterval = 300;
+char      settingMeentToken[256] = "";
 uint8_t   settingFuse = 25;
 uint8_t   settingPhases = 0;
 // uint8_t   settingSmHasFaseInfo = 1;

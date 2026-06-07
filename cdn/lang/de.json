@@ -282,6 +282,7 @@
   "dict_mqtt_interval": "Versenden von MQTT-Nachrichten (Sek.)",
   "dict_mimic": "Aktive mimic (Neustart bei Anderung)",
   "dict_meent_interval": "MEENT-Webhook senden (Sek.)",
+  "dict_meent_token": "MEENT-Token",
   "dict_mqttbroker_connected": "MQTT-Broker verbunden",
   "dict_meter_source": "Zählerquelle",
   "dict_telegramcount": "Smart-Meter-Nachrichten verarbeitet",

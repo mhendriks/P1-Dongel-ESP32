@@ -138,6 +138,10 @@ enum class MbSource : uint8_t {
   net_power_l1_kw,
   net_power_l2_kw,
   net_power_l3_kw,
+  power_factor_total,
+  power_factor_l1,
+  power_factor_l2,
+  power_factor_l3,
   apparent_power_total_va,
   direction_total,
   direction_l1,
@@ -306,6 +310,22 @@ static float readMbSourceValue(MbSource source) {
       return DSMRdata.power_delivered_l2_present ? (float)(DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val()) : NAN;
     case MbSource::net_power_l3_kw:
       return DSMRdata.power_delivered_l3_present ? (float)(DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val()) : NAN;
+    case MbSource::power_factor_total: {
+      float value = readMbSourceValue(MbSource::net_power_total_kw);
+      return isnan(value) ? NAN : (value < 0.0f ? -1.0f : 1.0f);
+    }
+    case MbSource::power_factor_l1: {
+      float value = readMbSourceValue(MbSource::net_power_l1_kw);
+      return isnan(value) ? NAN : (value < 0.0f ? -1.0f : 1.0f);
+    }
+    case MbSource::power_factor_l2: {
+      float value = readMbSourceValue(MbSource::net_power_l2_kw);
+      return isnan(value) ? NAN : (value < 0.0f ? -1.0f : 1.0f);
+    }
+    case MbSource::power_factor_l3: {
+      float value = readMbSourceValue(MbSource::net_power_l3_kw);
+      return isnan(value) ? NAN : (value < 0.0f ? -1.0f : 1.0f);
+    }
     case MbSource::apparent_power_total_va: {
       float value = readMbSourceValue(MbSource::net_power_total_kw);
       return isnan(value) ? NAN : fabsf(value) * 1000.0f;

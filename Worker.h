@@ -30,7 +30,8 @@ enum WorkerJobType : uint8_t {
   WORKER_JOB_P1_STATUS_WRITE,
   WORKER_JOB_RNG_WRITE,
   WORKER_JOB_HTTP_POST,
-  WORKER_JOB_MANIFEST_CHECK
+  WORKER_JOB_MANIFEST_CHECK,
+  WORKER_JOB_SOLAR_FETCH
 };
 
 struct WorkerLogPayload {
@@ -72,6 +73,7 @@ bool WorkerHasCapacity(WorkerPriority priority, uint8_t needed);
 bool WorkerEnqueueLog(const char* payload, bool toDebug);
 bool WorkerEnqueueWebhookPost(const WorkerWebhookPayload& payload);
 bool WorkerEnqueueRngWrite(const WorkerRngPayload& payload);
+bool WorkerEnqueueSolarFetch();
 void WorkerNotifyP1TelegramOk();
 void WorkerPrintStats();
 

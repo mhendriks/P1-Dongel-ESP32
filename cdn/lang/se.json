@@ -341,6 +341,7 @@
   "dict_mqtt_interval": "Skicka MQTT-meddelanden (sek.)",
   "dict_mimic": "Active mimic (reboot on change)",
   "dict_meent_interval": "Skicka MEENT-webhook (sek.)",
+  "dict_meent_token": "MEENT token",
   "dict_mqttbroker_connected": "MQTT broker ansluten",
   "dict_meter_source": "Mätarkälla",
   "dict_telegramcount": "Meddelanden från smart elmätare behandlade",

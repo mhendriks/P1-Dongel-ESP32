@@ -46,11 +46,29 @@ String JsonWebhook(const WorkerWebhookPayload& payload) {
 
 time_t webhookStartMs;
 
+#ifdef POST_MEENT
+static String meentAuthorizationHeader() {
+  String token = settingMeentToken;
+  token.trim();
+  if (!token.length()) token = MEENT_AUTH_TOKEN;
+  token.trim();
+  if (!token.length()) return "";
+  if (token.startsWith("Bearer ") || token.startsWith("bearer ")) return token;
+  return "Bearer " + token;
+}
+#endif
+
 void PostWebhook() {
   if (!bNewTelegramWebhook || netw_state == NW_NONE || webhookPostErrors > 100 || webhookPostPending) return;
 
 #ifdef POST_MEENT
-  const uint32_t meentIntervalMs = (uint32_t)constrain(settingMeentInterval, (uint16_t)1, (uint16_t)3600) * 1000UL;
+  const uint16_t effectiveMeentInterval =
+#ifdef DEBUG
+      10;
+#else
+      constrain(settingMeentInterval, (uint16_t)1, (uint16_t)3600);
+#endif
+  const uint32_t meentIntervalMs = (uint32_t)effectiveMeentInterval * 1000UL;
   const uint32_t nowMs = millis();
   if (webhookLastPostMs != 0 && (uint32_t)(nowMs - webhookLastPostMs) < meentIntervalMs) return;
 #endif
@@ -88,7 +106,8 @@ void PostWebhookFromWorker(const WorkerWebhookPayload& payload) {
     http.addHeader("Content-Type", "application/json");
 #ifdef POST_MEENT
     http.addHeader("API-Version", MEENT_API_VERSION);
-    http.addHeader("Authorization", MEENT_AUTH_TOKEN);
+    String authHeader = meentAuthorizationHeader();
+    if (authHeader.length()) http.addHeader("Authorization", authHeader);
 #endif
 
     int httpResponseCode = http.POST(JsonWebhook(payload));

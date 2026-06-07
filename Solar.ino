@@ -20,6 +20,7 @@ SolarPwrSystems Enphase   = { false, "https://envoy/ivp/pdm/energy", "", 0, 0, 0
 SolarPwrSystems SolarEdge = { false, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
 SolarPwrSystems SMAinv    = { false, "http://192.168.1.231",      "", 0, 0, 0, 0, 0,  15, 0, "/sma.json" };
 SolarPwrSystems Omniksol  = { false, "", "", 0, 0, 0, 0, 0,  15, 0, "/omniksol.json"  };
+static uint16_t LastSolarFetchDurationMs = 0;
 
 static String   _sma_sid;
 static uint32_t _sma_sid_t0 = 0;
@@ -43,6 +44,22 @@ static uint32_t defaultSolarRefreshInterval(SolarSource src) {
     case OMNIKSOL:   return 15;
   }
   return 15;
+}
+
+static void noteSolarFetchDuration(uint32_t startMs) {
+  uint32_t duration = millis() - startMs;
+  LastSolarFetchDurationMs = duration > UINT16_MAX ? UINT16_MAX : (uint16_t)duration;
+}
+
+uint16_t SolarLastFetchDurationMs() {
+  return LastSolarFetchDurationMs;
+}
+
+uint16_t SolarEnphaseAgeSec() {
+  if (!Enphase.Available || !Enphase.LastRefresh) return UINT16_MAX;
+  time_t age = uptime() - Enphase.LastRefresh;
+  if (age < 0) return 0;
+  return age > UINT16_MAX ? UINT16_MAX : (uint16_t)age;
 }
 
 static void resetSolarEdgeRuntimeState() {
@@ -77,12 +94,18 @@ static bool smaHttpPOST(const String& url, const String& body, String& out) {
   WiFiClientSecure *clientTLS = nullptr;
 
   bool https = url.startsWith("https://");
+  bool beginOk = false;
   if (https) {
     clientTLS = new WiFiClientSecure();
     clientTLS->setInsecure();
-    http.begin(*clientTLS, url);
+    beginOk = http.begin(*clientTLS, url);
   } else {
-    http.begin(url);
+    beginOk = http.begin(url);
+  }
+
+  if (!beginOk) {
+    if (clientTLS) delete clientTLS;
+    return false;
   }
 
   http.addHeader("Content-Type", "application/json");
@@ -193,7 +216,7 @@ void ReadSolarConfig(SolarSource src) {
   Debug("siteid > "); Debugln(solarSystem->SiteID);
 #endif
 
-  GetSolarData(src, true);
+  solarSystem->LastRefresh = 0;
 }
 
 void ReadSolarConfigs() {
@@ -202,6 +225,15 @@ void ReadSolarConfigs() {
   ReadSolarConfig(SOLAR_EDGE);
   ReadSolarConfig(SMA);
   ReadSolarConfig(OMNIKSOL);
+
+  if (telegramCount == 0) {
+    GetSolarData(ENPHASE, true);
+    GetSolarData(SOLAR_EDGE, true);
+    GetSolarData(SMA, true);
+    GetSolarData(OMNIKSOL, true);
+  } else {
+    WorkerEnqueueSolarFetch();
+  }
 }
 
 void GetSolarData(SolarSource src, bool forceUpdate) {
@@ -210,6 +242,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   if (!solarSystem->Available) return;
   if (!forceUpdate && ((uptime() - solarSystem->LastRefresh) < solarSystem->Interval)) return;
   solarSystem->LastRefresh = uptime();
+  uint32_t fetchStartMs = millis();
 
   if (src == SMA) {
     long pac, day;
@@ -221,6 +254,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
       Debug("SMA Actual > "); Debugln(solarSystem->Actual);
 #endif
     }
+    noteSolarFetchDuration(fetchStartMs);
     return;
   }
 
@@ -321,6 +355,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
       SolarEdgeFlowPvValid = false;
     }
 
+    noteSolarFetchDuration(fetchStartMs);
     return;
   }
 
@@ -337,7 +372,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
 
   int httpResponseCode = http.GET();
   DebugVerboseT(F("HTTP Response code: ")); DebugVerboseLn(httpResponseCode);
-  if (httpResponseCode <= 0) { http.end(); return; }
+  if (httpResponseCode <= 0) { http.end(); noteSolarFetchDuration(fetchStartMs); return; }
 
   String payload = http.getString();
   #ifdef DEBUG
@@ -350,7 +385,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   http.end();
 
   JsonDocument solarDoc;
-  if (deserializeJson(solarDoc, payload)) { Debugln("Error deserialisation solarDoc"); return; }
+  if (deserializeJson(solarDoc, payload)) { Debugln("Error deserialisation solarDoc"); noteSolarFetchDuration(fetchStartMs); return; }
 
   if (bSolis) {
     solarSystem->Actual = solarDoc["i_pow_n"].as<uint32_t>();
@@ -373,14 +408,27 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   Debug("Daily > ");  Debugln(solarSystem->Daily);
   Debug("Actual > "); Debugln(solarSystem->Actual);
 #endif
+  noteSolarFetchDuration(fetchStartMs);
+}
+
+void GetSolarDataNFromWorker() {
+  if ( skipNetwork ) return;
+  GetSolarData(ENPHASE,    false);
+  WDT_FEED();
+  GetSolarData(SOLAR_EDGE, false);
+  WDT_FEED();
+  GetSolarData(SMA,        false);
+  WDT_FEED();
+  GetSolarData(OMNIKSOL,   false);
+  WDT_FEED();
 }
 
 void GetSolarDataN() {
-  if ( skipNetwork ) return;
-  GetSolarData(ENPHASE,    false);
-  GetSolarData(SOLAR_EDGE, false);
-  GetSolarData(SMA,        false);
-  GetSolarData(OMNIKSOL,   false);
+  static uint32_t nextScheduleMs = 0;
+  uint32_t now = millis();
+  if ((int32_t)(now - nextScheduleMs) < 0) return;
+  nextScheduleMs = now + 1000;
+  WorkerEnqueueSolarFetch();
 }
 
 uint32_t totalSolarDailyWh() {

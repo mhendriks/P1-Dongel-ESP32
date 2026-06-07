@@ -208,10 +208,10 @@ static bool migrateLegacyRNGdaysFile(const char* sourceFile) {
 
     strlcpy(newRecords[slot].date, date, sizeof(newRecords[slot].date));
     JsonArray values = obj["values"];
-    for (uint8_t i = 0; i < RING_DEFAULT_VALUE_COUNT; i++) {
+    const uint8_t valueCount = min((size_t)RNG_DAYS_VALUE_COUNT, values.size());
+    for (uint8_t i = 0; i < valueCount; i++) {
       newRecords[slot].values[i] = values[i] | 0.0f;
     }
-    newRecords[slot].values[6] = 0.0f;
 
     if (!haveNewest || nr > newestNr) {
       newestNr = nr;
@@ -458,6 +458,19 @@ enum RngWorkerMode : uint8_t {
 };
 
 static volatile uint8_t rngWriteJobsPending = 0;
+
+static const char* rngModeName(uint8_t mode) {
+  switch ((RngWorkerMode)mode) {
+    case RNG_WORKER_CURRENT_HOURS:  return "hours";
+    case RNG_WORKER_CURRENT_DAYS:   return "days";
+    case RNG_WORKER_CURRENT_MONTHS: return "months";
+    case RNG_WORKER_PREV_HOURS:     return "prev-hours";
+    case RNG_WORKER_PREV_DAYS:      return "prev-days";
+    case RNG_WORKER_PREV_MONTHS:    return "prev-months";
+    case RNG_WORKER_DST_GAP_HOURS:  return "dst-hours";
+  }
+  return "unknown";
+}
 
 static bool rngWritePending() {
   return rngWriteJobsPending > 0;
@@ -716,7 +729,7 @@ static void rngPrevMonthKey(char* key, size_t keySize, const char* dsmrTimestamp
   snprintf(key, keySize, "%2.2d%2.2d2823", yr, mth);
 }
 
-static void rngWritePrevSnapshotRecord(const WorkerRngPayload& snapshot, E_ringfiletype ringfiletype) {
+static bool rngWritePrevSnapshotRecord(const WorkerRngPayload& snapshot, E_ringfiletype ringfiletype) {
   char key[9] = "";
   switch (ringfiletype) {
     case RINGHOURS:
@@ -739,14 +752,14 @@ static void rngWritePrevSnapshotRecord(const WorkerRngPayload& snapshot, E_ringf
   }
 
   uint8_t slot = CalcSlotAt(ringfiletype, snapshot.actT, true);
-  writeRingSnapshotAtSlot(snapshot, ringfiletype, slot, key, false, true);
+  return writeRingSnapshotAtSlot(snapshot, ringfiletype, slot, key, false, true);
 }
 
-static void rngWriteCurrentSnapshotRecord(const WorkerRngPayload& snapshot, E_ringfiletype ringfiletype) {
+static bool rngWriteCurrentSnapshotRecord(const WorkerRngPayload& snapshot, E_ringfiletype ringfiletype) {
   char key[9] = "";
   rngKeyFromTimestamp(key, sizeof(key), snapshot.actTimestamp);
   uint8_t slot = CalcSlotAt(ringfiletype, snapshot.actT, false);
-  writeRingSnapshotAtSlot(snapshot, ringfiletype, slot, key, false, false);
+  return writeRingSnapshotAtSlot(snapshot, ringfiletype, slot, key, false, false);
 }
 
 void RngWriteFromWorker(const WorkerRngPayload& snapshot) {
@@ -757,24 +770,25 @@ void RngWriteFromWorker(const WorkerRngPayload& snapshot) {
     return;
   }
 
+  bool written = false;
   switch ((RngWorkerMode)snapshot.mode) {
     case RNG_WORKER_CURRENT_HOURS:
-      rngWriteCurrentSnapshotRecord(snapshot, RINGHOURS);
+      written = rngWriteCurrentSnapshotRecord(snapshot, RINGHOURS);
       break;
     case RNG_WORKER_CURRENT_DAYS:
-      rngWriteCurrentSnapshotRecord(snapshot, RINGDAYS);
+      written = rngWriteCurrentSnapshotRecord(snapshot, RINGDAYS);
       break;
     case RNG_WORKER_CURRENT_MONTHS:
-      rngWriteCurrentSnapshotRecord(snapshot, RINGMONTHS);
+      written = rngWriteCurrentSnapshotRecord(snapshot, RINGMONTHS);
       break;
     case RNG_WORKER_PREV_HOURS:
-      rngWritePrevSnapshotRecord(snapshot, RINGHOURS);
+      written = rngWritePrevSnapshotRecord(snapshot, RINGHOURS);
       break;
     case RNG_WORKER_PREV_DAYS:
-      rngWritePrevSnapshotRecord(snapshot, RINGDAYS);
+      written = rngWritePrevSnapshotRecord(snapshot, RINGDAYS);
       break;
     case RNG_WORKER_PREV_MONTHS:
-      rngWritePrevSnapshotRecord(snapshot, RINGMONTHS);
+      written = rngWritePrevSnapshotRecord(snapshot, RINGMONTHS);
       break;
     case RNG_WORKER_DST_GAP_HOURS:
       {
@@ -782,7 +796,7 @@ void RngWriteFromWorker(const WorkerRngPayload& snapshot) {
         rngKeyFromTimestamp(key, sizeof(key), snapshot.actTimestamp);
         uint8_t slot = CalcSlotAt(RINGHOURS, snapshot.actT, false);
         slot = (slot + 1) % RingFiles[RINGHOURS].slots;
-        writeRingSnapshotAtSlot(snapshot, RINGHOURS, slot, key, true, false);
+        written = writeRingSnapshotAtSlot(snapshot, RINGHOURS, slot, key, true, false);
         DebugTln(F("DST gap fix"));
       }
       break;
@@ -790,6 +804,9 @@ void RngWriteFromWorker(const WorkerRngPayload& snapshot) {
 
   if (snapshot.lastInBatch) P1SetDevFirstUse(false);
   if (rngWriteJobsPending > 0) rngWriteJobsPending--;
+  DebugTf("RNG write %s: %s key=%-8.8s pending=%u\r\n",
+          rngModeName(snapshot.mode), written ? "ok" : "FAILED",
+          snapshot.actTimestamp, rngWriteJobsPending);
 
 #ifdef XTRA_LOG
   if (!rngWritePending()) LogFile("RNG: all files written", true);
@@ -805,9 +822,8 @@ void writeRingFiles() {
   }
 
   if (rngWritePending()) {
-#ifdef XTRA_LOG
-    LogFile("RNG: write already pending", true);
-#endif
+    DebugTf("RNG hour write skipped: previous batch pending=%u old=%s new=%s\r\n",
+            rngWriteJobsPending, actTimestamp, DSMRdata.timestamp.c_str());
     return;
   }
 
@@ -839,10 +855,14 @@ void writeRingFiles() {
   if (hour(actT) == 1 && hour(newT) == 3) modes[jobCount++] = RNG_WORKER_DST_GAP_HOURS;
 
   if (!WorkerHasCapacity(WORKER_PRIO_LOW, jobCount)) {
+    DebugTf("RNG hour write skipped: queue capacity jobs=%u old=%s new=%s\r\n",
+            jobCount, actTimestamp, DSMRdata.timestamp.c_str());
     LogFile("RNG: queue full, write skipped", true);
     return;
   }
 
+  DebugTf("RNG hour transition: old=%s new=%s jobs=%u\r\n",
+          snapshot.actTimestamp, snapshot.dsmrTimestamp, jobCount);
   rngWriteJobsPending = jobCount;
   for (uint8_t i = 0; i < jobCount; i++) {
     WorkerRngPayload jobPayload = snapshot;

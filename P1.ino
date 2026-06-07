@@ -221,20 +221,136 @@ static void debugP1ParseError(bool isHan, size_t rawLen, const String& DSMRerror
   }
 }
 
+void RecordP1ParseError(bool isHan, size_t rawLen, const String& DSMRerror) {
+  static uint32_t lastErrorMs = 0;
+  static uint8_t burstCount = 0;
+
+  uint32_t nowMs = millis();
+  uint32_t dtMs = lastErrorMs ? (uint32_t)(nowMs - lastErrorMs) : 0;
+  if (lastErrorMs && dtMs < 10000) {
+    if (burstCount < 255) burstCount++;
+  } else {
+    burstCount = 1;
+  }
+  lastErrorMs = nowMs;
+
+  P1ParseErrorLogEntry& entry = P1ParseErrorLog[P1ParseErrorLogNext];
+  entry.ms = nowMs;
+  entry.telegramCount = telegramCount;
+  entry.telegramErrors = telegramErrors;
+  entry.rawLen = rawLen > UINT16_MAX ? UINT16_MAX : (uint16_t)rawLen;
+  entry.dtPrevSec = dtMs > 65535000UL ? 65535 : (uint16_t)(dtMs / 1000);
+  entry.sequence = P1error_cnt_sequence;
+  entry.burst = burstCount;
+  entry.eidState = (uint8_t)P1Status.eid_state;
+  entry.eidEnabled = bEID_enabled;
+  entry.rngPending = RngWritePending();
+#ifndef MQTT_DISABLE
+  entry.mqttBusy = bSendMQTT || mqttPublishActive || mqttConnectActive;
+#else
+  entry.mqttBusy = false;
+#endif
+  entry.wsClients = apiWs.connectedClients();
+  entry.p1outDtr = dtr1;
+  entry.out1Avail = Out1Avail;
+  int serialAvailable = Serial1.available();
+  entry.serialAvailable = serialAvailable < 0 ? 0 : (serialAvailable > UINT16_MAX ? UINT16_MAX : (uint16_t)serialAvailable);
+  entry.enphaseAgeSec = SolarEnphaseAgeSec();
+  entry.solarLastDurationMs = SolarLastFetchDurationMs();
+  entry.freeHeap = ESP.getFreeHeap();
+  entry.maxAllocHeap = ESP.getMaxAllocHeap();
+
+  char detail[sizeof(entry.detail) - 5];
+  copyLogSafe(detail, sizeof(detail), DSMRerror);
+  snprintf(entry.detail, sizeof(entry.detail), "%s%s", isHan ? "HAN " : "", detail);
+
+  P1ParseErrorLogNext = (P1ParseErrorLogNext + 1) % P1_PARSE_ERROR_LOG_SIZE;
+  if (P1ParseErrorLogCount < P1_PARSE_ERROR_LOG_SIZE) P1ParseErrorLogCount++;
+}
+
+void AppendP1ParseErrorLog(JsonDocument& doc) {
+  JsonArray errors = doc["telegram_error_log"].to<JsonArray>();
+  for (uint8_t i = 0; i < P1ParseErrorLogCount; i++) {
+    uint8_t index = (P1ParseErrorLogNext + P1_PARSE_ERROR_LOG_SIZE - P1ParseErrorLogCount + i) % P1_PARSE_ERROR_LOG_SIZE;
+    const P1ParseErrorLogEntry& entry = P1ParseErrorLog[index];
+    JsonObject item = errors.add<JsonObject>();
+    item["ms"] = entry.ms;
+    item["telegram"] = entry.telegramCount;
+    item["errors"] = entry.telegramErrors;
+    item["raw_len"] = entry.rawLen;
+    item["dt_prev_s"] = entry.dtPrevSec;
+    item["seq"] = entry.sequence;
+    item["burst"] = entry.burst;
+    item["eid_enabled"] = entry.eidEnabled;
+    item["eid_state"] = entry.eidState;
+    item["rng"] = entry.rngPending;
+    item["mqtt"] = entry.mqttBusy;
+    item["ws"] = entry.wsClients;
+    item["p1out_dtr"] = entry.p1outDtr;
+    item["out1_pending"] = entry.out1Avail;
+    item["serial_avail"] = entry.serialAvailable;
+    item["enphase_age_s"] = entry.enphaseAgeSec;
+    item["solar_last_ms"] = entry.solarLastDurationMs;
+    item["heap"] = entry.freeHeap;
+    item["max_alloc"] = entry.maxAllocHeap;
+    item["detail"] = entry.detail;
+  }
+}
+
+String p1ParseErrorLogJson() {
+  JsonDocument doc;
+  AppendP1ParseErrorLog(doc);
+  String out;
+  serializeJson(doc, out);
+  return out;
+}
+
+void PrintP1ParseErrorLog() {
+  DebugTf("P1 parse error log: %u/%u entries\r\n", P1ParseErrorLogCount, P1_PARSE_ERROR_LOG_SIZE);
+  for (uint8_t i = 0; i < P1ParseErrorLogCount; i++) {
+    uint8_t index = (P1ParseErrorLogNext + P1_PARSE_ERROR_LOG_SIZE - P1ParseErrorLogCount + i) % P1_PARSE_ERROR_LOG_SIZE;
+    const P1ParseErrorLogEntry& entry = P1ParseErrorLog[index];
+    DebugTf("%02u ms=%lu tel=%lu err=%lu raw=%u dt=%us seq=%u burst=%u eid=%u/%u rng=%u mqtt=%u ws=%u dtr=%u out=%u ser=%u eph=%us solar=%ums heap=%lu max=%lu %s\r\n",
+            i,
+            (unsigned long)entry.ms,
+            (unsigned long)entry.telegramCount,
+            (unsigned long)entry.telegramErrors,
+            entry.rawLen,
+            entry.dtPrevSec,
+            entry.sequence,
+            entry.burst,
+            entry.eidEnabled ? 1 : 0,
+            entry.eidState,
+            entry.rngPending ? 1 : 0,
+            entry.mqttBusy ? 1 : 0,
+            entry.wsClients,
+            entry.p1outDtr ? 1 : 0,
+            entry.out1Avail ? 1 : 0,
+            entry.serialAvailable,
+            entry.enphaseAgeSec,
+            entry.solarLastDurationMs,
+            (unsigned long)entry.freeHeap,
+            (unsigned long)entry.maxAllocHeap,
+            entry.detail);
+  }
+}
+
 static void handleParsedMeter(P1Reader& meter, bool isHan) {
   if (!meter.available()) return;
 
   ToggleLED(LED_ON);
   CapTelegram = meter.CompleteRaw();
+  const size_t rawLen = meter.rawLength();
   if (!isHan) Out1Avail = true;
   if (bRawPort) bRawPortTelegramPending = true;
+  // if (bRawPort) ws_raw.println(CapTelegram);
 
 #ifdef VIRTUAL_P1
   if (!isHan) virtSetLastData();
 #endif
 
   if (showRaw) {
-    Debugf("Raw smart meter data (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
+    Debugf("Raw smart meter data (%d)\n%s\n", CapTelegram.length(), CapTelegram.c_str());
     showRaw = false;
     meter.clear();
     ToggleLED(LED_OFF);
@@ -244,7 +360,7 @@ static void handleParsedMeter(P1Reader& meter, bool isHan) {
   telegramCount++;
   if (!bHideP1Log) {
     DebugTf("meterDataCount=[%d] meterDataErrors=[%d] bufferlength=[%d]\r\n",
-            telegramCount, telegramErrors, meter.raw().length());
+            telegramCount, telegramErrors, CapTelegram.length());
   }
   MyData DSMRdataNew = {};
   String DSMRerror;
@@ -253,6 +369,7 @@ static void handleParsedMeter(P1Reader& meter, bool isHan) {
     applyParsedSmartMeterData(DSMRdataNew, isHan);
   } else {
     telegramErrors++;
+    RecordP1ParseError(isHan, rawLen, DSMRerror);
     if (P1error_cnt_sequence++ > 3) bP1offline = true;
     DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
     DebugTf("Raw smart meter data\r\n%s\r\n\r\n", CapTelegram.c_str());
@@ -279,7 +396,7 @@ static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
   }
 
   if (showRaw) {
-    Debugf("Raw smart meter data (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
+    Debugf("Raw smart meter data (%d)\n%s\n", CapTelegram.length(), CapTelegram.c_str());
     showRaw = false;
     meter.clear();
     ToggleLED(LED_OFF);
@@ -289,7 +406,7 @@ static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
   telegramCount++;
   if (!bHideP1Log) {
     DebugTf("meterDataCount=[%d] meterDataErrors=[%d] bufferlength=[%d]\r\n",
-            telegramCount, telegramErrors, meter.raw().length());
+            telegramCount, telegramErrors, CapTelegram.length());
   }
   MyData DSMRdataNew = {};
   String DSMRerror;
@@ -298,6 +415,7 @@ static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
     applyParsedSmartMeterData(DSMRdataNew, isHan);
   } else {
     telegramErrors++;
+    RecordP1ParseError(isHan, CapTelegram.length(), DSMRerror);
     if (P1error_cnt_sequence++ > 3) bP1offline = true;
     DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
     DebugTf("Raw smart meter data\r\n%s\r\n\r\n", CapTelegram.c_str());
@@ -317,7 +435,7 @@ static void handleParsedMeter(han::HanReader& meter, bool isHan) {
   if (bRawPort) bRawPortTelegramPending = true;
 
   if (showRaw) {
-    Debugf("Raw smart meter data (%d)\n%s\n", meter.raw().length(), CapTelegram.c_str());
+    Debugf("Raw smart meter data (%d)\n%s\n", CapTelegram.length(), CapTelegram.c_str());
     showRaw = false;
     meter.clear();
     ToggleLED(LED_OFF);
@@ -327,7 +445,7 @@ static void handleParsedMeter(han::HanReader& meter, bool isHan) {
   telegramCount++;
   if (!bHideP1Log) {
     DebugTf("meterDataCount=[%d] meterDataErrors=[%d] bufferlength=[%d]\r\n",
-            telegramCount, telegramErrors, meter.raw().length());
+            telegramCount, telegramErrors, CapTelegram.length());
   }
   MyData DSMRdataNew = {};
   String DSMRerror;
@@ -336,6 +454,7 @@ static void handleParsedMeter(han::HanReader& meter, bool isHan) {
     applyParsedSmartMeterData(DSMRdataNew, isHan);
   } else {
     telegramErrors++;
+    RecordP1ParseError(isHan, CapTelegram.length(), DSMRerror);
     if (P1error_cnt_sequence++ > 3) bP1offline = true;
     DebugTf("%sParse error\r\n%s\r\n\r\n", isHan ? "HAN " : "", DSMRerror.c_str());
     DebugTf("Raw smart meter data\r\n%s\r\n\r\n", CapTelegram.c_str());
@@ -448,14 +567,11 @@ void handleVirtualP1(){}
 #endif
 
 void handleRawPort(){
-  if (!bRawPort) {
-    bRawPortTelegramPending = false;
-    return;
-  }
-
-  if (!bRawPortTelegramPending) return;
+  if ( !bRawPortTelegramPending ) return;
 
   bRawPortTelegramPending = false;
+
+  (void)ws_raw.available(); //trigger accept clients
   ws_raw.println(CapTelegram);
 }
 
@@ -576,7 +692,7 @@ void processTelegram(){
     UpdateYesterday();
   }
 #else
-  DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
+  // DebugTf("actHour[%02d] -- newHour[%02d]\r\n", hour(actT), hour(newT));  
   if ( ( hour(actT) != hour(newT) ) || P1Status.FirstUse || !dataYesterday.lastUpdDay) {
     writeRingFiles(); //bWriteFiles = true; //handled in main flow
     UpdateYesterday();

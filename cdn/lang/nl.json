@@ -325,6 +325,7 @@
   "dict_mqtt_interval": "Verzend MQTT Berichten (Sec.)",
   "dict_mimic": "Actieve mimic (reboot bij wijziging)",
   "dict_meent_interval": "Verzend MEENT webhook (sec.)",
+  "dict_meent_token": "MEENT token",
   "dict_mqttbroker_connected": "MQTT broker verbonden",
   "dict_meter_source": "Meterbron",
   "dict_telegramcount": "Slimme meter berichten verwerkt",

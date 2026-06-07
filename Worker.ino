@@ -19,6 +19,7 @@ struct WorkerStats {
 
 static WorkerStats workerStats = {};
 static volatile bool workerRngRunPermit = false;
+static volatile bool workerSolarFetchPending = false;
 static bool workerDeferredRngJobValid = false;
 static WorkerJob workerDeferredRngJob = {};
 
@@ -28,6 +29,7 @@ void writeSettingsDirect();
 void ManifestCheckFromWorker();
 void PostWebhookFromWorker(const WorkerWebhookPayload& payload);
 void RngWriteFromWorker(const WorkerRngPayload& payload);
+void GetSolarDataNFromWorker();
 
 static QueueHandle_t workerQueueForPriority(WorkerPriority priority) {
   switch (priority) {
@@ -115,6 +117,11 @@ static void workerHandleJob(const WorkerJob& job) {
 
     case WORKER_JOB_RNG_WRITE:
       RngWriteFromWorker(job.data.rng);
+      break;
+
+    case WORKER_JOB_SOLAR_FETCH:
+      GetSolarDataNFromWorker();
+      workerSolarFetchPending = false;
       break;
 
     default:
@@ -232,6 +239,16 @@ bool WorkerEnqueueRngWrite(const WorkerRngPayload& payload) {
   WorkerJob job = workerJob(WORKER_JOB_RNG_WRITE);
   job.data.rng = payload;
   return WorkerEnqueue(job, WORKER_PRIO_LOW, 0);
+}
+
+bool WorkerEnqueueSolarFetch() {
+  if (!tWorker || !qWorkerLow || workerSolarFetchPending) return false;
+
+  workerSolarFetchPending = true;
+  if (WorkerEnqueueSimple(WORKER_JOB_SOLAR_FETCH, WORKER_PRIO_LOW)) return true;
+
+  workerSolarFetchPending = false;
+  return false;
 }
 
 void WorkerNotifyP1TelegramOk() {

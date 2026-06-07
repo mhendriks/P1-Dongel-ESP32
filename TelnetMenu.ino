@@ -152,8 +152,9 @@ void handleKeyInput()
                         case 'u': ReadManifest(); break;
                         case 'l': DisplayFile("/P1.log");break;
                         case 's': listFS();break;
+                        case 'e': PrintP1ParseErrorLog(); break;
                         case 'w': WorkerPrintStats(); break;
-                        default : Debugln(F("Display:\nb = board info\nd = Day table from FS\nh = Hour table from FS\nm = Month table from FS\nl = Logfile from FS\ns = File info\nw = Worker stats"));
+                        default : Debugln(F("Display:\nb = board info\nd = Day table from FS\ne = P1 error log\nh = Hour table from FS\nm = Month table from FS\nl = Logfile from FS\ns = File info\nw = Worker stats"));
                         } //switch
                         while (TelnetStream.available() > 0) {(char)TelnetStream.read();} //verwijder extra input
                       } //while

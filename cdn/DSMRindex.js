@@ -495,12 +495,14 @@ window.onload=bootsTrapMain;
 function visibilityListener() {
   switch(document.visibilityState) {
     case "hidden":
-		clearInterval(tabTimer);  
-		PauseAPI=true;
-		break;
+			clearInterval(tabTimer);  
+			PauseAPI=true;
+			objDAL?.pauseLiveStreams();
+			break;
     case "visible":
-		PauseAPI=false;
-		openTab();
+			PauseAPI=false;
+			objDAL?.resumeLiveStreams();
+			openTab();
 // 		if ( activeTab == "bEID") getclaim();
 		break;
     default:

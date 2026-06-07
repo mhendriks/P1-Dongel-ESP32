@@ -5,6 +5,6 @@
 // Only used when POST_MEENT is enabled
 #define URL_MEENT "https://example.invalid/api/data/"
 static const char* MEENT_API_VERSION = "v0.3";
+// Optional fallback when no runtime MEENT token is configured in settings.
 static const char* MEENT_AUTH_TOKEN = "Bearer xxxxxxxxxxxxxxxx";
-
 

@@ -104,6 +104,7 @@ void writeSettingsDirect() {
   docw["WaterVasteKosten"] = settingWNBK;
   docw["OverVoltageThreshold"] = settingOvervoltageThreshold;
   docw["MeentInterval"] = settingMeentInterval;
+  docw["MeentToken"] = settingMeentToken;
   docw["Fuse"] = settingFuse;
   docw["Phases"] = settingPhases;
   // docw["SmHasFaseInfo"] = settingSmHasFaseInfo;
@@ -227,6 +228,7 @@ void readSettings(bool show)
   if (doc["MeentInterval"].is<int>()) {
     settingMeentInterval = constrain(doc["MeentInterval"].as<int>(), 1, 3600);
   }
+  if (doc["MeentToken"].is<const char*>()) strlcpy(settingMeentToken, doc["MeentToken"].as<const char*>(), sizeof(settingMeentToken));
   // settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
   if (doc["mqtt-hide"].is<bool>()) hideMQTTsettings = doc["mqtt-hide"];
@@ -460,6 +462,7 @@ void updateSetting(const char *field, const char *newValue)
   
   if (!stricmp(field, "b_auth_user")) strCopy(bAuthUser,25, newValue);  
   if (!stricmp(field, "b_auth_pw")) strCopy(bAuthPW,25, newValue); 
+  if (!stricmp(field, "meent_token")) strCopy(settingMeentToken, sizeof(settingMeentToken), newValue);
 
   if (!stricmp(field, "water_fact")) WtrFactor = String(newValue).toFloat(); 
   

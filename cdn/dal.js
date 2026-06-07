@@ -138,10 +138,27 @@ class ApiWebSocketBridge {
 		this.connected = false;
 	}
 
-	start() {
-		if (!this.enabled || this.ws) return;
-		this.#connect();
-	}
+		start() {
+			if (!this.enabled || this.ws) return;
+			this.#connect();
+		}
+
+		isActive() {
+			return this.connected || (this.ws && this.ws.readyState === WebSocket.CONNECTING);
+		}
+
+		stop({reconnect=false} = {}) {
+			if (this.reconnectTimer) {
+				clearTimeout(this.reconnectTimer);
+				this.reconnectTimer = 0;
+			}
+			const ws = this.ws;
+			this.ws = null;
+			this.connected = false;
+			if (!ws) return;
+			ws.onclose = reconnect ? ws.onclose : null;
+			ws.close();
+		}
 
 	#connect() {
 		if (!this.enabled) return;
@@ -303,20 +320,30 @@ class dsmr_dal_main{
       this.callback = fnCB;
     }
   
-	    init(){
-	      this.ensureDeviceInformation(true);
-		  this.ws.start();
-		  this.startTimePolling();
-	    } 
+		    init(){
+		      this.ensureDeviceInformation(true);
+			  this.ws.start();
+			  this.startTimePolling();
+		    } 
 
-		#startLiveSource(source) {
-			this.streamDesired[source] = true;
-			if (this.ws.connected) {
-				this.streams[source].refresh();
-				return;
+			pauseLiveStreams() {
+				this.ws.stop();
+				Object.values(this.streams).forEach(stream => stream.stop());
 			}
-			this.streams[source].start();
+
+		resumeLiveStreams() {
+			this.ws.start();
+			if (this.ws.isActive()) return;
+			Object.keys(this.streamDesired).forEach(source => {
+				if (this.streamDesired[source]) this.streams[source].start();
+			});
 		}
+
+	#startLiveSource(source) {
+		this.streamDesired[source] = true;
+		if (this.ws.isActive()) return;
+		this.streams[source].start();
+	}
 
 		#stopLiveSource(source) {
 			this.streamDesired[source] = false;

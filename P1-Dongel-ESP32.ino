@@ -52,7 +52,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
+
 5.9.0
+- SDK 3.3.10
 - remove shelly EM1 -- not used with em pro3
 - tooltips bij de diverse settings (Gerben)
 - Add remote Proxy
@@ -75,12 +77,12 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE       // + D1MC and NRGDH
+// #define NRG_DONGLE       // + D1MC and NRGDH 
 // #define _P1P
 
 //SPECIAL
 // #define __Az__
-// #define OTAURL_PREFIX "az/"
+// #define OTAURL_PREFIX "me/"
 
 //FEATURES
 #define MBUS
