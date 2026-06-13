@@ -52,15 +52,13 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-
 5.9.0
 - SDK 3.3.10
-- remove shelly EM1 -- not used with em pro3
+- 3 button control (a-pair, b-reboot, c=factory reset)
 - tooltips bij de diverse settings (Gerben)
 - Add remote Proxy
 - refactoring targets
 - add wallbox mapping
-- 3 button control (a-pair, b-reboot, c=factory reset)
 - kWh meter als bron voor productie data gebruiken (Harrie)
 - update button in HA to trigger the update (mqtt based #70) 
    - HA auto update ala : https://www.zigbee2mqtt.io/guide/usage/ota_updates.html#automatic-checking-for-available-updates

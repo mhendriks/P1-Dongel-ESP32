@@ -102,7 +102,11 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
   String msg_payload;
   serializeJson(doc, msg_payload);
 //  Debugln(msg_payload);
-  if (!MQTTclient.publish(msg_topic, msg_payload.c_str(), true) ) DebugTf("Error publish(%s) [%s] [%d bytes]\r\n", msg_topic, msg_payload, ( strlen(msg_topic) + msg_payload.length() ));
+  if (!MQTTclient.publish(msg_topic, msg_payload.c_str(), true)) {
+    DebugTf("Error publish(%s) [%s] [%u bytes]\r\n",
+            msg_topic, msg_payload.c_str(),
+            (unsigned)(strlen(msg_topic) + msg_payload.length()));
+  }
 }
 
 void AutoDiscoverHA(){
@@ -176,7 +180,7 @@ void MQTTsetServer(){
   }
   MQTTclient.setBufferSize(MQTT_BUFF_MAX);
   MQTTclient.setKeepAlive(60);
-  DebugVerboseTf("setServer(%s, %d) \r\n", settingMQTTbroker, settingMQTTbrokerPort);
+  DebugVerboseTf("setServer(%s, %lu) \r\n", settingMQTTbroker, (unsigned long)settingMQTTbrokerPort);
   MQTTclient.setServer(settingMQTTbroker, settingMQTTbrokerPort);
 
 //  CHANGE_INTERVAL_SEC(reconnectMQTTtimer, 1);
@@ -205,7 +209,7 @@ void MqttReconfig(String payload){
   if ( doc["broker"].is<const char*>() && doc["port"].is<int>() && doc["user"].is<const char*>() && doc["pass"].is<const char*>() ){
     //test connection
     MQTTSend( "msg", "MQTT: reconfig check connection", true );
-    char MqttID[30+13];
+    char MqttID[sizeof(settingHostname) + sizeof(macID) + 1];
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
     MQTTDisconnect();
     MQTTclient.setServer(doc["broker"].as<const char*>(), doc["port"].as<uint16_t>());
@@ -292,7 +296,7 @@ void MQTTConnect() {
   if ( DUE( reconnectMQTTtimer) && ( netw_state == NW_ETH || netw_state == NW_WIFI) ) {    
 // #endif    
     LogFile("MQTT: RECONNECT to broker...", true);
-    char MqttID[30+13];
+    char MqttID[sizeof(settingHostname) + sizeof(macID) + 1];
     snprintf(MqttID, sizeof(MqttID), "%s-%s", settingHostname, macID);
     snprintf( cMsg, 150, "%sLWT", MQTopTopic );
     DebugVerboseTf("connect %s user=%s passwd=%s lwt=%s\n",
@@ -492,7 +496,8 @@ void sendMQTTData() {
   if ( MQTTclient.connected() ) {   
   mqttPublishActive = true;
     
-  DebugVerboseTf("Sending data to MQTT server [%s]:[%d]\r\n", settingMQTTbroker, settingMQTTbrokerPort);
+  DebugVerboseTf("Sending data to MQTT server [%s]:[%lu]\r\n",
+                 settingMQTTbroker, (unsigned long)settingMQTTbrokerPort);
   
   if ( !StaticInfoSend )  MQTTSentStaticInfo();
     

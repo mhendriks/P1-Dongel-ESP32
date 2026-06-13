@@ -26,7 +26,7 @@ void P1Update(bool sketch){
 
   bHideP1Log = true; //hide
   //clear buffer
-  while (TelnetStream.available() > 0) { (char)TelnetStream.read(); yield(); }
+  while (TelnetStream.available() > 0) { TelnetStream.read(); yield(); }
   
   Debugln(F("\n/!\\ UPDATE MODULE /!\\"));
   Debugf("Enter firmware version (eg. 4.5.1): ");
@@ -122,20 +122,24 @@ void handleKeyInput()
                         case 'z': P1StatusReset(); break;
                         default : Debugln(F("P1 Status info:\nr = read\nw = write\np = print\nz = erase"));
                         } //switch
-                        while (TelnetStream.available() > 0) {(char)TelnetStream.read();} //verwijder extra input
+                        while (TelnetStream.available() > 0) { TelnetStream.read(); } //verwijder extra input
                       } //while
                       break; }
       case 'b':
       case 'B':     displayBoardInfo();
                     break;
       case 'T':     {        
-                      char c;
+                      char c = '\0';
                       while (TelnetStream.available() > 0) { 
                         c = (char)TelnetStream.read();
-                            while (TelnetStream.available() > 0) {(char)TelnetStream.read();} //verwijder extra input
+                            while (TelnetStream.available() > 0) { TelnetStream.read(); } //verwijder extra input
                       } //while
-                      P1Status.dev_type = int(c) - 48;
-                      P1SetDevType();
+                      if (c >= '0' && c <= '9') {
+                        P1Status.dev_type = c - '0';
+                        P1SetDevType();
+                      } else {
+                        Debugln(F("Missing or invalid device type"));
+                      }
                       break; }                           
       case 'l':
       case 'L':     readSettings(true);
@@ -156,7 +160,7 @@ void handleKeyInput()
                         case 'w': WorkerPrintStats(); break;
                         default : Debugln(F("Display:\nb = board info\nd = Day table from FS\ne = P1 error log\nh = Hour table from FS\nm = Month table from FS\nl = Logfile from FS\ns = File info\nw = Worker stats"));
                         } //switch
-                        while (TelnetStream.available() > 0) {(char)TelnetStream.read();} //verwijder extra input
+                        while (TelnetStream.available() > 0) { TelnetStream.read(); } //verwijder extra input
                       } //while
                       break; }
       case 'E':     bHideP1Log = true;
@@ -205,7 +209,8 @@ void handleKeyInput()
                     }
                     break;                    
       case 'x':
-      case 'X':     DebugTf("Watermeter readings: %i m3 and %i liters\n",P1Status.wtr_m3,P1Status.wtr_l);
+      case 'X':     DebugTf("Watermeter readings: %lu m3 and %u liters\n",
+                            (unsigned long)P1Status.wtr_m3, (unsigned)P1Status.wtr_l);
                     break;
       case 'y':
       case 'Y':     writeRingFiles();
@@ -235,7 +240,7 @@ void handleKeyInput()
     while (TelnetStream.available() > 0) 
     {
        yield();
-       (char)TelnetStream.read();
+       TelnetStream.read();
     }
   }
   

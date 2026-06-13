@@ -79,7 +79,7 @@ struct ApiRequestContext {
 #define MQTT_BUFF_MAX     1024
 #define MQTT_RECONNECT_DEFAULT_TIME 10 //seconds
 
-P1Reader    slimmeMeter(&Serial1, DTR_IO);
+P1FixedReader<2500> slimmeMeter(&Serial1, DTR_IO);
 #ifdef HAN_READER
 han::HanReader hanMeter(&Serial1);
 #if defined(HAN_TESTDATA) || defined(HAN_TESTDATA_RAW)
@@ -95,9 +95,6 @@ class SmartMeterHandle {
  
  SmartMeterHandle(P1FixedReader<2500>& dsmr, han::HanReader& han, SmartMeterSource source = SmartMeterSource::HAN)
       : dsmr_(dsmr), han_(han), source_(source) {}
-
-  // SmartMeterHandle(P1Reader& dsmr, han::HanReader& han, SmartMeterSource source = SmartMeterSource::HAN)
-  //     : dsmr_(dsmr), han_(han), source_(source) {}
 
   void setSource(SmartMeterSource source) { source_ = source; }
   SmartMeterSource source() const { return source_; }
@@ -159,7 +156,6 @@ class SmartMeterHandle {
   }
 
  private:
-  // P1Reader& dsmr_;
   P1FixedReader<2500>& dsmr_;
   han::HanReader& han_;
   SmartMeterSource source_;
@@ -250,7 +246,6 @@ RingRecord RNGDayRec[RNG_DAYS_SLOT_COUNT];
 RingRecord DashDayHistory[4];
 bool DashDayHistoryReady = false;
 
-void printRecordArray(const RingRecord* records, int slots, const char* label);
 bool loadRingfile(E_ringfiletype type);
 bool loadRNGDaysHistory();
 void updateDashDayHistoryFromSnapshot(const char* prevTimestamp, const char* currentTimestamp, const float* values);
@@ -296,7 +291,7 @@ using MyData = ParsedData<
   /* String */                ,p1_version_be
   /* FixedValue */            ,peak_pwr_last_q
   /* TimestampedFixedValue */ ,highest_peak_pwr
-  /* String */                ,highest_peak_pwr_13mnd
+  // /* String */                ,highest_peak_pwr_13mnd
   /* String */                ,timestamp
   /* String */                ,equipment_id
   /* FixedValue */            ,energy_delivered_tariff1
@@ -336,81 +331,32 @@ using MyData = ParsedData<
   /* uint16_t */              ,mbus1_device_type
   /* String */                ,mbus1_equipment_id_tc
   /* String */                ,mbus1_equipment_id_ntc
-  /* uint8_t */               ,mbus1_valve_position
+  // /* uint8_t */               ,mbus1_valve_position
   /* TimestampedFixedValue */ ,mbus1_delivered
   /* TimestampedFixedValue */ ,mbus1_delivered_ntc
   /* TimestampedFixedValue */ ,mbus1_delivered_dbl
   /* uint16_t */              ,mbus2_device_type
   /* String */                ,mbus2_equipment_id_tc
   /* String */                ,mbus2_equipment_id_ntc
-  /* uint8_t */               ,mbus2_valve_position
+  // /* uint8_t */               ,mbus2_valve_position
   /* TimestampedFixedValue */ ,mbus2_delivered
   /* TimestampedFixedValue */ ,mbus2_delivered_ntc
   /* TimestampedFixedValue */ ,mbus2_delivered_dbl
   /* uint16_t */              ,mbus3_device_type
   /* String */                ,mbus3_equipment_id_tc
   /* String */                ,mbus3_equipment_id_ntc
-  /* uint8_t */               ,mbus3_valve_position
+  // /* uint8_t */               ,mbus3_valve_position
   /* TimestampedFixedValue */ ,mbus3_delivered
   /* TimestampedFixedValue */ ,mbus3_delivered_ntc
   /* TimestampedFixedValue */ ,mbus3_delivered_dbl
   /* uint16_t */              ,mbus4_device_type
   /* String */                ,mbus4_equipment_id_tc
   /* String */                ,mbus4_equipment_id_ntc
-  /* uint8_t */               ,mbus4_valve_position
+  // /* uint8_t */               ,mbus4_valve_position
   /* TimestampedFixedValue */ ,mbus4_delivered
   /* TimestampedFixedValue */ ,mbus4_delivered_ntc
   /* TimestampedFixedValue */ ,mbus4_delivered_dbl
 >;
-
-/*TODO espnow communicatie
-
-typedef struct struct_pairing {
-    uint8_t msgType;     //Pair
-    char    ssid[32];    //max 32
-    char    pw[63];      //max 63
-    char    host[30];    //max 30
-    uint8_t ipAddr[4];  //max 4
-} struct_pairing;
-
-//6*4 + 8 = 32
-typedef struct HistRect {
-  time_t    epoch;
-  uint32_t  T1;
-  uint32_t  T2;
-  uint32_t  T1r;
-  uint32_t  T2r;
-  uint32_t  G;
-  uint32_t  W;
-};
-
-//1 + 7 * 32  = 225
-typedef struct HistData {
-  uint8_t   msgType; //HistData
-  HistRect  recs[7];
-};
-
-// 8 + 8*4 = 40 bytes
-struct Actuals {
-  uint8_t   msgType; //Actuals
-  time_t    epoch; //8
-  uint32_t  actEin; //4
-  uint32_t  actEout;//4
-  uint32_t  actG;//4
-  uint32_t  actW;//4
-  uint32_t  dailyEin;//4
-  uint32_t  dailyEout;//4
-  uint32_t  dailyG;//4
-  uint32_t  dailyW;//4
-};
-
-P1DataRec P1_Day[15]; //390 bytes 
-P1DataRec P1_Hour[25]; //650 bytes 
-P1DataRec P1_Month[49]; //1.274 bytes 
-*/
-//P1DataRec P1_Profile[288]; //7.488
-
-// const PROGMEM char *flashMode[]    { "QIO", "QOUT", "DIO", "DOUT", "Unknown" };
 
 //===========================prototype's=======================================
 int strcicmp(const char *a, const char *b);
@@ -436,7 +382,6 @@ uint32_t currentDay = 0;
 
 struct Status {
    uint32_t           reboots;
-   uint32_t           sloterrors; //deprecated
    char               timestamp[14];
    volatile uint32_t  wtr_m3;
    volatile uint16_t  wtr_l;

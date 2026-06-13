@@ -69,9 +69,9 @@ char _bol[128];
 void _debugBOL(const char *fn, int line)
 {
    
-  snprintf(_bol, sizeof(_bol), "%1d [%02d:%02d:%02d][%7u|%6u] %-12.12s(%4d): ", \
+  snprintf(_bol, sizeof(_bol), "%1d [%02d:%02d:%02d][%7lu|%6lu] %-12.12s(%4d): ", \
                 xPortGetCoreID(), hour(), minute(), second(), \
-                ESP.getFreeHeap(), ESP.getMaxAllocHeap(),\
+                (unsigned long)ESP.getFreeHeap(), (unsigned long)ESP.getMaxAllocHeap(),\
                 fn, line);
                  
 #ifdef DEBUG
@@ -87,7 +87,10 @@ void PrintHWMark(const int id){
       if (uptime() % 10 == 0) 
       {
         if ( !HWMarks[id] ) { 
-          Debugf("--HighWaterMark %s: %d - heap: %d\n", pcTaskGetName(NULL), uxTaskGetStackHighWaterMark(NULL),ESP.getFreeHeap());
+          Debugf("--HighWaterMark %s: %lu - heap: %lu\n",
+                 pcTaskGetName(NULL),
+                 (unsigned long)uxTaskGetStackHighWaterMark(NULL),
+                 (unsigned long)ESP.getFreeHeap());
           HWMarks[id]=true;
         } 
       } else HWMarks[id]=false; //every minut

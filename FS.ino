@@ -72,15 +72,15 @@ void listFS()
   DebugTln(F("\r\n"));
   for(int f=0; f<fileNr; f++)
   {
-    Debugf("%-25s %6d bytes \r\n", dirMap[f].Name, dirMap[f].Size);
+    Debugf("%-25s %6ld bytes \r\n", dirMap[f].Name, (long)dirMap[f].Size);
     yield();
   }
 
   Debugln(F("\r"));
-  if (freeSpace() < 10.240) Debugf("Available File System space [%6d]kB (LOW ON SPACE!!!)\r\n", (freeSpace() / 1024));
+  if (freeSpace() < 10.240) Debugf("Available File System space [%6ld]kB (LOW ON SPACE!!!)\r\n", freeSpace() / 1024);
   else  {
-    Debugf("Available File System space [%6d]kB\r\n", (freeSpace() / 1024));
-    Debugf("           File System Size [%6d]kB\r\n", (LittleFS.totalBytes() / 1024));
+    Debugf("Available File System space [%6ld]kB\r\n", freeSpace() / 1024);
+    Debugf("           File System Size [%6lu]kB\r\n", (unsigned long)(LittleFS.totalBytes() / 1024));
   }
 
 } // listFS()
@@ -95,7 +95,7 @@ void eraseFile()
   while (TelnetStream.available() > 0) 
   {
     yield();
-    (char)TelnetStream.read();
+    TelnetStream.read();
   }
 
   Debug("Enter filename to erase: ");
@@ -126,7 +126,7 @@ void eraseFile()
   while (TelnetStream.available() > 0) 
   {
     yield();
-    (char)TelnetStream.read();
+    TelnetStream.read();
   }
 
 } // eraseFile()

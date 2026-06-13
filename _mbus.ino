@@ -93,14 +93,6 @@ void clearModbusMonitorEntries() {
 // Modbus data types
 enum class ModbusDataType : uint8_t { UINT32, INT32, INT16, FLOAT };
 
-union {
-  float    f;
-  uint32_t u;
-  int32_t  i;
-} map_temp;
-
-
-
 enum class MbSource : uint8_t {
   timestamp_epoch,
   energy_delivered_tariff1_kwh,

@@ -21,7 +21,7 @@ command_t Command;
 uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 ActualData_t ActualData;
 tariff_t TariffData;
-char updateURL[60],updateFile[35];
+char updateURL[80], updateFile[35];
 bool bESPNowInit = false;
 
 static bool espNowReadyForPeerData() {
@@ -41,7 +41,10 @@ void procesACK(const uint8_t *incomingData){
   esp_now_ack_data_t ackData;
   memcpy(&ackData, incomingData, sizeof(ackData));
 
-  Debugf("Received ACK for packet ID %u, success: %s (Slave Offset: %u)\n", ackData.packetId, ackData.success ? "true" : "false", ackData.currentOffset);
+  Debugf("Received ACK for packet ID %u, success: %s (Slave Offset: %lu)\n",
+         ackData.packetId,
+         ackData.success ? "true" : "false",
+         (unsigned long)ackData.currentOffset);
   lastAckPacketId = ackData.packetId;
   lastAckSuccess = ackData.success;
   ackReceived = true;
@@ -64,7 +67,8 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
     case COMMAND:
       if (!need(sizeof(command_t))) return;
       memcpy(&Command, incomingData, sizeof(command_t));
-      Debugf("COMMAND RECEIVED type [%i], state [%i]\n", Command.action,bPairingmode);
+      Debugf("COMMAND RECEIVED type [%i], state [%lld]\n",
+             Command.action, (long long)bPairingmode);
       switch (Command.action) {
         case CONN_REQUEST:
           Debugln("CONN_REQUEST");
@@ -230,7 +234,7 @@ void sendStroomPlanner(){
     return;
   }
   planner_t PlannerData;
-  memset(&PlannerData, 0, sizeof(PlannerData));
+  PlannerData = {};
   PlannerData.msgType = STROOMPLANNER;
 
   if ( !bEID_enabled || StroomPlanData.size() == 0 ) {
@@ -457,7 +461,8 @@ bool sendUpdateViaESPNOWFromHTTP(const char* url) {
     }
 
     if (!chunkSentSuccessfully) {
-      Debugf("Failed to send chunk for offset %u (ID: %u) after %d retries. Aborting update.\n", currentOffset, currentPacketId, MAX_RETRIES);
+      Debugf("Failed to send chunk for offset %lu (ID: %u) after %d retries. Aborting update.\n",
+             (unsigned long)currentOffset, currentPacketId, MAX_RETRIES);
       return false;
     }
 
@@ -498,7 +503,7 @@ void handleP2P(){
                 client_ota_data.manifest,
                 (result == ESP_OK) ? "OK" : "FAILED");
       break;}
-    case UPD_GO_UPDATE:
+    case UPD_GO_UPDATE: {
       Debugln("handleP2P -> UPD_GO_UPDATE");
       {
       String fileName = client_ota_data.file;
@@ -507,10 +512,15 @@ void handleP2P(){
       strlcpy(updateFile, fileName.c_str(), sizeof(updateFile));
       }
       Debugln(updateFile);
-      snprintf(updateURL, sizeof(updateURL),"http://%s%s",client_ota_data.update_url,updateFile);
+      int urlLen = snprintf(updateURL, sizeof(updateURL), "http://%s%s",
+                            client_ota_data.update_url, updateFile);
+      if (urlLen < 0 || urlLen >= (int)sizeof(updateURL)) {
+        Debugln(F("P2P update URL too long"));
+        break;
+      }
       Debugln(updateURL);
       if ( !sendUpdateViaESPNOWFromHTTP(updateURL) ) Debugln("Error in p2p update process");
-      break;
+      break; }
     case OFFSET_ACTION + ASK_PLANNER:
       sendStroomPlanner();
       break;

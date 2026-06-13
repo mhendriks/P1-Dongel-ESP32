@@ -192,6 +192,8 @@ void DetectModule() {
             mb_rts  = RTSPIN;
             break;
 #endif            
+    default:
+            break;
   } //switch
 }
 
@@ -619,7 +621,7 @@ void strConcat(char *dest, int maxLen, float v, int dec)
 void strConcat(char *dest, int maxLen, int32_t v)
 {
   static char buff[25];
-  sprintf(buff,"%d", v);
+  snprintf(buff, sizeof(buff), "%ld", (long)v);
 
   if (strlen(dest) + strlen(buff) < maxLen) 
   {

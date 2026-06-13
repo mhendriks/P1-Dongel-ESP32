@@ -1747,6 +1747,7 @@ function SendNetSwitchJson() {
 	 }
     
 	 nFilecount = json.length - 1; //last object is general information
+	 const fileUrls = json.slice(0, -1).map(file => `/${encodeURIComponent(file.name.replace(/^\/+/, ''))}`);
      let dir = '<table id="FSTable" width=90%>';
 	   for (var i = 0; i < json.length - 1; i++) {
 		 dir += "<tr>";
@@ -1763,8 +1764,15 @@ function SendNetSwitchJson() {
 			 });
 	   });
 	   main.insertAdjacentHTML('beforeend', '</table>');
-//        main.insertAdjacentHTML('beforeend', `<div id='filecount'>Aantal bestanden: ${nFilecount} </div>`);
-       main.insertAdjacentHTML('beforeend', `<div id='filecount'>${t('lbl-fm-files')}: ${nFilecount} </div>`);       
+       main.insertAdjacentHTML('beforeend',
+         `<div id="filecount">
+            <span>${t('lbl-fm-files')}: ${nFilecount}</span>
+            <a id="downloadAllFiles" href="#">Download all</a>
+          </div>`);
+       document.getElementById('downloadAllFiles').addEventListener('click', async event => {
+         event.preventDefault();
+         await downloadFilesSequential(fileUrls);
+       });
 	   main.insertAdjacentHTML('beforeend', `<p id="FSFree">${t('lbl-fm-storage')}: <b>${json[i].usedBytes} ${t('lbl-fm-used')}</b> | ${json[i].totalBytes} ${t('lbl-fm-total')}`);
 	   free = json[i].freeBytes;
 	   fileSize.innerHTML = "<b> &nbsp; </b><p>";    // spacer                
@@ -3488,7 +3496,7 @@ function initModbusMonitorControls() {
 			}
 			else if (i === "mimic") {
 			  const MIMICS = [
-				{ v: 0, t: t("Disabled") },
+				{ v: 0, t: t("mimic-disabled") },
 				{ v: 1, t: "HW P1" },
 				{ v: 2, t: "Shelly Pro 3EM" }
 			  ];
@@ -4373,22 +4381,13 @@ const FALLBACK_TRANSLATIONS = {
     "net-value-off": "Onder",
     "net-intro-2": "Shelly/IO wordt",
     "net-off-state": "Shelly/IO wordt",
-    "net-below-threshold": "Onder drempel",
-    "net-above-threshold": "Vanaf drempel",
-    "net-action-from": "Actie vanaf",
-    "net-action-under": "Actie onder",
     "net-threshold-error": "De terugschakeldrempel moet lager zijn dan de schakeldrempel.",
     "net-unit-watt": "Watt",
     "net-unit-seconds": "seconden",
     "net-on-delay": "Vertraging",
     "net-off-delay": "Vertraging",
-    "tle-web-settings": "Webpagina Instellingen",
-    "lbl-history-graph-order": "X-as historische grafieken",
-    "lbl-history-graph-order-short": "X-as",
     "lbl-history-order-new-to-old-short": "nieuw→oud",
     "lbl-history-order-old-to-new-short": "oud→nieuw",
-    "opt-history-graph-new-to-old": "Nieuw naar oud (standaard)",
-    "opt-history-graph-old-to-new": "Oud naar nieuw",
     "tip-history-graph-new-to-old": "X-as: nieuw naar oud. Klik voor oud naar nieuw.",
     "tip-history-graph-old-to-new": "X-as: oud naar nieuw. Klik voor nieuw naar oud."
   },
@@ -4402,22 +4401,13 @@ const FALLBACK_TRANSLATIONS = {
     "net-value-off": "Below",
     "net-intro-2": "Shelly/IO becomes",
     "net-off-state": "Shelly/IO becomes",
-    "net-below-threshold": "Below threshold",
-    "net-above-threshold": "From threshold",
-    "net-action-from": "Action from",
-    "net-action-under": "Action below",
     "net-threshold-error": "The switch-back threshold must be lower than the switch threshold.",
     "net-unit-watt": "Watt",
     "net-unit-seconds": "seconds",
     "net-on-delay": "Delay",
     "net-off-delay": "Delay",
-    "tle-web-settings": "Web Page Settings",
-    "lbl-history-graph-order": "Historical graph x-axis",
-    "lbl-history-graph-order-short": "X-axis",
     "lbl-history-order-new-to-old-short": "new→old",
     "lbl-history-order-old-to-new-short": "old→new",
-    "opt-history-graph-new-to-old": "Newest to oldest (default)",
-    "opt-history-graph-old-to-new": "Oldest to newest",
     "tip-history-graph-new-to-old": "X-axis: newest to oldest. Click for oldest to newest.",
     "tip-history-graph-old-to-new": "X-axis: oldest to newest. Click for newest to oldest."
   },
@@ -4431,22 +4421,13 @@ const FALLBACK_TRANSLATIONS = {
     "net-value-off": "Unter",
     "net-intro-2": "Shelly/IO wird",
     "net-off-state": "Shelly/IO wird",
-    "net-below-threshold": "Unter Schwelle",
-    "net-above-threshold": "Ab Schwelle",
-    "net-action-from": "Aktion ab",
-    "net-action-under": "Aktion unter",
     "net-threshold-error": "Die Zurückschaltschwelle muss niedriger als die Schaltschwelle sein.",
     "net-unit-watt": "Watt",
     "net-unit-seconds": "Sekunden",
     "net-on-delay": "Verzögerung",
     "net-off-delay": "Verzögerung",
-    "tle-web-settings": "Webseiten Einstellungen",
-    "lbl-history-graph-order": "X-Achse historischer Grafiken",
-    "lbl-history-graph-order-short": "X-Achse",
     "lbl-history-order-new-to-old-short": "neu→alt",
     "lbl-history-order-old-to-new-short": "alt→neu",
-    "opt-history-graph-new-to-old": "Neu nach alt (Standard)",
-    "opt-history-graph-old-to-new": "Alt nach neu",
     "tip-history-graph-new-to-old": "X-Achse: neu nach alt. Klicken fur alt nach neu.",
     "tip-history-graph-old-to-new": "X-Achse: alt nach neu. Klicken fur neu nach alt."
   },
@@ -4460,22 +4441,13 @@ const FALLBACK_TRANSLATIONS = {
     "net-value-off": "Under",
     "net-intro-2": "Shelly/IO blir",
     "net-off-state": "Shelly/IO blir",
-    "net-below-threshold": "Under gräns",
-    "net-above-threshold": "Från gräns",
-    "net-action-from": "Åtgärd från",
-    "net-action-under": "Åtgärd under",
     "net-threshold-error": "Återgångsgränsen måste vara lägre än växlingsgränsen.",
     "net-unit-watt": "Watt",
     "net-unit-seconds": "sekunder",
     "net-on-delay": "Fördröjning",
     "net-off-delay": "Fördröjning",
-    "tle-web-settings": "Inställningar för webbsida",
-    "lbl-history-graph-order": "X-axel for historiska grafer",
-    "lbl-history-graph-order-short": "X-axel",
     "lbl-history-order-new-to-old-short": "ny→gammal",
     "lbl-history-order-old-to-new-short": "gammal→ny",
-    "opt-history-graph-new-to-old": "Nyast till aldst (standard)",
-    "opt-history-graph-old-to-new": "Aldst till nyast",
     "tip-history-graph-new-to-old": "X-axel: nyast till aldst. Klicka for aldst till nyast.",
     "tip-history-graph-old-to-new": "X-axel: aldst till nyast. Klicka for nyast till aldst."
   }

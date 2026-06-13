@@ -18,7 +18,10 @@ struct WorkerStats {
 };
 
 static WorkerStats workerStats = {};
-static volatile bool workerRngRunPermit = false;
+static const uint32_t WORKER_RNG_WRITE_WINDOW_MS = 100;
+static portMUX_TYPE workerRngPermitMux = portMUX_INITIALIZER_UNLOCKED;
+static bool workerRngRunPermit = false;
+static uint32_t workerRngPermitMs = 0;
 static volatile bool workerSolarFetchPending = false;
 static bool workerDeferredRngJobValid = false;
 static WorkerJob workerDeferredRngJob = {};
@@ -48,10 +51,40 @@ static void workerCountDropped(WorkerPriority priority) {
   if (priority <= WORKER_PRIO_LOW) workerStats.dropped[priority]++;
 }
 
+static bool workerRngPermitAvailable() {
+  const uint32_t nowMs = millis();
+  bool available;
+
+  portENTER_CRITICAL(&workerRngPermitMux);
+  if (workerRngRunPermit && (uint32_t)(nowMs - workerRngPermitMs) > WORKER_RNG_WRITE_WINDOW_MS) {
+    workerRngRunPermit = false;
+  }
+  available = workerRngRunPermit;
+  portEXIT_CRITICAL(&workerRngPermitMux);
+
+  return available;
+}
+
+static bool workerRngClaimPermit() {
+  const uint32_t nowMs = millis();
+  bool claimed = false;
+
+  portENTER_CRITICAL(&workerRngPermitMux);
+  if (workerRngRunPermit && (uint32_t)(nowMs - workerRngPermitMs) <= WORKER_RNG_WRITE_WINDOW_MS) {
+    workerRngRunPermit = false;
+    claimed = true;
+  } else {
+    workerRngRunPermit = false;
+  }
+  portEXIT_CRITICAL(&workerRngPermitMux);
+
+  return claimed;
+}
+
 static bool workerReceiveNext(WorkerJob& job) {
   static uint8_t highBudget = WORKER_HIGH_BUDGET;
 
-  if (workerRngRunPermit && workerDeferredRngJobValid) {
+  if (workerDeferredRngJobValid && workerRngPermitAvailable()) {
     job = workerDeferredRngJob;
     workerDeferredRngJobValid = false;
     return true;
@@ -82,12 +115,7 @@ static bool workerReceiveNext(WorkerJob& job) {
 }
 
 static bool workerRngShouldDefer(const WorkerJob& job) {
-  return job.type == WORKER_JOB_RNG_WRITE && !workerRngRunPermit;
-}
-
-static void workerRngConsumePermit(const WorkerJob& job) {
-  if (job.type != WORKER_JOB_RNG_WRITE) return;
-  workerRngRunPermit = false;
+  return job.type == WORKER_JOB_RNG_WRITE && !workerRngClaimPermit();
 }
 
 static void workerHandleJob(const WorkerJob& job) {
@@ -148,7 +176,6 @@ void fWorker(void* pvParameters) {
       }
 
       workerStats.processed++;
-      workerRngConsumePermit(job);
       workerHandleJob(job);
     } else {
       vTaskDelay(20 / portTICK_PERIOD_MS);
@@ -252,7 +279,12 @@ bool WorkerEnqueueSolarFetch() {
 }
 
 void WorkerNotifyP1TelegramOk() {
+  const uint32_t nowMs = millis();
+
+  portENTER_CRITICAL(&workerRngPermitMux);
+  workerRngPermitMs = nowMs;
   workerRngRunPermit = true;
+  portEXIT_CRITICAL(&workerRngPermitMux);
 }
 
 void WorkerPrintStats() {

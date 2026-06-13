@@ -144,7 +144,7 @@ void writeSettingsDirect() {
   docw["ha_unique_ids"] = HAUniqueIds;
   docw["skip-network"] = skipNetwork;
   docw["try_calc_i"] = try_calc_i;
-  docw["mimic"] = mimicsEnabled() ? mimicType : MIMIC_NONE;
+  docw["mimic"] = mimicsEnabled() ? mimicType : (uint8_t)MIMIC_NONE;
 
 
   docw["eid-enabled"] = bEID_enabled;

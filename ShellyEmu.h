@@ -108,18 +108,6 @@ private:
     setJsonNumber(result, "total_act_power", astraTotalPower(phaseA + phaseB + phaseC), 3);
   }
 
-  void fillAstraEm1Status(JsonDocument& doc, int requestId) {
-    const float phaseA = isfinite(P1::pL1()) ? P1::pL1() : 0.0f;
-    const float phaseB = isfinite(P1::pL2()) ? P1::pL2() : 0.0f;
-    const float phaseC = isfinite(P1::pL3()) ? P1::pL3() : 0.0f;
-
-    doc["id"] = requestId;
-    doc["src"] = _id.length() ? _id : makeId();
-
-    JsonObject result = doc["result"].to<JsonObject>();
-    setJsonNumber(result, "act_power", astraTotalPower(phaseA + phaseB + phaseC), 3);
-  }
-
   void handlePacket(AsyncUDPPacket packet) {
     JsonDocument req;  // ArduinoJson 7 dynamisch
     DeserializationError e = deserializeJson(req, packet.data(), packet.length());
@@ -146,13 +134,6 @@ private:
       packet.write((const uint8_t*)out.c_str(), out.length());
       return;
     }
-    if (method.equals(F("EM1.GetStatus"))) {
-      fillAstraEm1Status(resp, resp["id"].as<int>());
-      String out; serializeJson(resp, out);
-      packet.write((const uint8_t*)out.c_str(), out.length());
-      return;
-    }
-
     // Onbekende method -> negeren zoals bij AstraMeter
   }
 } shellyUDP;

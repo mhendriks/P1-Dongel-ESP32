@@ -65,7 +65,14 @@ void startNTP() {
   }
   DebugT(F("NTP Sync interval [sec]: "));Debugln(sntp_get_sync_interval()/1000);
   printLocalTime();
-  sprintf(actTimestamp, "%02d%02d%02d%02d%02d%02d%s\0\0", (tm.tm_year - 100 ), tm.tm_mon + 1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec,DSTactive?"S":"W");  
+  snprintf(actTimestamp, sizeof(actTimestamp), "%02u%02u%02u%02u%02u%02u%c",
+           (unsigned)((tm.tm_year - 100) % 100),
+           (unsigned)(tm.tm_mon + 1),
+           (unsigned)tm.tm_mday,
+           (unsigned)tm.tm_hour,
+           (unsigned)tm.tm_min,
+           (unsigned)tm.tm_sec,
+           DSTactive ? 'S' : 'W');
   
 } // startNTP()
 

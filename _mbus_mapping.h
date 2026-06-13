@@ -86,6 +86,7 @@ static const ActiveRecipe kSdm630Recipes[] = {
 };
 
 static const ActiveRecipe kDtsu666Recipes[] = {
+  {0x000B, 1,    (uint8_t)MbSource::constant,           (uint8_t)ModbusDataType::INT16, 0x00A7},
   {0x2006, 10,   (uint8_t)MbSource::voltage_l1_v,       (uint8_t)ModbusDataType::FLOAT, 0},
   {0x2008, 10,   (uint8_t)MbSource::voltage_l2_v,       (uint8_t)ModbusDataType::FLOAT, 0},
   {0x200A, 10,   (uint8_t)MbSource::voltage_l3_v,       (uint8_t)ModbusDataType::FLOAT, 0},

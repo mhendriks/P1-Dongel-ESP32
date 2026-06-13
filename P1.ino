@@ -153,9 +153,14 @@ static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
       if (Verbose2) DebugTln(F("NTP Time set"));
       if (getLocalTime(&tm)) {
         DSTactive = tm.tm_isdst;
-        sprintf(cMsg, "%02d%02d%02d%02d%02d%02d%s\0\0",
-                (tm.tm_year -100 ), tm.tm_mon + 1, tm.tm_mday,
-                tm.tm_hour, tm.tm_min, tm.tm_sec, DSTactive ? "S" : "W");
+        snprintf(cMsg, sizeof(cMsg), "%02u%02u%02u%02u%02u%02u%c",
+                 (unsigned)((tm.tm_year - 100) % 100),
+                 (unsigned)(tm.tm_mon + 1),
+                 (unsigned)tm.tm_mday,
+                 (unsigned)tm.tm_hour,
+                 (unsigned)tm.tm_min,
+                 (unsigned)tm.tm_sec,
+                 DSTactive ? 'S' : 'W');
       } else {
         strCopy(cMsg, sizeof(cMsg), actTimestamp);
         LogFile("timestamp = old time", true);
@@ -335,7 +340,7 @@ void PrintP1ParseErrorLog() {
   }
 }
 
-static void handleParsedMeter(P1Reader& meter, bool isHan) {
+static void handleParsedMeter(P1FixedReader<2500>& meter, bool isHan) {
   if (!meter.available()) return;
 
   ToggleLED(LED_ON);
@@ -350,7 +355,7 @@ static void handleParsedMeter(P1Reader& meter, bool isHan) {
 #endif
 
   if (showRaw) {
-    Debugf("Raw smart meter data (%d)\n%s\n", CapTelegram.length(), CapTelegram.c_str());
+    Debugf("Raw smart meter data (%u)\n%s\n", (unsigned)CapTelegram.length(), CapTelegram.c_str());
     showRaw = false;
     meter.clear();
     ToggleLED(LED_OFF);
@@ -359,8 +364,10 @@ static void handleParsedMeter(P1Reader& meter, bool isHan) {
 
   telegramCount++;
   if (!bHideP1Log) {
-    DebugTf("meterDataCount=[%d] meterDataErrors=[%d] bufferlength=[%d]\r\n",
-            telegramCount, telegramErrors, CapTelegram.length());
+    DebugTf("meterDataCount=[%lu] meterDataErrors=[%lu] bufferlength=[%u]\r\n",
+            (unsigned long)telegramCount,
+            (unsigned long)telegramErrors,
+            (unsigned)CapTelegram.length());
   }
   MyData DSMRdataNew = {};
   String DSMRerror;
@@ -396,7 +403,7 @@ static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
   }
 
   if (showRaw) {
-    Debugf("Raw smart meter data (%d)\n%s\n", CapTelegram.length(), CapTelegram.c_str());
+    Debugf("Raw smart meter data (%u)\n%s\n", (unsigned)CapTelegram.length(), CapTelegram.c_str());
     showRaw = false;
     meter.clear();
     ToggleLED(LED_OFF);
@@ -405,8 +412,10 @@ static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
 
   telegramCount++;
   if (!bHideP1Log) {
-    DebugTf("meterDataCount=[%d] meterDataErrors=[%d] bufferlength=[%d]\r\n",
-            telegramCount, telegramErrors, CapTelegram.length());
+    DebugTf("meterDataCount=[%lu] meterDataErrors=[%lu] bufferlength=[%u]\r\n",
+            (unsigned long)telegramCount,
+            (unsigned long)telegramErrors,
+            (unsigned)CapTelegram.length());
   }
   MyData DSMRdataNew = {};
   String DSMRerror;
@@ -435,7 +444,7 @@ static void handleParsedMeter(han::HanReader& meter, bool isHan) {
   if (bRawPort) bRawPortTelegramPending = true;
 
   if (showRaw) {
-    Debugf("Raw smart meter data (%d)\n%s\n", CapTelegram.length(), CapTelegram.c_str());
+    Debugf("Raw smart meter data (%u)\n%s\n", (unsigned)CapTelegram.length(), CapTelegram.c_str());
     showRaw = false;
     meter.clear();
     ToggleLED(LED_OFF);
@@ -444,8 +453,10 @@ static void handleParsedMeter(han::HanReader& meter, bool isHan) {
 
   telegramCount++;
   if (!bHideP1Log) {
-    DebugTf("meterDataCount=[%d] meterDataErrors=[%d] bufferlength=[%d]\r\n",
-            telegramCount, telegramErrors, CapTelegram.length());
+    DebugTf("meterDataCount=[%lu] meterDataErrors=[%lu] bufferlength=[%u]\r\n",
+            (unsigned long)telegramCount,
+            (unsigned long)telegramErrors,
+            (unsigned)CapTelegram.length());
   }
   MyData DSMRdataNew = {};
   String DSMRerror;

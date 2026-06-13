@@ -17,7 +17,11 @@ void P1StatusEnd(){
 }
 
 void P1StatusPrint(){
-      DebugTf("P1 Status: reboots[%i] | sloterrors [%i] | Timestamp [%s] | water [%i] m3 [%i] liter\n",P1Status.reboots, P1Status.sloterrors, P1Status.timestamp, P1Status.wtr_m3, P1Status.wtr_l);
+      DebugTf("P1 Status: reboots[%lu] | Timestamp [%s] | water [%lu] m3 [%u] liter\n",
+              (unsigned long)P1Status.reboots,
+              P1Status.timestamp,
+              (unsigned long)P1Status.wtr_m3,
+              (unsigned)P1Status.wtr_l);
   }
 
 void P1StatusDefType(){
@@ -75,7 +79,6 @@ void P1StatusReset(){
 }
 
 void P1StatusClear(){
-//  P1Status.sloterrors = 0;
   P1Status.reboots    = 0;
   P1Status.wtr_m3     = 0;
   P1Status.wtr_l      = 0;

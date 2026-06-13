@@ -160,7 +160,9 @@ bool RemoteUpdateNow(const char* versie, bool sketch, String* errorDetail) {
   vTaskSuspend(tP1Reader);
   esp_task_wdt_delete(tP1Reader);
   
-  Debugf("OTA versie: %s | flashsize: %i Mb\n", _versie.c_str(), (ESP.getFlashChipSize() / 1024.0 / 1024.0));
+  Debugf("OTA versie: %s | flashsize: %lu Mb\n",
+         _versie.c_str(),
+         (unsigned long)(ESP.getFlashChipSize() / 1024UL / 1024UL));
   Debugln("OTA path: " + path);
 
   httpUpdate.onStart(update_started);

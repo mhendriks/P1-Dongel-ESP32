@@ -119,12 +119,14 @@ static inline bool markWifiDisconnected(uint32_t nowMs) {
   return false;
 }
 
+#ifdef ETHERNET
 static bool isZeroMac(const uint8_t *mac){
   for (uint8_t i = 0; i < 6; i++) {
     if (mac[i] != 0x00) return false;
   }
   return true;
 }
+#endif
 
 #ifdef ETHERNET
 static bool readPreferredEthMac(uint8_t *mac){
@@ -301,6 +303,8 @@ void PostMacIP() {
 #ifdef DEBUG  
   DebugT(F("HTTP RequestData: "));Debugln(httpRequestData);
   DebugT(F("HTTP Response code: "));Debugln(httpResponseCode);
+#else
+  (void)httpResponseCode;
 #endif  
 
   http.end();  

@@ -69,6 +69,17 @@ table {
 
 table tr {background: rgba(0,0,0,0.3)}
 
+#filecount {
+  display: flex;
+  width: 100%;
+}
+
+#downloadAllFiles {
+  margin-left: auto;
+  color: #000;
+  text-decoration: underline;
+}
+
 th {
   padding-left: 15px;
   padding-right: 15px;

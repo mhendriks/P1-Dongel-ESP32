@@ -32,10 +32,6 @@ static ApiResponse jsonOkResponse(const String& body) {
   return {200, "application/json", body};
 }
 
-static ApiResponse jsonNoContentResponse() {
-  return {204, "application/json", ""};
-}
-
 static ApiResponse jsonNotFoundResponse(const String& uri = "") {
   JsonDocument doc;
   JsonObject error = doc["error"].to<JsonObject>();
@@ -223,7 +219,7 @@ ApiResponse JsonEIDplanner(){
   JsonDocument doc;
   if ( StroomPlanData.size() == 0 ) {
     doc["h_start"] = 99;
-    doc.createNestedArray("data");
+    doc["data"].to<JsonArray>();
     return jsonDocResponse(doc);
   }
 
@@ -231,7 +227,7 @@ ApiResponse JsonEIDplanner(){
   size_t plannerCount = dataArray.size();
   if (plannerCount == 0) {
     doc["h_start"] = 99;
-    doc.createNestedArray("data");
+    doc["data"].to<JsonArray>();
     return jsonDocResponse(doc);
   }
 
@@ -239,7 +235,7 @@ ApiResponse JsonEIDplanner(){
   if (!timestamp || strlen(timestamp) < 13) {
     DebugTln(F("Ongeldige of ontbrekende timestamp"));
     doc["h_start"] = 99;
-    doc.createNestedArray("data");
+    doc["data"].to<JsonArray>();
     return jsonDocResponse(doc);
   }
 
@@ -347,7 +343,7 @@ static void fillHWapiJson(JsonDocument& jsonDoc) {
     
    // Externe apparaten (zoals gasmeter)
     JsonArray external;
-    if ( mbusGas || WtrMtr ) external = jsonDoc.createNestedArray("external");
+    if ( mbusGas || WtrMtr ) external = jsonDoc["external"].to<JsonArray>();
     // Gasverbruik via M-Bus  
     if ( mbusGas ) {
       jsonDoc["total_gas_m3"] = F3DEC(gasDelivered);
@@ -359,7 +355,7 @@ static void fillHWapiJson(JsonDocument& jsonDoc) {
         mbusGas == 3 ? DSMRdata.mbus3_equipment_id_tc :
         mbusGas == 4 ? DSMRdata.mbus4_equipment_id_tc :
         "";
-      JsonObject gasMeter = external.createNestedObject();
+      JsonObject gasMeter = external.add<JsonObject>();
       gasMeter["unique_id"] = jsonDoc["gas_unique_id"];
       gasMeter["type"] = "gas_meter";
       gasMeter["timestamp"] =  strtoull( gasDeliveredTimestamp.substring(0, gasDeliveredTimestamp.length() - 1).c_str(), nullptr, 10);
@@ -368,7 +364,7 @@ static void fillHWapiJson(JsonDocument& jsonDoc) {
     }
 
     if ( WtrMtr ) {
-      JsonObject waterMeter = external.createNestedObject();
+      JsonObject waterMeter = external.add<JsonObject>();
 
         waterMeter["unique_id"] = 
         mbusWater == 1 ? DSMRdata.mbus1_equipment_id_tc :
@@ -501,7 +497,7 @@ String deviceInfoJson()
   doc["telegramerrors"] = (int)telegramErrors;
 
 #ifndef MQTT_DISABLE
-  snprintf(cMsg, sizeof(cMsg), "%s:%04d", settingMQTTbroker, settingMQTTbrokerPort);
+  snprintf(cMsg, sizeof(cMsg), "%s:%04lu", settingMQTTbroker, (unsigned long)settingMQTTbrokerPort);
   doc["mqttbroker"] = cMsg;
   doc["mqttinterval"] = settingMQTTinterval;
   doc["mqttbroker_connected"] = !bMQTTenabled ? "off" : (MQTTclient.connected() ? "yes" : "no");
@@ -524,11 +520,12 @@ static void fillDeviceSettingsJson(JsonDocument& doc) {
   DebugTln(F("sending device settings ...\r"));
 
   // Helper macro to add a setting to the JSON document
-#define ADD_SETTING(name, type, min, max, value) \
-  doc[name]["value"] = value;                     \
-  doc[name]["type"] = type;                       \
-  doc[name]["min"] = min;                         \
-  doc[name]["max"] = max
+#define ADD_SETTING(name, type, min, max, value) do { \
+  doc[name]["value"] = value;                         \
+  doc[name]["type"] = type;                           \
+  doc[name]["min"] = min;                             \
+  doc[name]["max"] = max;                             \
+} while (0)
 
   ADD_SETTING("hostname", "s", 0, sizeof(settingHostname) - 1, settingHostname);
   if ( !bWarmteLink ) { // IF NO HEATLINK

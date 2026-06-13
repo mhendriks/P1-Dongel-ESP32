@@ -17,9 +17,9 @@ void IRAM_ATTR iWater() {
 
   if (dt >= WATER_MIN_PULSE_US) {
     g_lastPulseUs = nowUs;
-    g_waterPulses++;
+    g_waterPulses = g_waterPulses + 1;
   } else {
-    g_debounces++;
+    g_debounces = g_debounces + 1;
   }
   portEXIT_CRITICAL_ISR(&waterMux);
 }
@@ -69,7 +69,7 @@ void handleWater() {
   P1Status.wtr_l += (int)(newPulses * (float)WtrFactor);
 
   while (P1Status.wtr_l >= 1000) {
-    P1Status.wtr_m3++;
+    P1Status.wtr_m3 = P1Status.wtr_m3 + 1;
     P1Status.wtr_l -= 1000;
     CHANGE_INTERVAL_MS(StatusTimer, 100);
   }
@@ -79,11 +79,11 @@ void handleWater() {
   waterDelivered = waterCurrentM3();
 
   uint32_t deb = waterGetDebounces();
-  DebugTf("Wtr delta readings: %lu | debounces: %lu | waterstand: %im3 en %i liters\n",
+  DebugTf("Wtr delta readings: %lu | debounces: %lu | waterstand: %lum3 en %u liters\n",
           (unsigned long)WtrTimeBetween,
           (unsigned long)deb,
-          P1Status.wtr_m3,
-          P1Status.wtr_l);
+          (unsigned long)P1Status.wtr_m3,
+          (unsigned)P1Status.wtr_l);
 
   WtrTimeBetween = 0;
 }
@@ -95,7 +95,9 @@ void MQTTsendWater() {
     MQTTSend("water", waterDelivered);
     MQTTSend("water_ts", waterDeliveredTimestamp, true);
   } else {
-    sprintf(cMsg, "%d.%3.3d", P1Status.wtr_m3, P1Status.wtr_l);
+    snprintf(cMsg, sizeof(cMsg), "%lu.%03u",
+             (unsigned long)P1Status.wtr_m3,
+             (unsigned)P1Status.wtr_l);
     MQTTSend("water", cMsg, true);
   }
 }

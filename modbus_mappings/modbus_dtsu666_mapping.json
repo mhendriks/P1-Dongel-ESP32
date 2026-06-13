@@ -1,4 +1,5 @@
 [
+  { "register": 11,   "source": "constant",          "scale": 1,    "type": "int16", "value": 167 },
   { "register": 8198, "source": "voltage_l1_v",      "scale": 10,   "type": "float" },
   { "register": 8200, "source": "voltage_l2_v",      "scale": 10,   "type": "float" },
   { "register": 8202, "source": "voltage_l3_v",      "scale": 10,   "type": "float" },
