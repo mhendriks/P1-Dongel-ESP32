@@ -17,6 +17,11 @@
   #define MB_RTU
   #define RTU_SERIAL          Serial2
 
+  // Fixed Modbus RTU pinout for P1UM (Ultra V1 and Mini).
+  #define RXPIN               1
+  #define TXPIN               3
+  #define RTSPIN              2
+  
 #elif defined(ETHERNET)
 
   #define NETSWITCH
