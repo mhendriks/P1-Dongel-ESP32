@@ -7,6 +7,7 @@ static char remoteUpdateState[16] = "idle";
 static char remoteUpdateDetail[64] = "";
 static uint8_t remoteUpdateProgress = 0;
 static uint32_t remoteUpdateQueuedAt = 0;
+static char latestFirmwareVersion[15] = _VERSION_ONLY;
 static const char* const ESPHOME_OTA_ROOT = "http://ota.smart-stuff.nl/esphome/";
 
 static void setRemoteUpdateStatus(const char* state, const char* detail = "") {
@@ -19,6 +20,10 @@ void AppendRemoteUpdateStatus(JsonDocument& doc) {
   ota["state"] = remoteUpdateState;
   ota["progress"] = remoteUpdateProgress;
   ota["detail"] = remoteUpdateDetail;
+}
+
+const char* LatestFirmwareVersion() {
+  return latestFirmwareVersion;
 }
 
 void handleRemoteUpdate(){
@@ -73,6 +78,7 @@ bool QueueRemoteUpdate(const char* versie, bool sketch) {
   remoteUpdateQueuedAt = millis();
   remoteUpdateProgress = 0;
   setRemoteUpdateStatus("queued", versie);
+  MQTTSetHAUpdateState(true, 10);
   return true;
 }
 
@@ -250,6 +256,8 @@ bool CheckNewVersion() {
   if (maj < 0 || min < 0 || fix < 0) return false;
 
   snprintf(manifestVersion, sizeof(manifestVersion), "%d.%d.%d", maj, min, fix);
+  strlcpy(latestFirmwareVersion, manifestVersion, sizeof(latestFirmwareVersion));
+  MQTTSetHAUpdateState(false);
   Debugf("Manifest version : %s\n\r", manifestVersion);
   Debugf("Current version: %d.%d.%d\n\r", _VERSION_MAJOR, _VERSION_MINOR, _VERSION_PATCH);
 
@@ -351,7 +359,7 @@ void update_error(int err) {
 void RemoteUpdate(const char* versie, bool sketch){
   (void)sketch;
   String ignored;
-  RemoteUpdateNow(versie, sketch, &ignored);
+  if (!RemoteUpdateNow(versie, sketch, &ignored)) MQTTSetHAUpdateState(false);
   UpdateRequested = false;
 } //RemoteUpdate
 

@@ -52,17 +52,33 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
+5.8.4
+- SDK 3.3.10
+- add: support of the hex water sensor dongles.
+- fix: P1UM rtu support 
+
 5.9.0
 - SDK 3.3.10
-- 3 button control (a-pair, b-reboot, c=factory reset)
-- tooltips bij de diverse settings (Gerben)
-- Add remote Proxy
-- refactoring targets
-- add wallbox mapping
-- kWh meter als bron voor productie data gebruiken (Harrie)
 - update button in HA to trigger the update (mqtt based #70) 
-   - HA auto update ala : https://www.zigbee2mqtt.io/guide/usage/ota_updates.html#automatic-checking-for-available-updates
+- fix index not found when index file isn't available on cdn
+- add: share crash data in log option
+
+todo:
+- stable en beta option in settings
+- 3 button control (a-pair, b-reboot, c=factory reset)
+- Normalise energy data (huge change)
+- installer web popup via branded popup
+- refactor hardware/build targets and profile configuration
+- add wallbox mapping
 - extra report "jaarbalans": op basis van nog te verwachten maandnw ( Leo B )
+
+5.10.0
+- Add remote Proxy
+- tooltips bij de diverse settings (Gerben)
+
+6.0.0 - sources / targets setup - EMS structure
+- kWh meter als bron voor productie data gebruiken (Harrie)
+- refactoring api's (less / atomic / no units)
 
 */
 
@@ -72,7 +88,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //---  PROFILES  ---
-// #define ULTRA            //ultra (mini) dongle
+#define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       // + D1MC and NRGDH 
@@ -97,6 +113,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define HAN_TESTDATA_RAW
 // #define HAN_TESTDATA_DYNAMIC
 // #define DIRECT_AP_CONNECT 1
+// #define ENABLE_CRASH_BREADCRUMBS 1
 
 #include "DSMRloggerAPI.h"
 #include <esp_task_wdt.h>
@@ -116,10 +133,14 @@ void setup()
   WDT_FEED();
   lastReset = getResetReason();
   DebugT(F("Last reset reason: ")); Debugln(lastReset);
+  CrashLogBegin(lastReset.c_str());
+  CrashLogPrint();
   DebugFlush();
 //================ File System =====================================
   if ( LittleFS.begin(true) ) { DebugTln(F("FS Mount OK\r")); FSmounted = true;  } 
   else DebugTln(F("!!!! FS Mount ERROR\r"));   // Serious problem with File System 
+  CrashLogPersistAbnormalReset();
+  CrashLogMark("boot", __LINE__);
   WDT_FEED();
 //================ Status update ===================================
   WorkerBegin();

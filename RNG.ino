@@ -742,6 +742,7 @@ static bool rngWriteCurrentSnapshotRecord(const WorkerRngPayload& snapshot, E_ri
 }
 
 void RngWriteFromWorker(const WorkerRngPayload& snapshot) {
+  CrashLogMark("rng-write", __LINE__);
   // Ring writes can touch flash and parse/format JSON, so they run from the worker
   // queue instead of the P1 reader path.
   if (!EnableHistory) {

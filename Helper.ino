@@ -14,6 +14,9 @@
 #include "esp_efuse.h"
 #include "esp_efuse_table.h"
 
+#define P1P_H20_B   3
+#define P1P_H20_2   4
+
 // ------------------ ENUMS & CONSTANTS ------------------ //
 enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2, NRGDH, D1MC };
 const char* const HWTypeNames[]  = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S", "P1UX2", "NRGDH", "D1MC" };
@@ -257,6 +260,24 @@ void SetConfig(){
   DetectHW();
   DevTypeMapping();
   DetectModule();
+
+#ifndef ULTRA
+  if (HardwareType == P1P) { // Check for legacy P1P versions
+    switch ( P1Status.dev_type ) {
+      case P1P_H20_B:  UseRGB = true;
+                       IOWater = 0;
+                       WtrMtr = true;
+                       break;
+      case P1P_H20_2:  UseRGB = false;
+                       IOWater = 3;
+                       RxP1 = 4;
+                       TxO1 = 10;
+                       P1Out = true;
+                       WtrMtr = true;
+                       break;
+    } 
+  }
+#endif
 
   //pin modes
   // pinMode(DTR_IO, OUTPUT);

@@ -7,6 +7,32 @@
 #ifndef MQTT_DISABLE 
 
 String MQTTclientId;
+static volatile bool haUpdateStatePending = true;
+static bool haUpdateInProgress = false;
+static uint8_t haUpdateProgress = 0;
+
+static bool MQTTPublishHAUpdateState() {
+  if (!MQTTclient.connected()) return false;
+
+  char stateTopic[sizeof(MQTopTopic) + 20];
+  snprintf(stateTopic, sizeof(stateTopic), "%supdate/state", MQTopTopic);
+
+  JsonDocument doc;
+  doc["installed_version"] = _VERSION_ONLY;
+  doc["latest_version"] = LatestFirmwareVersion();
+  doc["title"] = "DSMR-API Firmware";
+  doc["in_progress"] = haUpdateInProgress;
+  if (haUpdateInProgress) doc["update_percentage"] = haUpdateProgress;
+  else doc["update_percentage"] = nullptr;
+
+  String payload;
+  serializeJson(doc, payload);
+  if (MQTTclient.publish(stateTopic, payload.c_str(), true)) return true;
+
+  DebugTf("Error publish HA update state (%s), MQTT state %d\r\n",
+          stateTopic, MQTTclient.state());
+  return false;
+}
 
 void CreateMacIDTopic() {
   snprintf( MQTopTopic, sizeof(MQTopTopic), "%s%s%s", settingMQTTtopTopic, MacIDinToptopic?macID:"",MacIDinToptopic?"/":"" );
@@ -39,8 +65,15 @@ void StartMqttTask(){
 
 void handleMQTT(){
   MQTTclient.loop();
+  if (haUpdateStatePending) haUpdateStatePending = !MQTTPublishHAUpdateState();
   if ( bSendMQTT ) sendMQTTData();
   MQTTConnect();
+}
+
+void MQTTSetHAUpdateState(bool inProgress, uint8_t progress) {
+  haUpdateInProgress = inProgress;
+  haUpdateProgress = progress;
+  haUpdateStatePending = true;
 }
 
 static void addIfNotEmpty(JsonDocument& doc, const char* key, const char* value) {
@@ -109,6 +142,44 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
   }
 }
 
+static void SendAutoDiscoverHAUpdate() {
+  char configTopic[120];
+  char uniqueId[50];
+  char stateTopic[sizeof(MQTopTopic) + 20];
+  char commandTopic[sizeof(MQTopTopic) + 20];
+  char chipId[24];
+  const char* macSuffix = strlen(macID) > 8 ? macID + strlen(macID) - 8 : macID;
+
+  if (HAUniqueIds) {
+    snprintf(configTopic, sizeof(configTopic), "homeassistant/update/%s-%s/firmware/config", settingHostname, macSuffix);
+    snprintf(uniqueId, sizeof(uniqueId), "firmware_update_%s", macSuffix);
+  } else {
+    snprintf(configTopic, sizeof(configTopic), "homeassistant/update/%s/firmware/config", settingHostname);
+    strlcpy(uniqueId, "firmware_update", sizeof(uniqueId));
+  }
+  snprintf(stateTopic, sizeof(stateTopic), "%supdate/state", MQTopTopic);
+  snprintf(commandTopic, sizeof(commandTopic), "%supdate/install", MQTopTopic);
+  snprintf(chipId, sizeof(chipId), "%llu", (unsigned long long)_getChipId());
+
+  JsonDocument doc;
+  doc["uniq_id"] = uniqueId;
+  doc["dev_cla"] = "firmware";
+  doc["name"] = "DSMR Firmware";
+  doc["stat_t"] = stateTopic;
+  doc["cmd_t"] = commandTopic;
+  doc["pl_inst"] = "install";
+
+  JsonObject dev = doc["dev"].to<JsonObject>();
+  dev["ids"] = chipId;
+  dev["name"] = settingHostname;
+  dev["mdl"] = settingHostname;
+  dev["mf"] = "Smartstuff";
+
+  String payload;
+  serializeJson(doc, payload);
+  MQTTclient.publish(configTopic, payload.c_str(), true);
+}
+
 void AutoDiscoverHA(){
   if (!EnableHAdiscovery) return;
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/p1-dongle-pro/power_delivered/config" -m '{"uniq_id":"power_delivered","dev_cla":"power","name":"Power Delivered","stat_t":"Eth-Dongle-Pro/power_delivered","unit_of_meas":"W","val_tpl":"{{ value | round(3) * 1000 }}","stat_cla":"measurement","dev":{"ids":"36956260","name":"Eth-Dongle-Pro","mdl":"P1 Dongle Pro","mf":"Smartstuff"}}'
@@ -154,6 +225,7 @@ void AutoDiscoverHA(){
 //#endif  
   }
 
+  SendAutoDiscoverHAUpdate();
 }
 
 void MQTTDisconnect(){
@@ -251,11 +323,17 @@ static void MQTTcallback(char* topic, byte* payload, unsigned int len) {
   StrPayload[copyLen] = '\0';
   DebugTraceT(F("Message arrived [")); DebugTrace(StrTopic); DebugTrace(F("] ")); DebugTraceLn(StrPayload);
 
-  if ( StrTopic.indexOf("update") >= 0) {
-    bUpdateSketch = true;
-    strlcpy(UpdateVersion, StrPayload, sizeof(UpdateVersion));
+  char updateTopic[sizeof(MQTopTopic) + 20];
+  char installTopic[sizeof(MQTopTopic) + 20];
+  snprintf(updateTopic, sizeof(updateTopic), "%supdate", MQTopTopic);
+  snprintf(installTopic, sizeof(installTopic), "%supdate/install", MQTopTopic);
+
+  if (strcmp(topic, installTopic) == 0 && strcmp(StrPayload, "install") == 0) {
+    DebugVerboseT(F("HA MQTT install command received"));
+    QueueRemoteUpdate(LatestFirmwareVersion(), true);
+  } else if (strcmp(topic, updateTopic) == 0) {
     DebugVerboseT(F("MQTT update command received"));
-    UpdateRequested = true;
+    QueueRemoteUpdate(StrPayload, true);
   }
   if ( StrTopic.indexOf("interval") >= 0) {
     settingMQTTinterval =  String(StrPayload).toInt();
@@ -315,6 +393,7 @@ void MQTTConnect() {
       
       const char* topics[] = {
           "update",
+          "update/install",
           "interval",
           "reboot",
           "reconfig",
@@ -328,7 +407,8 @@ void MQTTConnect() {
         MQTTclient.subscribe(cMsg);
       }
 
-    if ( EnableHAdiscovery ) AutoDiscoverHA();
+      haUpdateStatePending = !MQTTPublishHAUpdateState();
+      if ( EnableHAdiscovery ) AutoDiscoverHA();
     } else {
       LogFile("MQTT: ... connection FAILED! Will try again in 10 sec", true);
       DebugT("error code: ");Debugln(MQTTclient.state());
@@ -542,6 +622,7 @@ void MQTTSend(const char* item, float value){}
 void MQTTConnect() {}
 void handleMQTT(){}
 void SetupMQTT(){}
+void MQTTSetHAUpdateState(bool inProgress, uint8_t progress){}
 void MQTTDisconnect(){}
 
 #endif

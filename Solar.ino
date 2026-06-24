@@ -88,6 +88,58 @@ static bool smaReadMetricValue(JsonObject dev, const char* key, long& out) {
   return true;
 }
 
+static String smaJsonEscape(const String& value) {
+  String escaped;
+  escaped.reserve(value.length() + 4);
+  for (size_t i = 0; i < value.length(); i++) {
+    char c = value.charAt(i);
+    if (c == '"' || c == '\\') escaped += '\\';
+    escaped += c;
+  }
+  return escaped;
+}
+
+static bool smaReadHttpResponseCapped(HTTPClient& http, String& out) {
+  out = "";
+
+  int len = http.getSize();
+  if (len > 0 && len > (int)SMA_MAX_RESPONSE_LEN) return false;
+  if (!out.reserve(len > 0 ? len : SMA_MAX_RESPONSE_LEN)) return false;
+
+  WiFiClient* stream = http.getStreamPtr();
+  if (!stream) return false;
+
+  uint32_t lastDataMs = millis();
+  while (http.connected() || stream->available()) {
+    int available = stream->available();
+    if (available > 0) {
+      while (available-- > 0) {
+        int c = stream->read();
+        if (c < 0) break;
+        if (out.length() >= SMA_MAX_RESPONSE_LEN) {
+          out = "";
+          return false;
+        }
+        out += (char)c;
+      }
+      lastDataMs = millis();
+      WDT_FEED();
+      if (len > 0 && out.length() >= (size_t)len) break;
+      continue;
+    }
+
+    if ((uint32_t)(millis() - lastDataMs) > 5000) {
+      out = "";
+      return false;
+    }
+    delay(1);
+    WDT_FEED();
+  }
+
+  out.trim();
+  return out.length() > 0 && out.startsWith("{");
+}
+
 static bool smaHttpPOST(const String& url, const String& body, String& out) {
   out = "";
   HTTPClient http;
@@ -97,6 +149,7 @@ static bool smaHttpPOST(const String& url, const String& body, String& out) {
   bool beginOk = false;
   if (https) {
     clientTLS = new WiFiClientSecure();
+    if (!clientTLS) return false;
     clientTLS->setInsecure();
     beginOk = http.begin(*clientTLS, url);
   } else {
@@ -115,29 +168,7 @@ static bool smaHttpPOST(const String& url, const String& body, String& out) {
   int rc = http.POST(body);
   WDT_FEED();
   if (rc == 200) {
-    int len = http.getSize();
-    if (len > 0 && len > (int)SMA_MAX_RESPONSE_LEN) {
-      http.end();
-      WDT_FEED();
-      if (clientTLS) delete clientTLS;
-      return false;
-    }
-    out = http.getString();
-    if (out.length() > SMA_MAX_RESPONSE_LEN) {
-      out = "";
-      http.end();
-      WDT_FEED();
-      if (clientTLS) delete clientTLS;
-      return false;
-    }
-    out.trim();
-    if (!out.startsWith("{")) {
-      out = "";
-      http.end();
-      WDT_FEED();
-      if (clientTLS) delete clientTLS;
-      return false;
-    }
+    if (!smaReadHttpResponseCapped(http, out)) out = "";
   }
   http.end();
   WDT_FEED();
@@ -148,7 +179,7 @@ static bool smaHttpPOST(const String& url, const String& body, String& out) {
 static bool smaLogin(const String& baseUrl, const String& password, const char* right = "usr") {
   String resp;
   String url  = baseUrl + "/dyn/login.json";
-  String body = String("{\"pass\":\"") + password + "\",\"right\":\"" + right + "\"}";
+  String body = String("{\"pass\":\"") + smaJsonEscape(password) + "\",\"right\":\"" + right + "\"}";
   if (!smaHttpPOST(url, body, resp)) { _sma_sid = ""; DebugTln("Error smaHttpPOST"); return false; }
   JsonDocument doc;
   if (deserializeJson(doc, resp))     { _sma_sid = ""; DebugTln("Error sma deserializeJson error"); return false; }
@@ -166,15 +197,15 @@ static bool smaGetPacAndDay(const String& baseUrl, long& pac_W, long& day_Wh) {
   String url  = baseUrl + "/dyn/getValues.json?sid=" + _sma_sid;
   // SMA metric keys: 6100_40263F00 = current AC power, 6400_00262200 = daily yield.
   String body = "{\"destDev\":[],\"keys\":[\"6100_40263F00\",\"6400_00262200\"]}";
-  if (!smaHttpPOST(url, body, resp)) { DebugTln("Error smaHttpPOST values"); return false; }
+  if (!smaHttpPOST(url, body, resp)) { _sma_sid = ""; DebugTln("Error smaHttpPOST values"); return false; }
   JsonDocument doc;
-  if (deserializeJson(doc, resp)) return false;
+  if (deserializeJson(doc, resp)) { _sma_sid = ""; return false; }
 
   JsonObject result = doc["result"];
-  if (result.isNull()) return false;
-  auto it = result.begin(); if (it == result.end()) return false;
+  if (result.isNull()) { _sma_sid = ""; return false; }
+  auto it = result.begin(); if (it == result.end()) { _sma_sid = ""; return false; }
   JsonObject dev = it->value();
-  if (dev.isNull()) return false;
+  if (dev.isNull()) { _sma_sid = ""; return false; }
 
   long pac = 0;
   long day = 0;
@@ -241,6 +272,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
 
   if (!solarSystem->Available) return;
   if (!forceUpdate && ((uptime() - solarSystem->LastRefresh) < solarSystem->Interval)) return;
+  CrashLogMark(src == SMA ? "solar-sma" : "solar-fetch", __LINE__);
   solarSystem->LastRefresh = uptime();
   uint32_t fetchStartMs = millis();
 
@@ -424,6 +456,8 @@ void GetSolarDataNFromWorker() {
 }
 
 void GetSolarDataN() {
+  if (RngWritePending()) return;
+
   static uint32_t nextScheduleMs = 0;
   uint32_t now = millis();
   if ((int32_t)(now - nextScheduleMs) < 0) return;

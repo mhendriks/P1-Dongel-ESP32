@@ -168,6 +168,17 @@ SmartMeterHandle smartMeter(slimmeMeter, hanMeter);
 portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 
 void LogFile(const char* payload, bool toDebug = false);
+#if ENABLE_CRASH_BREADCRUMBS
+void CrashLogBegin(const char* resetReason);
+void CrashLogMark(const char* tag, uint16_t line = 0);
+void CrashLogPrint();
+void CrashLogPersistAbnormalReset();
+#else
+static inline void CrashLogBegin(const char*) {}
+static inline void CrashLogMark(const char*, uint16_t = 0) {}
+static inline void CrashLogPrint() {}
+static inline void CrashLogPersistAbnormalReset() {}
+#endif
 bool EnsureIndexFilePresent();
 void P1StatusWrite();
 void P1StatusWriteDirect();
@@ -181,7 +192,9 @@ void RemoteUpdate();
 bool QueueRemoteUpdate(const char* versie, bool sketch);
 bool RemoteUpdateAvailable(const char* versie, String* errorDetail = nullptr);
 bool RemoteUpdateNow(const char* versie, bool sketch, String* errorDetail = nullptr);
+const char* LatestFirmwareVersion();
 void AppendRemoteUpdateStatus(JsonDocument& doc);
+void MQTTSetHAUpdateState(bool inProgress, uint8_t progress = 0);
 void P1Reboot();
 void EIDPostHello(ApiResponse* response = nullptr);
 void SendTariffData();

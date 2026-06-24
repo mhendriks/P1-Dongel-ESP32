@@ -12,6 +12,13 @@
   #define ENABLE_MIMICS 1
 #endif
 
+#ifndef ENABLE_CRASH_BREADCRUMBS
+  #define ENABLE_CRASH_BREADCRUMBS 0
+#endif
+#ifndef ENABLE_CRASH_COREDUMP_SUMMARY
+  #define ENABLE_CRASH_COREDUMP_SUMMARY ENABLE_CRASH_BREADCRUMBS
+#endif
+
 // Direct AP closed-network mode.
 // Optional local customer settings can be placed in ../../_secrets/direct_ap.h.
 #if __has_include("./../../_secrets/direct_ap.h")

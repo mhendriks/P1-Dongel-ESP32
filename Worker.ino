@@ -118,6 +118,10 @@ static bool workerRngShouldDefer(const WorkerJob& job) {
   return job.type == WORKER_JOB_RNG_WRITE && !workerRngClaimPermit();
 }
 
+static bool workerSolarShouldDefer() {
+  return RngWritePending() || workerDeferredRngJobValid;
+}
+
 static void workerHandleJob(const WorkerJob& job) {
   switch (job.type) {
     case WORKER_JOB_NONE:
@@ -148,6 +152,11 @@ static void workerHandleJob(const WorkerJob& job) {
       break;
 
     case WORKER_JOB_SOLAR_FETCH:
+      if (workerSolarShouldDefer()) {
+        workerSolarFetchPending = false;
+        DebugVerboseTln(F("Worker: solar fetch deferred during RNG write"));
+        break;
+      }
       GetSolarDataNFromWorker();
       workerSolarFetchPending = false;
       break;
