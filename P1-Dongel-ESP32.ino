@@ -52,18 +52,18 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.8.4
-- SDK 3.3.10
-- add: support of the hex water sensor dongles.
-- fix: P1UM rtu support 
+5.8.5
+- fix: hex watermeter 
 
 5.9.0
 - SDK 3.3.10
 - update button in HA to trigger the update (mqtt based #70) 
 - fix index not found when index file isn't available on cdn
 - add: share crash data in log option
+- fix: modbus DTSU666 power values incorrect scale
 
 todo:
+- dynamic prices 
 - stable en beta option in settings
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - Normalise energy data (huge change)
@@ -88,10 +88,10 @@ todo:
 // #define XTRA_LOG
 
 //---  PROFILES  ---
-#define ULTRA            //ultra (mini) dongle
+// #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE       // + D1MC and NRGDH 
+#define NRG_DONGLE       // + D1MC and NRGDH 
 // #define _P1P
 
 //SPECIAL

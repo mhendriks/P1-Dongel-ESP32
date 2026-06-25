@@ -93,10 +93,10 @@ static const ActiveRecipe kDtsu666Recipes[] = {
   {0x200C, 1000, (uint8_t)MbSource::current_l1_a,       (uint8_t)ModbusDataType::FLOAT, 0},
   {0x200E, 1000, (uint8_t)MbSource::current_l2_a,       (uint8_t)ModbusDataType::FLOAT, 0},
   {0x2010, 1000, (uint8_t)MbSource::current_l3_a,       (uint8_t)ModbusDataType::FLOAT, 0},
-  {0x2012, 100,  (uint8_t)MbSource::net_power_total_kw,  (uint8_t)ModbusDataType::FLOAT, 0},
-  {0x2014, 100,  (uint8_t)MbSource::net_power_l1_kw,     (uint8_t)ModbusDataType::FLOAT, 0},
-  {0x2016, 100,  (uint8_t)MbSource::net_power_l2_kw,     (uint8_t)ModbusDataType::FLOAT, 0},
-  {0x2018, 100,  (uint8_t)MbSource::net_power_l3_kw,     (uint8_t)ModbusDataType::FLOAT, 0},
+  {0x2012, 10000, (uint8_t)MbSource::net_power_total_kw, (uint8_t)ModbusDataType::FLOAT, 0},
+  {0x2014, 10000, (uint8_t)MbSource::net_power_l1_kw,    (uint8_t)ModbusDataType::FLOAT, 0},
+  {0x2016, 10000, (uint8_t)MbSource::net_power_l2_kw,    (uint8_t)ModbusDataType::FLOAT, 0},
+  {0x2018, 10000, (uint8_t)MbSource::net_power_l3_kw,    (uint8_t)ModbusDataType::FLOAT, 0},
 };
 
 static const ActiveRecipe kAlfenSocomecRecipes[] = {
