@@ -52,10 +52,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.8.4
-- SDK 3.3.10
-- add: support of the hex water sensor dongles
-- fix: P1UM rtu support
 
 5.9.0
 - SDK 3.3.10
