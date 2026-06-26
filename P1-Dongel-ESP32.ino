@@ -52,27 +52,29 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.8.5
-- fix: hex watermeter 
 
-5.9.0
-- SDK 3.3.10
+5.8.6
 - update button in HA to trigger the update (mqtt based #70) 
 - fix index not found when index file isn't available on cdn
 - add: share crash data in log option
 - fix: modbus DTSU666 power values incorrect scale
+- fix: skip network crash
+- fix: older hex dongle h2o support
 
-todo:
-- dynamic prices 
-- stable en beta option in settings
-- 3 button control (a-pair, b-reboot, c=factory reset)
+5.9.0
 - Normalise energy data (huge change)
+
+5.9.x
+- dynamic prices 
+- 3 button control (a-pair, b-reboot, c=factory reset)
 - installer web popup via branded popup
 - refactor hardware/build targets and profile configuration
 - add wallbox mapping
 - extra report "jaarbalans": op basis van nog te verwachten maandnw ( Leo B )
 
 5.10.0
+- add option to see total counter remotely
+- stable or beta update option in settings
 - Add remote Proxy
 - tooltips bij de diverse settings (Gerben)
 
