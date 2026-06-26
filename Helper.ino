@@ -246,22 +246,7 @@ void DevTypeMapping(){
   UseRGB    = (dc.rgb >= 0);
   IOWater   = dc.water;
 
-  DebugTf(
-    "Pins: button=%d RGB=%d statusLED=%d Rx=%d HanIO=%d Tx=%d DTR=%d LED_out=%d P1Out=%d Water=%d UseRGB=%d Hostname=%s\n",
-    button_io, rgbled_io, statusled, RxP1, HanIO, TxO1, DTR_out, LED_out, P1Out, IOWater, UseRGB, settingHostname
-  );
-
-  // W5500 RESET handling = ENABLE ETH
-  if ( HardwareType == P1UX2 && HardwareVersion >= 101 ) pinWriteIfValid(dc.eth_rst, HIGH);   // disable W5500 RESET only 1.1+ hardware
-
-}
-
-void SetConfig(){
-  DetectHW();
-  DevTypeMapping();
-  DetectModule();
-
-#ifndef ULTRA
+  #ifndef ULTRA
   if (HardwareType == P1P) { // Check for legacy P1P versions
     switch ( P1Status.dev_type ) {
       case P1P_H20_B:  UseRGB = true;
@@ -278,6 +263,21 @@ void SetConfig(){
     } 
   }
 #endif
+
+  DebugTf(
+    "Pins: button=%d RGB=%d statusLED=%d Rx=%d HanIO=%d Tx=%d DTR=%d LED_out=%d P1Out=%d Water=%d UseRGB=%d Hostname=%s\n",
+    button_io, rgbled_io, statusled, RxP1, HanIO, TxO1, DTR_out, LED_out, P1Out, IOWater, UseRGB, settingHostname
+  );
+
+  // W5500 RESET handling = ENABLE ETH
+  if ( HardwareType == P1UX2 && HardwareVersion >= 101 ) pinWriteIfValid(dc.eth_rst, HIGH);   // disable W5500 RESET only 1.1+ hardware
+
+}
+
+void SetConfig(){
+  DetectHW();
+  DevTypeMapping();
+  DetectModule();
 
   //pin modes
   // pinMode(DTR_IO, OUTPUT);

@@ -64,6 +64,7 @@ static void apiWsEvent(uint8_t clientNum, WStype_t type, uint8_t* payload, size_
 }
 
 void setupApiWebSocket() {
+  if (skipNetwork) return;
   if (strlen(bAuthUser)) apiWs.setAuthorization(bAuthUser, bAuthPW);
   apiWs.onEvent(apiWsEvent);
   apiWs.enableHeartbeat(15000, 3000, 2);
@@ -76,6 +77,7 @@ void apiWsMarkLiveDirty() {
 }
 
 void handleApiWebSocket() {
+  if (skipNetwork) return;
   apiWs.loop();
   if (!apiWs.connectedClients()) return;
 

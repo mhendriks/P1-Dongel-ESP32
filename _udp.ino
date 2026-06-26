@@ -290,6 +290,7 @@ static bool ebUdpSend(const EB_Payload& p) {
 EB_Payload g_payload;
 
 void UdpBegin() {
+  if ( skipNetwork ) return;
 
   g_udpCryptoReady = false;
   bool keyOk = ebLoadOrCreateKeypair();
@@ -349,6 +350,7 @@ void ebUdpSetStatc(){
 void handleUDP() {
   static bool udpCheckOnce = false;
 
+  if ( skipNetwork ) return;
   if (!New_P1_UDP || !bUDPenabled || !g_udpCryptoReady ) return;
 
   DebugTraceTln(F("UDP -- PUSH"));

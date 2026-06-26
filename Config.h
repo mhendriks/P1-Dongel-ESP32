@@ -88,6 +88,7 @@ struct dev_conf {
     int8_t p1_in_rx;
     int8_t p1_in_dtr;
     int8_t han_io;
+    
     int8_t p1_out_tx;
     int8_t p1_out_dtr;
     int8_t p1_out_led;
@@ -105,7 +106,7 @@ struct dev_conf {
 dev_conf device_config[] = {
   // -- GENERAL --  ----------- P1/HAN ------------  -------- ETH --------- 
   { _DEFAULT_HOSTNAME,-1, -1, -1, -1,  -1, -1, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // UNDETECTED
-  { "P1-Dongle-Pro",   9, -1,  7,  5,  10,  6, -1,  -1,  1,  0,  -1, -1, -1, -1, -1, -1 }, // P1P (ESP32C3 - P1 Dongle Pro)
+  { "P1-Dongle-Pro",   9, -1,  7,  5,  10,  6, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // P1P (ESP32C3 - P1 Dongle Pro)
   { "NRG-Dongle-Pro",  9, -1,  3, -1,  20, -1, -1,  10,  1,  0,  -1, -1, -1, -1, -1, -1 }, // NRGD (ESP32C3 - NRG Dongle Pro)
   { "Eth-Dongle-Pro",  9,  8,  3, -1,   7,  0, -1,  -1, -1, -1,   1,  5,  6,  4, 10, -1 }, // P1E (ETH)
   { "Eth-Dongle-Pro",  9, -1,  8, -1,   0, -1, -1,   7,  3, -1,   6,  4,  5, 10,  1, -1 }, // P1EP (ETH)
