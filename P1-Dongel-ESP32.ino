@@ -52,10 +52,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-
-5.8.7
-- fix WebSocket live-update retry (Win 11 / FF issue) 
-
 5.9.0
 - Normalise energy data (huge change)
 

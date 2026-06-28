@@ -7,9 +7,10 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-#define ACTUALELEMENTS  22
-#define INFOELEMENTS     3
-#define FIELDELEMENTS    1
+
+#define ACTUALELEMENTS  (sizeof(actualArray) / sizeof(actualArray[0]))
+#define INFOELEMENTS    (sizeof(infoArray) / sizeof(infoArray[0]))
+#define FIELDELEMENTS   1
 
 byte fieldsElements = 0;
 char Onefield[25];
