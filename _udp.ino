@@ -256,9 +256,12 @@ static void ebUpdateDynamic(EB_Payload& p, uint64_t epochSeconds) {
   if (DSMRdata.voltage_l3_present) p.dy.vrms3 = DSMRdata.voltage_l3.int_val();
   
   // ---- current ----
-  if (DSMRdata.current_l1_present) p.dy.i1 = (p.dy.pactive1<0? -1 : 1) * (int32_t)DSMRdata.current_l1.int_val();
-  if (DSMRdata.current_l2_present) p.dy.i2 = (p.dy.pactive2<0? -1 : 1) * (int32_t)DSMRdata.current_l2.int_val();
-  if (DSMRdata.current_l3_present) p.dy.i3 = (p.dy.pactive3<0? -1 : 1) * (int32_t)DSMRdata.current_l3.int_val();
+  MeterCurrent currentL1 = GetMeterCurrent(1);
+  MeterCurrent currentL2 = GetMeterCurrent(2);
+  MeterCurrent currentL3 = GetMeterCurrent(3);
+  if (currentL1.present) p.dy.i1 = (p.dy.pactive1<0? -1 : 1) * (int32_t)currentL1.mA;
+  if (currentL2.present) p.dy.i2 = (p.dy.pactive2<0? -1 : 1) * (int32_t)currentL2.mA;
+  if (currentL3.present) p.dy.i3 = (p.dy.pactive3<0? -1 : 1) * (int32_t)currentL3.mA;
   p.dy.in = p.dy.i1 + p.dy.i2 + p.dy.i3;
 
   if (!ebSignRange(p.dy.ecdsa_md, &p.dy.seqno, (const uint8_t*)&p.dy.energyNeg + sizeof(p.dy.energyNeg))) {
@@ -339,8 +342,11 @@ void ebUdpSetStatc(){
   CAP_PREACTTOT
   CAP_POWFACT
 */
-  g_payload.dy.capability = (DSMRdata.voltage_l1_present?CAP_VRMS:0) | (DSMRdata.current_l1_present?CAP_I:0) | CAP_PACTIVE | CAP_PACTIVETOT | CAP_ENERGYPOS | CAP_ENERGYNEG; // cf. spec 3.3 voorbeeld :contentReference[oaicite:44]{index=44}
-  g_payload.dy.phasemask = (DSMRdata.voltage_l2_present && !DSMRdata.voltage_l2?PH_N:0) | (DSMRdata.current_l1_present?PH_L1:0 ) | (DSMRdata.current_l2_present?PH_L2:0) | (DSMRdata.current_l3_present?PH_L3:0);
+  MeterCurrent currentL1 = GetMeterCurrent(1);
+  MeterCurrent currentL2 = GetMeterCurrent(2);
+  MeterCurrent currentL3 = GetMeterCurrent(3);
+  g_payload.dy.capability = (DSMRdata.voltage_l1_present?CAP_VRMS:0) | (currentL1.present?CAP_I:0) | CAP_PACTIVE | CAP_PACTIVETOT | CAP_ENERGYPOS | CAP_ENERGYNEG; // cf. spec 3.3 voorbeeld :contentReference[oaicite:44]{index=44}
+  g_payload.dy.phasemask = (DSMRdata.voltage_l2_present && !DSMRdata.voltage_l2?PH_N:0) | (currentL1.present?PH_L1:0 ) | (currentL2.present?PH_L2:0) | (currentL3.present?PH_L3:0);
   uint8_t phases = (DSMRdata.voltage_l1_present?1:0) + (DSMRdata.voltage_l2_present?1:0) + (DSMRdata.voltage_l3_present?1:0);
   EBTopology topo = (EBTopology) phases;
   if ( phases == 3 && DSMRdata.voltage_l2.int_val() < 1000 ) topo = TOPO_DELTA;

@@ -171,6 +171,8 @@ static constexpr int kModbusMappingFroniusSunSpec203 = 15;
 #include "_mbus_mapping.h"
 
 static float mbSignedCurrent(float current, float returned);
+static float mbCurrentA(uint8_t phase);
+static float mbCurrentmA(uint8_t phase, float sign);
 static float readMbSourceValue(MbSource source);
 static float readScaledMbSourceValue(MbSource source, int16_t scale);
 static bool readMbSourceUInt32(MbSource source, int16_t scale, uint32_t value, uint32_t& outValue);
@@ -183,28 +185,32 @@ static float mbSignedCurrent(float current, float returned) {
   return current * (returned ? -1.0f : 1.0f);
 }
 
+static float mbCurrentA(uint8_t phase) {
+  MeterCurrent current = GetMeterCurrent(phase);
+  return current.present ? (current.mA / 1000.0f) : NAN;
+}
+
+static float mbCurrentmA(uint8_t phase, float sign) {
+  MeterCurrent current = GetMeterCurrent(phase);
+  return current.present ? sign * (float)current.mA : NAN;
+}
+
 static float readMbSourceValue(MbSource source) {
   switch (source) {
     case MbSource::timestamp_epoch:
       return (float)(actT - (actTimestamp[12] == 'S' ? 7200 : 3600));
     case MbSource::energy_delivered_tariff1_kwh:
-      return (DSMRdata.energy_delivered_tariff1_present && !bUseEtotals) ? DSMRdata.energy_delivered_tariff1.val() : NAN;
+      return (DSMRdata.energy_delivered_tariff1_present && !meterState.capabilities.energyTotalsOnly) ? DSMRdata.energy_delivered_tariff1.val() : NAN;
     case MbSource::energy_delivered_tariff2_kwh:
-      return (DSMRdata.energy_delivered_tariff2_present && !bUseEtotals) ? DSMRdata.energy_delivered_tariff2.val() : NAN;
+      return (DSMRdata.energy_delivered_tariff2_present && !meterState.capabilities.energyTotalsOnly) ? DSMRdata.energy_delivered_tariff2.val() : NAN;
     case MbSource::energy_returned_tariff1_kwh:
-      return (DSMRdata.energy_returned_tariff1_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff1.val() : NAN;
+      return (DSMRdata.energy_returned_tariff1_present && !meterState.capabilities.energyTotalsOnly) ? DSMRdata.energy_returned_tariff1.val() : NAN;
     case MbSource::energy_returned_tariff2_kwh:
-      return (DSMRdata.energy_returned_tariff2_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff2.val() : NAN;
+      return (DSMRdata.energy_returned_tariff2_present && !meterState.capabilities.energyTotalsOnly) ? DSMRdata.energy_returned_tariff2.val() : NAN;
     case MbSource::energy_delivered_total_kwh:
-      return DSMRdata.energy_delivered_total_present
-        ? DSMRdata.energy_delivered_total.val()
-        : ((DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) +
-           (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f));
+      return meterState.derived.deliveredTotalPresent ? meterState.derived.deliveredTotalWh / 1000.0f : NAN;
     case MbSource::energy_returned_total_kwh:
-      return DSMRdata.energy_returned_total_present
-        ? DSMRdata.energy_returned_total.val()
-        : ((DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
-           (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f));
+      return meterState.derived.returnedTotalPresent ? meterState.derived.returnedTotalWh / 1000.0f : NAN;
     case MbSource::energy_total_abs_kwh: {
       const float delivered = readMbSourceValue(MbSource::energy_delivered_total_kwh);
       const float returned = readMbSourceValue(MbSource::energy_returned_total_kwh);
@@ -257,7 +263,7 @@ static float readMbSourceValue(MbSource source) {
     case MbSource::power_returned_kw:
       return DSMRdata.power_returned_present ? DSMRdata.power_returned.val() : NAN;
     case MbSource::net_power_total_kw:
-      return DSMRdata.power_delivered_present ? (DSMRdata.power_delivered.val() - DSMRdata.power_returned.val()) : NAN;
+      return meterState.derived.netPowerPresent ? meterState.derived.netPowerW / 1000.0f : NAN;
     case MbSource::voltage_l1_v:
       return DSMRdata.voltage_l1_present ? (float)DSMRdata.voltage_l1.val() : NAN;
     case MbSource::voltage_l2_v:
@@ -273,35 +279,53 @@ static float readMbSourceValue(MbSource source) {
       return count ? (value / (float)count) : NAN;
     }
     case MbSource::current_l1_a:
-      return DSMRdata.current_l1_present ? (float)DSMRdata.current_l1.val() : NAN;
+      return mbCurrentA(1);
     case MbSource::current_l2_a:
-      return DSMRdata.current_l2_present ? (float)DSMRdata.current_l2.val() : NAN;
+      return mbCurrentA(2);
     case MbSource::current_l3_a:
-      return DSMRdata.current_l3_present ? (float)DSMRdata.current_l3.val() : NAN;
-    case MbSource::current_total_a:
-      return DSMRdata.current_l1_present
-        ? (float)(DSMRdata.current_l1.val() + DSMRdata.current_l2.val() + DSMRdata.current_l3.val())
+      return mbCurrentA(3);
+    case MbSource::current_total_a: {
+      MeterCurrent currentL1 = GetMeterCurrent(1);
+      MeterCurrent currentL2 = GetMeterCurrent(2);
+      MeterCurrent currentL3 = GetMeterCurrent(3);
+      return (currentL1.present || currentL2.present || currentL3.present)
+        ? ((currentL1.present ? currentL1.mA / 1000.0f : 0.0f) +
+           (currentL2.present ? currentL2.mA / 1000.0f : 0.0f) +
+           (currentL3.present ? currentL3.mA / 1000.0f : 0.0f))
         : NAN;
-    case MbSource::signed_current_l1_a:
-      return DSMRdata.current_l1_present ? mbSignedCurrent((float)DSMRdata.current_l1.val(), DSMRdata.power_returned_l1.val()) : NAN;
-    case MbSource::signed_current_l2_a:
-      return DSMRdata.current_l2_present ? mbSignedCurrent((float)DSMRdata.current_l2.val(), DSMRdata.power_returned_l2.val()) : NAN;
-    case MbSource::signed_current_l3_a:
-      return DSMRdata.current_l3_present ? mbSignedCurrent((float)DSMRdata.current_l3.val(), DSMRdata.power_returned_l3.val()) : NAN;
+    }
+    case MbSource::signed_current_l1_a: {
+      float current = mbCurrentA(1);
+      return isnan(current) ? NAN : mbSignedCurrent(current, DSMRdata.power_returned_l1.val());
+    }
+    case MbSource::signed_current_l2_a: {
+      float current = mbCurrentA(2);
+      return isnan(current) ? NAN : mbSignedCurrent(current, DSMRdata.power_returned_l2.val());
+    }
+    case MbSource::signed_current_l3_a: {
+      float current = mbCurrentA(3);
+      return isnan(current) ? NAN : mbSignedCurrent(current, DSMRdata.power_returned_l3.val());
+    }
     case MbSource::gas_timestamp_epoch:
-      return mbusGas ? (float)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600)) : NAN;
+      return meterState.capabilities.mbusGasPort ? (float)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600)) : NAN;
     case MbSource::gas_delivered_m3:
-      return mbusGas ? (float)gasDelivered : NAN;
+      return meterState.capabilities.mbusGasPort ? (float)gasDelivered : NAN;
     case MbSource::electricity_tariff:
       return DSMRdata.electricity_tariff_present ? (float)atoi(DSMRdata.electricity_tariff.c_str()) : NAN;
     case MbSource::peak_pwr_last_q_kw:
       return DSMRdata.peak_pwr_last_q_present ? (float)DSMRdata.peak_pwr_last_q.val() : NAN;
-    case MbSource::net_power_l1_kw:
-      return DSMRdata.power_delivered_l1_present ? (float)(DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val()) : NAN;
-    case MbSource::net_power_l2_kw:
-      return DSMRdata.power_delivered_l2_present ? (float)(DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val()) : NAN;
-    case MbSource::net_power_l3_kw:
-      return DSMRdata.power_delivered_l3_present ? (float)(DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val()) : NAN;
+    case MbSource::net_power_l1_kw: {
+      MeterPower power = GetMeterPhasePower(1);
+      return power.present ? power.W / 1000.0f : NAN;
+    }
+    case MbSource::net_power_l2_kw: {
+      MeterPower power = GetMeterPhasePower(2);
+      return power.present ? power.W / 1000.0f : NAN;
+    }
+    case MbSource::net_power_l3_kw: {
+      MeterPower power = GetMeterPhasePower(3);
+      return power.present ? power.W / 1000.0f : NAN;
+    }
     case MbSource::power_factor_total: {
       float value = readMbSourceValue(MbSource::net_power_total_kw);
       return isnan(value) ? NAN : (value < 0.0f ? -1.0f : 1.0f);
@@ -344,7 +368,7 @@ static float readMbSourceValue(MbSource source) {
       return value / 3.0f;
     }
     case MbSource::water_delivered_m3:
-      return mbusWater ? (float)waterDelivered
+      return meterState.capabilities.mbusWaterPort ? (float)waterDelivered
                        : (WtrMtr ? (float)(P1Status.wtr_m3 + (P1Status.wtr_l / 1000.0f)) : NAN);
     case MbSource::unavailable_float:
       return NAN;
@@ -376,21 +400,21 @@ static float readScaledMbSourceValue(MbSource source, int16_t scale) {
   if (scale == 10000 || scale == -10000) {
     switch (source) {
       case MbSource::net_power_total_kw:
-        return DSMRdata.power_delivered_present
-          ? sign * (float)(((int32_t)DSMRdata.power_delivered.int_val() - (int32_t)DSMRdata.power_returned.int_val()) * 10)
+        return meterState.derived.netPowerPresent
+          ? sign * (float)(meterState.derived.netPowerW * 10)
           : NAN;
-      case MbSource::net_power_l1_kw:
-        return DSMRdata.power_delivered_l1_present
-          ? sign * (float)(((int32_t)DSMRdata.power_delivered_l1.int_val() - (int32_t)DSMRdata.power_returned_l1.int_val()) * 10)
-          : NAN;
-      case MbSource::net_power_l2_kw:
-        return DSMRdata.power_delivered_l2_present
-          ? sign * (float)(((int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val()) * 10)
-          : NAN;
-      case MbSource::net_power_l3_kw:
-        return DSMRdata.power_delivered_l3_present
-          ? sign * (float)(((int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val()) * 10)
-          : NAN;
+      case MbSource::net_power_l1_kw: {
+        MeterPower power = GetMeterPhasePower(1);
+        return power.present ? sign * (float)(power.W * 10) : NAN;
+      }
+      case MbSource::net_power_l2_kw: {
+        MeterPower power = GetMeterPhasePower(2);
+        return power.present ? sign * (float)(power.W * 10) : NAN;
+      }
+      case MbSource::net_power_l3_kw: {
+        MeterPower power = GetMeterPhasePower(3);
+        return power.present ? sign * (float)(power.W * 10) : NAN;
+      }
       default: {
         float value = readMbSourceValue(source);
         return isnan(value) ? NAN : value * scale;
@@ -400,23 +424,17 @@ static float readScaledMbSourceValue(MbSource source, int16_t scale) {
 
   switch (source) {
     case MbSource::energy_delivered_tariff1_kwh:
-      return (DSMRdata.energy_delivered_tariff1_present && !bUseEtotals) ? sign * DSMRdata.energy_delivered_tariff1.int_val() : NAN;
+      return (DSMRdata.energy_delivered_tariff1_present && !meterState.capabilities.energyTotalsOnly) ? sign * DSMRdata.energy_delivered_tariff1.int_val() : NAN;
     case MbSource::energy_delivered_tariff2_kwh:
-      return (DSMRdata.energy_delivered_tariff2_present && !bUseEtotals) ? sign * DSMRdata.energy_delivered_tariff2.int_val() : NAN;
+      return (DSMRdata.energy_delivered_tariff2_present && !meterState.capabilities.energyTotalsOnly) ? sign * DSMRdata.energy_delivered_tariff2.int_val() : NAN;
     case MbSource::energy_returned_tariff1_kwh:
-      return (DSMRdata.energy_returned_tariff1_present && !bUseEtotals) ? sign * DSMRdata.energy_returned_tariff1.int_val() : NAN;
+      return (DSMRdata.energy_returned_tariff1_present && !meterState.capabilities.energyTotalsOnly) ? sign * DSMRdata.energy_returned_tariff1.int_val() : NAN;
     case MbSource::energy_returned_tariff2_kwh:
-      return (DSMRdata.energy_returned_tariff2_present && !bUseEtotals) ? sign * DSMRdata.energy_returned_tariff2.int_val() : NAN;
+      return (DSMRdata.energy_returned_tariff2_present && !meterState.capabilities.energyTotalsOnly) ? sign * DSMRdata.energy_returned_tariff2.int_val() : NAN;
     case MbSource::energy_delivered_total_kwh:
-      return DSMRdata.energy_delivered_total_present
-        ? sign * DSMRdata.energy_delivered_total.int_val()
-        : sign * ((DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.int_val() : 0) +
-                  (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.int_val() : 0));
+      return meterState.derived.deliveredTotalPresent ? sign * (float)meterState.derived.deliveredTotalWh : NAN;
     case MbSource::energy_returned_total_kwh:
-      return DSMRdata.energy_returned_total_present
-        ? sign * DSMRdata.energy_returned_total.int_val()
-        : sign * ((DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.int_val() : 0) +
-                  (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.int_val() : 0));
+      return meterState.derived.returnedTotalPresent ? sign * (float)meterState.derived.returnedTotalWh : NAN;
     case MbSource::power_delivered_kw:
       return DSMRdata.power_delivered_present ? sign * DSMRdata.power_delivered.int_val() : NAN;
     case MbSource::power_returned_kw:
@@ -436,37 +454,42 @@ static float readScaledMbSourceValue(MbSource source, int16_t scale) {
       return count ? sign * (float)(value / count) : NAN;
     }
     case MbSource::current_l1_a:
-      return DSMRdata.current_l1_present ? sign * (float)DSMRdata.current_l1.int_val() : NAN;
+      return mbCurrentmA(1, sign);
     case MbSource::current_l2_a:
-      return DSMRdata.current_l2_present ? sign * (float)DSMRdata.current_l2.int_val() : NAN;
+      return mbCurrentmA(2, sign);
     case MbSource::current_l3_a:
-      return DSMRdata.current_l3_present ? sign * (float)DSMRdata.current_l3.int_val() : NAN;
-    case MbSource::current_total_a:
-      return DSMRdata.current_l1_present
-        ? sign * (float)(DSMRdata.current_l1.int_val() + DSMRdata.current_l2.int_val() + DSMRdata.current_l3.int_val())
+      return mbCurrentmA(3, sign);
+    case MbSource::current_total_a: {
+      MeterCurrent currentL1 = GetMeterCurrent(1);
+      MeterCurrent currentL2 = GetMeterCurrent(2);
+      MeterCurrent currentL3 = GetMeterCurrent(3);
+      return (currentL1.present || currentL2.present || currentL3.present)
+        ? sign * (float)(
+            (currentL1.present ? currentL1.mA : 0) +
+            (currentL2.present ? currentL2.mA : 0) +
+            (currentL3.present ? currentL3.mA : 0))
         : NAN;
+    }
     case MbSource::peak_pwr_last_q_kw:
       return DSMRdata.peak_pwr_last_q_present ? sign * DSMRdata.peak_pwr_last_q.int_val() : NAN;
     case MbSource::net_power_total_kw:
-      return DSMRdata.power_delivered_present
-        ? sign * (float)((int32_t)DSMRdata.power_delivered.int_val() - (int32_t)DSMRdata.power_returned.int_val())
-        : NAN;
-    case MbSource::net_power_l1_kw:
-      return DSMRdata.power_delivered_l1_present
-        ? sign * (float)((int32_t)DSMRdata.power_delivered_l1.int_val() - (int32_t)DSMRdata.power_returned_l1.int_val())
-        : NAN;
-    case MbSource::net_power_l2_kw:
-      return DSMRdata.power_delivered_l2_present
-        ? sign * (float)((int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val())
-        : NAN;
-    case MbSource::net_power_l3_kw:
-      return DSMRdata.power_delivered_l3_present
-        ? sign * (float)((int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val())
-        : NAN;
+      return meterState.derived.netPowerPresent ? sign * (float)meterState.derived.netPowerW : NAN;
+    case MbSource::net_power_l1_kw: {
+      MeterPower power = GetMeterPhasePower(1);
+      return power.present ? sign * (float)power.W : NAN;
+    }
+    case MbSource::net_power_l2_kw: {
+      MeterPower power = GetMeterPhasePower(2);
+      return power.present ? sign * (float)power.W : NAN;
+    }
+    case MbSource::net_power_l3_kw: {
+      MeterPower power = GetMeterPhasePower(3);
+      return power.present ? sign * (float)power.W : NAN;
+    }
     case MbSource::gas_delivered_m3:
-      return mbusGas ? sign * (float)lroundf((float)gasDelivered * 1000.0f) : NAN;
+      return meterState.capabilities.mbusGasPort ? sign * (float)lroundf((float)gasDelivered * 1000.0f) : NAN;
     case MbSource::water_delivered_m3:
-      return mbusWater ? sign * (float)lroundf(waterDelivered * 1000.0f)
+      return meterState.capabilities.mbusWaterPort ? sign * (float)lroundf(waterDelivered * 1000.0f)
                        : (WtrMtr ? sign * (float)(P1Status.wtr_m3 * 1000 + P1Status.wtr_l) : NAN);
     default: {
       float value = readMbSourceValue(source);
@@ -488,7 +511,7 @@ static bool readMbSourceUInt32(MbSource source, int16_t scale, uint32_t value, u
       outValue = (uint32_t)(actT - (actTimestamp[12] == 'S' ? 7200 : 3600));
       return true;
     case MbSource::gas_timestamp_epoch:
-      if (!mbusGas) return false;
+      if (!meterState.capabilities.mbusGasPort) return false;
       outValue = (uint32_t)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600));
       return true;
     case MbSource::electricity_tariff:

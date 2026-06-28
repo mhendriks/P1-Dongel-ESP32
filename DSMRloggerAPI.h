@@ -71,6 +71,52 @@ struct ApiRequestContext {
   String uri;
 };
 
+struct MeterCurrent {
+  bool present = false;
+  bool calculated = false;
+  uint32_t mA = 0;
+};
+
+struct MeterPower {
+  bool present = false;
+  int32_t W = 0;
+};
+
+struct MeterVoltage {
+  bool present = false;
+  uint32_t mV = 0;
+};
+
+struct MeterCapabilities {
+  bool isHan = false;
+  bool energyTotalsOnly = false;
+  bool heatLink = false;
+  bool hasPhaseVoltage = false;
+  bool fastTelegram = true;
+  byte mbusGasPort = 0;
+  byte mbusWaterPort = 0;
+};
+
+struct MeterDerived {
+  bool deliveredTotalPresent = false;
+  bool returnedTotalPresent = false;
+  bool netPowerPresent = false;
+  bool calculatedCurrentL1Present = false;
+  bool calculatedCurrentL2Present = false;
+  bool calculatedCurrentL3Present = false;
+  uint32_t deliveredTotalWh = 0;
+  uint32_t returnedTotalWh = 0;
+  int32_t netPowerW = 0;
+  uint32_t calculatedCurrentL1mA = 0;
+  uint32_t calculatedCurrentL2mA = 0;
+  uint32_t calculatedCurrentL3mA = 0;
+};
+
+struct MeterState {
+  MeterCapabilities capabilities;
+  MeterDerived derived;
+};
+
 #ifdef MBUS
   #include "ModbusServerWiFi.h"
 #endif
@@ -202,6 +248,12 @@ void EID_RESTART_IDLE_TIMER();
 uint32_t actueleOverspanningSeconden(uint32_t overspanningTotaal, unsigned long startTijd, bool overspanning);
 void ResetOvervoltageStats();
 String smActualJsonDebug();
+void UpdateMeterDerived();
+MeterCurrent GetMeterCurrent(uint8_t phase);
+MeterPower GetMeterPhasePower(uint8_t phase);
+MeterVoltage GetMeterVoltage(uint8_t phase);
+
+MeterState meterState;
 
 WebServer httpServer(80);
 WebSocketsServer apiWs(81);
@@ -476,13 +528,11 @@ extern bool overspanningActiefL3;
 bool        showRaw = false;
 bool        LEDenabled    = true;
 // bool        DSMR_NL       = true;
-bool        bUseEtotals   = false;
 bool        EnableHAdiscovery = true;
 bool        bHideP1Log = false;
 char        bAuthUser[25]="", bAuthPW[25]="";
 bool        EnableHistory = true;
 bool        bPre40 = false;
-bool        bWarmteLink = false;
 bool        bActJsonMQTT = false;
 bool        bRawPort = false;
 volatile bool bRawPortTelegramPending = false;
@@ -490,7 +540,6 @@ bool        bLED_PRT = true;
 bool        bModbusMonitor = false;
 bool        P1Out = false;
 bool        bNewTelegramWebhook = false;
-bool        bV5meter = true;
 bool        bP1offline = true;
 time_t      last_telegram_t = 0;
 uint32_t    P1error_cnt_sequence = 0;
@@ -550,8 +599,6 @@ uint32_t   settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;
 bool      UpdateRequested = false;
-byte      mbusGas = 0;
-byte      mbusWater = 0;
 float     waterDelivered;
 String    waterDeliveredTimestamp;
 String    mbusDeliveredTimestamp;

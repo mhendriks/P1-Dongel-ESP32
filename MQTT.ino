@@ -184,7 +184,7 @@ void AutoDiscoverHA(){
   if (!EnableHAdiscovery) return;
 //mosquitto_pub -h 192.168.2.250 -p 1883 -t "homeassistant/sensor/p1-dongle-pro/power_delivered/config" -m '{"uniq_id":"power_delivered","dev_cla":"power","name":"Power Delivered","stat_t":"Eth-Dongle-Pro/power_delivered","unit_of_meas":"W","val_tpl":"{{ value | round(3) * 1000 }}","stat_cla":"measurement","dev":{"ids":"36956260","name":"Eth-Dongle-Pro","mdl":"P1 Dongle Pro","mf":"Smartstuff"}}'
 //#ifndef HEATLINK
-  if ( ! bWarmteLink ) { // IF NO HEATLINK  
+  if ( ! meterState.capabilities.heatLink ) { // IF NO HEATLINK
     SendAutoDiscoverHA("timestamp", "timestamp", "DSMR Last Update", "", "{{ strptime(value[:-1] + '-+0200' if value[12] == 'S' else value[:-1] + '-+0100', '%y%m%d%H%M%S-%z') }}","", "\"icon\": \"mdi:clock\",");
     SendAutoDiscoverHA("uptime", "duration", "Uptime", "s", "","","");
 
@@ -513,7 +513,7 @@ void MQTTSentStaticInfo(){
 void MQTTsendGas(){
   if (!gasDelivered) return;
 //#ifdef HEATLINK
-  if ( bWarmteLink ) { // IF HEATLINK
+  if ( meterState.capabilities.heatLink ) { // IF HEATLINK
   MQTTSend( "heat_delivered", gasDelivered );
 //  MQTTSend( "heat_delivered_ts", gasDeliveredTimestamp ); // double: because device timestamp is equal
 //#else
@@ -525,11 +525,18 @@ void MQTTsendGas(){
 }
 
 void MQTTSendVictronData(){
-  auto gridPower = [](auto delivered, auto returned) -> int32_t {
-    return (int32_t)((delivered.int_val() + returned.int_val()) * (returned ? -1.0 : 1.0));
+  auto gridPower = [](uint8_t phase) -> int32_t {
+    MeterPower power = GetMeterPhasePower(phase);
+    return power.present ? power.W : 0;
   };
-  auto fixedValue = [](auto value, uint8_t decimals) -> float {
-    float scaled = value.int_val() / 1000.0f;
+  auto currentValue = [](uint8_t phase) -> float {
+    MeterCurrent current = GetMeterCurrent(phase);
+    return current.present ? roundf(current.mA / 1000.0f) : 0.0f;
+  };
+  auto voltageValue = [](uint8_t phase, uint8_t decimals) -> float {
+    MeterVoltage voltage = GetMeterVoltage(phase);
+    if (!voltage.present) return 0.0f;
+    float scaled = voltage.mV / 1000.0f;
     if (decimals == 0) return roundf(scaled);
     if (decimals == 1) return roundf(scaled * 10.0f) / 10.0f;
     return scaled;
@@ -537,22 +544,22 @@ void MQTTSendVictronData(){
 
   JsonDocument doc;
   JsonObject grid = doc["grid"].to<JsonObject>();
-  grid["power"] = gridPower(DSMRdata.power_delivered, DSMRdata.power_returned);
+  grid["power"] = meterState.derived.netPowerW;
 
   JsonObject l1 = grid["L1"].to<JsonObject>();
-  l1["power"] = gridPower(DSMRdata.power_delivered_l1, DSMRdata.power_returned_l1);
-  l1["voltage"] = fixedValue(DSMRdata.voltage_l1, 1);
-  l1["current"] = fixedValue(DSMRdata.current_l1, 0);
+  l1["power"] = gridPower(1);
+  l1["voltage"] = voltageValue(1, 1);
+  l1["current"] = currentValue(1);
 
   JsonObject l2 = grid["L2"].to<JsonObject>();
-  l2["power"] = gridPower(DSMRdata.power_delivered_l2, DSMRdata.power_returned_l2);
-  l2["voltage"] = fixedValue(DSMRdata.voltage_l2, 1);
-  l2["current"] = fixedValue(DSMRdata.current_l2, 0);
+  l2["power"] = gridPower(2);
+  l2["voltage"] = voltageValue(2, 1);
+  l2["current"] = currentValue(2);
 
   JsonObject l3 = grid["L3"].to<JsonObject>();
-  l3["power"] = gridPower(DSMRdata.power_delivered_l3, DSMRdata.power_returned_l3);
-  l3["voltage"] = fixedValue(DSMRdata.voltage_l3, 1);
-  l3["current"] = fixedValue(DSMRdata.current_l3, 0);
+  l3["power"] = gridPower(3);
+  l3["voltage"] = voltageValue(3, 1);
+  l3["current"] = currentValue(3);
 
   String jsondata;
   serializeJson(doc, jsondata);
@@ -593,7 +600,7 @@ void sendMQTTData() {
         jsonDoc["water"]    = waterDelivered;
         jsonDoc["water_ts"] = waterDeliveredTimestamp;
       }
-      if ( mbusGas ) {
+      if ( meterState.capabilities.mbusGasPort ) {
         jsonDoc["gas"]      = gasDelivered;
         jsonDoc["gas_ts"]   = gasDeliveredTimestamp;
       }

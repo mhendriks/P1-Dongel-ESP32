@@ -443,7 +443,7 @@
       
       Json += "}";
       
-      if ( mbusGas ) {
+      if ( meterState.capabilities.mbusGasPort ) {
         Json += JsonBuildMBus("g", epoch(gasDeliveredTimestamp.c_str(), 10, false) - utc_comp, (int)(gasDelivered*1000.0));
       }
 

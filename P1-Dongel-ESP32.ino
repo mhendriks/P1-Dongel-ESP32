@@ -52,17 +52,29 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-
-5.8.6
-- update button in HA to trigger the update (mqtt based #70) 
-- fix index not found when index file isn't available on cdn
-- add: share crash data in log option
-- fix: modbus DTSU666 power values incorrect scale
-- fix: skip network crash
-- fix: older hex dongle h2o support
+5.8.7
+### Fixed
+- Peak power MQTT missing
+- Dashboard when only total energy is available
 
 5.9.0
-- Normalise energy data (huge change)
+### Changed
+- Refactored smart meter processing around a new `MeterState` layer.
+- Separated source meter data from derived values and meter capabilities.
+- Added `meterState.capabilities` for meter profile information such as HAN, M-Bus gas/water, total-only meters, and phase voltage support.
+- Added `meterState.derived` for shared derived values such as total import/export energy, net power, and calculated phase currents.
+- Centralized phase current selection for JSON, MQTT, Modbus, Shelly emulation, UDP, and statistics.
+- Improved handling for meters that expose total energy registers but no tariff registers.
+- Updated Modbus total energy and net power handling to use the shared derived/accessor layer.
+
+### Fixed
+- Prevented calculated phase currents from being written back into source meter data.
+- Removed legacy synthetic phase power normalization for meters without real per-phase power data.
+- Preserved current fallback behavior for meters where calculated current cannot be derived from phase voltage and phase power.
+
+
+### Internal
+- Prepared the meter processing layer for future meter sources such as Linky.
 
 5.9.x
 - dynamic prices 
@@ -70,9 +82,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - installer web popup via branded popup
 - refactor hardware/build targets and profile configuration
 - add wallbox mapping
-- extra report "jaarbalans": op basis van nog te verwachten maandnw ( Leo B )
 
 5.10.0
+- extra report "jaarbalans": op basis van nog te verwachten maandnw ( Leo B )
 - add option to see total counter remotely
 - stable or beta update option in settings
 - Add remote Proxy
@@ -90,10 +102,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //---  PROFILES  ---
-// #define ULTRA            //ultra (mini) dongle
+#define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-#define NRG_DONGLE       // + D1MC and NRGDH 
+// #define NRG_DONGLE       // + D1MC and NRGDH 
 // #define _P1P
 
 //SPECIAL

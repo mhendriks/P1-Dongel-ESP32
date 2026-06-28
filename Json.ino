@@ -7,16 +7,16 @@
 **  TERMS OF USE: MIT License. See bottom of file.                                                            
 ***************************************************************************      
 */
-#define ACTUALELEMENTS  22
-#define INFOELEMENTS     3
-#define FIELDELEMENTS    1
-
 byte fieldsElements = 0;
 char Onefield[25];
 bool onlyIfPresent = false;
 
 const static PROGMEM char infoArray[][25]   = { "identification","p1_version","equipment_id" }; //waardes dient redelijk statisch zijn niet elke keer versturen
 const static PROGMEM char actualArray[][25] = { "timestamp","electricity_tariff","energy_delivered_tariff1","energy_delivered_tariff2","energy_returned_tariff1","energy_returned_tariff2","energy_delivered_total","energy_returned_total","power_delivered","power_returned","voltage_l1","voltage_l2","voltage_l3","current_l1","current_l2","current_l3","power_delivered_l1","power_delivered_l2","power_delivered_l3","power_returned_l1","power_returned_l2","power_returned_l3","peak_pwr_last_q", "highest_peak_pwr"};
+
+#define ACTUALELEMENTS  (sizeof(actualArray) / sizeof(actualArray[0]))
+#define INFOELEMENTS    (sizeof(infoArray) / sizeof(infoArray[0]))
+#define FIELDELEMENTS   1
 
 JsonDocument jsonDoc;  // generic doc to return, clear() before use!
 
@@ -112,9 +112,12 @@ ApiResponse dashLiveApiResponse() {
   if (power.size() == 0) doc.remove("power");
 
   JsonObject current = doc["current"].to<JsonObject>();
-  if (DSMRdata.current_l1_present) current["l1"] = DSMRdata.current_l1.val();
-  if (DSMRdata.current_l2_present) current["l2"] = DSMRdata.current_l2.val();
-  if (DSMRdata.current_l3_present) current["l3"] = DSMRdata.current_l3.val();
+  MeterCurrent currentL1 = GetMeterCurrent(1);
+  MeterCurrent currentL2 = GetMeterCurrent(2);
+  MeterCurrent currentL3 = GetMeterCurrent(3);
+  if (currentL1.present) current["l1"] = currentL1.mA / 1000.0f;
+  if (currentL2.present) current["l2"] = currentL2.mA / 1000.0f;
+  if (currentL3.present) current["l3"] = currentL3.mA / 1000.0f;
   if (current.size() == 0) doc.remove("current");
 
   JsonObject voltage = doc["voltage"].to<JsonObject>();
@@ -138,11 +141,11 @@ ApiResponse dashLiveApiResponse() {
     gas["timestamp"] = gasDeliveredTimestamp;
   }
 
-  if (WtrMtr || mbusWater) {
+  if (WtrMtr || meterState.capabilities.mbusWaterPort) {
     JsonObject water = doc["water"].to<JsonObject>();
-    water["delivered"] = mbusWater ? (int)(waterDelivered * 1000) / 1000.0
+    water["delivered"] = meterState.capabilities.mbusWaterPort ? (int)(waterDelivered * 1000) / 1000.0
                                    : (float)P1Status.wtr_m3 + (P1Status.wtr_l ? P1Status.wtr_l / 1000.0 : 0);
-    if (mbusWater) water["timestamp"] = waterDeliveredTimestamp;
+    if (meterState.capabilities.mbusWaterPort) water["timestamp"] = waterDeliveredTimestamp;
   }
 
   JsonObject peak = doc["peak"].to<JsonObject>();
@@ -163,9 +166,12 @@ ApiResponse dashLiveApiResponse() {
 String apiStatsJson() {
   return jsonResponse([&](JsonDocument& doc){
     
-    if ( DSMRdata.current_l1_present ) doc["I1piek"]  = P1Stats.I1piek;
-    if ( DSMRdata.current_l2_present ) doc["I2piek"]  = P1Stats.I2piek;
-    if ( DSMRdata.current_l3_present ) doc["I3piek"]  = P1Stats.I3piek;
+    MeterCurrent currentL1 = GetMeterCurrent(1);
+    MeterCurrent currentL2 = GetMeterCurrent(2);
+    MeterCurrent currentL3 = GetMeterCurrent(3);
+    if ( currentL1.present ) doc["I1piek"]  = P1Stats.I1piek;
+    if ( currentL2.present ) doc["I2piek"]  = P1Stats.I2piek;
+    if ( currentL3.present ) doc["I3piek"]  = P1Stats.I3piek;
     
     if ( DSMRdata.power_delivered_l1_present ) doc["P1max"]   = P1Stats.P1max;
     if ( DSMRdata.power_delivered_l2_present ) doc["P2max"]   = P1Stats.P2max;
@@ -251,8 +257,8 @@ ApiResponse JsonEIDplanner(){
 
 void JsonWater(){
 
-  if ( !WtrMtr && !mbusWater ) return;  
-  if ( mbusWater) {
+  if ( !WtrMtr && !meterState.capabilities.mbusWaterPort ) return;
+  if ( meterState.capabilities.mbusWaterPort) {
     jsonDoc["water"]["value"] =  (int)(waterDelivered*1000)/1000.0;
     jsonDoc["water_delivered_ts"]["value"] = waterDeliveredTimestamp;
   } else {
@@ -303,27 +309,36 @@ static void fillHWapiJson(JsonDocument& jsonDoc) {
 
     // Energieverbruik en teruglevering
     jsonDoc["active_tariff"] = DSMRdata.electricity_tariff.toInt();
-    jsonDoc["total_power_import_kwh"] = F3DEC(DSMRdata.energy_delivered_total.val());
+    jsonDoc["total_power_import_kwh"] = F3DEC(meterState.derived.deliveredTotalWh / 1000.0f);
     jsonDoc["total_power_import_t1_kwh"] = F3DEC(DSMRdata.energy_delivered_tariff1.val());
     jsonDoc["total_power_import_t2_kwh"] = F3DEC(DSMRdata.energy_delivered_tariff2.val());
-    jsonDoc["total_power_export_kwh"] = F3DEC(DSMRdata.energy_returned_total.val());
+    jsonDoc["total_power_export_kwh"] = F3DEC(meterState.derived.returnedTotalWh / 1000.0f);
     jsonDoc["total_power_export_t1_kwh"] = F3DEC(DSMRdata.energy_returned_tariff1.val());
     jsonDoc["total_power_export_t2_kwh"] = F3DEC(DSMRdata.energy_returned_tariff2.val());
 
     // Huidige stroomwaarden
-    jsonDoc["active_power_w"] = (int32_t)(DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val());
-    jsonDoc["active_power_l1_w"] = (int32_t)(DSMRdata.power_delivered_l1.int_val() - DSMRdata.power_returned_l1.int_val());
-    jsonDoc["active_power_l2_w"] = (int32_t)(DSMRdata.power_delivered_l2.int_val() - DSMRdata.power_returned_l2.int_val());
-    jsonDoc["active_power_l3_w"] = (int32_t)(DSMRdata.power_delivered_l3.int_val() - DSMRdata.power_returned_l3.int_val());
+    jsonDoc["active_power_w"] = meterState.derived.netPowerW;
+    MeterPower powerL1 = GetMeterPhasePower(1);
+    MeterPower powerL2 = GetMeterPhasePower(2);
+    MeterPower powerL3 = GetMeterPhasePower(3);
+    jsonDoc["active_power_l1_w"] = powerL1.present ? powerL1.W : 0;
+    jsonDoc["active_power_l2_w"] = powerL2.present ? powerL2.W : 0;
+    jsonDoc["active_power_l3_w"] = powerL3.present ? powerL3.W : 0;
     
     // Spanning en stroom
-    jsonDoc["active_voltage_l1_v"] = F3DEC(DSMRdata.voltage_l1.val());
-    jsonDoc["active_voltage_l2_v"] = F3DEC(DSMRdata.voltage_l2.val());
-    jsonDoc["active_voltage_l3_v"] = F3DEC(DSMRdata.voltage_l3.val());
+    MeterVoltage voltageL1 = GetMeterVoltage(1);
+    MeterVoltage voltageL2 = GetMeterVoltage(2);
+    MeterVoltage voltageL3 = GetMeterVoltage(3);
+    jsonDoc["active_voltage_l1_v"] = F3DEC(voltageL1.present ? voltageL1.mV / 1000.0f : 0.0f);
+    jsonDoc["active_voltage_l2_v"] = F3DEC(voltageL2.present ? voltageL2.mV / 1000.0f : 0.0f);
+    jsonDoc["active_voltage_l3_v"] = F3DEC(voltageL3.present ? voltageL3.mV / 1000.0f : 0.0f);
 
-    float i1 = (DSMRdata.voltage_l1_present&&DSMRdata.voltage_l1.val())?jsonDoc["active_power_l1_w"].as<float>()/DSMRdata.voltage_l1.val():0.0f;
-    float i2 = (DSMRdata.voltage_l2_present&&DSMRdata.voltage_l2.val())?jsonDoc["active_power_l2_w"].as<float>()/DSMRdata.voltage_l2.val():0.0f;
-    float i3 = (DSMRdata.voltage_l3_present&&DSMRdata.voltage_l3.val())?jsonDoc["active_power_l3_w"].as<float>()/DSMRdata.voltage_l3.val():0.0f;
+    MeterCurrent currentL1 = GetMeterCurrent(1);
+    MeterCurrent currentL2 = GetMeterCurrent(2);
+    MeterCurrent currentL3 = GetMeterCurrent(3);
+    float i1 = currentL1.present ? currentL1.mA / 1000.0f : 0.0f;
+    float i2 = currentL2.present ? currentL2.mA / 1000.0f : 0.0f;
+    float i3 = currentL3.present ? currentL3.mA / 1000.0f : 0.0f;
 
     jsonDoc["active_current_a"]    = F3DEC( abs(i1) + abs(i2) + abs(i3) );
     jsonDoc["active_current_l1_a"] = F3DEC(i1);
@@ -343,17 +358,17 @@ static void fillHWapiJson(JsonDocument& jsonDoc) {
     
    // Externe apparaten (zoals gasmeter)
     JsonArray external;
-    if ( mbusGas || WtrMtr ) external = jsonDoc["external"].to<JsonArray>();
+    if ( meterState.capabilities.mbusGasPort || WtrMtr ) external = jsonDoc["external"].to<JsonArray>();
     // Gasverbruik via M-Bus  
-    if ( mbusGas ) {
+    if ( meterState.capabilities.mbusGasPort ) {
       jsonDoc["total_gas_m3"] = F3DEC(gasDelivered);
       jsonDoc["gas_timestamp"] = strtoull( gasDeliveredTimestamp.substring(0, gasDeliveredTimestamp.length() - 1).c_str(), nullptr, 10);
       
      jsonDoc["gas_unique_id"] = 
-        mbusGas == 1 ? DSMRdata.mbus1_equipment_id_tc :
-        mbusGas == 2 ? DSMRdata.mbus2_equipment_id_tc :
-        mbusGas == 3 ? DSMRdata.mbus3_equipment_id_tc :
-        mbusGas == 4 ? DSMRdata.mbus4_equipment_id_tc :
+        meterState.capabilities.mbusGasPort == 1 ? DSMRdata.mbus1_equipment_id_tc :
+        meterState.capabilities.mbusGasPort == 2 ? DSMRdata.mbus2_equipment_id_tc :
+        meterState.capabilities.mbusGasPort == 3 ? DSMRdata.mbus3_equipment_id_tc :
+        meterState.capabilities.mbusGasPort == 4 ? DSMRdata.mbus4_equipment_id_tc :
         "";
       JsonObject gasMeter = external.add<JsonObject>();
       gasMeter["unique_id"] = jsonDoc["gas_unique_id"];
@@ -367,17 +382,17 @@ static void fillHWapiJson(JsonDocument& jsonDoc) {
       JsonObject waterMeter = external.add<JsonObject>();
 
         waterMeter["unique_id"] = 
-        mbusWater == 1 ? DSMRdata.mbus1_equipment_id_tc :
-        mbusWater == 2 ? DSMRdata.mbus2_equipment_id_tc :
-        mbusWater == 3 ? DSMRdata.mbus3_equipment_id_tc :
-        mbusWater == 4 ? DSMRdata.mbus4_equipment_id_tc :
+        meterState.capabilities.mbusWaterPort == 1 ? DSMRdata.mbus1_equipment_id_tc :
+        meterState.capabilities.mbusWaterPort == 2 ? DSMRdata.mbus2_equipment_id_tc :
+        meterState.capabilities.mbusWaterPort == 3 ? DSMRdata.mbus3_equipment_id_tc :
+        meterState.capabilities.mbusWaterPort == 4 ? DSMRdata.mbus4_equipment_id_tc :
         "8369788379824579787689"; //SENSOR-ONLY
 
-      // waterMeter["unique_id"] = mbusGas ? DSMRdata.mbus1_equipment_id_tc;
+      // waterMeter["unique_id"] = meterState.capabilities.mbusGasPort ? DSMRdata.mbus1_equipment_id_tc;
       waterMeter["type"] = "water_meter";
       String Timestamp = actTimestamp;
-      waterMeter["timestamp"] =  strtoull( mbusWater ? waterDeliveredTimestamp.substring(0, waterDeliveredTimestamp.length() - 1).c_str(): Timestamp.substring(0, Timestamp.length() - 1).c_str(), nullptr, 10);
-      waterMeter["value"] = mbusWater ? F3DEC(waterDelivered) : F3DEC(P1Status.wtr_m3+P1Status.wtr_l/1000.0) ;
+      waterMeter["timestamp"] =  strtoull( meterState.capabilities.mbusWaterPort ? waterDeliveredTimestamp.substring(0, waterDeliveredTimestamp.length() - 1).c_str(): Timestamp.substring(0, Timestamp.length() - 1).c_str(), nullptr, 10);
+      waterMeter["value"] = meterState.capabilities.mbusWaterPort ? F3DEC(waterDelivered) : F3DEC(P1Status.wtr_m3+P1Status.wtr_l/1000.0) ;
       waterMeter["unit"] = "m3";
     }
 }
@@ -528,7 +543,7 @@ static void fillDeviceSettingsJson(JsonDocument& doc) {
 } while (0)
 
   ADD_SETTING("hostname", "s", 0, sizeof(settingHostname) - 1, settingHostname);
-  if ( !bWarmteLink ) { // IF NO HEATLINK
+  if ( !meterState.capabilities.heatLink ) { // IF NO HEATLINK
   ADD_SETTING("ed_tariff1", "f", 0, 10, settingEDT1);
   ADD_SETTING("ed_tariff2", "f", 0, 10, settingEDT2);
   ADD_SETTING("er_tariff1", "f", 0, 10, settingERT1);
@@ -536,7 +551,7 @@ static void fillDeviceSettingsJson(JsonDocument& doc) {
   ADD_SETTING("w_tariff", "f", 0, 10, settingWDT);
   }
   ADD_SETTING("gd_tariff", "f", 0, 10, settingGDT);
-  if ( ! bWarmteLink ) { // IF NO HEATLINK
+  if ( ! meterState.capabilities.heatLink ) { // IF NO HEATLINK
     ADD_SETTING("electr_netw_costs", "f", 0, 100, settingENBK);
     ADD_SETTING("water_netw_costs", "f", 0, 100, settingWNBK);
   }
@@ -609,7 +624,7 @@ if ( !hideMQTTsettings) {
   doc["udp"] = bUDPenabled;
   #endif
 
-  if ( bWarmteLink ) { // IF HEATLINK
+  if ( meterState.capabilities.heatLink ) { // IF HEATLINK
     doc["conf"] = "p1-q";
   } else {
     doc["pre40"] = bPre40;

@@ -568,7 +568,7 @@ bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
     values[2] = (float)DSMRdata.energy_returned_tariff1;
     values[3] = (float)DSMRdata.energy_returned_tariff2;
     values[4] = (float)gasDelivered;
-    values[5] = mbusWater ? (float)waterDelivered
+    values[5] = meterState.capabilities.mbusWaterPort ? (float)waterDelivered
                           : (float)P1Status.wtr_m3 + (float)P1Status.wtr_l / 1000.0f;
     if (ringValueCount(ringfiletype) > RING_DEFAULT_VALUE_COUNT) {
       values[6] = bPrevRecord ? 0.0f : currentSolarDailyKwh();
@@ -817,7 +817,7 @@ void writeRingFiles() {
   snapshot.values[2] = (float)DSMRdata.energy_returned_tariff1;
   snapshot.values[3] = (float)DSMRdata.energy_returned_tariff2;
   snapshot.values[4] = (float)gasDelivered;
-  snapshot.values[5] = mbusWater ? (float)waterDelivered
+  snapshot.values[5] = meterState.capabilities.mbusWaterPort ? (float)waterDelivered
                                  : (float)P1Status.wtr_m3 + (float)P1Status.wtr_l / 1000.0f;
   snapshot.values[6] = currentSolarDailyKwh();
   updateDashDayHistoryFromSnapshot(snapshot.actTimestamp, snapshot.dsmrTimestamp, snapshot.values);

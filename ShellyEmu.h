@@ -19,11 +19,11 @@ namespace P1 {
   inline float pL3()             { return DSMRdata.power_delivered_l3_present ? (float)((int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val()) : NAN; }
   
   inline float uL1()             { return DSMRdata.voltage_l1_present?DSMRdata.voltage_l1.val():NAN; }    // DSMR 32.7.0 (V)
-  inline float iL1()             { return  DSMRdata.current_l1_present?DSMRdata.current_l1.val():NAN; }    // DSMR 31.7.0 (A)
+  inline float iL1()             { MeterCurrent c = GetMeterCurrent(1); return c.present ? (c.mA / 1000.0f) : NAN; }    // DSMR 31.7.0 (A)
   inline float uL2()             { return DSMRdata.voltage_l2_present?DSMRdata.voltage_l2.val():NAN; }    // DSMR 32.7.0 (V)
-  inline float iL2()             { return  DSMRdata.current_l2_present?DSMRdata.current_l2.val():NAN; }    // DSMR 31.7.0 (A)
+  inline float iL2()             { MeterCurrent c = GetMeterCurrent(2); return c.present ? (c.mA / 1000.0f) : NAN; }    // DSMR 51.7.0 (A)
   inline float uL3()             { return DSMRdata.voltage_l3_present?DSMRdata.voltage_l3.val():NAN; }    // DSMR 32.7.0 (V)
-  inline float iL3()             { return  DSMRdata.current_l3_present?DSMRdata.current_l3.val():NAN; }    // DSMR 31.7.0 (A)
+  inline float iL3()             { MeterCurrent c = GetMeterCurrent(3); return c.present ? (c.mA / 1000.0f) : NAN; }    // DSMR 71.7.0 (A)
 }
 
 class ShellyEmuUDP {

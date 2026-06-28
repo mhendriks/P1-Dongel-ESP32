@@ -603,6 +603,16 @@ function meterValue(field, fallback = 0) {
 	return Number.isNaN(value) ? fallback : value;
 }
 
+function totalEnergyValue(json, totalKey, tariff1Key, tariff2Key, fallback = 0) {
+	const total = meterValue(dashMetric(json, totalKey), NaN);
+	if (!Number.isNaN(total)) return total;
+
+	const tariff1 = meterValue(dashMetric(json, tariff1Key), NaN);
+	const tariff2 = meterValue(dashMetric(json, tariff2Key), NaN);
+	if (Number.isNaN(tariff1) && Number.isNaN(tariff2)) return fallback;
+	return (Number.isNaN(tariff1) ? 0 : tariff1) + (Number.isNaN(tariff2) ? 0 : tariff2);
+}
+
 function meterString(field, fallback = "") {
 	const rawValue = (field && typeof field === "object" && Object.prototype.hasOwnProperty.call(field, "value"))
 		? field.value
@@ -817,12 +827,8 @@ function SetOnSettings(json) {
 	HeeftWater = settingsWaterEnabled(objDAL?.getDeviceSettings?.()) || settingsWaterEnabled(json);
 
 	if (!Injection) {
-		Injection = meterValue(dashMetric(json, "energy_returned_tariff1"), NaN);
-		Injection = Number.isNaN(Injection) ? false : Injection;
-		if (!Injection) {
-			const returnedT2 = meterValue(dashMetric(json, "energy_returned_tariff2"), NaN);
-			Injection = Number.isNaN(returnedT2) ? false : returnedT2;
-		}
+		const returnedEnergy = totalEnergyValue(json, "energy_returned_total", "energy_returned_tariff1", "energy_returned_tariff2", NaN);
+		Injection = Number.isNaN(returnedEnergy) ? false : returnedEnergy;
 	}
 	Injection = Injection && !IgnoreInjection;
 
@@ -1247,8 +1253,8 @@ function refreshDashboard(json){
 		if (Dongle_Config != "p1-q") {
 
       //bereken verschillen afname, teruglevering en totaal
-      let nPA = meterValue(dash("energy_delivered_tariff1"), 0) + meterValue(dash("energy_delivered_tariff2"), 0);
-      let nPI = meterValue(dash("energy_returned_tariff1"), 0) + meterValue(dash("energy_returned_tariff2"), 0);
+      let nPA = totalEnergyValue(json, "energy_delivered_total", "energy_delivered_tariff1", "energy_delivered_tariff2", 0);
+      let nPI = totalEnergyValue(json, "energy_returned_total", "energy_returned_tariff1", "energy_returned_tariff2", 0);
       Parra = calculateDifferences( nPA, hist_arrPa, 1);
       Parri = calculateDifferences( nPI, hist_arrPi, 1);
       for(let i=0;i<3;i++){ Parr[i]=Parra[i] - Parri[i]; }

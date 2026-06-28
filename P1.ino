@@ -99,6 +99,7 @@ static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
   P1error_cnt_sequence = 0;
   DSMRdata = DSMRdataNew;
   last_telegram_t = millis();
+  meterState.capabilities.isHan = isHan;
 
 #ifdef HAN_READER
   if (isHan) {
@@ -106,11 +107,12 @@ static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
     gasDeliveredTimestamp = "";
     waterDelivered = 0.0f;
     waterDeliveredTimestamp = "";
-    mbusGas = 0;
-    mbusWater = 0;
+    meterState.capabilities.mbusGasPort = 0;
+    meterState.capabilities.mbusWaterPort = 0;
     WtrMtr = false;
-    bUseEtotals = false;
-    bWarmteLink = false;
+    meterState.capabilities.heatLink = false;
+    meterState.capabilities.hasPhaseVoltage = false;
+    meterState.capabilities.fastTelegram = false;
   }
 #endif
 
@@ -125,25 +127,7 @@ static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
     }
   }
 
-  if (!DSMRdata.energy_delivered_total_present) {
-    DSMRdata.energy_delivered_total._value = DSMRdata.energy_delivered_tariff1.int_val() + DSMRdata.energy_delivered_tariff2.int_val();
-    DSMRdata.energy_delivered_total_present = true;
-  }
-
-  if (!DSMRdata.energy_returned_total_present) {
-    DSMRdata.energy_returned_total._value = DSMRdata.energy_returned_tariff1.int_val() + DSMRdata.energy_returned_tariff2.int_val();
-    DSMRdata.energy_returned_total_present = true;
-  }
-
-  if (bUseEtotals) {
-    DSMRdata.energy_delivered_tariff1_present = true;
-    DSMRdata.energy_delivered_tariff1 = DSMRdata.energy_delivered_total;
-    DSMRdata.energy_returned_tariff1_present = true;
-    DSMRdata.energy_returned_tariff1 = DSMRdata.energy_returned_total;
-  }
-
-  if (!isHan) modifySmFaseInfo();
-  if (bWarmteLink) {
+  if (meterState.capabilities.heatLink) {
     DSMRdata.timestamp = DSMRdata.mbus1_delivered.timestamp;
     DSMRdata.timestamp_present = true;
     gasDelivered = MbusDelivered(1);
@@ -169,12 +153,12 @@ static void applyParsedSmartMeterData(MyData& DSMRdataNew, bool isHan) {
       DSMRdata.timestamp_present = true;
     }
 
-    if (mbusWater) {
-      waterDelivered = MbusDelivered(mbusWater);
+    if (meterState.capabilities.mbusWaterPort) {
+      waterDelivered = MbusDelivered(meterState.capabilities.mbusWaterPort);
       waterDeliveredTimestamp = mbusDeliveredTimestamp;
     }
-    if (mbusGas) {
-      gasDelivered = MbusDelivered(mbusGas);
+    if (meterState.capabilities.mbusGasPort) {
+      gasDelivered = MbusDelivered(meterState.capabilities.mbusGasPort);
       gasDeliveredTimestamp = mbusDeliveredTimestamp;
     }
   }
@@ -614,7 +598,7 @@ void handleSlimmemeter()
   #endif
   smartMeter.loop();
   handleParsedMeter(smartMeter, false);
-  if (millis() - last_telegram_t > (bV5meter ? 3500 : 35000)) bP1offline = true;
+  if (millis() - last_telegram_t > (meterState.capabilities.fastTelegram ? 3500 : 35000)) bP1offline = true;
 } // handleSlimmemeter()
 
 //==================================================================================
@@ -631,28 +615,33 @@ void SMCheckOnce(){
     smID = DSMRdata.identification;
   } // check id 
 
-  if ( DSMRdata.energy_delivered_total_present && !DSMRdata.energy_delivered_tariff1_present ) bUseEtotals = true;
   if (DSMRdata.p1_version_be_present) {
     DSMRdata.p1_version = DSMRdata.p1_version_be;
     DSMRdata.p1_version_be_present  = false;
     DSMRdata.p1_version_present     = true;
     // DSMR_NL = false;
   } //p1_version_be_present
-  if ( ! DSMRdata.energy_delivered_tariff1_present && !DSMRdata.energy_delivered_total_present ) bWarmteLink = true;
-  mbusWater = MbusTypeAvailable(7);  
-  if (mbusWater) WtrMtr = true;
+  if ( ! DSMRdata.energy_delivered_tariff1_present && !DSMRdata.energy_delivered_total_present ) meterState.capabilities.heatLink = true;
+  meterState.capabilities.mbusWaterPort = MbusTypeAvailable(7);
+  if (meterState.capabilities.mbusWaterPort) WtrMtr = true;
   else if ( WtrMtr ) {
       waterDeliveredTimestamp = DSMRdata.timestamp;
       waterDelivered = P1Status.wtr_m3 + (P1Status.wtr_l / 1000.0);
   }
-  mbusGas = MbusTypeAvailable(3);  
-  DebugTf("mbusWater: %d\r\n",mbusWater);
-  DebugTf("mbusGas: %d\r\n",mbusGas);
+  meterState.capabilities.mbusGasPort = MbusTypeAvailable(3);
+  DebugTf("meterState.capabilities.mbusWaterPort: %d\r\n",meterState.capabilities.mbusWaterPort);
+  DebugTf("meterState.capabilities.mbusGasPort: %d\r\n",meterState.capabilities.mbusGasPort);
   ResetStats();
-  bV5meter = DSMRdata.voltage_l1_present || DSMRdata.voltage_l2_present || DSMRdata.voltage_l3_present;
-  DebugTf("bV5meter: %d\r\n",bV5meter);
-  DebugTf("bUseEtotals: %d\r\n",bUseEtotals);
-  DebugTf("bWarmteLink: %d\r\n",bWarmteLink);
+  meterState.capabilities.hasPhaseVoltage = DSMRdata.voltage_l1_present || DSMRdata.voltage_l2_present || DSMRdata.voltage_l3_present;
+  meterState.capabilities.fastTelegram = meterState.capabilities.hasPhaseVoltage;
+  DebugTf("meterState.capabilities.fastTelegram: %d\r\n",meterState.capabilities.fastTelegram);
+  DebugTf("energyTotalsOnly: %d\r\n",
+          (DSMRdata.energy_delivered_total_present || DSMRdata.energy_returned_total_present) &&
+          !DSMRdata.energy_delivered_tariff1_present &&
+          !DSMRdata.energy_delivered_tariff2_present &&
+          !DSMRdata.energy_returned_tariff1_present &&
+          !DSMRdata.energy_returned_tariff2_present);
+  DebugTf("meterState.capabilities.heatLink: %d\r\n",meterState.capabilities.heatLink);
 }
 //called every hour
 void UpdateYesterday( ){
@@ -663,10 +652,10 @@ void UpdateYesterday( ){
   if ( dataYesterday.lastUpdDay == (newT/(uint32_t)(3600*24)) ) return; //do nothing
   //data yesterday should be changed
   DebugTln("UpdateUsage data");
-  dataYesterday.t1    = (uint32_t) (DSMRdata.energy_delivered_tariff1 * 1000);
-  dataYesterday.t2    = (uint32_t) (DSMRdata.energy_delivered_tariff2 * 1000);
-  dataYesterday.t1r   = (uint32_t) (DSMRdata.energy_returned_tariff1 * 1000);
-  dataYesterday.t2r   = (uint32_t) (DSMRdata.energy_returned_tariff2 * 1000);
+  dataYesterday.t1    = meterState.capabilities.energyTotalsOnly ? meterState.derived.deliveredTotalWh : (uint32_t) (DSMRdata.energy_delivered_tariff1 * 1000);
+  dataYesterday.t2    = meterState.capabilities.energyTotalsOnly ? 0 : (uint32_t) (DSMRdata.energy_delivered_tariff2 * 1000);
+  dataYesterday.t1r   = meterState.capabilities.energyTotalsOnly ? meterState.derived.returnedTotalWh : (uint32_t) (DSMRdata.energy_returned_tariff1 * 1000);
+  dataYesterday.t2r   = meterState.capabilities.energyTotalsOnly ? 0 : (uint32_t) (DSMRdata.energy_returned_tariff2 * 1000);
   dataYesterday.gas   = (uint32_t) (gasDelivered * 1000);
   dataYesterday.water = (uint32_t) (waterDelivered * 1000);
   dataYesterday.lastUpdDay = newT/(3600*24);
@@ -680,29 +669,8 @@ void processTelegram(){
 
   newT = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), true); // update system time
   
-  // Calculate current only when phase power has a usable, non-zero value.
-  // Some Belgian meters report zero for every phase power while providing
-  // valid phase currents; do not overwrite those currents with zero.
-  if ( try_calc_i ) {
-    if ( DSMRdata.voltage_l1_present && DSMRdata.voltage_l1 &&
-         ((DSMRdata.power_delivered_l1_present && DSMRdata.power_delivered_l1.int_val()) ||
-          (DSMRdata.power_returned_l1_present && DSMRdata.power_returned_l1.int_val())) ){
-      DSMRdata.current_l1._value = (uint32_t)((DSMRdata.power_delivered_l1.int_val() + DSMRdata.power_returned_l1.int_val())/DSMRdata.voltage_l1*1000);
-      DSMRdata.current_l1_present = true;
-    }
-    if ( DSMRdata.voltage_l2_present && DSMRdata.voltage_l2 &&
-         ((DSMRdata.power_delivered_l2_present && DSMRdata.power_delivered_l2.int_val()) ||
-          (DSMRdata.power_returned_l2_present && DSMRdata.power_returned_l2.int_val())) ){
-      DSMRdata.current_l2._value = (uint32_t)((DSMRdata.power_delivered_l2.int_val() + DSMRdata.power_returned_l2.int_val())/DSMRdata.voltage_l2*1000);
-      DSMRdata.current_l2_present = true;
-    }
-    if ( DSMRdata.voltage_l3_present && DSMRdata.voltage_l3 &&
-         ((DSMRdata.power_delivered_l3_present && DSMRdata.power_delivered_l3.int_val()) ||
-          (DSMRdata.power_returned_l3_present && DSMRdata.power_returned_l3.int_val())) ){
-      DSMRdata.current_l3._value = (uint32_t)((DSMRdata.power_delivered_l3.int_val() + DSMRdata.power_returned_l3.int_val())/DSMRdata.voltage_l3*1000);
-      DSMRdata.current_l3_present = true;
-    }
-  }//try calc i
+  UpdateMeterDerived();
+
   // has the hour changed write ringfiles
 #ifdef DEBUG
   DebugTf("actMin[%02d] -- newMin[%02d]\r\n", minute(actT), minute(newT));  
@@ -742,7 +710,7 @@ void processTelegram(){
   
   // PostHomey();
   #ifdef POST_POWERCH
-    if ( (bV5meter && telegramCount % 3 == 0 ) || !bV5meter ) bNewTelegramWebhook = true; //every 3 secs (v5) or new meter data (v2/4)
+    if ( (meterState.capabilities.fastTelegram && telegramCount % 3 == 0 ) || !meterState.capabilities.fastTelegram ) bNewTelegramWebhook = true; //every 3 secs (v5) or new meter data (v2/4)
   #endif
   #ifdef POST_MEENT
     bNewTelegramWebhook = true; // interval handling is done in PostWebhook()
@@ -751,26 +719,6 @@ void processTelegram(){
     New_P1_UDP = true;
   #endif 
 } // processTelegram()
-
-//==================================================================================
-void modifySmFaseInfo()
-{
-        if (DSMRdata.power_delivered_present && !DSMRdata.power_delivered_l1_present)
-        {
-          DSMRdata.power_delivered_l1 = DSMRdata.power_delivered;
-          DSMRdata.power_delivered_l1_present = true;
-          DSMRdata.power_delivered_l2_present = true;
-          DSMRdata.power_delivered_l3_present = true;
-        }
-        if (DSMRdata.power_returned_present && !DSMRdata.power_returned_l1_present)
-        {
-          DSMRdata.power_returned_l1 = DSMRdata.power_returned;
-          DSMRdata.power_returned_l1_present = true;
-          DSMRdata.power_returned_l2_present = true;
-          DSMRdata.power_returned_l3_present = true;
-        }
-  
-} //  modifySmFaseInfo()
 
 extern unsigned long startTijdL1;
 extern unsigned long startTijdL2;
@@ -841,9 +789,12 @@ uint32_t actueleOverspanningSeconden(uint32_t overspanningTotaal, unsigned long 
 }
 
 void ProcessStats(){
-  if ( DSMRdata.current_l1_present && DSMRdata.current_l1.int_val() > P1Stats.I1piek ) P1Stats.I1piek = DSMRdata.current_l1.int_val();
-  if ( DSMRdata.current_l2_present && DSMRdata.current_l2.int_val() > P1Stats.I2piek ) P1Stats.I2piek = DSMRdata.current_l2.int_val();
-  if ( DSMRdata.current_l3_present && DSMRdata.current_l3.int_val() > P1Stats.I3piek ) P1Stats.I3piek = DSMRdata.current_l3.int_val();
+  MeterCurrent currentL1 = GetMeterCurrent(1);
+  MeterCurrent currentL2 = GetMeterCurrent(2);
+  MeterCurrent currentL3 = GetMeterCurrent(3);
+  if ( currentL1.present && currentL1.mA > P1Stats.I1piek ) P1Stats.I1piek = currentL1.mA;
+  if ( currentL2.present && currentL2.mA > P1Stats.I2piek ) P1Stats.I2piek = currentL2.mA;
+  if ( currentL3.present && currentL3.mA > P1Stats.I3piek ) P1Stats.I3piek = currentL3.mA;
   
   if ( DSMRdata.power_delivered_l1_present) {
     if ( DSMRdata.power_delivered_l1.int_val() > P1Stats.P1max ) P1Stats.P1max = DSMRdata.power_delivered_l1.int_val();

@@ -89,9 +89,9 @@ void handleWater() {
 }
 
 void MQTTsendWater() {
-  if (!WtrMtr && !mbusWater) return;
+  if (!WtrMtr && !meterState.capabilities.mbusWaterPort) return;
 
-  if (mbusWater) {
+  if (meterState.capabilities.mbusWaterPort) {
     MQTTSend("water", waterDelivered);
     MQTTSend("water_ts", waterDeliveredTimestamp, true);
   } else {
