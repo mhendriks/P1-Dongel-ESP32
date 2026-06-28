@@ -83,11 +83,11 @@ void handleApiWebSocket() {
 
   uint32_t nowMs = millis();
   if (apiWsLiveDirty && nowMs - apiWsLastLive >= API_WS_LIVE_MIN_INTERVAL_MS) {
+    apiWsLastLive = nowMs;
     bool sent = apiWsBroadcast("dash_live", dashLiveApiResponse().body);
     sent = apiWsBroadcast("actual", smActualJsonDebug()) && sent;
     if (!sent) return;
     apiWsLiveDirty = false;
-    apiWsLastLive = nowMs;
   }
 
   if (nowMs - apiWsLastTime >= API_WS_TIME_INTERVAL_MS) {

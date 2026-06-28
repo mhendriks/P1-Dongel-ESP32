@@ -104,7 +104,7 @@ struct dev_conf {
 // enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2, NRGDH, D1MC };
 
 dev_conf device_config[] = {
-  // -- GENERAL --  ----------- P1/HAN ------------  -------- ETH --------- 
+                   //  -- GENERAL --   --- IN ---   - P1 OUT -   -------- ETH --------- 
   { _DEFAULT_HOSTNAME,-1, -1, -1, -1,  -1, -1, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // UNDETECTED
   { "P1-Dongle-Pro",   9, -1,  7,  5,  10,  6, -1,  -1, -1, -1,  -1, -1, -1, -1, -1, -1 }, // P1P (ESP32C3 - P1 Dongle Pro)
   { "NRG-Dongle-Pro",  9, -1,  3, -1,  20, -1, -1,  10,  1,  0,  -1, -1, -1, -1, -1, -1 }, // NRGD (ESP32C3 - NRG Dongle Pro)

@@ -53,13 +53,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select port>
 
 
-5.8.6
-- update button in HA to trigger the update (mqtt based #70) 
-- fix index not found when index file isn't available on cdn
-- add: share crash data in log option
-- fix: modbus DTSU666 power values incorrect scale
-- fix: skip network crash
-- fix: older hex dongle h2o support
+5.8.7
+- fix WebSocket live-update retry (Win 11 / FF issue) 
 
 5.9.0
 - Normalise energy data (huge change)
@@ -93,7 +88,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-#define NRG_DONGLE       // + D1MC and NRGDH 
+// #define NRG_DONGLE       // + D1MC and NRGDH 
 // #define _P1P
 
 //SPECIAL
