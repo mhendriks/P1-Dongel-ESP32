@@ -28,11 +28,12 @@
 
     bool bGotDirective = false;
     bool bGetPlannerDetails = false;
+    bool bEIDHelloPending = false;
 
     uint32_t eid_interval_sec = 300;
 
 #ifdef DEBUG
-  #define EID_IDLE_TIME 15 //sec
+  #define EID_IDLE_TIME 30
   #define EID_CLAIM_RETRY 20*1 //sec
   #define EID_REFRESH_TIME 1*60
 #else
@@ -56,6 +57,7 @@
 
   void EID_RESTART_IDLE_TIMER(){
     RESTART_TIMER(T_EID_IDLE);
+    bEIDHelloPending = true;
   }
 
     void EIDStart(){
@@ -80,8 +82,10 @@
       static uint8_t last_state = 255;
       if (last_state != P1Status.eid_state) {
         last_state = P1Status.eid_state;
-        if (last_state == EID_IDLE) RESTART_TIMER(T_EID_IDLE);
-        if (last_state == EID_CLAIMING) RESTART_TIMER(T_EID_CLAIM);
+        if (last_state == EID_CLAIMING) {
+          RESTART_TIMER(T_EID_IDLE);
+          RESTART_TIMER(T_EID_CLAIM);
+        }
         if (last_state == EID_ENROLLED) RESTART_TIMER(T_EID);
         String log = "EID: State change -> " + String(P1Status.eid_state);
         LogFile( log.c_str(),true );
@@ -100,18 +104,25 @@
             if ( DUE(T_EID_PLAN) ) bGetPlannerDetails = true;
           break;
         case EID_CLAIMING:
+          if ( DUE(T_EID_IDLE) ) { 
+            // Claim was received, but the user did not activate it within the setup window.
+            bEID_enabled = false;
+            P1Status.eid_state = EID_IDLE;
+            bEIDHelloPending = false;
+            P1StatusWrite();
+            writeSettings(); //write state change
+            LogFile( "EID - claim timeout, auto turn off", true );
+            return;
+          }
           if ( DUE(T_EID_CLAIM) ) {
             DebugTln("EID_CLAIMING");
             EIDPostHello(); //refresh every 1m
           }
           break;
         case EID_IDLE:
-          if ( DUE(T_EID_IDLE) ) { 
-            //inden na 3600 sec nog geen status verandering dan disable
-            bEID_enabled = false;
-            writeSettings(); //write state change
-            LogFile( "EID - auto turn off", true );
-            return;
+          if ( bEIDHelloPending || DUE(T_EID_HELLO_FAIL) ) {
+            bEIDHelloPending = false;
+            EIDPostHello();
           }
           break;
       } //switch
@@ -203,6 +214,10 @@
 
           if (claimCode) {
             Debugln(F("ClaimCode obtained"));
+            if (P1Status.eid_state != EID_CLAIMING) {
+              RESTART_TIMER(T_EID_IDLE);
+              RESTART_TIMER(T_EID_CLAIM);
+            }
             P1Status.eid_state = EID_CLAIMING;
             // Toekomstig: eid_claim_code = claimCode;
             // eventueel claimUrl, exp ook loggen
