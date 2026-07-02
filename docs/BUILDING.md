@@ -84,7 +84,33 @@ Notes:
 
 Do not hardcode hardware profile defines in `P1-Dongel-ESP32.ino` when using `build.sh`.
 
-Use `build.sh` to compile all profiles. It injects profile-specific defines and board settings, including:
+Use `build.sh` to compile all profiles by default:
+
+```bash
+./build.sh
+```
+
+You can also compile one or more selected profiles:
+
+```bash
+./build.sh ULTRA
+./build.sh P1P ETH_P1EP
+```
+
+Add `--clear-cache` or `--clean` to remove the selected profile build directories before compiling:
+
+```bash
+./build.sh --clear-cache ULTRA
+```
+
+Extra Arduino build properties can be passed through as well. For `compiler.cpp.extra_flags`, the value is appended to the profile flags:
+
+```bash
+./build.sh ULTRA --extra-flags "-DWEBSOCKETS_TCP_TIMEOUT=2000"
+./build.sh ULTRA --build-property compiler.cpp.extra_flags="-DWEBSOCKETS_TCP_TIMEOUT=2000"
+```
+
+The script injects profile-specific defines and board settings, including:
 
 - ESP32-C3 builds must always use the `Minimal SPIFFS` partition scheme (`OTA 1.9MB / 128KB SPIFFS`).
 - ESP32-S3 builds must always use the 8MB partition scheme (`FlashSize=8M`, `PartitionScheme=default_8MB`, OTA 3MB / matching 8MB layout).
