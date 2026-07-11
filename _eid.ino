@@ -31,6 +31,7 @@
     bool bEIDHelloPending = false;
 
     uint32_t eid_interval_sec = 300;
+    int16_t eid_last_http_code = 0;
 
 #ifdef DEBUG
   #define EID_IDLE_TIME 30
@@ -62,6 +63,35 @@
 
     void EIDStart(){
       if ( bEID_enabled ) EIDPostHello();
+    }
+
+    String EIDStatusText(){
+      String status;
+      uint32_t updateSec = 0;
+      if (!bEID_enabled) {
+        status = "OFF";
+      } else {
+        switch (P1Status.eid_state) {
+          case EID_CLAIMING:
+            status = "ON - Claiming";
+            updateSec = EID_CLAIM_RETRY;
+            break;
+          case EID_ENROLLED:
+            if (eid_webhook.length()) {
+              status = "ON - Enrolled";
+              updateSec = eid_interval_sec;
+            } else {
+              status = "ON - Reconnecting";
+              updateSec = 60;
+            }
+            break;
+          case EID_IDLE:
+          default: status = "ON - Idle"; break;
+        }
+      }
+      if (eid_last_http_code) status += " | HTTP " + String(eid_last_http_code);
+      if (updateSec) status += " | update " + String(updateSec) + " sec";
+      return status;
     }
 
     void clearEIDPlannerData(bool forceupdate){
@@ -106,12 +136,10 @@
         case EID_CLAIMING:
           if ( DUE(T_EID_IDLE) ) { 
             // Claim was received, but the user did not activate it within the setup window.
-            bEID_enabled = false;
             P1Status.eid_state = EID_IDLE;
             bEIDHelloPending = false;
             P1StatusWrite();
-            writeSettings(); //write state change
-            LogFile( "EID - claim timeout, auto turn off", true );
+            LogFile( "EID - claim timeout, pairing stopped", true );
             return;
           }
           if ( DUE(T_EID_CLAIM) ) {
@@ -120,7 +148,7 @@
           }
           break;
         case EID_IDLE:
-          if ( bEIDHelloPending || DUE(T_EID_HELLO_FAIL) ) {
+          if ( bEIDHelloPending ) {
             bEIDHelloPending = false;
             EIDPostHello();
           }
@@ -199,6 +227,7 @@
       http.addHeader("X-Provisioning-Secret", EID_PROF_SECR);
 
       int httpResponseCode = http.POST( buildProvisioningPayload() );
+      eid_last_http_code = httpResponseCode;
       DebugVerbose(F("httpResponseCode: ")); DebugVerboseLn(httpResponseCode);
 
       if (httpResponseCode == 200) {
@@ -264,6 +293,8 @@
         firstHelloDone = true;
       }
 
+      String statusText = EIDStatusText();
+      DebugVerboseTf("EID hello HTTP %d, %s\r\n", httpResponseCode, statusText.c_str());
       http.end();
     }
 
@@ -475,6 +506,7 @@
       DebugTrace(F("Json payload: ")); DebugTraceLn(Json);
 
       httpResponseCode = http.POST(Json);
+      eid_last_http_code = httpResponseCode;
       DebugVerbose(F("httpResponseCode: ")); DebugVerboseLn(httpResponseCode);
       payload = http.getString();
       DebugTrace(F("response body: ")); DebugTraceLn(payload); 
@@ -484,5 +516,7 @@
           RESTART_TIMER(T_EID_HELLO_FAIL);
         }
       CHANGE_INTERVAL_SEC(T_EID, eid_interval_sec);
+      DebugVerboseTf("EID upload HTTP %d, update %lu sec\r\n",
+                     httpResponseCode, (unsigned long)eid_interval_sec);
       http.end();
     }

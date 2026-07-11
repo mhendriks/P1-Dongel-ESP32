@@ -68,6 +68,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - stable or beta update option in settings
 - Add remote Proxy
 - tooltips bij de diverse settings (Gerben)
+- option for NRG Monitor to show small project image
+- control center which shows the status of a connection (MQTT/EID/P1/HAN/...)
 
 6.0.0 - sources / targets setup - EMS structure
 - kWh meter als bron voor productie data gebruiken (Harrie)

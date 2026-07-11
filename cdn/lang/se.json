@@ -412,6 +412,7 @@
   "dict_phases": "Antal faser",
   "dict_dev-pairing": "Peer2Peer-kommunikation",
   "dict_eid-enabled": "EnergyID (1h setup timeout)",
+  "dict_eid_status": "EnergyID status",
   "dict_utilization": "CPU-användning",
   "dsh-water": "Vatten",
   "lbl-metric": "Matvarde",

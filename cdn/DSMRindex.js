@@ -3918,9 +3918,38 @@ function initModbusMonitorControls() {
   //============================================================================  
   function saveSettings() 
   {
-    for( let i in objDAL.dev_settings )
+    let basicAuthSaveDone = Promise.resolve();
+    let skipBasicAuthFields = false;
+
+    if (document.getElementById("setFld_b_auth_user") && document.getElementById("setFld_b_auth_pw")) {
+      const oldAuthUser = objDAL.dev_settings.b_auth_user?.value ?? "";
+      const oldAuthPw = objDAL.dev_settings.b_auth_pw?.value ?? "";
+      const newAuthUser = document.getElementById("setFld_b_auth_user").value;
+      const newAuthPw = document.getElementById("setFld_b_auth_pw").value;
+
+      if (oldAuthUser && oldAuthUser != newAuthUser && oldAuthPw != newAuthPw) {
+        console.log("save data [basic_auth] => clear user, save pw, save user");
+        skipBasicAuthFields = true;
+        basicAuthSaveDone = sendPostSetting("b_auth_user", "")
+          .then(() => sendPostSetting("b_auth_pw", newAuthPw))
+          .then(() => {
+            if (newAuthUser) return sendPostSetting("b_auth_user", newAuthUser);
+          });
+      }
+    }
+
+    const settingKeys = Object.keys(objDAL.dev_settings).sort((a, b) => {
+      if (a === "b_auth_pw") return -1;
+      if (b === "b_auth_pw") return 1;
+      if (a === "b_auth_user") return 1;
+      if (b === "b_auth_user") return -1;
+      return 0;
+    });
+
+    for( let i of settingKeys )
     {
 	  if ( i == "conf" || document.getElementById("setFld_"+i ) == undefined ) continue;
+	  if ( skipBasicAuthFields && (i == "b_auth_user" || i == "b_auth_pw") ) continue;
 	  
 	  let fldId  = i;
       let newVal = document.getElementById("setFld_"+fldId).value;
@@ -3938,15 +3967,15 @@ function initModbusMonitorControls() {
       }
     }    
     // delay refresh as all fetch functions are async!!
-    setTimeout(function() {
+    basicAuthSaveDone.then(() => setTimeout(function() {
 //       refreshSettings();
 			document.getElementById('settings_table').innerHTML = '';
 			objDAL.ensureDeviceInformation(true);
-	    }, 1000);
+	    }, 1000));
 //     ParseDevSettings();
   } // saveSettings()
-  
-  
+
+
   //============================================================================  
   function saveMeterReadings() 
   {
@@ -4013,7 +4042,7 @@ function initModbusMonitorControls() {
         mode : "no-cors"
     };
 	Spinner(true);
-    fetch( URL_DEVICE_SETTINGS, other_params )
+    return fetch( URL_DEVICE_SETTINGS, other_params )
       .then(function(response) {
             //console.log(response.status );    //=> number 100–599
             //console.log(response.statusText); //=> String

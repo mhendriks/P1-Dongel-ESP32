@@ -331,6 +331,7 @@
   "dict_ssid": "WiFi SSID",
   "dict_wifirssi": "WiFi RSSI",
   "dict_uptime": "Up Time [dagen] - [uu:mm]",
+  "dict_eid_status": "EnergyID status",
   "dict_reboots": "Aantal keer opnieuw opgestart",
   "dict_lastreset": "Laatste Reset reden",
   "dict_smr_version": "NL of BE Slimme Meter",

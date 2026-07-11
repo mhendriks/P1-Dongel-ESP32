@@ -496,6 +496,7 @@ String deviceInfoJson()
 
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
+  doc["eid_status"] = EIDStatusText();
 
 #ifndef MQTT_DISABLE
   snprintf(cMsg, sizeof(cMsg), "%s:%04lu", settingMQTTbroker, (unsigned long)settingMQTTbrokerPort);

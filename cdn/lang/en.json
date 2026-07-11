@@ -368,6 +368,7 @@
   "dict_ssid": "WiFi SSID",
   "dict_wifirssi": "WiFi RSSI",
   "dict_uptime": "Up Time [days] - [hh:mm]",
+  "dict_eid_status": "EnergyID status",
   "dict_reboots": "Number of Restarts",
   "dict_lastreset": "Last Reset Reason",
   "dict_smr_version": "NL or BE Smart Meter",

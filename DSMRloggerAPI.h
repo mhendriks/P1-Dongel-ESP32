@@ -657,12 +657,15 @@ void sendSmFieldJson(const String& field);
 ApiResponse solarApiResponse();
 ApiResponse accuApiResponse();
 ApiResponse EIDGetClaimApiResponse(const String& action);
+String EIDStatusText();
 String modbusMonitorJson();
 void clearModbusMonitorEntries();
 void setupApiWebSocket();
 void handleApiWebSocket();
 void apiWsMarkLiveDirty();
 void handleRawPort();
+void SyncESPNOW();
+void SetNRGMPairingMode(bool enabled);
 
 #include "Debug.h"
 #include <ESPmDNS.h>

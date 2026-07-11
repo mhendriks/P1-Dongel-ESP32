@@ -11,11 +11,17 @@ static const uint32_t API_WS_TIME_INTERVAL_MS = 5000;
 static const uint32_t API_WS_HIST_INTERVAL_MS = 3600000;
 static const uint32_t API_WS_SEND_WARN_MS = 500;
 static const uint32_t API_WS_WRITE_READY_TIMEOUT_MS = 20;
+static const uint32_t API_WS_PONG_TIMEOUT_MS = 10000;
 static const uint8_t API_WS_MAX_CLIENTS = 3;
 static volatile bool apiWsLiveDirty = false;
 static uint32_t apiWsLastLive = 0;
 static uint32_t apiWsLastTime = 0;
 static uint32_t apiWsLastHist = 0;
+static uint32_t apiWsLastPong[WEBSOCKETS_SERVER_CLIENT_MAX] = {0};
+
+static void apiWsMarkPong(uint8_t clientNum) {
+  if (clientNum < WEBSOCKETS_SERVER_CLIENT_MAX) apiWsLastPong[clientNum] = millis();
+}
 
 static void apiWsDropClient(uint8_t clientNum, const char* reason) {
   if (clientNum >= WEBSOCKETS_SERVER_CLIENT_MAX) return;
@@ -106,18 +112,21 @@ static void apiWsEvent(uint8_t clientNum, WStype_t type, uint8_t* payload, size_
       apiWs.disconnect(clientNum);
       return;
     }
+    apiWsMarkPong(clientNum);
     DebugTf("API WS client connected: slot=%u clients=%d\r\n", clientNum, apiWs.connectedClients());
     apiWsSendSnapshot(clientNum);
   } else if (type == WStype_DISCONNECTED) {
+    if (clientNum < WEBSOCKETS_SERVER_CLIENT_MAX) apiWsLastPong[clientNum] = 0;
     DebugTf("API WS client disconnected: slot=%u clients=%d\r\n", clientNum, apiWs.connectedClients());
+  } else if (type == WStype_PONG) {
+    apiWsMarkPong(clientNum);
   }
 }
 
 void setupApiWebSocket() {
   if (skipNetwork) return;
-  if (strlen(bAuthUser)) apiWs.setAuthorization(bAuthUser, bAuthPW);
   apiWs.onEvent(apiWsEvent);
-  apiWs.enableHeartbeat(15000, 3000, 2);
+  apiWs.enableHeartbeat(5000, 2000, 2);
   apiWs.begin();
   DebugTln(F("API WebSocket server started on port 81\r"));
 }
@@ -132,6 +141,15 @@ void handleApiWebSocket() {
   if (!apiWs.connectedClients()) return;
 
   uint32_t nowMs = millis();
+  for (uint8_t clientNum = 0; clientNum < WEBSOCKETS_SERVER_CLIENT_MAX; clientNum++) {
+    if (!apiWs.clientIsConnected(clientNum)) continue;
+
+    uint32_t lastPong = apiWsLastPong[clientNum];
+    if (lastPong && nowMs - lastPong > API_WS_PONG_TIMEOUT_MS) {
+      apiWsDropClient(clientNum, "pong-timeout");
+    }
+  }
+
   if (apiWsLiveDirty && nowMs - apiWsLastLive >= API_WS_LIVE_MIN_INTERVAL_MS) {
     apiWsLastLive = nowMs;
     bool sent = apiWsBroadcast("dash_live", dashLiveApiResponse().body);

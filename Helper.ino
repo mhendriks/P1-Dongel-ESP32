@@ -250,6 +250,8 @@ void DevTypeMapping(){
   if (HardwareType == P1P) { // Check for legacy P1P versions
     switch ( P1Status.dev_type ) {
       case P1P_H20_B:  UseRGB = true;
+                       statusled = -1;
+                       rgbled_io = 8;
                        IOWater = 0;
                        WtrMtr = true;
                        break;

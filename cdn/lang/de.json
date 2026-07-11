@@ -355,6 +355,7 @@
   "dict_phases": "Anzahl Phasen",
   "dict_dev-pairing": "Peer2Peer Kommunikation",
   "dict_eid-enabled": "EnergyID ein/aus",
+  "dict_eid_status": "EnergyID Status",
   "dict_utilization": "CPU-Nutzung",
   "dsh-actual": "Aktuell",
   "dsh-dash": "Dashboard",

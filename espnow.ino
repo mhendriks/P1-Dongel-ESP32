@@ -23,6 +23,13 @@ ActualData_t ActualData;
 tariff_t TariffData;
 char updateURL[80], updateFile[35];
 bool bESPNowInit = false;
+static bool bNRGMEnabledByPairing = false;
+static const uint32_t ESPNOW_ASK_TARIF_MIN_INTERVAL_MS = 5000;
+static const uint32_t ESPNOW_ASK_TARIF_LOG_INTERVAL_MS = 10000;
+static uint32_t lastAskTarifQueuedMs = 0;
+static uint32_t lastAskTarifThrottleLogMs = 0;
+
+void SyncESPNOW();
 
 static bool espNowReadyForPeerData() {
   return Pref.peers && bESPNowInit;
@@ -30,6 +37,40 @@ static bool espNowReadyForPeerData() {
 
 static void espNowSendCommand(const uint8_t* peer, const void* command) {
   esp_now_send(peer, (uint8_t*)command, sizeof(command_t));
+}
+
+static void FinishNRGMPairing(bool success) {
+  bPairingmode = 0;
+  if (success) {
+    bNRGMEnabledByPairing = false;
+    return;
+  }
+
+  if (bNRGMEnabledByPairing) {
+    bNRGMEnabledByPairing = false;
+    if (bNRGMenabled) {
+      bNRGMenabled = false;
+      SyncESPNOW();
+    }
+  }
+}
+
+void SetNRGMPairingMode(bool enabled) {
+  if (enabled) {
+    if (!bNRGMenabled) {
+      bNRGMenabled = true;
+      bNRGMEnabledByPairing = true;
+      SyncESPNOW();
+    } else if (!bPairingmode) {
+      bNRGMEnabledByPairing = false;
+    }
+
+    if (!bESPNowInit) SyncESPNOW();
+    bPairingmode = millis();
+    if (!bPairingmode) bPairingmode = 1;
+  } else {
+    FinishNRGMPairing(false);
+  }
 }
 
 void PSPUpdatePlanner() {
@@ -62,12 +103,12 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
     return true;
   };
 
-  Debug("msgTyp: ");Debugln( typ );
+  DebugTrace("msgTyp: ");DebugTraceLn( typ );
   switch ( typ ){
     case COMMAND:
       if (!need(sizeof(command_t))) return;
       memcpy(&Command, incomingData, sizeof(command_t));
-      Debugf("COMMAND RECEIVED type [%i], state [%lld]\n",
+      DebugTracef("COMMAND RECEIVED type [%i], state [%lld]\n",
              Command.action, (long long)bPairingmode);
       switch (Command.action) {
         case CONN_REQUEST:
@@ -91,9 +132,18 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
           Debugln("CONN_CLEAR");
           break;
         case ASK_TARIF:
-          Debugln("ASK_TARIFS");
-          P2PType = OFFSET_ACTION + ASK_TARIF;
+        {
+          uint32_t nowMs = millis();
+          if (lastAskTarifQueuedMs == 0 || nowMs - lastAskTarifQueuedMs >= ESPNOW_ASK_TARIF_MIN_INTERVAL_MS) {
+            Debugln("ASK_TARIFS");
+            P2PType = OFFSET_ACTION + ASK_TARIF;
+            lastAskTarifQueuedMs = nowMs;
+          } else if (lastAskTarifThrottleLogMs == 0 || nowMs - lastAskTarifThrottleLogMs >= ESPNOW_ASK_TARIF_LOG_INTERVAL_MS) {
+            DebugTln(F("ASK_TARIFS throttled"));
+            lastAskTarifThrottleLogMs = nowMs;
+          }
           break;  
+        }
         case ASK_STATIC:
           Debugln("ASK_STATIC");
           P2PType = OFFSET_ACTION + ASK_STATIC;
@@ -112,9 +162,9 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
               Debugln("CONN_REQUEST: pair mode en juiste hostname");
               memcpy(Pref.mac, info->src_addr,6);
               AddPeer(Pref.mac);
-              bPairingmode = 0;
               Pref.peers = 1;
               P1StatusWrite();
+              FinishNRGMPairing(true);
               Command.action = PAIRING;
               Command.channel = WiFi.channel();
               espNowSendCommand(NULL, &Command);
@@ -176,6 +226,7 @@ void StopESPNOW(){
   en_error = 0;
   P2PType = 0;
   bPairingmode = 0;
+  bNRGMEnabledByPairing = false;
   Debugln("StartESPNOW: deinit OK");
 }
 
@@ -480,7 +531,7 @@ void handleP2P(){
   // Receive callbacks only set P2PType; the heavier peer actions run here from
   // the main loop so networking, JSON parsing, and OTA streaming stay serialized.
   if ( bPairingmode && (millis() - bPairingmode) > PAIR_TIMEOUT ) { 
-    bPairingmode = 0; 
+    FinishNRGMPairing(false);
     Debugln("-P- Timeout disable PAIRING mode");
   }
   if ( en_error > 30 ) { en_connected = false; en_error = 0;}
@@ -542,5 +593,6 @@ void handleP2P(){
   void StartESPNOW(){}
   void StopESPNOW(){}
   void SyncESPNOW(){}
-    void handleP2P(){}
+  void SetNRGMPairingMode(bool enabled){ (void)enabled; }
+  void handleP2P(){}
 #endif // ESPNOW

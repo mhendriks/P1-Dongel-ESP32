@@ -65,8 +65,7 @@ void handleButtonPressed(btn_types btn){
         Debugln(" already PAIRED -> rePAIR"); 
         // return;
       }
-      if ( bPairingmode ) bPairingmode = 0;
-      else bPairingmode = millis();
+      SetNRGMPairingMode(!bPairingmode);
       Debugln(bPairingmode ? "ON" : "OFF");
 #else 
       P1Reboot();
