@@ -39,8 +39,8 @@
   #define EID_REFRESH_TIME 1*60
 #else
   #define EID_IDLE_TIME 3600
-  #define EID_CLAIM_RETRY 60*1
-  #define EID_REFRESH_TIME 24*60
+  #define EID_CLAIM_RETRY 1*60
+  #define EID_REFRESH_TIME 2*60
 #endif
 
     DECLARE_TIMER_SEC(T_EID_IDLE, EID_IDLE_TIME); //idle timeout
