@@ -75,8 +75,8 @@ void PostWebhook() {
 
   WorkerWebhookPayload payload = {};
   payload.id = _getChipId();
-  payload.pFromGrid = DSMRdata.power_delivered.int_val();
-  payload.pToGrid = DSMRdata.power_returned.int_val();
+  payload.pFromGrid = outputPowerInt(DSMRdata.power_delivered.int_val());
+  payload.pToGrid = outputPowerInt(DSMRdata.power_returned.int_val());
   payload.timestamp = actT;
 
   if (!WorkerEnqueueWebhookPost(payload)) return;

@@ -560,6 +560,8 @@ IPAddress ipDNS, ipGateWay, ipSubnet;
 float     settingEDT1 = 0.1, settingEDT2 = 0.2, settingERT1 = 0.3, settingERT2 = 0.4, settingGDT = 0.5, settingWDT = 1.04;
 float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
 uint16_t  settingOvervoltageThreshold = 253;
+uint16_t  settingCTFactor = 1;
+uint16_t  settingVTFactor = 1;
 uint16_t  settingMeentInterval = 300;
 char      settingMeentToken[256] = "";
 uint8_t   settingFuse = 25;
@@ -574,6 +576,41 @@ bool      FSmounted = false;
 bool      skipNetwork = false;
 bool      allowSkipNetworkByButton = false;
 bool      try_calc_i = true;
+
+static constexpr uint16_t METER_FACTOR_MIN = 1;
+static constexpr uint16_t METER_FACTOR_MAX = 1000;
+
+inline uint32_t outputPowerFactor() {
+  return (uint32_t)settingCTFactor * (uint32_t)settingVTFactor;
+}
+
+inline float outputCurrent(float rawValue) {
+  return rawValue * (float)settingCTFactor;
+}
+
+inline float outputVoltage(float rawValue) {
+  return rawValue * (float)settingVTFactor;
+}
+
+inline float outputPower(float rawValue) {
+  return rawValue * (float)outputPowerFactor();
+}
+
+inline int32_t outputPowerInt(int64_t rawValue) {
+  int64_t scaled = rawValue * (int64_t)outputPowerFactor();
+  if (scaled > INT32_MAX) return INT32_MAX;
+  if (scaled < INT32_MIN) return INT32_MIN;
+  return (int32_t)scaled;
+}
+
+inline uint32_t outputFactorForField(const char* field) {
+  if (!strncmp(field, "current_l", 9)) return settingCTFactor;
+  if (!strncmp(field, "voltage_l", 9)) return settingVTFactor;
+  if (!strncmp(field, "power_delivered", 15) || !strncmp(field, "power_returned", 14)) {
+    return outputPowerFactor();
+  }
+  return 1;
+}
 
 //MQTT
 uint32_t   settingMQTTinterval = 10;

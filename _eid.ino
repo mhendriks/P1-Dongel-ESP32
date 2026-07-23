@@ -481,10 +481,10 @@
         Json += ",\"t2-i\":" + String((int)(DSMRdata.energy_returned_tariff2*1000.0));
       }
       if ( DSMRdata.power_delivered_present ) {
-        Json += ",\"pwr\":" + String((int)(DSMRdata.power_delivered*1000.0));
+        Json += ",\"pwr\":" + String(outputPowerInt(DSMRdata.power_delivered.int_val()));
       }
       if ( DSMRdata.power_returned_present ) {
-        Json += ",\"pwr-i\":" + String((int)(DSMRdata.power_returned*1000.0));
+        Json += ",\"pwr-i\":" + String(outputPowerInt(DSMRdata.power_returned.int_val()));
       }
       
       Json += "}";

@@ -9,21 +9,21 @@
 #include <ArduinoJson.h>
 
 namespace P1 {
-  inline float powerImportkW()   { return (float) DSMRdata.power_delivered.val(); }  // DSMR 1-0:1.7.0 (kW)
-  inline float powerExportkW()   { return DSMRdata.power_returned.val(); }  // DSMR 1-0:2.7.0 (kW)
+  inline float powerImportkW()   { return outputPower((float)DSMRdata.power_delivered.val()); }  // DSMR 1-0:1.7.0 (kW)
+  inline float powerExportkW()   { return outputPower(DSMRdata.power_returned.val()); }  // DSMR 1-0:2.7.0 (kW)
   inline float importTotalkWh()  { return DSMRdata.energy_delivered_tariff1.val() + DSMRdata.energy_delivered_tariff2.val(); } // DSMR 1-0:1.8.0
   inline float exportTotalkWh()  { return DSMRdata.energy_returned_tariff1.val() + DSMRdata.energy_returned_tariff2.val(); }  // DSMR 1-0:2.8.0
 
-  inline float pL1()             { return DSMRdata.power_delivered_l1_present ? (float)((int32_t)DSMRdata.power_delivered_l1.int_val() - (int32_t)DSMRdata.power_returned_l1.int_val()) : NAN; }
-  inline float pL2()             { return DSMRdata.power_delivered_l2_present ? (float)((int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val()) : NAN; }
-  inline float pL3()             { return DSMRdata.power_delivered_l3_present ? (float)((int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val()) : NAN; }
+  inline float pL1()             { return DSMRdata.power_delivered_l1_present ? outputPower((float)((int32_t)DSMRdata.power_delivered_l1.int_val() - (int32_t)DSMRdata.power_returned_l1.int_val())) : NAN; }
+  inline float pL2()             { return DSMRdata.power_delivered_l2_present ? outputPower((float)((int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val())) : NAN; }
+  inline float pL3()             { return DSMRdata.power_delivered_l3_present ? outputPower((float)((int32_t)DSMRdata.power_delivered_l3.int_val() - (int32_t)DSMRdata.power_returned_l3.int_val())) : NAN; }
   
-  inline float uL1()             { return DSMRdata.voltage_l1_present?DSMRdata.voltage_l1.val():NAN; }    // DSMR 32.7.0 (V)
-  inline float iL1()             { return  DSMRdata.current_l1_present?DSMRdata.current_l1.val():NAN; }    // DSMR 31.7.0 (A)
-  inline float uL2()             { return DSMRdata.voltage_l2_present?DSMRdata.voltage_l2.val():NAN; }    // DSMR 32.7.0 (V)
-  inline float iL2()             { return  DSMRdata.current_l2_present?DSMRdata.current_l2.val():NAN; }    // DSMR 31.7.0 (A)
-  inline float uL3()             { return DSMRdata.voltage_l3_present?DSMRdata.voltage_l3.val():NAN; }    // DSMR 32.7.0 (V)
-  inline float iL3()             { return  DSMRdata.current_l3_present?DSMRdata.current_l3.val():NAN; }    // DSMR 31.7.0 (A)
+  inline float uL1()             { return DSMRdata.voltage_l1_present?outputVoltage(DSMRdata.voltage_l1.val()):NAN; }    // DSMR 32.7.0 (V)
+  inline float iL1()             { return DSMRdata.current_l1_present?outputCurrent(DSMRdata.current_l1.val()):NAN; }    // DSMR 31.7.0 (A)
+  inline float uL2()             { return DSMRdata.voltage_l2_present?outputVoltage(DSMRdata.voltage_l2.val()):NAN; }    // DSMR 32.7.0 (V)
+  inline float iL2()             { return DSMRdata.current_l2_present?outputCurrent(DSMRdata.current_l2.val()):NAN; }    // DSMR 31.7.0 (A)
+  inline float uL3()             { return DSMRdata.voltage_l3_present?outputVoltage(DSMRdata.voltage_l3.val()):NAN; }    // DSMR 32.7.0 (V)
+  inline float iL3()             { return DSMRdata.current_l3_present?outputCurrent(DSMRdata.current_l3.val()):NAN; }    // DSMR 31.7.0 (A)
 }
 
 class ShellyEmuUDP {

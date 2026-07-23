@@ -221,26 +221,26 @@ static void ebUpdateDynamic(EB_Payload& p, uint64_t epochSeconds) {
   
   // ---- power ----
   if (DSMRdata.power_delivered_l1_present || DSMRdata.power_returned_l1_present) {
-    int32_t del = DSMRdata.power_delivered_l1_present ? DSMRdata.power_delivered_l1.int_val() * 1000: 0;
-    int32_t ret = DSMRdata.power_returned_l1_present  ? DSMRdata.power_returned_l1.int_val() * 1000: 0;
+    int32_t del = DSMRdata.power_delivered_l1_present ? outputPowerInt((int64_t)DSMRdata.power_delivered_l1.int_val() * 1000): 0;
+    int32_t ret = DSMRdata.power_returned_l1_present  ? outputPowerInt((int64_t)DSMRdata.power_returned_l1.int_val() * 1000): 0;
     p.dy.pactive1 = del - ret;
   }
 
   if (DSMRdata.power_delivered_l2_present || DSMRdata.power_returned_l2_present) {
-    int32_t del = DSMRdata.power_delivered_l2_present ? DSMRdata.power_delivered_l2.int_val() * 1000: 0;
-    int32_t ret = DSMRdata.power_returned_l2_present  ? DSMRdata.power_returned_l2.int_val() * 1000: 0;
+    int32_t del = DSMRdata.power_delivered_l2_present ? outputPowerInt((int64_t)DSMRdata.power_delivered_l2.int_val() * 1000): 0;
+    int32_t ret = DSMRdata.power_returned_l2_present  ? outputPowerInt((int64_t)DSMRdata.power_returned_l2.int_val() * 1000): 0;
     p.dy.pactive2 = del - ret;
   }
 
   if (DSMRdata.power_delivered_l3_present || DSMRdata.power_returned_l3_present) {
-    int32_t del = DSMRdata.power_delivered_l3_present ? DSMRdata.power_delivered_l3.int_val() * 1000: 0;
-    int32_t ret = DSMRdata.power_returned_l3_present  ? DSMRdata.power_returned_l3.int_val() * 1000: 0;
+    int32_t del = DSMRdata.power_delivered_l3_present ? outputPowerInt((int64_t)DSMRdata.power_delivered_l3.int_val() * 1000): 0;
+    int32_t ret = DSMRdata.power_returned_l3_present  ? outputPowerInt((int64_t)DSMRdata.power_returned_l3.int_val() * 1000): 0;
     p.dy.pactive3 = del - ret;
   }
 
   if (DSMRdata.power_delivered_present || DSMRdata.power_returned_present) {
-    int32_t del = DSMRdata.power_delivered_present ? DSMRdata.power_delivered.int_val() * 1000 : 0;
-    int32_t ret = DSMRdata.power_returned_present  ? DSMRdata.power_returned.int_val() * 1000 : 0;
+    int32_t del = DSMRdata.power_delivered_present ? outputPowerInt((int64_t)DSMRdata.power_delivered.int_val() * 1000) : 0;
+    int32_t ret = DSMRdata.power_returned_present  ? outputPowerInt((int64_t)DSMRdata.power_returned.int_val() * 1000) : 0;
     p.dy.pactiveTot = del - ret;
   }
 
@@ -251,14 +251,14 @@ static void ebUpdateDynamic(EB_Payload& p, uint64_t epochSeconds) {
   if (DSMRdata.energy_returned_tariff2_present)  p.dy.energyNeg  += DSMRdata.energy_returned_tariff2.int_val();
 
   // ---- voltage ----
-  if (DSMRdata.voltage_l1_present) p.dy.vrms1 = DSMRdata.voltage_l1.int_val();
-  if (DSMRdata.voltage_l2_present) p.dy.vrms2 = DSMRdata.voltage_l2.int_val();
-  if (DSMRdata.voltage_l3_present) p.dy.vrms3 = DSMRdata.voltage_l3.int_val();
+  if (DSMRdata.voltage_l1_present) p.dy.vrms1 = (int32_t)lroundf(outputVoltage((float)DSMRdata.voltage_l1.int_val()));
+  if (DSMRdata.voltage_l2_present) p.dy.vrms2 = (int32_t)lroundf(outputVoltage((float)DSMRdata.voltage_l2.int_val()));
+  if (DSMRdata.voltage_l3_present) p.dy.vrms3 = (int32_t)lroundf(outputVoltage((float)DSMRdata.voltage_l3.int_val()));
   
   // ---- current ----
-  if (DSMRdata.current_l1_present) p.dy.i1 = (p.dy.pactive1<0? -1 : 1) * (int32_t)DSMRdata.current_l1.int_val();
-  if (DSMRdata.current_l2_present) p.dy.i2 = (p.dy.pactive2<0? -1 : 1) * (int32_t)DSMRdata.current_l2.int_val();
-  if (DSMRdata.current_l3_present) p.dy.i3 = (p.dy.pactive3<0? -1 : 1) * (int32_t)DSMRdata.current_l3.int_val();
+  if (DSMRdata.current_l1_present) p.dy.i1 = (p.dy.pactive1<0? -1 : 1) * (int32_t)lroundf(outputCurrent((float)DSMRdata.current_l1.int_val()));
+  if (DSMRdata.current_l2_present) p.dy.i2 = (p.dy.pactive2<0? -1 : 1) * (int32_t)lroundf(outputCurrent((float)DSMRdata.current_l2.int_val()));
+  if (DSMRdata.current_l3_present) p.dy.i3 = (p.dy.pactive3<0? -1 : 1) * (int32_t)lroundf(outputCurrent((float)DSMRdata.current_l3.int_val()));
   p.dy.in = p.dy.i1 + p.dy.i2 + p.dy.i3;
 
   if (!ebSignRange(p.dy.ecdsa_md, &p.dy.seqno, (const uint8_t*)&p.dy.energyNeg + sizeof(p.dy.energyNeg))) {

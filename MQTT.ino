@@ -434,38 +434,39 @@ struct buildJsonMQTT {
      strncpy(Name,String(Item::name).c_str(),sizeof(Name));
     if ( isInFieldsArray(Name) && i.present() ) {
           // add value to '/all' topic
-          if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val());
+          uint32_t factor = outputFactorForField(Name);
+          if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val(), factor);
           else if ( MQTTclient.connected() && (!bActJsonMQTT || EnableHAdiscovery) ) {
             sprintf(cMsg,"%s%s",MQTopTopic,Name);
-            MQTTclient.publish( cMsg, String(value_to_json(i.val())).c_str() );
+            MQTTclient.publish( cMsg, String(value_to_json(i.val(), factor)).c_str() );
           }
     } // if isInFieldsArray && present
   } //apply
 
   template<typename Item>
-  Item& value_to_json(Item& i) {
+  Item& value_to_json(Item& i, uint32_t) {
     return i;
   }
 
-  String value_to_json(TimestampedFixedValue i) {
-    return String(i,3);
+  String value_to_json(TimestampedFixedValue i, uint32_t factor) {
+    return String(((double)i.int_val() * factor) / 1000.0, 3);
   }
   
-  String value_to_json(FixedValue i) {
-    return String(i,3);
+  String value_to_json(FixedValue i, uint32_t factor) {
+    return String(((double)i.int_val() * factor) / 1000.0, 3);
   }
 
   template<typename Item>
-  Item& value_to_json_mqtt(Item& i) {
+  Item& value_to_json_mqtt(Item& i, uint32_t) {
     return i;
   }
 
-  String value_to_json_mqtt(TimestampedFixedValue i) {
-    return String(i,3);
+  String value_to_json_mqtt(TimestampedFixedValue i, uint32_t factor) {
+    return String(((double)i.int_val() * factor) / 1000.0, 3);
   }
 
-  double value_to_json_mqtt(FixedValue i) {
-    return i.int_val()/1000.0;
+  double value_to_json_mqtt(FixedValue i, uint32_t factor) {
+    return ((double)i.int_val() * factor) / 1000.0;
   }
 
 }; // buildJsonMQTT
@@ -537,22 +538,22 @@ void MQTTSendVictronData(){
 
   JsonDocument doc;
   JsonObject grid = doc["grid"].to<JsonObject>();
-  grid["power"] = gridPower(DSMRdata.power_delivered, DSMRdata.power_returned);
+  grid["power"] = outputPowerInt(gridPower(DSMRdata.power_delivered, DSMRdata.power_returned));
 
   JsonObject l1 = grid["L1"].to<JsonObject>();
-  l1["power"] = gridPower(DSMRdata.power_delivered_l1, DSMRdata.power_returned_l1);
-  l1["voltage"] = fixedValue(DSMRdata.voltage_l1, 1);
-  l1["current"] = fixedValue(DSMRdata.current_l1, 0);
+  l1["power"] = outputPowerInt(gridPower(DSMRdata.power_delivered_l1, DSMRdata.power_returned_l1));
+  l1["voltage"] = outputVoltage(fixedValue(DSMRdata.voltage_l1, 1));
+  l1["current"] = outputCurrent(fixedValue(DSMRdata.current_l1, 0));
 
   JsonObject l2 = grid["L2"].to<JsonObject>();
-  l2["power"] = gridPower(DSMRdata.power_delivered_l2, DSMRdata.power_returned_l2);
-  l2["voltage"] = fixedValue(DSMRdata.voltage_l2, 1);
-  l2["current"] = fixedValue(DSMRdata.current_l2, 0);
+  l2["power"] = outputPowerInt(gridPower(DSMRdata.power_delivered_l2, DSMRdata.power_returned_l2));
+  l2["voltage"] = outputVoltage(fixedValue(DSMRdata.voltage_l2, 1));
+  l2["current"] = outputCurrent(fixedValue(DSMRdata.current_l2, 0));
 
   JsonObject l3 = grid["L3"].to<JsonObject>();
-  l3["power"] = gridPower(DSMRdata.power_delivered_l3, DSMRdata.power_returned_l3);
-  l3["voltage"] = fixedValue(DSMRdata.voltage_l3, 1);
-  l3["current"] = fixedValue(DSMRdata.current_l3, 0);
+  l3["power"] = outputPowerInt(gridPower(DSMRdata.power_delivered_l3, DSMRdata.power_returned_l3));
+  l3["voltage"] = outputVoltage(fixedValue(DSMRdata.voltage_l3, 1));
+  l3["current"] = outputCurrent(fixedValue(DSMRdata.current_l3, 0));
 
   String jsondata;
   serializeJson(doc, jsondata);

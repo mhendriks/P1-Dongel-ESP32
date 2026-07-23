@@ -103,6 +103,8 @@ void writeSettingsDirect() {
   docw["GasVasteKosten"] = settingGNBK;
   docw["WaterVasteKosten"] = settingWNBK;
   docw["OverVoltageThreshold"] = settingOvervoltageThreshold;
+  docw["CTFactor"] = settingCTFactor;
+  docw["VTFactor"] = settingVTFactor;
   docw["MeentInterval"] = settingMeentInterval;
   docw["MeentToken"] = settingMeentToken;
   docw["Fuse"] = settingFuse;
@@ -225,6 +227,12 @@ void readSettings(bool show)
   if (doc["OverVoltageThreshold"].is<int>()) {
     settingOvervoltageThreshold = constrain(doc["OverVoltageThreshold"].as<int>(), 200, 300);
   }
+  if (doc["CTFactor"].is<int>()) {
+    settingCTFactor = constrain(doc["CTFactor"].as<int>(), (int)METER_FACTOR_MIN, (int)METER_FACTOR_MAX);
+  }
+  if (doc["VTFactor"].is<int>()) {
+    settingVTFactor = constrain(doc["VTFactor"].as<int>(), (int)METER_FACTOR_MIN, (int)METER_FACTOR_MAX);
+  }
   if (doc["MeentInterval"].is<int>()) {
     settingMeentInterval = constrain(doc["MeentInterval"].as<int>(), 1, 3600);
   }
@@ -258,7 +266,8 @@ void readSettings(bool show)
   if (doc["enableHistory"].is<bool>()) EnableHistory = doc["enableHistory"];
   if (doc["watermeter"].is<bool>() ) WtrMtr = doc["watermeter"];
   if (doc["waterfactor"].is<float>()) WtrFactor = doc["waterfactor"];
-  bool settingsBackfillNeeded = !doc["Fuse"].is<int>() || !doc["Phases"].is<int>();
+  bool settingsBackfillNeeded = !doc["Fuse"].is<int>() || !doc["Phases"].is<int>() ||
+                                !doc["CTFactor"].is<int>() || !doc["VTFactor"].is<int>();
   if (doc["Fuse"].is<int>()) {
     uint8_t newFuse = doc["Fuse"];
     settingFuse = (newFuse == 16 || newFuse == 25 || newFuse == 35) ? newFuse : 25;
@@ -366,6 +375,12 @@ void updateSetting(const char *field, const char *newValue)
       settingOvervoltageThreshold = newThreshold;
       ResetOvervoltageStats();
     }
+  }
+  if (!stricmp(field, "ct_factor")) {
+    settingCTFactor = constrain(String(newValue).toInt(), (int)METER_FACTOR_MIN, (int)METER_FACTOR_MAX);
+  }
+  if (!stricmp(field, "vt_factor")) {
+    settingVTFactor = constrain(String(newValue).toInt(), (int)METER_FACTOR_MIN, (int)METER_FACTOR_MAX);
   }
   if (!stricmp(field, "meent_interval")) {
     settingMeentInterval = constrain(String(newValue).toInt(), 1, 3600);

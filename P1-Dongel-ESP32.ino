@@ -52,6 +52,15 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
+5.8.10
+- add: CT and VT scaling factors for current, voltage and power outputs
+- add: Smart Meter settings tab
+- remove: manual SMR 2/3 setting; detection is automatic
+- add: P1 communication mode and detected meter version to System Information
+- add: WebSocket guard and diagnostics for stalled clients
+- fix: harden solar HTTP clients to prevent timeouts, stalls and SMA panic reboots
+- change: EID provisioning refresh interval from 24 hours to 2 hours
+
 5.9.0
 - Normalise energy data (huge change)
 
@@ -62,6 +71,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - refactor hardware/build targets and profile configuration
 - add wallbox mapping
 - extra report "jaarbalans": op basis van nog te verwachten maandnw ( Leo B )
+- max 3 solar systemen ondersteunen. Max 3 x zelfde of variaties zijn.  
 
 5.10.0
 - add option to see total counter remotely

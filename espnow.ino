@@ -380,8 +380,8 @@ void P2PSendActualData(){
   if ( !espNowReadyForPeerData() || !bNRGMenabled || !en_connected ) return;
   
   ActualData.epoch  = actT;
-  ActualData.P      = DSMRdata.power_delivered.int_val();
-  ActualData.Pr     = DSMRdata.power_returned.int_val() ;
+  ActualData.P      = outputPowerInt(DSMRdata.power_delivered.int_val());
+  ActualData.Pr     = outputPowerInt(DSMRdata.power_returned.int_val());
   ActualData.e_t1   = DSMRdata.energy_delivered_tariff1.int_val() - dataYesterday.t1;
   ActualData.e_t2   = DSMRdata.energy_delivered_tariff2.int_val() - dataYesterday.t2;
   ActualData.e_t1r  = DSMRdata.energy_returned_tariff1.int_val() - dataYesterday.t1r;

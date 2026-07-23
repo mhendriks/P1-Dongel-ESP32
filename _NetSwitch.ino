@@ -82,7 +82,7 @@ void NetSwitchStateMngr(){
   if ( !bNETSWenabled ) return;
   if ( !bNetSwitchConfigRead ) return;
   //every time new p1 values are available
-  int32_t Phouse = DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val();
+  int32_t Phouse = outputPowerInt((int32_t)DSMRdata.power_delivered.int_val() - (int32_t)DSMRdata.power_returned.int_val());
   int32_t legacyValueOn = getNetSwitchValue("value_on", docTriggers["value"].as<int>());
   int32_t legacyValueOff = getNetSwitchValue("value_off", legacyValueOn);
   bool exportMode = getNetSwitchExportMode();

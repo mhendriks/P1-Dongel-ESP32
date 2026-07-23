@@ -3217,11 +3217,12 @@ function initSettingsSubTabsOnce() {
 function splitSettingsUI() {
   const table   = document.getElementById("settings_table");
   const general = document.getElementById("settings_general");
+  const smartMeter = document.getElementById("settings_smart_meter");
   const tariff  = document.getElementById("settings_tariff");
   const mqtt    = document.getElementById("settings_mqtt");
   const modbus  = document.getElementById("settings_modbus");
 
-  if ( !table || !general || !mqtt || !modbus || !tariff ) return;
+  if ( !table || !general || !smartMeter || !mqtt || !modbus || !tariff ) return;
 
   // velden op basis van "i" (dus zonder "settingR_")
   const MQTT_KEYS = new Set([
@@ -3250,6 +3251,16 @@ function splitSettingsUI() {
 	"water_netw_costs",
 	"gas_netw_costs"
   ]);
+
+  const SMART_METER_KEYS = [
+    "phases",
+    "fuse",
+    "ct_factor",
+    "vt_factor",
+    "overvoltage_threshold",
+    "try_calc_i"
+  ];
+  const SMART_METER_KEY_SET = new Set(SMART_METER_KEYS);
   
   const MODBUS_KEYS = new Set([
     "mb_map",
@@ -3276,9 +3287,15 @@ function splitSettingsUI() {
     const key = id.startsWith("settingR_") ? id.substring("settingR_".length) : "";
 
     if (MQTT_KEYS.has(key)) mqtt.appendChild(row);
+    else if (SMART_METER_KEY_SET.has(key)) smartMeter.appendChild(row);
     else if (TARIFF_KEYS.has(key)) tariff.appendChild(row);
     else if (MODBUS_KEYS.has(key)) modbus.appendChild(row);
     else general.appendChild(row);
+  });
+
+  SMART_METER_KEYS.forEach(key => {
+    const row = document.getElementById(`settingR_${key}`);
+    if (row) smartMeter.appendChild(row);
   });
 
   const mqttToggleRow = document.getElementById("settingR_mqtt_enabled");

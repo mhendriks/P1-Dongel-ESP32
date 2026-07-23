@@ -253,41 +253,41 @@ static float readMbSourceValue(MbSource source) {
       return isnan(value) ? NAN : (value / 3.0f);
     }
     case MbSource::power_delivered_kw:
-      return DSMRdata.power_delivered_present ? DSMRdata.power_delivered.val() : NAN;
+      return DSMRdata.power_delivered_present ? outputPower(DSMRdata.power_delivered.val()) : NAN;
     case MbSource::power_returned_kw:
-      return DSMRdata.power_returned_present ? DSMRdata.power_returned.val() : NAN;
+      return DSMRdata.power_returned_present ? outputPower(DSMRdata.power_returned.val()) : NAN;
     case MbSource::net_power_total_kw:
-      return DSMRdata.power_delivered_present ? (DSMRdata.power_delivered.val() - DSMRdata.power_returned.val()) : NAN;
+      return DSMRdata.power_delivered_present ? outputPower(DSMRdata.power_delivered.val() - DSMRdata.power_returned.val()) : NAN;
     case MbSource::voltage_l1_v:
-      return DSMRdata.voltage_l1_present ? (float)DSMRdata.voltage_l1.val() : NAN;
+      return DSMRdata.voltage_l1_present ? outputVoltage((float)DSMRdata.voltage_l1.val()) : NAN;
     case MbSource::voltage_l2_v:
-      return DSMRdata.voltage_l2_present ? (float)DSMRdata.voltage_l2.val() : NAN;
+      return DSMRdata.voltage_l2_present ? outputVoltage((float)DSMRdata.voltage_l2.val()) : NAN;
     case MbSource::voltage_l3_v:
-      return DSMRdata.voltage_l3_present ? (float)DSMRdata.voltage_l3.val() : NAN;
+      return DSMRdata.voltage_l3_present ? outputVoltage((float)DSMRdata.voltage_l3.val()) : NAN;
     case MbSource::phase_voltage_avg_v: {
       float value = 0.0f;
       uint8_t count = 0;
       if (DSMRdata.voltage_l1_present) { value += (float)DSMRdata.voltage_l1.val(); count++; }
       if (DSMRdata.voltage_l2_present) { value += (float)DSMRdata.voltage_l2.val(); count++; }
       if (DSMRdata.voltage_l3_present) { value += (float)DSMRdata.voltage_l3.val(); count++; }
-      return count ? (value / (float)count) : NAN;
+      return count ? outputVoltage(value / (float)count) : NAN;
     }
     case MbSource::current_l1_a:
-      return DSMRdata.current_l1_present ? (float)DSMRdata.current_l1.val() : NAN;
+      return DSMRdata.current_l1_present ? outputCurrent((float)DSMRdata.current_l1.val()) : NAN;
     case MbSource::current_l2_a:
-      return DSMRdata.current_l2_present ? (float)DSMRdata.current_l2.val() : NAN;
+      return DSMRdata.current_l2_present ? outputCurrent((float)DSMRdata.current_l2.val()) : NAN;
     case MbSource::current_l3_a:
-      return DSMRdata.current_l3_present ? (float)DSMRdata.current_l3.val() : NAN;
+      return DSMRdata.current_l3_present ? outputCurrent((float)DSMRdata.current_l3.val()) : NAN;
     case MbSource::current_total_a:
       return DSMRdata.current_l1_present
-        ? (float)(DSMRdata.current_l1.val() + DSMRdata.current_l2.val() + DSMRdata.current_l3.val())
+        ? outputCurrent((float)(DSMRdata.current_l1.val() + DSMRdata.current_l2.val() + DSMRdata.current_l3.val()))
         : NAN;
     case MbSource::signed_current_l1_a:
-      return DSMRdata.current_l1_present ? mbSignedCurrent((float)DSMRdata.current_l1.val(), DSMRdata.power_returned_l1.val()) : NAN;
+      return DSMRdata.current_l1_present ? outputCurrent(mbSignedCurrent((float)DSMRdata.current_l1.val(), DSMRdata.power_returned_l1.val())) : NAN;
     case MbSource::signed_current_l2_a:
-      return DSMRdata.current_l2_present ? mbSignedCurrent((float)DSMRdata.current_l2.val(), DSMRdata.power_returned_l2.val()) : NAN;
+      return DSMRdata.current_l2_present ? outputCurrent(mbSignedCurrent((float)DSMRdata.current_l2.val(), DSMRdata.power_returned_l2.val())) : NAN;
     case MbSource::signed_current_l3_a:
-      return DSMRdata.current_l3_present ? mbSignedCurrent((float)DSMRdata.current_l3.val(), DSMRdata.power_returned_l3.val()) : NAN;
+      return DSMRdata.current_l3_present ? outputCurrent(mbSignedCurrent((float)DSMRdata.current_l3.val(), DSMRdata.power_returned_l3.val())) : NAN;
     case MbSource::gas_timestamp_epoch:
       return mbusGas ? (float)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600)) : NAN;
     case MbSource::gas_delivered_m3:
@@ -297,11 +297,11 @@ static float readMbSourceValue(MbSource source) {
     case MbSource::peak_pwr_last_q_kw:
       return DSMRdata.peak_pwr_last_q_present ? (float)DSMRdata.peak_pwr_last_q.val() : NAN;
     case MbSource::net_power_l1_kw:
-      return DSMRdata.power_delivered_l1_present ? (float)(DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val()) : NAN;
+      return DSMRdata.power_delivered_l1_present ? outputPower((float)(DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val())) : NAN;
     case MbSource::net_power_l2_kw:
-      return DSMRdata.power_delivered_l2_present ? (float)(DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val()) : NAN;
+      return DSMRdata.power_delivered_l2_present ? outputPower((float)(DSMRdata.power_delivered_l2.val() - DSMRdata.power_returned_l2.val())) : NAN;
     case MbSource::net_power_l3_kw:
-      return DSMRdata.power_delivered_l3_present ? (float)(DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val()) : NAN;
+      return DSMRdata.power_delivered_l3_present ? outputPower((float)(DSMRdata.power_delivered_l3.val() - DSMRdata.power_returned_l3.val())) : NAN;
     case MbSource::power_factor_total: {
       float value = readMbSourceValue(MbSource::net_power_total_kw);
       return isnan(value) ? NAN : (value < 0.0f ? -1.0f : 1.0f);
@@ -331,17 +331,17 @@ static float readMbSourceValue(MbSource source) {
     case MbSource::direction_l3:
       return DSMRdata.power_returned_l3_present ? (DSMRdata.power_returned_l3 > 0 ? -1.0f : 1.0f) : NAN;
     case MbSource::line_voltage_l12_v:
-      return (DSMRdata.voltage_l1_present && DSMRdata.voltage_l2_present) ? calculateLineVoltage(DSMRdata.voltage_l1, DSMRdata.voltage_l2) : NAN;
+      return (DSMRdata.voltage_l1_present && DSMRdata.voltage_l2_present) ? outputVoltage(calculateLineVoltage(DSMRdata.voltage_l1, DSMRdata.voltage_l2)) : NAN;
     case MbSource::line_voltage_l23_v:
-      return (DSMRdata.voltage_l2_present && DSMRdata.voltage_l3_present) ? calculateLineVoltage(DSMRdata.voltage_l2, DSMRdata.voltage_l3) : NAN;
+      return (DSMRdata.voltage_l2_present && DSMRdata.voltage_l3_present) ? outputVoltage(calculateLineVoltage(DSMRdata.voltage_l2, DSMRdata.voltage_l3)) : NAN;
     case MbSource::line_voltage_l31_v:
-      return (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) : NAN;
+      return (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? outputVoltage(calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1)) : NAN;
     case MbSource::line_voltage_avg_v: {
       float value = 0.0f;
       value += (DSMRdata.voltage_l1_present && DSMRdata.voltage_l2_present) ? calculateLineVoltage(DSMRdata.voltage_l1, DSMRdata.voltage_l2) : 0.0f;
       value += (DSMRdata.voltage_l2_present && DSMRdata.voltage_l3_present) ? calculateLineVoltage(DSMRdata.voltage_l2, DSMRdata.voltage_l3) : 0.0f;
       value += (DSMRdata.voltage_l3_present && DSMRdata.voltage_l1_present) ? calculateLineVoltage(DSMRdata.voltage_l3, DSMRdata.voltage_l1) : 0.0f;
-      return value / 3.0f;
+      return outputVoltage(value / 3.0f);
     }
     case MbSource::water_delivered_m3:
       return mbusWater ? (float)waterDelivered
@@ -366,6 +366,10 @@ static float readMbSourceValue(MbSource source) {
 }
 
 static float readScaledMbSourceValue(MbSource source, int16_t scale) {
+  if (settingCTFactor != 1 || settingVTFactor != 1) {
+    float value = readMbSourceValue(source);
+    return isnan(value) ? NAN : value * scale;
+  }
   if (scale != 1000 && scale != -1000 && scale != 10000 && scale != -10000) {
     float value = readMbSourceValue(source);
     return isnan(value) ? NAN : value * scale;

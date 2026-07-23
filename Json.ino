@@ -102,26 +102,26 @@ ApiResponse dashLiveApiResponse() {
   doc["timestamp"] = DSMRdata.timestamp_present ? DSMRdata.timestamp.c_str() : actTimestamp;
 
   JsonObject power = doc["power"].to<JsonObject>();
-  if (DSMRdata.power_delivered_present) power["delivered"] = DSMRdata.power_delivered.val();
-  if (DSMRdata.power_returned_present) power["returned"] = DSMRdata.power_returned.val();
-  if (DSMRdata.power_delivered_l1_present) power["delivered_l1"] = DSMRdata.power_delivered_l1.val();
-  if (DSMRdata.power_delivered_l2_present) power["delivered_l2"] = DSMRdata.power_delivered_l2.val();
-  if (DSMRdata.power_delivered_l3_present) power["delivered_l3"] = DSMRdata.power_delivered_l3.val();
-  if (DSMRdata.power_returned_l1_present) power["returned_l1"] = DSMRdata.power_returned_l1.val();
-  if (DSMRdata.power_returned_l2_present) power["returned_l2"] = DSMRdata.power_returned_l2.val();
-  if (DSMRdata.power_returned_l3_present) power["returned_l3"] = DSMRdata.power_returned_l3.val();
+  if (DSMRdata.power_delivered_present) power["delivered"] = outputPower(DSMRdata.power_delivered.val());
+  if (DSMRdata.power_returned_present) power["returned"] = outputPower(DSMRdata.power_returned.val());
+  if (DSMRdata.power_delivered_l1_present) power["delivered_l1"] = outputPower(DSMRdata.power_delivered_l1.val());
+  if (DSMRdata.power_delivered_l2_present) power["delivered_l2"] = outputPower(DSMRdata.power_delivered_l2.val());
+  if (DSMRdata.power_delivered_l3_present) power["delivered_l3"] = outputPower(DSMRdata.power_delivered_l3.val());
+  if (DSMRdata.power_returned_l1_present) power["returned_l1"] = outputPower(DSMRdata.power_returned_l1.val());
+  if (DSMRdata.power_returned_l2_present) power["returned_l2"] = outputPower(DSMRdata.power_returned_l2.val());
+  if (DSMRdata.power_returned_l3_present) power["returned_l3"] = outputPower(DSMRdata.power_returned_l3.val());
   if (power.size() == 0) doc.remove("power");
 
   JsonObject current = doc["current"].to<JsonObject>();
-  if (DSMRdata.current_l1_present) current["l1"] = DSMRdata.current_l1.val();
-  if (DSMRdata.current_l2_present) current["l2"] = DSMRdata.current_l2.val();
-  if (DSMRdata.current_l3_present) current["l3"] = DSMRdata.current_l3.val();
+  if (DSMRdata.current_l1_present) current["l1"] = outputCurrent(DSMRdata.current_l1.val());
+  if (DSMRdata.current_l2_present) current["l2"] = outputCurrent(DSMRdata.current_l2.val());
+  if (DSMRdata.current_l3_present) current["l3"] = outputCurrent(DSMRdata.current_l3.val());
   if (current.size() == 0) doc.remove("current");
 
   JsonObject voltage = doc["voltage"].to<JsonObject>();
-  if (DSMRdata.voltage_l1_present) voltage["l1"] = DSMRdata.voltage_l1.val();
-  if (DSMRdata.voltage_l2_present) voltage["l2"] = DSMRdata.voltage_l2.val();
-  if (DSMRdata.voltage_l3_present) voltage["l3"] = DSMRdata.voltage_l3.val();
+  if (DSMRdata.voltage_l1_present) voltage["l1"] = outputVoltage(DSMRdata.voltage_l1.val());
+  if (DSMRdata.voltage_l2_present) voltage["l2"] = outputVoltage(DSMRdata.voltage_l2.val());
+  if (DSMRdata.voltage_l3_present) voltage["l3"] = outputVoltage(DSMRdata.voltage_l3.val());
   if (voltage.size() == 0) doc.remove("voltage");
 
   JsonObject energy = doc["energy"].to<JsonObject>();
@@ -164,25 +164,25 @@ ApiResponse dashLiveApiResponse() {
 String apiStatsJson() {
   return jsonResponse([&](JsonDocument& doc){
     
-    if ( DSMRdata.current_l1_present ) doc["I1piek"]  = P1Stats.I1piek;
-    if ( DSMRdata.current_l2_present ) doc["I2piek"]  = P1Stats.I2piek;
-    if ( DSMRdata.current_l3_present ) doc["I3piek"]  = P1Stats.I3piek;
+    if ( DSMRdata.current_l1_present ) doc["I1piek"]  = outputCurrent(P1Stats.I1piek);
+    if ( DSMRdata.current_l2_present ) doc["I2piek"]  = outputCurrent(P1Stats.I2piek);
+    if ( DSMRdata.current_l3_present ) doc["I3piek"]  = outputCurrent(P1Stats.I3piek);
     
-    if ( DSMRdata.power_delivered_l1_present ) doc["P1max"]   = P1Stats.P1max;
-    if ( DSMRdata.power_delivered_l2_present ) doc["P2max"]   = P1Stats.P2max;
-    if ( DSMRdata.power_delivered_l3_present ) doc["P3max"]   = P1Stats.P3max;
+    if ( DSMRdata.power_delivered_l1_present ) doc["P1max"]   = outputPowerInt(P1Stats.P1max);
+    if ( DSMRdata.power_delivered_l2_present ) doc["P2max"]   = outputPowerInt(P1Stats.P2max);
+    if ( DSMRdata.power_delivered_l3_present ) doc["P3max"]   = outputPowerInt(P1Stats.P3max);
     
-    if ( DSMRdata.power_delivered_l1_present ) doc["P1min"]   = P1Stats.P1min;
-    if ( DSMRdata.power_delivered_l2_present ) doc["P2min"]   = P1Stats.P2min;
-    if ( DSMRdata.power_delivered_l3_present ) doc["P3min"]   = P1Stats.P3min;
+    if ( DSMRdata.power_delivered_l1_present ) doc["P1min"]   = outputPowerInt(P1Stats.P1min);
+    if ( DSMRdata.power_delivered_l2_present ) doc["P2min"]   = outputPowerInt(P1Stats.P2min);
+    if ( DSMRdata.power_delivered_l3_present ) doc["P3min"]   = outputPowerInt(P1Stats.P3min);
 
-    if ( DSMRdata.voltage_l1_present ) doc["U1piek"]  = P1Stats.U1piek;
-    if ( DSMRdata.voltage_l2_present ) doc["U2piek"]  = P1Stats.U2piek;
-    if ( DSMRdata.voltage_l3_present ) doc["U3piek"]  = P1Stats.U3piek;
+    if ( DSMRdata.voltage_l1_present ) doc["U1piek"]  = outputVoltage(P1Stats.U1piek);
+    if ( DSMRdata.voltage_l2_present ) doc["U2piek"]  = outputVoltage(P1Stats.U2piek);
+    if ( DSMRdata.voltage_l3_present ) doc["U3piek"]  = outputVoltage(P1Stats.U3piek);
 
-    if ( DSMRdata.voltage_l1_present )doc["U1min"]  = P1Stats.U1min;
-    if ( DSMRdata.voltage_l2_present )doc["U2min"]  = P1Stats.U2min;
-    if ( DSMRdata.voltage_l3_present )doc["U3min"]  = P1Stats.U3min;
+    if ( DSMRdata.voltage_l1_present )doc["U1min"]  = outputVoltage(P1Stats.U1min);
+    if ( DSMRdata.voltage_l2_present )doc["U2min"]  = outputVoltage(P1Stats.U2min);
+    if ( DSMRdata.voltage_l3_present )doc["U3min"]  = outputVoltage(P1Stats.U3min);
 
     if ( DSMRdata.voltage_l1_present )doc["TU1over"] = actueleOverspanningSeconden(P1Stats.TU1over, startTijdL1, overspanningActiefL1);
     if ( DSMRdata.voltage_l2_present )doc["TU2over"] = actueleOverspanningSeconden(P1Stats.TU2over, startTijdL2, overspanningActiefL2);
@@ -312,19 +312,19 @@ static void fillHWapiJson(JsonDocument& jsonDoc) {
     jsonDoc["total_power_export_t2_kwh"] = F3DEC(DSMRdata.energy_returned_tariff2.val());
 
     // Huidige stroomwaarden
-    jsonDoc["active_power_w"] = (int32_t)(DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val());
-    jsonDoc["active_power_l1_w"] = (int32_t)(DSMRdata.power_delivered_l1.int_val() - DSMRdata.power_returned_l1.int_val());
-    jsonDoc["active_power_l2_w"] = (int32_t)(DSMRdata.power_delivered_l2.int_val() - DSMRdata.power_returned_l2.int_val());
-    jsonDoc["active_power_l3_w"] = (int32_t)(DSMRdata.power_delivered_l3.int_val() - DSMRdata.power_returned_l3.int_val());
+    jsonDoc["active_power_w"] = outputPowerInt((int32_t)(DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val()));
+    jsonDoc["active_power_l1_w"] = outputPowerInt((int32_t)(DSMRdata.power_delivered_l1.int_val() - DSMRdata.power_returned_l1.int_val()));
+    jsonDoc["active_power_l2_w"] = outputPowerInt((int32_t)(DSMRdata.power_delivered_l2.int_val() - DSMRdata.power_returned_l2.int_val()));
+    jsonDoc["active_power_l3_w"] = outputPowerInt((int32_t)(DSMRdata.power_delivered_l3.int_val() - DSMRdata.power_returned_l3.int_val()));
     
     // Spanning en stroom
-    jsonDoc["active_voltage_l1_v"] = F3DEC(DSMRdata.voltage_l1.val());
-    jsonDoc["active_voltage_l2_v"] = F3DEC(DSMRdata.voltage_l2.val());
-    jsonDoc["active_voltage_l3_v"] = F3DEC(DSMRdata.voltage_l3.val());
+    jsonDoc["active_voltage_l1_v"] = F3DEC(outputVoltage(DSMRdata.voltage_l1.val()));
+    jsonDoc["active_voltage_l2_v"] = F3DEC(outputVoltage(DSMRdata.voltage_l2.val()));
+    jsonDoc["active_voltage_l3_v"] = F3DEC(outputVoltage(DSMRdata.voltage_l3.val()));
 
-    float i1 = (DSMRdata.voltage_l1_present&&DSMRdata.voltage_l1.val())?jsonDoc["active_power_l1_w"].as<float>()/DSMRdata.voltage_l1.val():0.0f;
-    float i2 = (DSMRdata.voltage_l2_present&&DSMRdata.voltage_l2.val())?jsonDoc["active_power_l2_w"].as<float>()/DSMRdata.voltage_l2.val():0.0f;
-    float i3 = (DSMRdata.voltage_l3_present&&DSMRdata.voltage_l3.val())?jsonDoc["active_power_l3_w"].as<float>()/DSMRdata.voltage_l3.val():0.0f;
+    float i1 = (DSMRdata.voltage_l1_present&&DSMRdata.voltage_l1.val())?jsonDoc["active_power_l1_w"].as<float>()/outputVoltage(DSMRdata.voltage_l1.val()):0.0f;
+    float i2 = (DSMRdata.voltage_l2_present&&DSMRdata.voltage_l2.val())?jsonDoc["active_power_l2_w"].as<float>()/outputVoltage(DSMRdata.voltage_l2.val()):0.0f;
+    float i3 = (DSMRdata.voltage_l3_present&&DSMRdata.voltage_l3.val())?jsonDoc["active_power_l3_w"].as<float>()/outputVoltage(DSMRdata.voltage_l3.val()):0.0f;
 
     jsonDoc["active_current_a"]    = F3DEC( abs(i1) + abs(i2) + abs(i3) );
     jsonDoc["active_current_l1_a"] = F3DEC(i1);
@@ -410,23 +410,23 @@ struct buildJson {
       if (isInFieldsArray(Name)) {
         
         if (i.present()) {          
-          jsonDoc[Name]["value"] = value_to_json(i.val());
+          jsonDoc[Name]["value"] = value_to_json(i.val(), outputFactorForField(Name));
           if (String(Item::unit()).length() > 0) jsonDoc[Name]["unit"]  = Item::unit();
         }  else if (!onlyIfPresent) jsonDoc[Name]["value"] = "-";   
     } //infielsarrayname
   }
   
   template<typename Item>
-  Item& value_to_json(Item& i) {
+  Item& value_to_json(Item& i, uint32_t) {
     return i;
   }
 
-  double value_to_json(TimestampedFixedValue i) {
-    return i.int_val()/1000.0;
+  double value_to_json(TimestampedFixedValue i, uint32_t factor) {
+    return ((double)i.int_val() * factor) / 1000.0;
   }
   
-  double value_to_json(FixedValue i) {
-    return i.int_val()/1000.0;
+  double value_to_json(FixedValue i, uint32_t factor) {
+    return ((double)i.int_val() * factor) / 1000.0;
   }
 
 }; // buildjson{} 
@@ -493,6 +493,11 @@ String deviceInfoJson()
 #else
   doc["meter_source"] = "DSMR";
 #endif
+  doc["p1_communication_mode"] = bPre40 ? "9600 baud, 7E1 (SMR 2/3)"
+                                         : "115200 baud, 8N1 (SMR 4/5)";
+  if (DSMRdata.p1_version.length() > 0) {
+    doc["smart_meter_version"] = DSMRdata.p1_version;
+  }
 
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
@@ -574,6 +579,8 @@ if ( !hideMQTTsettings) {
   ADD_SETTING("b_auth_user", "s", 0, sizeof(bAuthUser) - 1, bAuthUser);
   ADD_SETTING("b_auth_pw", "s", 0, sizeof(bAuthPW) - 1, bAuthPW);
   ADD_SETTING("overvoltage_threshold", "i", 200, 300, settingOvervoltageThreshold);
+  ADD_SETTING("ct_factor", "i", METER_FACTOR_MIN, METER_FACTOR_MAX, settingCTFactor);
+  ADD_SETTING("vt_factor", "i", METER_FACTOR_MIN, METER_FACTOR_MAX, settingVTFactor);
   ADD_SETTING("fuse", "i", 16, 35, settingFuse);
   ADD_SETTING("phases", "i", 0, 3, settingPhases);
 #ifdef VIRTUAL_P1
@@ -614,7 +621,6 @@ if ( !hideMQTTsettings) {
   if ( bWarmteLink ) { // IF HEATLINK
     doc["conf"] = "p1-q";
   } else {
-    doc["pre40"] = bPre40;
     doc["conf"] = "p1-p";
   }
 
