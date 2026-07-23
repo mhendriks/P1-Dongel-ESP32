@@ -25,6 +25,8 @@ static uint16_t LastSolarFetchDurationMs = 0;
 static String   _sma_sid;
 static uint32_t _sma_sid_t0 = 0;
 static const size_t SMA_MAX_RESPONSE_LEN = 2048;
+static const uint16_t SOLAR_HTTP_CONNECT_TIMEOUT_MS = 4000;
+static const uint16_t SOLAR_HTTP_TIMEOUT_MS = 5000;
 
 static void* solarSystemForSource(SolarSource src) {
   switch (src) {
@@ -44,6 +46,32 @@ static uint32_t defaultSolarRefreshInterval(SolarSource src) {
     case OMNIKSOL:   return 15;
   }
   return 15;
+}
+
+static const char* solarFetchTag(SolarSource src) {
+  switch (src) {
+    case ENPHASE:    return "solar-enphase";
+    case SOLAR_EDGE: return "solar-solaredge";
+    case SMA:        return "solar-sma";
+    case OMNIKSOL:   return "solar-omnik";
+  }
+  return "solar-fetch";
+}
+
+static bool solarHttpBegin(HTTPClient& http, WiFiClient& client, WiFiClientSecure& clientTLS, const String& url) {
+  bool beginOk;
+  if (url.startsWith("https://")) {
+    clientTLS.setInsecure();
+    beginOk = http.begin(clientTLS, url);
+  } else {
+    beginOk = http.begin(client, url);
+  }
+
+  if (!beginOk) return false;
+  http.setConnectTimeout(SOLAR_HTTP_CONNECT_TIMEOUT_MS);
+  http.setTimeout(SOLAR_HTTP_TIMEOUT_MS);
+  http.addHeader("Connection", "close");
+  return true;
 }
 
 static void noteSolarFetchDuration(uint32_t startMs) {
@@ -143,27 +171,24 @@ static bool smaReadHttpResponseCapped(HTTPClient& http, String& out) {
 static bool smaHttpPOST(const String& url, const String& body, String& out) {
   out = "";
   HTTPClient http;
-  WiFiClientSecure *clientTLS = nullptr;
+  WiFiClient client;
+  WiFiClientSecure clientTLS;
 
   bool https = url.startsWith("https://");
   bool beginOk = false;
   if (https) {
-    clientTLS = new WiFiClientSecure();
-    if (!clientTLS) return false;
-    clientTLS->setInsecure();
-    beginOk = http.begin(*clientTLS, url);
+    clientTLS.setInsecure();
+    beginOk = http.begin(clientTLS, url);
   } else {
-    beginOk = http.begin(url);
+    beginOk = http.begin(client, url);
   }
 
-  if (!beginOk) {
-    if (clientTLS) delete clientTLS;
-    return false;
-  }
+  if (!beginOk) return false;
 
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Connection", "close");
-  http.setTimeout(5000);
+  http.setConnectTimeout(SOLAR_HTTP_CONNECT_TIMEOUT_MS);
+  http.setTimeout(SOLAR_HTTP_TIMEOUT_MS);
   WDT_FEED();
   int rc = http.POST(body);
   WDT_FEED();
@@ -172,7 +197,6 @@ static bool smaHttpPOST(const String& url, const String& body, String& out) {
   }
   http.end();
   WDT_FEED();
-  if (clientTLS) delete clientTLS;
   return (rc == 200 && out.length() > 0);
 }
 
@@ -272,7 +296,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
 
   if (!solarSystem->Available) return;
   if (!forceUpdate && ((uptime() - solarSystem->LastRefresh) < solarSystem->Interval)) return;
-  CrashLogMark(src == SMA ? "solar-sma" : "solar-fetch", __LINE__);
+  CrashLogMark(solarFetchTag(src), __LINE__);
   solarSystem->LastRefresh = uptime();
   uint32_t fetchStartMs = millis();
 
@@ -307,7 +331,6 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
       powerFlowUrl += "?api_key=" + token;
     }
 
-    HTTPClient http;
     String payload;
     JsonDocument solarDoc;
     solarSystem->Actual = 0;
@@ -315,7 +338,10 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
     resetSolarEdgeRuntimeState();
 
     auto fetchJson = [&](const String& url) -> bool {
-      http.begin(url.c_str());
+      HTTPClient http;
+      WiFiClient client;
+      WiFiClientSecure clientTLS;
+      if (!solarHttpBegin(http, client, clientTLS, url)) return false;
       http.addHeader("Accept", "application/json");
       int rc = http.GET();
       DebugVerboseLn(F("Solaredge request"));
@@ -392,9 +418,11 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   }
 
   HTTPClient http;
+  WiFiClient client;
+  WiFiClientSecure clientTLS;
   String urlcheck = solarSystem->Url;
   bool bSolis = (urlcheck.indexOf("CMD=inv_query") > 0);
-  http.begin(solarSystem->Url.c_str());
+  if (!solarHttpBegin(http, client, clientTLS, solarSystem->Url)) { noteSolarFetchDuration(fetchStartMs); return; }
   http.addHeader("Accept", "application/json");
   if (src == ENPHASE) {
     if (!bSolis) http.addHeader("Authorization", "Bearer " + solarSystem->Token);
