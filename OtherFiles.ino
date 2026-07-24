@@ -220,7 +220,7 @@ void readSettings(bool show)
   settingERT1 = doc["EnergyReturnedT1"];
   settingERT2 = doc["EnergyReturnedT2"];
   settingGDT = doc["GASDeliveredT"];
-  if (doc["WaterDelivered"].is<bool>()) settingWDT = doc["WaterDelivered"];
+  if (doc["WaterDelivered"].is<float>()) settingWDT = doc["WaterDelivered"];
   settingENBK = doc["EnergyVasteKosten"];
   settingGNBK = doc["GasVasteKosten"];
   if (doc["WaterVasteKosten"].is<float>()) settingWNBK = doc["WaterVasteKosten"];
