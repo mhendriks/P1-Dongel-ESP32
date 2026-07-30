@@ -235,7 +235,27 @@ class ApiWebSocketsServer : public WebSocketsServer {
   }
 };
 
-WebServer httpServer(80);
+class RecoverableWebServer : public WebServer {
+ public:
+  RecoverableWebServer(int port) : WebServer(port) {}
+
+  bool recoverStaleWaitRead(uint32_t minAgeMs) {
+    if (_currentStatus != HC_WAIT_READ) return false;
+    if ((uint32_t)(millis() - _statusChange) < minAgeMs) return false;
+
+    int fd = _currentClient.fd();
+    if (fd >= 0 && _currentClient.connected()) return false;
+
+    if (fd >= 0) _currentClient.stop();
+    _currentClient = NetworkClient();
+    _currentStatus = HC_NONE;
+    _statusChange = millis();
+    return true;
+  }
+};
+
+RecoverableWebServer httpServer(80);
+volatile bool httpServerHandleActive = false;
 ApiWebSocketsServer apiWs(81);
 NetServer ws_raw(82);
 
@@ -700,6 +720,8 @@ void clearModbusMonitorEntries();
 void setupApiWebSocket();
 void handleApiWebSocket();
 void apiWsMarkLiveDirty();
+void handleHttpServerClient();
+void serviceHttpServerRecovery();
 void handleRawPort();
 void SyncESPNOW();
 void SetNRGMPairingMode(bool enabled);

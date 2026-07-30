@@ -52,15 +52,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.8.10
-- add: CT and VT scaling factors for current, voltage and power outputs
-- add: Smart Meter settings tab
-- remove: manual SMR 2/3 setting; detection is automatic
-- add: P1 communication mode and detected meter version to System Information
-- add: WebSocket guard and diagnostics for stalled clients
-- fix: harden solar HTTP clients to prevent timeouts, stalls and SMA panic reboots
-- change: EID provisioning refresh interval from 24 hours to 2 hours
-
 5.9.0
 - Normalise energy data (huge change)
 
@@ -213,7 +204,7 @@ void setup()
 
 void loop () { 
   esp_task_wdt_reset();
-  httpServer.handleClient();
+  handleHttpServerClient();
   handleApiWebSocket();
   if ( DUE(StatusTimer) && (telegramCount > 2) ) { 
     P1StatusWrite();

@@ -395,7 +395,7 @@ void doRedirect(String msg, int wait, const char* URL, bool reboot, bool resetWi
   {
     for (uint8_t i = 0; i < 100; i++) { 
       delay(50); 
-      httpServer.handleClient();
+      handleHttpServerClient();
     }
     if (resetWifi) 
     {   

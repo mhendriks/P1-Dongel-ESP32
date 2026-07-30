@@ -291,6 +291,9 @@ function refreshData() {
   ensureBurnupLoaded();
   impactSyncBatteryControls();
 
+  objDAL.refreshHistoryDays();
+  objDAL.refreshHistoryMonths();
+
   clearInterval(timerRefresh);
   clearTimeout(timerRetryRender);
   timerRefresh = setInterval(function() {
