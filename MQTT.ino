@@ -195,6 +195,9 @@ void AutoDiscoverHA(){
     SendAutoDiscoverHA("energy_delivered_tariff2", "energy", "Energy Delivered T2", "kWh", "{{ value | round(3) }}","total_increasing","");
     SendAutoDiscoverHA("energy_returned_tariff1", "energy", "Energy Returned T1", "kWh", "{{ value | round(3) }}","total_increasing","");
     SendAutoDiscoverHA("energy_returned_tariff2", "energy", "Energy Returned T2", "kWh", "{{ value | round(3) }}","total_increasing","");
+    SendAutoDiscoverHA("energy_delivered_total", "energy", "Energy Delivered Total", "kWh", "{{ value | round(3) }}","total_increasing","");
+    SendAutoDiscoverHA("energy_returned_total", "energy", "Energy Returned Total", "kWh", "{{ value | round(3) }}","total_increasing","");
+    SendAutoDiscoverHA("electricity_tariff", "", "Electricity Tariff", "", "{{ value | int }}","","");
     
     SendAutoDiscoverHA("power_delivered_l1", "power", "Power Delivered l1", "W", "{{ value | round(3) * 1000 }}","measurement","");
     SendAutoDiscoverHA("power_delivered_l2", "power", "Power Delivered l2", "W", "{{ value | round(3) * 1000 }}","measurement","");

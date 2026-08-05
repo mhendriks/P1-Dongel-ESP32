@@ -140,6 +140,9 @@ void writeSettingsDirect() {
   docw["mb_baud"] = mb_config.baud;
   docw["mb_parity"] = mb_config.parity - 134217700;
   docw["mb_monitor"] = bModbusMonitor;
+  docw["victron_accu_enabled"] = victronModbusConfig.enabled;
+  docw["victron_accu_ip"] = victronModbusConfig.ip;
+  docw["victron_accu_id"] = victronModbusConfig.id;
   docw["mqtt-hide"] = hideMQTTsettings;
   docw["remove-index"] = RemoveIndexAfterUpdate;
   docw["macid-topic"] = MacIDinToptopic;
@@ -299,6 +302,9 @@ void readSettings(bool show)
   if (doc["mb_baud"].is<int>()) mb_config.baud = doc["mb_baud"];
   if (doc["mb_parity"].is<int>()) mb_config.parity = 134217700 + doc["mb_parity"].as<int>();
   if (doc["mb_monitor"].is<bool>()) bModbusMonitor = doc["mb_monitor"];
+  if (doc["victron_accu_enabled"].is<bool>()) victronModbusConfig.enabled = doc["victron_accu_enabled"];
+  if (doc["victron_accu_ip"].is<const char*>()) strlcpy(victronModbusConfig.ip, doc["victron_accu_ip"].as<const char*>(), sizeof(victronModbusConfig.ip));
+  if (doc["victron_accu_id"].is<int>()) victronModbusConfig.id = constrain(doc["victron_accu_id"].as<int>(), 1, 247);
   if (doc["skip-network"].is<bool>()) skipNetwork = doc["skip-network"];
   if (doc["mimic"].is<int>()) {
     int newMimic = constrain(doc["mimic"].as<int>(), (int)MIMIC_NONE, (int)MIMIC_SHELLY_PRO_3EM);
@@ -527,11 +533,34 @@ void updateSetting(const char *field, const char *newValue)
   #endif
 
   if (!stricmp(field, "mb_map")) setModbusMapping(String(newValue).toInt());  
-  if (!stricmp(field, "mb_id")) mb_config.id = String(newValue).toInt();  
+  if (!stricmp(field, "mb_id")) {
+    uint8_t oldModbusId = mb_config.id;
+    uint8_t newModbusId = constrain(String(newValue).toInt(), 1, 255);
+    if (oldModbusId != newModbusId) {
+      mb_config.id = newModbusId;
+      updateModbusServerId(oldModbusId, newModbusId);
+    }
+  }
   if (!stricmp(field, "mb_port")) mb_config.port = String(newValue).toInt();  
   if (!stricmp(field, "mb_baud")) mb_config.baud = String(newValue).toInt();  
   if (!stricmp(field, "mb_parity")) mb_config.parity = String(newValue).toInt();  
   if (!stricmp(field, "mb_monitor")) bModbusMonitor = (stricmp(newValue, "true") == 0 ? true : false);
+  bool victronConfigChanged = false;
+  if (!stricmp(field, "victron_accu_enabled")) {
+    victronModbusConfig.enabled = (stricmp(newValue, "true") == 0);
+    victronConfigChanged = true;
+  }
+  if (!stricmp(field, "victron_accu_ip")) {
+    strCopy(victronModbusConfig.ip, sizeof(victronModbusConfig.ip), newValue);
+    victronConfigChanged = true;
+  }
+  if (!stricmp(field, "victron_accu_id")) {
+    victronModbusConfig.id = constrain(String(newValue).toInt(), 1, 247);
+    victronConfigChanged = true;
+  }
+#ifdef MBUS
+  if (victronConfigChanged) victronModbusConfigChanged();
+#endif
   if (!stricmp(field, "mimic")) {
     int newMimic = constrain(String(newValue).toInt(), (int)MIMIC_NONE, (int)MIMIC_SHELLY_PRO_3EM);
     reboot_required = (mimicType != newMimic);

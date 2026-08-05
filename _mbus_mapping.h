@@ -244,6 +244,12 @@ static const ActiveRecipe kPhoenixEemXm3xxRecipes[] = {
   {40131, 1,    (uint8_t)MbSource::constant,                  (uint8_t)ModbusDataType::UINT32, 0x0107},
 };
 
+// EM24-TCP is served per 16-bit register by readEm24Register(). This marker
+// keeps it as a regular selectable preset without duplicating that mapping.
+static const ActiveRecipe kEm24TcpRecipes[] = {
+  {0xA100, 1, (uint8_t)MbSource::constant, (uint8_t)ModbusDataType::INT16, 3},
+};
+
 static const ActiveRecipe kFroniusSunSpec203Recipes[] = {
   {40000, 1,    (uint8_t)MbSource::constant,                  (uint8_t)ModbusDataType::UINT32, 0x53756e53},
   {40002, 1,    (uint8_t)MbSource::constant,                  (uint8_t)ModbusDataType::INT16,  1},

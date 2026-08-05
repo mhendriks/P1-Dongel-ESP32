@@ -52,7 +52,7 @@ static ApiResponse jsonDocResponse(const JsonDocument& doc) {
 int signalToEnum(const char* signal);
 
 ApiResponse dashHistoryApiResponse() {
-  char body[640];
+  char body[1024];
   int len = snprintf(body, sizeof(body),
                      "{\"ready\":%s,\"source\":\"memory\",\"days\":["
                      "{\"date\":\"%.8s\",\"values\":[%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f]},"
@@ -60,10 +60,10 @@ ApiResponse dashHistoryApiResponse() {
                      "{\"date\":\"%.8s\",\"values\":[%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f]},"
                      "{\"date\":\"%.8s\",\"values\":[%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f]}]}",
                      DashDayHistoryReady ? "true" : "false",
-                     DashDayHistory[0].date, DashDayHistory[0].values[0], DashDayHistory[0].values[1], DashDayHistory[0].values[2], DashDayHistory[0].values[3], DashDayHistory[0].values[4], DashDayHistory[0].values[5], DashDayHistory[0].values[6],
-                     DashDayHistory[1].date, DashDayHistory[1].values[0], DashDayHistory[1].values[1], DashDayHistory[1].values[2], DashDayHistory[1].values[3], DashDayHistory[1].values[4], DashDayHistory[1].values[5], DashDayHistory[1].values[6],
-                     DashDayHistory[2].date, DashDayHistory[2].values[0], DashDayHistory[2].values[1], DashDayHistory[2].values[2], DashDayHistory[2].values[3], DashDayHistory[2].values[4], DashDayHistory[2].values[5], DashDayHistory[2].values[6],
-                     DashDayHistory[3].date, DashDayHistory[3].values[0], DashDayHistory[3].values[1], DashDayHistory[3].values[2], DashDayHistory[3].values[3], DashDayHistory[3].values[4], DashDayHistory[3].values[5], DashDayHistory[3].values[6]);
+                     DashDayHistory[0].date, outputEnergy(DashDayHistory[0].values[0]), outputEnergy(DashDayHistory[0].values[1]), outputEnergy(DashDayHistory[0].values[2]), outputEnergy(DashDayHistory[0].values[3]), DashDayHistory[0].values[4], DashDayHistory[0].values[5], DashDayHistory[0].values[6],
+                     DashDayHistory[1].date, outputEnergy(DashDayHistory[1].values[0]), outputEnergy(DashDayHistory[1].values[1]), outputEnergy(DashDayHistory[1].values[2]), outputEnergy(DashDayHistory[1].values[3]), DashDayHistory[1].values[4], DashDayHistory[1].values[5], DashDayHistory[1].values[6],
+                     DashDayHistory[2].date, outputEnergy(DashDayHistory[2].values[0]), outputEnergy(DashDayHistory[2].values[1]), outputEnergy(DashDayHistory[2].values[2]), outputEnergy(DashDayHistory[2].values[3]), DashDayHistory[2].values[4], DashDayHistory[2].values[5], DashDayHistory[2].values[6],
+                     DashDayHistory[3].date, outputEnergy(DashDayHistory[3].values[0]), outputEnergy(DashDayHistory[3].values[1]), outputEnergy(DashDayHistory[3].values[2]), outputEnergy(DashDayHistory[3].values[3]), DashDayHistory[3].values[4], DashDayHistory[3].values[5], DashDayHistory[3].values[6]);
 
   if (len < 0 || len >= (int)sizeof(body)) return {500, "application/json", "{}"};
   return jsonOkResponse(String(body));
@@ -125,12 +125,12 @@ ApiResponse dashLiveApiResponse() {
   if (voltage.size() == 0) doc.remove("voltage");
 
   JsonObject energy = doc["energy"].to<JsonObject>();
-  if (DSMRdata.energy_delivered_tariff1_present) energy["delivered_t1"] = DSMRdata.energy_delivered_tariff1.val();
-  if (DSMRdata.energy_delivered_tariff2_present) energy["delivered_t2"] = DSMRdata.energy_delivered_tariff2.val();
-  if (DSMRdata.energy_returned_tariff1_present) energy["returned_t1"] = DSMRdata.energy_returned_tariff1.val();
-  if (DSMRdata.energy_returned_tariff2_present) energy["returned_t2"] = DSMRdata.energy_returned_tariff2.val();
-  if (DSMRdata.energy_delivered_total_present) energy["delivered_total"] = DSMRdata.energy_delivered_total.val();
-  if (DSMRdata.energy_returned_total_present) energy["returned_total"] = DSMRdata.energy_returned_total.val();
+  if (DSMRdata.energy_delivered_tariff1_present) energy["delivered_t1"] = outputEnergy(DSMRdata.energy_delivered_tariff1.val());
+  if (DSMRdata.energy_delivered_tariff2_present) energy["delivered_t2"] = outputEnergy(DSMRdata.energy_delivered_tariff2.val());
+  if (DSMRdata.energy_returned_tariff1_present) energy["returned_t1"] = outputEnergy(DSMRdata.energy_returned_tariff1.val());
+  if (DSMRdata.energy_returned_tariff2_present) energy["returned_t2"] = outputEnergy(DSMRdata.energy_returned_tariff2.val());
+  if (DSMRdata.energy_delivered_total_present) energy["delivered_total"] = outputEnergy(DSMRdata.energy_delivered_total.val());
+  if (DSMRdata.energy_returned_total_present) energy["returned_total"] = outputEnergy(DSMRdata.energy_returned_total.val());
   if (energy.size() == 0) doc.remove("energy");
 
   if (gasDelivered) {
@@ -147,9 +147,9 @@ ApiResponse dashLiveApiResponse() {
   }
 
   JsonObject peak = doc["peak"].to<JsonObject>();
-  if (DSMRdata.peak_pwr_last_q_present) peak["last_q"] = DSMRdata.peak_pwr_last_q.val();
+  if (DSMRdata.peak_pwr_last_q_present) peak["last_q"] = outputPower(DSMRdata.peak_pwr_last_q.val());
   if (DSMRdata.highest_peak_pwr_present) {
-    peak["highest"] = DSMRdata.highest_peak_pwr.val();
+    peak["highest"] = outputPower(DSMRdata.highest_peak_pwr.val());
     peak["highest_timestamp"] = DSMRdata.highest_peak_pwr.timestamp;
   }
   if (peak.size() == 0) doc.remove("peak");
@@ -304,12 +304,12 @@ static void fillHWapiJson(JsonDocument& jsonDoc) {
 
     // Energieverbruik en teruglevering
     jsonDoc["active_tariff"] = DSMRdata.electricity_tariff.toInt();
-    jsonDoc["total_power_import_kwh"] = F3DEC(DSMRdata.energy_delivered_total.val());
-    jsonDoc["total_power_import_t1_kwh"] = F3DEC(DSMRdata.energy_delivered_tariff1.val());
-    jsonDoc["total_power_import_t2_kwh"] = F3DEC(DSMRdata.energy_delivered_tariff2.val());
-    jsonDoc["total_power_export_kwh"] = F3DEC(DSMRdata.energy_returned_total.val());
-    jsonDoc["total_power_export_t1_kwh"] = F3DEC(DSMRdata.energy_returned_tariff1.val());
-    jsonDoc["total_power_export_t2_kwh"] = F3DEC(DSMRdata.energy_returned_tariff2.val());
+    jsonDoc["total_power_import_kwh"] = F3DEC(outputEnergy(DSMRdata.energy_delivered_total.val()));
+    jsonDoc["total_power_import_t1_kwh"] = F3DEC(outputEnergy(DSMRdata.energy_delivered_tariff1.val()));
+    jsonDoc["total_power_import_t2_kwh"] = F3DEC(outputEnergy(DSMRdata.energy_delivered_tariff2.val()));
+    jsonDoc["total_power_export_kwh"] = F3DEC(outputEnergy(DSMRdata.energy_returned_total.val()));
+    jsonDoc["total_power_export_t1_kwh"] = F3DEC(outputEnergy(DSMRdata.energy_returned_tariff1.val()));
+    jsonDoc["total_power_export_t2_kwh"] = F3DEC(outputEnergy(DSMRdata.energy_returned_tariff2.val()));
 
     // Huidige stroomwaarden
     jsonDoc["active_power_w"] = outputPowerInt((int32_t)(DSMRdata.power_delivered.int_val() - DSMRdata.power_returned.int_val()));
@@ -592,9 +592,12 @@ if ( !hideMQTTsettings) {
 #endif
   
   //MODBUS TCP settings
-    ADD_SETTING("mb_map", "i", 0, 15, SelMap); //RTU+TCP
+  ADD_SETTING("mb_map", "i", 0, 16, SelMap); //RTU+TCP
   ADD_SETTING("mb_id", "i", 1, 255, mb_config.id); //RTU+TCP
   ADD_SETTING("mb_port", "i", 0, 65535, mb_config.port); //TCP
+  doc["victron_accu_enabled"] = victronModbusConfig.enabled;
+  ADD_SETTING("victron_accu_ip", "s", 0, sizeof(victronModbusConfig.ip) - 1, victronModbusConfig.ip);
+  ADD_SETTING("victron_accu_id", "i", 1, 247, victronModbusConfig.id);
   if ( mb_rx != -1 ){ //check if modbus rtu hardware is available
     ADD_SETTING("mb_baud", "i", 300, 115200, mb_config.baud); //RTU
     ADD_SETTING("mb_parity", "i", 134217744, 134217791, mb_config.parity); //RTU

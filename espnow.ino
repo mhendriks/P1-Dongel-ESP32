@@ -382,10 +382,10 @@ void P2PSendActualData(){
   ActualData.epoch  = actT;
   ActualData.P      = outputPowerInt(DSMRdata.power_delivered.int_val());
   ActualData.Pr     = outputPowerInt(DSMRdata.power_returned.int_val());
-  ActualData.e_t1   = DSMRdata.energy_delivered_tariff1.int_val() - dataYesterday.t1;
-  ActualData.e_t2   = DSMRdata.energy_delivered_tariff2.int_val() - dataYesterday.t2;
-  ActualData.e_t1r  = DSMRdata.energy_returned_tariff1.int_val() - dataYesterday.t1r;
-  ActualData.e_t2r  = DSMRdata.energy_returned_tariff2.int_val() - dataYesterday.t2r;
+  ActualData.e_t1   = outputEnergyUint32(DSMRdata.energy_delivered_tariff1.int_val() - dataYesterday.t1);
+  ActualData.e_t2   = outputEnergyUint32(DSMRdata.energy_delivered_tariff2.int_val() - dataYesterday.t2);
+  ActualData.e_t1r  = outputEnergyUint32(DSMRdata.energy_returned_tariff1.int_val() - dataYesterday.t1r);
+  ActualData.e_t2r  = outputEnergyUint32(DSMRdata.energy_returned_tariff2.int_val() - dataYesterday.t2r);
   if ( mbusGas ) ActualData.Gas = gasDelivered * 1000 - dataYesterday.gas;
   else ActualData.Gas = UINT32_MAX; 
   if ( WtrMtr ) ActualData.Water  = (waterDelivered * 1000) - dataYesterday.water;

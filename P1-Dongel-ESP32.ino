@@ -52,6 +52,19 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
+5.8.12
+- add: read Victron GX system battery data over Modbus TCP and show the battery
+       state, power and state of charge on the dashboard
+- add: configure the Victron IPv4 address and Unit ID under Modbus settings;
+       dependent fields are only shown when the integration is enabled
+- add: localize the Victron battery state in Dutch, English, German and Swedish
+- add: EM24-TCP Modbus mapping for Victron grid meter compatibility
+- fix: apply CT and VT factors consistently to energy counters, peak power,
+       history, API, Modbus, EnergyID, ESP-NOW, UDP and Shelly outputs
+- fix: add Home Assistant MQTT discovery for total delivered/returned energy
+       and the active electricity tariff
+- change: apply a changed Modbus server Unit ID without rebooting
+
 5.9.0
 - Normalise energy data (huge change)
 
@@ -184,6 +197,7 @@ void setup()
 
 #ifdef MBUS
   mbusSetup();
+  setupVictronModbus();
   SetupMB_RTU();
 #endif  
   ReadSolarConfigs();
@@ -216,6 +230,9 @@ void loop () {
   WifiWatchDog();
   handleRemoteUpdate();
   handleWater();
+#ifdef MBUS
+  handleVictronModbus();
+#endif
   handleEnergyID();  
   GetSolarDataN();
   handleRawPort();

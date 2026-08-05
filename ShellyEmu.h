@@ -11,8 +11,8 @@
 namespace P1 {
   inline float powerImportkW()   { return outputPower((float)DSMRdata.power_delivered.val()); }  // DSMR 1-0:1.7.0 (kW)
   inline float powerExportkW()   { return outputPower(DSMRdata.power_returned.val()); }  // DSMR 1-0:2.7.0 (kW)
-  inline float importTotalkWh()  { return DSMRdata.energy_delivered_tariff1.val() + DSMRdata.energy_delivered_tariff2.val(); } // DSMR 1-0:1.8.0
-  inline float exportTotalkWh()  { return DSMRdata.energy_returned_tariff1.val() + DSMRdata.energy_returned_tariff2.val(); }  // DSMR 1-0:2.8.0
+  inline float importTotalkWh()  { return outputEnergy(DSMRdata.energy_delivered_tariff1.val() + DSMRdata.energy_delivered_tariff2.val()); } // DSMR 1-0:1.8.0
+  inline float exportTotalkWh()  { return outputEnergy(DSMRdata.energy_returned_tariff1.val() + DSMRdata.energy_returned_tariff2.val()); }  // DSMR 1-0:2.8.0
 
   inline float pL1()             { return DSMRdata.power_delivered_l1_present ? outputPower((float)((int32_t)DSMRdata.power_delivered_l1.int_val() - (int32_t)DSMRdata.power_returned_l1.int_val())) : NAN; }
   inline float pL2()             { return DSMRdata.power_delivered_l2_present ? outputPower((float)((int32_t)DSMRdata.power_delivered_l2.int_val() - (int32_t)DSMRdata.power_returned_l2.int_val())) : NAN; }

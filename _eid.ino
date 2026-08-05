@@ -466,19 +466,19 @@
       Json += "\"ts\":" + String( actT - utc_comp );
       
       if ( DSMRdata.energy_delivered_tariff1_present ) {
-        Json += ",\"t1\":" + String((int)(DSMRdata.energy_delivered_tariff1*1000.0));
+        Json += ",\"t1\":" + String((unsigned long long)outputEnergyUint64(DSMRdata.energy_delivered_tariff1.int_val()));
       }
       
       if ( DSMRdata.energy_delivered_tariff2_present ) {
-        Json += ",\"t2\":" + String((int)(DSMRdata.energy_delivered_tariff2*1000.0));
+        Json += ",\"t2\":" + String((unsigned long long)outputEnergyUint64(DSMRdata.energy_delivered_tariff2.int_val()));
       }
 
       if ( DSMRdata.energy_returned_tariff1_present ) {
-        Json += ",\"t1-i\":" + String((int)(DSMRdata.energy_returned_tariff1*1000.0));
+        Json += ",\"t1-i\":" + String((unsigned long long)outputEnergyUint64(DSMRdata.energy_returned_tariff1.int_val()));
       }
 
       if ( DSMRdata.energy_returned_tariff2_present ) {
-        Json += ",\"t2-i\":" + String((int)(DSMRdata.energy_returned_tariff2*1000.0));
+        Json += ",\"t2-i\":" + String((unsigned long long)outputEnergyUint64(DSMRdata.energy_returned_tariff2.int_val()));
       }
       if ( DSMRdata.power_delivered_present ) {
         Json += ",\"pwr\":" + String(outputPowerInt(DSMRdata.power_delivered.int_val()));

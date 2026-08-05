@@ -1,29 +1,58 @@
-struct AccuPwrSystems {
-  bool      Available;
-  String    unit;
-  String    status;
-  float     currentPower;
-  uint8_t   chargeLevel;
-};
-
 AccuPwrSystems SolarEdgeAccu = {
   false, "", "", 0.0, 0
 };
 
+AccuPwrSystems VictronAccu = {
+  false, "kW", "", 0.0, 0
+};
+
+static uint32_t victronAccuLastUpdate = 0;
+static const uint32_t VICTRON_ACCU_STALE_MS = 20000;
+
 float SolarEdgeFlowPvPower = 0.0f;
 bool  SolarEdgeFlowPvValid = false;
 
+static bool victronAccuAvailable() {
+  return VictronAccu.Available && (millis() - victronAccuLastUpdate <= VICTRON_ACCU_STALE_MS);
+}
+
+static AccuPwrSystems* dashboardAccu() {
+  if (victronAccuAvailable()) return &VictronAccu;
+  if (SolarEdgeAccu.Available) return &SolarEdgeAccu;
+  return nullptr;
+}
+
+void updateVictronAccu(int16_t powerW, uint16_t chargeLevel, uint16_t state) {
+  VictronAccu.currentPower = powerW / 1000.0f;
+  VictronAccu.chargeLevel = (uint8_t)constrain((int)chargeLevel, 0, 100);
+  switch (state) {
+    case 1: VictronAccu.status = "Charging"; break;
+    case 2: VictronAccu.status = "Discharging"; break;
+    default: VictronAccu.status = "Idle"; break;
+  }
+  VictronAccu.Available = true;
+  victronAccuLastUpdate = millis();
+  apiWsMarkLiveDirty();
+}
+
+void invalidateVictronAccu() {
+  if (!VictronAccu.Available) return;
+  VictronAccu.Available = false;
+  apiWsMarkLiveDirty();
+}
+
 ApiResponse accuApiResponse() {
-  if ( !SolarEdgeAccu.Available ) {
+  AccuPwrSystems* accu = dashboardAccu();
+  if (!accu) {
     return {200, "application/json", "{\"active\":false}"};
   }
 
   JsonDocument doc;
   doc["active"] = true;
-  doc["status"] = SolarEdgeAccu.status;
-  doc["unit"] = SolarEdgeAccu.unit;
-  doc["currentPower"] = SolarEdgeAccu.currentPower;
-  doc["chargeLevel"] = SolarEdgeAccu.chargeLevel;
+  doc["status"] = accu->status;
+  doc["unit"] = accu->unit;
+  doc["currentPower"] = accu->currentPower;
+  doc["chargeLevel"] = accu->chargeLevel;
 
   String body;
   serializeJson(doc, body);
@@ -37,13 +66,14 @@ ApiResponse accuApiResponse() {
 }
 
 bool fillDashAccuJson(JsonDocument& doc) {
-  if (!SolarEdgeAccu.Available) return false;
+  AccuPwrSystems* source = dashboardAccu();
+  if (!source) return false;
 
   JsonObject accu = doc["accu"].to<JsonObject>();
   accu["active"] = true;
-  accu["status"] = SolarEdgeAccu.status;
-  accu["currentPower"] = SolarEdgeAccu.currentPower;
-  accu["chargeLevel"] = SolarEdgeAccu.chargeLevel;
+  accu["status"] = source->status;
+  accu["currentPower"] = source->currentPower;
+  accu["chargeLevel"] = source->chargeLevel;
 
   return true;
 }

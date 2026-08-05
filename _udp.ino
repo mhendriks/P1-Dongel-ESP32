@@ -245,10 +245,14 @@ static void ebUpdateDynamic(EB_Payload& p, uint64_t epochSeconds) {
   }
 
   // ---- Energy counters ----
-  if (DSMRdata.energy_delivered_tariff1_present) p.dy.energyPos  =  DSMRdata.energy_delivered_tariff1.int_val();
-  if (DSMRdata.energy_delivered_tariff2_present) p.dy.energyPos  += DSMRdata.energy_delivered_tariff2.int_val();
-  if (DSMRdata.energy_returned_tariff1_present)  p.dy.energyNeg  =  DSMRdata.energy_returned_tariff1.int_val();
-  if (DSMRdata.energy_returned_tariff2_present)  p.dy.energyNeg  += DSMRdata.energy_returned_tariff2.int_val();
+  uint64_t rawEnergyPos = 0;
+  uint64_t rawEnergyNeg = 0;
+  if (DSMRdata.energy_delivered_tariff1_present) rawEnergyPos += DSMRdata.energy_delivered_tariff1.int_val();
+  if (DSMRdata.energy_delivered_tariff2_present) rawEnergyPos += DSMRdata.energy_delivered_tariff2.int_val();
+  if (DSMRdata.energy_returned_tariff1_present)  rawEnergyNeg += DSMRdata.energy_returned_tariff1.int_val();
+  if (DSMRdata.energy_returned_tariff2_present)  rawEnergyNeg += DSMRdata.energy_returned_tariff2.int_val();
+  p.dy.energyPos = outputEnergyUint64(rawEnergyPos);
+  p.dy.energyNeg = outputEnergyUint64(rawEnergyNeg);
 
   // ---- voltage ----
   if (DSMRdata.voltage_l1_present) p.dy.vrms1 = (int32_t)lroundf(outputVoltage((float)DSMRdata.voltage_l1.int_val()));

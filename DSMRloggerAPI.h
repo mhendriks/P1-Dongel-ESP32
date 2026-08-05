@@ -39,6 +39,12 @@ struct {
   uint16_t port = 502;
 } mb_config;
 
+struct VictronModbusConfig {
+  bool enabled = false;
+  char ip[16] = "";
+  uint8_t id = 100;
+} victronModbusConfig;
+
 #include <WiFi.h>  
 // #include "Insights.h"
 #include <WiFiClientSecure.h>        
@@ -73,6 +79,7 @@ struct ApiRequestContext {
 
 #ifdef MBUS
   #include "ModbusServerWiFi.h"
+  #include "ModbusClientTCP.h"
 #endif
 
 #define JSON_BUFF_MAX     255
@@ -616,6 +623,21 @@ inline float outputPower(float rawValue) {
   return rawValue * (float)outputPowerFactor();
 }
 
+inline float outputEnergy(float rawValue) {
+  return rawValue * (float)outputPowerFactor();
+}
+
+inline uint64_t outputEnergyUint64(uint64_t rawValue) {
+  const uint64_t factor = outputPowerFactor();
+  if (rawValue > UINT64_MAX / factor) return UINT64_MAX;
+  return rawValue * factor;
+}
+
+inline uint32_t outputEnergyUint32(uint32_t rawValue) {
+  const uint64_t scaled = outputEnergyUint64(rawValue);
+  return scaled > UINT32_MAX ? UINT32_MAX : (uint32_t)scaled;
+}
+
 inline int32_t outputPowerInt(int64_t rawValue) {
   int64_t scaled = rawValue * (int64_t)outputPowerFactor();
   if (scaled > INT32_MAX) return INT32_MAX;
@@ -627,6 +649,12 @@ inline uint32_t outputFactorForField(const char* field) {
   if (!strncmp(field, "current_l", 9)) return settingCTFactor;
   if (!strncmp(field, "voltage_l", 9)) return settingVTFactor;
   if (!strncmp(field, "power_delivered", 15) || !strncmp(field, "power_returned", 14)) {
+    return outputPowerFactor();
+  }
+  if (!strncmp(field, "energy_delivered", 16) || !strncmp(field, "energy_returned", 15)) {
+    return outputPowerFactor();
+  }
+  if (!strcmp(field, "peak_pwr_last_q") || !strcmp(field, "highest_peak_pwr")) {
     return outputPowerFactor();
   }
   return 1;
@@ -706,7 +734,20 @@ ApiResponse dashLiveApiResponse();
 ApiResponse historyMonthsApiResponse(const String& body);
 ApiResponse listFilesApiResponse();
 bool fillDashSolarJson(JsonDocument& doc);
+struct AccuPwrSystems {
+  bool      Available;
+  String    unit;
+  String    status;
+  float     currentPower;
+  uint8_t   chargeLevel;
+};
+
 bool fillDashAccuJson(JsonDocument& doc);
+void updateVictronAccu(int16_t powerW, uint16_t chargeLevel, uint16_t state);
+void invalidateVictronAccu();
+void setupVictronModbus();
+void handleVictronModbus();
+void victronModbusConfigChanged();
 void sendHWapiJson();
 void sendDeviceSettingsJson();
 void sendSmActualJson();

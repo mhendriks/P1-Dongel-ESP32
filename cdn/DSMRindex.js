@@ -59,6 +59,7 @@ const SQUARE_M_CUBED 	   = "\u33A5";
 	  let eid_planner_enabled	= false
 	  let pairing_enabled    	= false
 	  let Meter_Source          = "DSMR"
+	  let MeterEnergyFactor    = 1
 	  let esphomeManifestRequested = false;
 	  let esphomeMigrationTarget = null;
   
@@ -913,7 +914,8 @@ function UpdateAccu(){
 		trend_accu.options.title.text = Number(json.chargeLevel).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" %";
 		trend_accu.update();
 		document.getElementById('dash_accu_p').innerHTML = formatValue(json.currentPower);
-		document.getElementById('accu-status').innerHTML = json.status;
+		const statusKey = `accu-status-${String(json.status || "idle").toLowerCase()}`;
+		document.getElementById('accu-status').innerHTML = t(statusKey);
 		setDashboardWidgetAvailable("dash_accu", true);
 	} else {
 		setDashboardWidgetAvailable("dash_accu", false);
@@ -1308,7 +1310,8 @@ function refreshDashboard(json){
 		}
 	
 	if ( SolarActive ) UpdateSolar();
-	if ( AccuActive ) UpdateAccu();
+	// Always check: a Victron battery can become available after the dashboard loaded.
+	UpdateAccu();
 	applyAllDashboardWidgetStates();
 
 }
@@ -2518,10 +2521,10 @@ function formatFailureLog(svalue) {
 		data.data[i].MM   = parseInt(data.data[i].date.substring(2,4));
         
         //simple differences
-        data.data[i].p_edt1= (data.data[i].values[0] - data.data[slotbefore].values[0]);
-        data.data[i].p_edt2= (data.data[i].values[1] - data.data[slotbefore].values[1]);
-        data.data[i].p_ert1= (data.data[i].values[2] - data.data[slotbefore].values[2]);
-        data.data[i].p_ert2= (data.data[i].values[3] - data.data[slotbefore].values[3]);
+        data.data[i].p_edt1= (data.data[i].values[0] - data.data[slotbefore].values[0]) * MeterEnergyFactor;
+        data.data[i].p_edt2= (data.data[i].values[1] - data.data[slotbefore].values[1]) * MeterEnergyFactor;
+        data.data[i].p_ert1= (data.data[i].values[2] - data.data[slotbefore].values[2]) * MeterEnergyFactor;
+        data.data[i].p_ert2= (data.data[i].values[3] - data.data[slotbefore].values[3]) * MeterEnergyFactor;
 		data.data[i].p_gd  = (data.data[i].values[4] - data.data[slotbefore].values[4]);
         data.data[i].water = (data.data[i].values[5] - data.data[slotbefore].values[5]);
         data.data[i].solar = (data.data[i].values.length > 6) ? Number(data.data[i].values[6]) : -1;
@@ -2552,10 +2555,10 @@ function formatFailureLog(svalue) {
       else
       {
         costs = 0;
-        data.data[i].p_edt1    = data.data[i].values[0];
-        data.data[i].p_edt2    = data.data[i].values[1];
-        data.data[i].p_ert1    = data.data[i].values[2];        
-        data.data[i].p_ert2    = data.data[i].values[3];        
+        data.data[i].p_edt1    = data.data[i].values[0] * MeterEnergyFactor;
+        data.data[i].p_edt2    = data.data[i].values[1] * MeterEnergyFactor;
+        data.data[i].p_ert1    = data.data[i].values[2] * MeterEnergyFactor;
+        data.data[i].p_ert2    = data.data[i].values[3] * MeterEnergyFactor;
         data.data[i].p_gd      = data.data[i].values[4];
 		data.data[i].water     = data.data[i].values[5];
         data.data[i].solar     = (data.data[i].values.length > 6) ? Number(data.data[i].values[6]) : -1;
@@ -2620,8 +2623,8 @@ function refreshHistData(type) {
 				let values = data.data[tempslot].values;
 				hist_arrG[i] = values[4];
 				hist_arrW[i] = values[5];
-				hist_arrPa[i] = values[0] + values[1];
-				hist_arrPi[i] = values[2] + values[3];
+				hist_arrPa[i] = (values[0] + values[1]) * MeterEnergyFactor;
+				hist_arrPi[i] = (values[2] + values[3]) * MeterEnergyFactor;
 				}
 				DailyHistoryReady = true;
 				if (activeTab === "bDashTab" && objDAL.getDashLive()?.timestamp) {
@@ -3080,6 +3083,11 @@ function formatValue(value)
         "er_tariff1" in json ? er_tariff1 = json.er_tariff1.value : er_tariff1 = 0;
         "er_tariff2" in json ? er_tariff2 = json.er_tariff2.value : er_tariff2 = 0;
         "gd_tariff" in json ? gd_tariff = json.gd_tariff.value : gd_tariff = 0;
+		const ctFactor = Number(json.ct_factor?.value ?? 1);
+		const vtFactor = Number(json.vt_factor?.value ?? 1);
+		MeterEnergyFactor = Number.isInteger(ctFactor) && ctFactor > 0 && Number.isInteger(vtFactor) && vtFactor > 0
+			? ctFactor * vtFactor
+			: 1;
 	  	"conf" in json ? Dongle_Config = json.conf : Dongle_Config = "";
         "electr_netw_costs" in json ? electr_netw_costs = json.electr_netw_costs.value : electr_netw_costs = 0;
         "eid-enabled" in json ? eid_enabled = json["eid-enabled"]: eid_enabled = false;
@@ -3266,6 +3274,9 @@ function splitSettingsUI() {
     "mb_map",
     "mb_id",
     "mb_port",
+    "victron_accu_enabled",
+    "victron_accu_ip",
+    "victron_accu_id",
     "mb_parity",
     "mb_baud",
     "mb_bits",
@@ -3303,6 +3314,7 @@ function splitSettingsUI() {
   const modbusMonitorCard = document.getElementById("modbus_monitor_card");
   if (modbusMonitorCard) modbus.appendChild(modbusMonitorCard);
   updateMQTTSettingsVisibility();
+  updateVictronSettingsVisibility();
 }
 
 function updateMQTTSettingsVisibility() {
@@ -3314,6 +3326,17 @@ function updateMQTTSettingsVisibility() {
   mqttPane.querySelectorAll(".settingDiv").forEach(row => {
     if (row.id === "settingR_mqtt_enabled") return;
     row.style.display = showMQTTFields ? "" : "none";
+  });
+}
+
+function updateVictronSettingsVisibility() {
+  const victronEnabled = document.getElementById("setFld_victron_accu_enabled");
+  if (!victronEnabled) return;
+
+  const showVictronFields = victronEnabled.checked;
+  ["victron_accu_ip", "victron_accu_id"].forEach(key => {
+    const row = document.getElementById(`settingR_${key}`);
+    if (row) row.style.display = showVictronFields ? "" : "none";
   });
 }
 
@@ -3499,6 +3522,7 @@ function initModbusMonitorControls() {
 				{ v: 8, t: "KLEFR / INEPRO / Webasto Unite" },
 				{ v: 9, t: "Phoenix Contact EEM-XM3xx" },
 				{ v: 15, t: "Fronius SunSpec 203" },
+				{ v: 16, t: "EM24-TCP" },
 			  ];
 			
 			  const sel = document.createElement("select");
@@ -3675,6 +3699,9 @@ function initModbusMonitorControls() {
 			sInput.addEventListener("input",  () => markDirty(sInput));
 			if (i === "mqtt_enabled") {
 			  sInput.addEventListener("change", updateMQTTSettingsVisibility);
+			}
+			if (i === "victron_accu_enabled") {
+			  sInput.addEventListener("change", updateVictronSettingsVisibility);
 			}
 			
 			inputDiv.appendChild(sInput);
@@ -4424,6 +4451,9 @@ function handle_menu_click()
 let translations = {};
 const FALLBACK_TRANSLATIONS = {
   nl: {
+    "accu-status-idle": "Inactief",
+    "accu-status-charging": "Laden",
+    "accu-status-discharging": "Ontladen",
     "net-action-on": "Schakelactie",
     "net-action-off": "Terugschakelactie",
     "net-direction": "Reageer op",
@@ -4444,6 +4474,9 @@ const FALLBACK_TRANSLATIONS = {
     "tip-history-graph-old-to-new": "X-as: oud naar nieuw. Klik voor nieuw naar oud."
   },
   en: {
+    "accu-status-idle": "Idle",
+    "accu-status-charging": "Charging",
+    "accu-status-discharging": "Discharging",
     "net-action-on": "Switch action",
     "net-action-off": "Switch-back action",
     "net-direction": "Respond to",
@@ -4464,6 +4497,9 @@ const FALLBACK_TRANSLATIONS = {
     "tip-history-graph-old-to-new": "X-axis: oldest to newest. Click for newest to oldest."
   },
   de: {
+    "accu-status-idle": "Inaktiv",
+    "accu-status-charging": "Laden",
+    "accu-status-discharging": "Entladen",
     "net-action-on": "Schaltaktion",
     "net-action-off": "Zurückschaltaktion",
     "net-direction": "Reagieren auf",
@@ -4484,6 +4520,9 @@ const FALLBACK_TRANSLATIONS = {
     "tip-history-graph-old-to-new": "X-Achse: alt nach neu. Klicken fur neu nach alt."
   },
   se: {
+    "accu-status-idle": "Inaktiv",
+    "accu-status-charging": "Laddar",
+    "accu-status-discharging": "Urladdning",
     "net-action-on": "Växlingsåtgärd",
     "net-action-off": "Återgångsåtgärd",
     "net-direction": "Reagera på",

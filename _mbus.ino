@@ -16,6 +16,128 @@ float calculateLineVoltage(float V1, float V2) {
 // Set up a Modbus server
 ModbusServerWiFi MBserver;
 
+// Dedicated client/socket for reading the system battery from a Victron GX.
+// This runs independently from MBserver, which keeps serving the grid mapping.
+static WiFiClient victronModbusSocket;
+static ModbusClientTCP victronModbusClient(victronModbusSocket, 2);
+static bool victronModbusClientStarted = false;
+static bool victronModbusTargetValid = false;
+static volatile bool victronModbusRequestPending = false;
+static volatile uint32_t victronModbusActiveToken = 0;
+static uint32_t victronModbusToken = 0;
+static uint32_t victronModbusLastPoll = 0;
+static constexpr uint32_t VICTRON_MODBUS_POLL_MS = 5000;
+static constexpr uint16_t VICTRON_MODBUS_POWER_REGISTER = 842;
+static constexpr uint16_t VICTRON_MODBUS_REGISTER_COUNT = 3;
+
+static portMUX_TYPE victronModbusDataMux = portMUX_INITIALIZER_UNLOCKED;
+static volatile bool victronModbusDataPending = false;
+static int16_t victronModbusPendingPower = 0;
+static uint16_t victronModbusPendingSoc = 0;
+static uint16_t victronModbusPendingState = 0;
+
+static void handleVictronModbusData(ModbusMessage response, uint32_t token) {
+  if (token != victronModbusActiveToken) return;
+  victronModbusRequestPending = false;
+
+  if (response.getServerID() != victronModbusConfig.id ||
+      response.getFunctionCode() != READ_HOLD_REGISTER ||
+      response.size() < 9 || response[2] != 6) {
+    DebugVerboseTln(F("Victron Modbus: invalid response"));
+    return;
+  }
+
+  int16_t powerW;
+  uint16_t soc;
+  uint16_t state;
+  response.get(3, powerW, soc, state);
+
+  portENTER_CRITICAL(&victronModbusDataMux);
+  victronModbusPendingPower = powerW;
+  victronModbusPendingSoc = soc;
+  victronModbusPendingState = state;
+  victronModbusDataPending = true;
+  portEXIT_CRITICAL(&victronModbusDataMux);
+}
+
+static void handleVictronModbusError(Error error, uint32_t token) {
+  if (token != victronModbusActiveToken) return;
+  victronModbusRequestPending = false;
+  DebugVerboseTf("Victron Modbus error: 0x%02X\r\n", (uint8_t)error);
+}
+
+void victronModbusConfigChanged() {
+  victronModbusActiveToken = 0;
+  victronModbusRequestPending = false;
+  portENTER_CRITICAL(&victronModbusDataMux);
+  victronModbusDataPending = false;
+  portEXIT_CRITICAL(&victronModbusDataMux);
+  victronModbusTargetValid = false;
+  victronModbusSocket.stop();
+
+  IPAddress target;
+  if (!victronModbusConfig.enabled || !target.fromString(victronModbusConfig.ip)) {
+    invalidateVictronAccu();
+    return;
+  }
+
+  if (!victronModbusClientStarted) {
+    victronModbusClient.onDataHandler(&handleVictronModbusData);
+    victronModbusClient.onErrorHandler(&handleVictronModbusError);
+    victronModbusClient.setTimeout(1500, 200);
+    victronModbusClient.begin();
+    victronModbusClientStarted = true;
+  }
+
+  victronModbusClient.setTarget(target, 502);
+  victronModbusTargetValid = true;
+  victronModbusLastPoll = 0;
+  invalidateVictronAccu();
+  DebugVerboseTf("Victron Modbus target: %s:502 id=%u\r\n",
+                 victronModbusConfig.ip, victronModbusConfig.id);
+}
+
+void setupVictronModbus() {
+  victronModbusConfigChanged();
+}
+
+void handleVictronModbus() {
+  if (victronModbusDataPending) {
+    int16_t powerW;
+    uint16_t soc;
+    uint16_t state;
+    portENTER_CRITICAL(&victronModbusDataMux);
+    powerW = victronModbusPendingPower;
+    soc = victronModbusPendingSoc;
+    state = victronModbusPendingState;
+    victronModbusDataPending = false;
+    portEXIT_CRITICAL(&victronModbusDataMux);
+
+    if (victronModbusConfig.enabled) updateVictronAccu(powerW, soc, state);
+  }
+
+  if (!victronModbusConfig.enabled || !victronModbusTargetValid ||
+      (netw_state != NW_ETH && netw_state != NW_WIFI) ||
+      victronModbusRequestPending) return;
+
+  uint32_t nowMs = millis();
+  if (victronModbusLastPoll && nowMs - victronModbusLastPoll < VICTRON_MODBUS_POLL_MS) return;
+  victronModbusLastPoll = nowMs;
+
+  uint32_t token = ++victronModbusToken;
+  victronModbusActiveToken = token;
+  victronModbusRequestPending = true;
+  Error error = victronModbusClient.addRequest(token,
+                                               victronModbusConfig.id,
+                                               READ_HOLD_REGISTER,
+                                               VICTRON_MODBUS_POWER_REGISTER,
+                                               VICTRON_MODBUS_REGISTER_COUNT);
+  if (error != SUCCESS) {
+    victronModbusRequestPending = false;
+    DebugVerboseTf("Victron Modbus queue error: 0x%02X\r\n", (uint8_t)error);
+  }
+}
+
 static constexpr uint8_t kModbusTransportTcp = 0;
 static constexpr uint8_t kModbusTransportRtu = 1;
 
@@ -166,6 +288,7 @@ static const ActiveRecipe* activeRecipes = nullptr;
 static size_t activeRecipeCount = 0;
 static uint16_t activeRecipeMaxReg = 0;
 static bool activeRecipeLswFirst = false;
+static constexpr int kModbusMappingEm24Tcp = 16;
 static constexpr int kModbusMappingFroniusSunSpec203 = 15;
 
 #include "_mbus_mapping.h"
@@ -178,6 +301,7 @@ static uint32_t encodeActiveRecipeValue(const ActiveRecipe& recipe);
 static const ActiveRecipe* findActiveRecipe(uint16_t reg);
 static bool loadActiveRecipes(const ActiveRecipe* recipes, size_t recipeCount);
 static bool loadPresetRecipes(int mappingChoice);
+static int32_t em24ScaledValue(MbSource source, int16_t scale);
 
 static float mbSignedCurrent(float current, float returned) {
   return current * (returned ? -1.0f : 1.0f);
@@ -188,23 +312,23 @@ static float readMbSourceValue(MbSource source) {
     case MbSource::timestamp_epoch:
       return (float)(actT - (actTimestamp[12] == 'S' ? 7200 : 3600));
     case MbSource::energy_delivered_tariff1_kwh:
-      return (DSMRdata.energy_delivered_tariff1_present && !bUseEtotals) ? DSMRdata.energy_delivered_tariff1.val() : NAN;
+      return (DSMRdata.energy_delivered_tariff1_present && !bUseEtotals) ? outputEnergy(DSMRdata.energy_delivered_tariff1.val()) : NAN;
     case MbSource::energy_delivered_tariff2_kwh:
-      return (DSMRdata.energy_delivered_tariff2_present && !bUseEtotals) ? DSMRdata.energy_delivered_tariff2.val() : NAN;
+      return (DSMRdata.energy_delivered_tariff2_present && !bUseEtotals) ? outputEnergy(DSMRdata.energy_delivered_tariff2.val()) : NAN;
     case MbSource::energy_returned_tariff1_kwh:
-      return (DSMRdata.energy_returned_tariff1_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff1.val() : NAN;
+      return (DSMRdata.energy_returned_tariff1_present && !bUseEtotals) ? outputEnergy(DSMRdata.energy_returned_tariff1.val()) : NAN;
     case MbSource::energy_returned_tariff2_kwh:
-      return (DSMRdata.energy_returned_tariff2_present && !bUseEtotals) ? DSMRdata.energy_returned_tariff2.val() : NAN;
+      return (DSMRdata.energy_returned_tariff2_present && !bUseEtotals) ? outputEnergy(DSMRdata.energy_returned_tariff2.val()) : NAN;
     case MbSource::energy_delivered_total_kwh:
-      return DSMRdata.energy_delivered_total_present
+      return outputEnergy(DSMRdata.energy_delivered_total_present
         ? DSMRdata.energy_delivered_total.val()
         : ((DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) +
-           (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f));
+           (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f)));
     case MbSource::energy_returned_total_kwh:
-      return DSMRdata.energy_returned_total_present
+      return outputEnergy(DSMRdata.energy_returned_total_present
         ? DSMRdata.energy_returned_total.val()
         : ((DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
-           (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f));
+           (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)));
     case MbSource::energy_total_abs_kwh: {
       const float delivered = readMbSourceValue(MbSource::energy_delivered_total_kwh);
       const float returned = readMbSourceValue(MbSource::energy_returned_total_kwh);
@@ -217,28 +341,28 @@ static float readMbSourceValue(MbSource source) {
       return
         (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_returned_tariff1_present ||
          DSMRdata.energy_delivered_tariff2_present || DSMRdata.energy_returned_tariff2_present)
-          ? (float)(
+          ? outputEnergy((float)(
               (DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) -
               (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f) +
               (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f) -
               (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)
-            )
+            ))
           : NAN;
     case MbSource::energy_net_tariff1_kwh:
       return
         (DSMRdata.energy_delivered_tariff1_present || DSMRdata.energy_returned_tariff1_present)
-          ? (float)(
+          ? outputEnergy((float)(
               (DSMRdata.energy_delivered_tariff1_present ? DSMRdata.energy_delivered_tariff1.val() : 0.0f) -
               (DSMRdata.energy_returned_tariff1_present ? DSMRdata.energy_returned_tariff1.val() : 0.0f)
-            )
+            ))
           : NAN;
     case MbSource::energy_net_tariff2_kwh:
       return
         (DSMRdata.energy_delivered_tariff2_present || DSMRdata.energy_returned_tariff2_present)
-          ? (float)(
+          ? outputEnergy((float)(
               (DSMRdata.energy_delivered_tariff2_present ? DSMRdata.energy_delivered_tariff2.val() : 0.0f) -
               (DSMRdata.energy_returned_tariff2_present ? DSMRdata.energy_returned_tariff2.val() : 0.0f)
-            )
+            ))
           : NAN;
     case MbSource::energy_net_avg_kwh: {
       float value = readMbSourceValue(MbSource::energy_net_total_kwh);
@@ -295,7 +419,7 @@ static float readMbSourceValue(MbSource source) {
     case MbSource::electricity_tariff:
       return DSMRdata.electricity_tariff_present ? (float)atoi(DSMRdata.electricity_tariff.c_str()) : NAN;
     case MbSource::peak_pwr_last_q_kw:
-      return DSMRdata.peak_pwr_last_q_present ? (float)DSMRdata.peak_pwr_last_q.val() : NAN;
+      return DSMRdata.peak_pwr_last_q_present ? outputPower((float)DSMRdata.peak_pwr_last_q.val()) : NAN;
     case MbSource::net_power_l1_kw:
       return DSMRdata.power_delivered_l1_present ? outputPower((float)(DSMRdata.power_delivered_l1.val() - DSMRdata.power_returned_l1.val())) : NAN;
     case MbSource::net_power_l2_kw:
@@ -583,7 +707,7 @@ static bool loadActiveRecipes(const ActiveRecipe* recipes, size_t recipeCount) {
 }
 
 static bool loadPresetRecipes(int mappingChoice) {
-  activeRecipeLswFirst = (mappingChoice == 4);
+  activeRecipeLswFirst = (mappingChoice == 4 || mappingChoice == kModbusMappingEm24Tcp);
 
   switch (mappingChoice) {
     case 0:
@@ -606,6 +730,10 @@ static bool loadPresetRecipes(int mappingChoice) {
       return loadActiveRecipes(kKlefrRecipes, sizeof(kKlefrRecipes) / sizeof(kKlefrRecipes[0]));
     case 9:
       return loadActiveRecipes(kPhoenixEemXm3xxRecipes, sizeof(kPhoenixEemXm3xxRecipes) / sizeof(kPhoenixEemXm3xxRecipes[0]));
+    case kModbusMappingEm24Tcp:
+      // EM24 requests are handled per 16-bit register below. Keep a valid
+      // recipe set here so the generic mapping state remains initialized.
+      return loadActiveRecipes(kEm24TcpRecipes, sizeof(kEm24TcpRecipes) / sizeof(kEm24TcpRecipes[0]));
     case kModbusMappingFroniusSunSpec203:
       return loadActiveRecipes(kFroniusSunSpec203Recipes, sizeof(kFroniusSunSpec203Recipes) / sizeof(kFroniusSunSpec203Recipes[0]));
     default:
@@ -651,6 +779,128 @@ static void addMbU32(ModbusMessage& response, uint32_t value) {
 
 static inline uint32_t packF(float f) { union { float f; uint32_t u; } x{f}; return x.u; }
 
+static bool em24IsThreePhase() {
+  if (settingPhases == 1) return false;
+  if (settingPhases >= 2) return true;
+  return DSMRdata.voltage_l2_present || DSMRdata.voltage_l3_present ||
+         DSMRdata.current_l2_present || DSMRdata.current_l3_present ||
+         DSMRdata.power_delivered_l2_present || DSMRdata.power_delivered_l3_present ||
+         DSMRdata.power_returned_l2_present || DSMRdata.power_returned_l3_present;
+}
+
+static int32_t em24ScaledValue(MbSource source, int16_t scale) {
+  const float value = readScaledMbSourceValue(source, scale);
+  return isnan(value) ? 0 : (int32_t)lroundf(value);
+}
+
+static uint32_t em24TotalPower() {
+  if (!em24IsThreePhase()) {
+    return (uint32_t)em24ScaledValue(MbSource::net_power_total_kw, 10000);
+  }
+
+  const int32_t total = em24ScaledValue(MbSource::net_power_l1_kw, 10000) +
+                        em24ScaledValue(MbSource::net_power_l2_kw, 10000) +
+                        em24ScaledValue(MbSource::net_power_l3_kw, 10000);
+  return (uint32_t)total;
+}
+
+static uint16_t em24Word(uint32_t value, uint16_t base, uint16_t address) {
+  return address == base ? (uint16_t)(value & 0xFFFFu) : (uint16_t)(value >> 16);
+}
+
+static uint16_t readEm24Register(uint16_t address) {
+  const bool threePhase = em24IsThreePhase();
+
+  if (address <= 0x0005) {
+    const uint16_t base = address & 0xFFFEu;
+    const uint8_t phase = base / 2;
+    if (!threePhase && phase > 0) return 0;
+    const MbSource source = phase == 0 ? MbSource::voltage_l1_v
+                           : phase == 1 ? MbSource::voltage_l2_v
+                                        : MbSource::voltage_l3_v;
+    return em24Word((uint32_t)em24ScaledValue(source, 10), base, address);
+  }
+
+  if (address == 0x000B) return 1648;
+
+  if (address >= 0x000C && address <= 0x0011) {
+    const uint16_t base = 0x000C + ((address - 0x000C) / 2) * 2;
+    const uint8_t phase = (base - 0x000C) / 2;
+    if (!threePhase && phase > 0) return 0;
+    const MbSource source = phase == 0 ? MbSource::current_l1_a
+                           : phase == 1 ? MbSource::current_l2_a
+                                        : MbSource::current_l3_a;
+    return em24Word((uint32_t)em24ScaledValue(source, 1000), base, address);
+  }
+
+  if (address >= 0x0012 && address <= 0x0017) {
+    const uint16_t base = 0x0012 + ((address - 0x0012) / 2) * 2;
+    const uint8_t phase = (base - 0x0012) / 2;
+    if (!threePhase && phase > 0) return 0;
+    const MbSource source = phase == 0 ? (threePhase ? MbSource::net_power_l1_kw : MbSource::net_power_total_kw)
+                           : phase == 1 ? MbSource::net_power_l2_kw
+                                        : MbSource::net_power_l3_kw;
+    return em24Word((uint32_t)em24ScaledValue(source, 10000), base, address);
+  }
+
+  if (address >= 0x0028 && address <= 0x0029) {
+    return em24Word(em24TotalPower(), 0x0028, address);
+  }
+  if (address == 0x0033) return 500;
+  if (address >= 0x0034 && address <= 0x0035) {
+    return em24Word((uint32_t)em24ScaledValue(MbSource::energy_delivered_total_kwh, 10), 0x0034, address);
+  }
+  if (address >= 0x0040 && address <= 0x0041) {
+    return em24Word((uint32_t)em24ScaledValue(MbSource::energy_delivered_total_kwh, 10), 0x0040, address);
+  }
+  if (address >= 0x0046 && address <= 0x0047) {
+    return em24Word((uint32_t)em24ScaledValue(MbSource::energy_returned_total_kwh, 10), 0x0046, address);
+  }
+  if (address >= 0x004E && address <= 0x004F) {
+    return em24Word((uint32_t)em24ScaledValue(MbSource::energy_returned_total_kwh, 10), 0x004E, address);
+  }
+  if (address == 0x0302 || address == 0x0304) return 0x0100;
+  if (address == 0x1002) return threePhase ? 0 : 3;
+
+  if (address >= 0x5000 && address <= 0x5006) {
+    char serial[15];
+    snprintf(serial, sizeof(serial), "P1%012llX", (unsigned long long)(_getChipId() & 0xFFFFFFFFFFFFULL));
+    const uint8_t offset = (address - 0x5000) * 2;
+    return ((uint16_t)(uint8_t)serial[offset] << 8) | (uint8_t)serial[offset + 1];
+  }
+
+  if (address == 0xA000) return 7;
+  if (address == 0xA100) return 3;
+  return 0;
+}
+
+static bool em24DataAvailable() {
+  if (last_telegram_t == 0) return false;
+
+  const uint32_t timeoutMs = bV5meter ? 3500UL : 35000UL;
+  return (uint32_t)(millis() - (uint32_t)last_telegram_t) <= timeoutMs;
+}
+
+static ModbusMessage handleEm24Read(ModbusMessage request, uint8_t transport, uint16_t address, uint16_t words) {
+  ModbusMessage response;
+  if (words == 0 || (uint32_t)address + words > 0xA101UL) {
+    response.setError(request.getServerID(), request.getFunctionCode(), ILLEGAL_DATA_ADDRESS);
+    logModbusMonitorRequest(transport, request, address, words, ILLEGAL_DATA_ADDRESS);
+    return response;
+  }
+
+  if (!em24DataAvailable()) {
+    response.setError(request.getServerID(), request.getFunctionCode(), SERVER_DEVICE_BUSY);
+    logModbusMonitorRequest(transport, request, address, words, SERVER_DEVICE_BUSY);
+    return response;
+  }
+
+  response.add(request.getServerID(), request.getFunctionCode(), (uint8_t)(words * 2));
+  for (uint16_t i = 0; i < words; i++) response.add(readEm24Register(address + i));
+  logModbusMonitorRequest(transport, request, address, words, 0);
+  return response;
+}
+
 // Change active mapping
 void setModbusMapping(int mappingChoice) {
     SelMap = mappingChoice;
@@ -671,6 +921,10 @@ static ModbusMessage MBusHandleRequestInternal(ModbusMessage request, uint8_t tr
     String actualJson = smActualJsonDebug();
     Debugf("--MODBUS actual snapshot: %s\n", actualJson.c_str());
 #endif
+
+    if (SelMap == kModbusMappingEm24Tcp) {
+      return handleEm24Read(request, transport, address, words);
+    }
 
     uint16_t maxReg = getMbActiveMaxReg();
 
@@ -788,3 +1042,29 @@ void SetupMB_RTU(){
 void SetupMB_RTU(){}
 void MBSetTermination (bool value){}
 #endif
+
+void updateModbusServerId(uint8_t oldId, uint8_t newId) {
+  if (oldId == newId) return;
+
+#ifdef MBUS
+  if (!skipNetwork) {
+    MBserver.stop();
+    MBserver.unregisterWorker(oldId);
+    MBserver.registerWorker(newId, READ_HOLD_REGISTER, &MBusHandleRequestTCP);
+    MBserver.registerWorker(newId, READ_INPUT_REGISTER, &MBusHandleRequestTCP);
+    MBserver.start(mb_config.port, MBUS_CLIENTS, MBUS_TIMEOUT);
+  }
+#endif
+
+#ifdef MB_RTU
+  if (MBserverRTU != nullptr) {
+    MBserverRTU->end();
+    MBserverRTU->unregisterWorker(oldId);
+    MBserverRTU->registerWorker(newId, READ_HOLD_REGISTER, &MBusHandleRequestRTU);
+    MBserverRTU->registerWorker(newId, READ_INPUT_REGISTER, &MBusHandleRequestRTU);
+    MBserverRTU->begin(RTU_SERIAL);
+  }
+#endif
+
+  DebugTf("Modbus ID changed at runtime: %u -> %u\r\n", oldId, newId);
+}
