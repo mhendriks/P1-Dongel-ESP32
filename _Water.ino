@@ -6,6 +6,7 @@ static portMUX_TYPE waterMux = portMUX_INITIALIZER_UNLOCKED;
 volatile uint32_t g_waterPulses = 0;
 volatile uint32_t g_debounces   = 0;
 volatile uint32_t g_lastPulseUs = 0;
+static double g_waterFractionalLiters = 0.0;
 
 static constexpr uint32_t WATER_MIN_PULSE_US = 2000000UL;
 
@@ -49,12 +50,24 @@ static inline float waterCurrentM3() {
   return (float)P1Status.wtr_m3 + ((float)P1Status.wtr_l / 1000.0f);
 }
 
+static inline uint32_t waterLitersFromPulses(uint32_t pulses) {
+  const double totalLiters = g_waterFractionalLiters +
+                             ((double)pulses * (double)WtrFactor);
+  const uint32_t wholeLiters = (uint32_t)(totalLiters + 0.000001);
+
+  g_waterFractionalLiters = totalLiters - (double)wholeLiters;
+  if (g_waterFractionalLiters < 0.0) g_waterFractionalLiters = 0.0;
+
+  return wholeLiters;
+}
+
 static void waterResetCounters() {
   portENTER_CRITICAL(&waterMux);
   g_waterPulses = 0;
   g_debounces   = 0;
   g_lastPulseUs = (uint32_t)esp_timer_get_time();
   portEXIT_CRITICAL(&waterMux);
+  g_waterFractionalLiters = 0.0;
 }
 
 void handleWater() {
@@ -66,7 +79,7 @@ void handleWater() {
   // Preserve the existing interval semantics: seconds since the previous accepted reading.
   WtrTimeBetween = (uint32_t)(now() - WtrPrevReading);
 
-  P1Status.wtr_l += (int)(newPulses * (float)WtrFactor);
+  P1Status.wtr_l += waterLitersFromPulses(newPulses);
 
   while (P1Status.wtr_l >= 1000) {
     P1Status.wtr_m3 = P1Status.wtr_m3 + 1;

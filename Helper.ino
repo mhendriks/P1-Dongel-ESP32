@@ -18,8 +18,8 @@
 #define P1P_H20_2   4
 
 // ------------------ ENUMS & CONSTANTS ------------------ //
-enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2, NRGDH, D1MC };
-const char* const HWTypeNames[]  = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S", "P1UX2", "NRGDH", "D1MC" };
+enum HWtype { UNDETECTED, P1P, NRGD, P1E, P1EP, P1UM, P1U, NRGM, P1S, P1UX2, NRGDH, D1MC, W1MC };
+const char* const HWTypeNames[]  = { "N/A", "P1P", "NRGD", "P1E", "P1EP", "P1UM", "P1U", "NRGM", "P1S", "P1UX2", "NRGDH", "D1MC", "W1MC" };
 const char* const ModTypeNames[] = { "N/A", "IO+", "H2O", "RS485" };
 
 // ------------------ GLOBAL VARIABLES ------------------ //
@@ -174,6 +174,10 @@ void DetectModule() {
             break;
     case NRGD:
             active_mod_conf = &module_config[0];
+            DetectModule(0); ActivateModule(0);
+            break;
+    case W1MC:
+            active_mod_conf = &module_config[4];
             DetectModule(0); ActivateModule(0);
             break;
 #ifdef ULTRA
@@ -336,10 +340,11 @@ static uint32_t monoOverrideLastToggleMs = 0;
 
 static void setRgbColor(uint32_t color) {
   ClearRGB();
+  const uint8_t brightness = (HardwareType == W1MC) ? 250 : BRIGHTNESS;
   switch ( color ) {
-    case LED_RED:   R_value = BRIGHTNESS; break;
-    case LED_GREEN: G_value = BRIGHTNESS; break;
-    case LED_BLUE:  B_value = BRIGHTNESS; break;
+    case LED_RED:   R_value = brightness; break;
+    case LED_GREEN: G_value = brightness; break;
+    case LED_BLUE:  B_value = brightness; break;
   }
 }
 

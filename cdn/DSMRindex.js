@@ -1154,8 +1154,8 @@ function refreshDashboard(json){
 		v3 = meterValue(dash("voltage_l3"), 0);
 
 
-		const voltageCardAvailable = !(HeeftWater && EnableHist);
-		if ( voltageCardAvailable && v1 ) {
+		// A separate water sensor and the smart-meter voltage can coexist.
+		if (v1) {
 			setDashboardWidgetAvailable("l2", true);
 			document.getElementById("fases").innerHTML = Phases;
 			
