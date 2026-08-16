@@ -53,21 +53,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select port>
 
 
-5.9.0 beta
-- updated dsmr3Lib with improved telegram and CRC handling
-- redesigned the File Management page with a storage overview and improved file actions
-- added options to open, download, delete, or download all files at once
-- improved upload validation for available storage and the maximum number of files
-- redesigned the System Information page
-- added battery data to the display dataset
-- changed the background worker from polling to event-driven processing
-- queued RNG writes for hour, day, and month transitions
-- reduced worker queue and memory usage
-- reduced temporary memory usage while capturing P1 and HAN telegrams
-- preserved captured telegrams after parsing, including after parse errors
-- improved P1 parser diagnostics
-- removed unused code and data
-- added project-local build optimisation with C++ exceptions disabled
+5.9.1
+- 
 
 5.10...
 - Normalise energy data (huge change)
