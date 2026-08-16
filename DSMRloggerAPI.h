@@ -56,7 +56,7 @@ struct VictronModbusConfig {
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <Preferences.h>
-#include <dsmr2.h>               // https://github.com/mhendriks/dsmr2Lib
+#include <dsmr3.h>               // https://github.com/mhendriks/dsmr3Lib
 #include "esp_chip_info.h"
 #include <esp_now.h>             //https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
 #include <esp_task_wdt.h>
@@ -134,12 +134,17 @@ class SmartMeterHandle {
     return isHan() ? han_.CompleteRaw() : dsmr_.CompleteRaw();
   }
 
+  bool CompleteRaw(String& destination) {
+    return isHan() ? han_.CompleteRaw(destination)
+                   : dsmr_.CompleteRaw(destination);
+  }
+
   String raw() {
     return isHan() ? han_.raw() : dsmr_.raw();
   }
 
   size_t rawLength() {
-    return isHan() ? han_.raw().length() : dsmr_.rawLength();
+    return isHan() ? han_.frameLength() : dsmr_.rawLength();
   }
 
   void clear() {
@@ -160,6 +165,12 @@ class SmartMeterHandle {
   template<typename TData>
   bool parse(TData* data, String* err = nullptr) {
     return isHan() ? han_.parse(data, err) : dsmr_.parse(data, err);
+  }
+
+  template<typename TData>
+  bool parse(TData* data, String* err, P1FieldWarning* fieldWarning) {
+    return isHan() ? han_.parse(data, err)
+                   : dsmr_.parse(data, err, false, fieldWarning);
   }
 
  private:
@@ -742,6 +753,7 @@ struct AccuPwrSystems {
   uint8_t   chargeLevel;
 };
 
+AccuPwrSystems* dashboardAccu();
 bool fillDashAccuJson(JsonDocument& doc);
 void updateVictronAccu(int16_t powerW, uint16_t chargeLevel, uint16_t state);
 void invalidateVictronAccu();

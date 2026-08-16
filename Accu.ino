@@ -16,7 +16,7 @@ static bool victronAccuAvailable() {
   return VictronAccu.Available && (millis() - victronAccuLastUpdate <= VICTRON_ACCU_STALE_MS);
 }
 
-static AccuPwrSystems* dashboardAccu() {
+AccuPwrSystems* dashboardAccu() {
   if (victronAccuAvailable()) return &VictronAccu;
   if (SolarEdgeAccu.Available) return &SolarEdgeAccu;
   return nullptr;

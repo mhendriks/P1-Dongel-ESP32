@@ -48,11 +48,6 @@ bool auth() {
   return true;
 }
 
-int shellyRpcRequestId() {
-  if (!httpServer.hasArg("id")) return 1;
-  return httpServer.arg("id").toInt();
-}
-
 void serveStaticWithAuth(const char* uri, const char* fileName) {
   httpServer.on(uri, HTTP_GET, [fileName]() {
     if (!auth()) return;

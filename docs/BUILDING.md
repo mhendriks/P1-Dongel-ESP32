@@ -1,6 +1,6 @@
 # Building Notes
 
-This project expects a few local/private headers outside the repo and a compatible `dsmr2Lib` version.
+This project expects a few local/private headers outside the repo and a compatible `dsmr3Lib` version.
 
 ## 1) Local `_secrets` headers (optional but expected by default)
 
@@ -110,6 +110,16 @@ Extra Arduino build properties can be passed through as well. For `compiler.cpp.
 ./build.sh ULTRA --build-property compiler.cpp.extra_flags="-DWEBSOCKETS_TCP_TIMEOUT=2000"
 ```
 
+### Sketch-local compiler options
+
+The ESP32 Arduino core reads compiler options from `build_opt.h` in the sketch root. This project uses it to disable C++ exceptions without changing the globally installed ESP32 platform:
+
+```text
+-fno-exceptions
+```
+
+Arduino IDE and `arduino-cli` both apply this file automatically. A `platform.local.txt` in the sketch root is not supported; that file is only read next to the installed ESP32 `platform.txt`. Unlike `platform.local.txt`, `build_opt.h` is project-specific and remains part of the repository when the ESP32 core is updated.
+
 The script injects profile-specific defines and board settings, including:
 
 - ESP32-C3 builds must always use the `Minimal SPIFFS` partition scheme (`OTA 1.9MB / 128KB SPIFFS`).
@@ -136,8 +146,8 @@ These headers come from the ESP32 board support package rather than a separate A
   Repo: <https://github.com/PaulStoffregen/Time>
 - `TelnetStream` (`TelnetStream.h`)
   Repo: <https://github.com/jandrassy/TelnetStream>
-- `dsmr2Lib` (`dsmr2.h`)
-  Repo: <https://github.com/mhendriks/dsmr2Lib>
+- `dsmr3Lib` (`dsmr3.h`)
+  Repo: <https://github.com/mhendriks/dsmr3Lib>
 - `WiFiManager` (`WiFiManager.h`)
   Repo: <https://github.com/tzapu/WiFiManager>
 - `CRC32` (`CRC32.h`)

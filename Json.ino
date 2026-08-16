@@ -383,12 +383,6 @@ static void fillHWapiJson(JsonDocument& jsonDoc) {
     }
 }
 
-String HWapiJson(){
-  return jsonResponse([&](JsonDocument& doc){
-    fillHWapiJson(doc);
-  });
-}
-
 void sendHWapiJson() {
   JsonDocument doc;
   fillHWapiJson(doc);
@@ -498,6 +492,25 @@ String deviceInfoJson()
   if (DSMRdata.p1_version.length() > 0) {
     doc["smart_meter_version"] = DSMRdata.p1_version;
   }
+
+#ifdef HAN_READER
+  if (!smartMeter.isHan()) {
+#endif
+    const P1Diagnostics diagnostics = slimmeMeter.diagnostics();
+    const char* crcMode = "detecteren";
+    if (diagnostics.crc_mode == P1CrcMode::PRESENT) crcMode = "actief";
+    else if (diagnostics.crc_mode == P1CrcMode::ABSENT) crcMode = "niet aanwezig";
+
+    char p1Diagnostics[80];
+    snprintf(p1Diagnostics, sizeof(p1Diagnostics),
+             "CRC %s · fouten %lu · velden overgeslagen %lu",
+             crcMode,
+             (unsigned long)diagnostics.crc_errors,
+             (unsigned long)diagnostics.skipped_fields);
+    doc["p1_diagnostics"] = p1Diagnostics;
+#ifdef HAN_READER
+  }
+#endif
 
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;

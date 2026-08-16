@@ -20,6 +20,7 @@ volatile bool lastAckSuccess = false;
 command_t Command;
 uint8_t broadcastAddress[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 ActualData_t ActualData;
+AccuData_t AccuData;
 tariff_t TariffData;
 char updateURL[80], updateFile[35];
 bool bESPNowInit = false;
@@ -28,6 +29,7 @@ static const uint32_t ESPNOW_ASK_TARIF_MIN_INTERVAL_MS = 5000;
 static const uint32_t ESPNOW_ASK_TARIF_LOG_INTERVAL_MS = 10000;
 static uint32_t lastAskTarifQueuedMs = 0;
 static uint32_t lastAskTarifThrottleLogMs = 0;
+static bool peerSupportsAccu = false;
 
 void SyncESPNOW();
 
@@ -113,6 +115,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
       switch (Command.action) {
         case CONN_REQUEST:
           Debugln("CONN_REQUEST");
+          peerSupportsAccu = false;
           if ( Pref.peers ) {
             Debugln("CONN_REQUEST: peer aanwezig");
             Command.action = CONN_RESPONSE;
@@ -151,7 +154,12 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         case ASK_PLANNER:
           Debugln("ASK_PLANNER");
           P2PType = OFFSET_ACTION + ASK_PLANNER;
-          break;                    
+          break;
+        case ASK_ACCU:
+          Debugln("ASK_ACCU");
+          peerSupportsAccu = true;
+          P2PType = OFFSET_ACTION + ASK_ACCU;
+          break;
         case PAIRING:
           Debugln("PAIRING");
           memcpy(&Command, incomingData, sizeof(Command));
@@ -227,6 +235,7 @@ void StopESPNOW(){
   P2PType = 0;
   bPairingmode = 0;
   bNRGMEnabledByPairing = false;
+  peerSupportsAccu = false;
   Debugln("StartESPNOW: deinit OK");
 }
 
@@ -397,6 +406,31 @@ void P2PSendActualData(){
   
   esp_err_t rs = esp_now_send(NULL, (uint8_t *) &ActualData, sizeof(ActualData));
   if (rs != ESP_OK) Debugf("P2P actual send failed: %d\n", (int)rs);
+}
+
+void P2PSendAccuData() {
+  if (!espNowReadyForPeerData() || !bNRGMenabled || !en_connected || !peerSupportsAccu) return;
+
+  AccuData.msgType = NRGACCU;
+  AccuData.accuAvailable = false;
+  AccuData.accuPower = 0;
+  AccuData.accuSoc = 0;
+  AccuData.accuState = ACCU_UNAVAILABLE;
+
+  AccuPwrSystems* source = dashboardAccu();
+  if (source) {
+    AccuData.accuAvailable = true;
+    float powerMultiplier = source->unit.equalsIgnoreCase("kW") ? 1000.0f : 1.0f;
+    AccuData.accuPower = (int32_t)roundf(source->currentPower * powerMultiplier);
+    AccuData.accuSoc = constrain(source->chargeLevel, 0, 100);
+
+    if (source->status.equalsIgnoreCase("Charging")) AccuData.accuState = ACCU_CHARGING;
+    else if (source->status.equalsIgnoreCase("Discharging")) AccuData.accuState = ACCU_DISCHARGING;
+    else AccuData.accuState = ACCU_IDLE;
+  }
+
+  esp_err_t rs = esp_now_send(NULL, (uint8_t*)&AccuData, sizeof(AccuData));
+  if (rs != ESP_OK) Debugf("P2P accu send failed: %d\n", (int)rs);
 }
 
 // Streams firmware from HTTP to a peer in ESP-NOW chunks. Each chunk carries a
@@ -574,6 +608,9 @@ void handleP2P(){
       break; }
     case OFFSET_ACTION + ASK_PLANNER:
       sendStroomPlanner();
+      break;
+    case OFFSET_ACTION + ASK_ACCU:
+      P2PSendAccuData();
       break;
     case NRGTARIFS:
       ReceiveTariffData();

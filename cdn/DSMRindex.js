@@ -1083,6 +1083,9 @@ function parseVersionManifest(json)
 		document.getElementById('message').innerHTML = "Software versie " + json.version + " beschikbaar";
 	  else document.getElementById('message').innerHTML = "";
 	}
+	if (objDAL?.devinfo && Object.keys(objDAL.devinfo).length) {
+	  renderDeviceInformation(objDAL.devinfo, json);
+	}
 }
 
 function refreshDashboard(json){
@@ -1740,138 +1743,368 @@ function SendNetSwitchJson() {
   
 
 //============================================================================  
-  function FSExplorer() {
-	 let main = document.querySelector('main');
-	 let fileSize = document.querySelector('fileSize');
+  let fmFileCount = 0;
+  let fmFreeBytes = 0;
+  let fmFileNames = new Set();
+  let fmFileSizes = new Map();
 
-	 Spinner(true);
-	 fetch('api/listfiles', {"setTimeout": 5000}).then(function (response) {
-		 return response.json();
-	 }).then(function (json) {
-	
-	//clear previous content	 
-	 let list = document.getElementById("FSmain");
-	 while (list.hasChildNodes()) {  
-	   list.removeChild(list.firstChild);
-	 }
-    
-	 nFilecount = json.length - 1; //last object is general information
-	 const fileUrls = json.slice(0, -1).map(file => `/${encodeURIComponent(file.name.replace(/^\/+/, ''))}`);
-     let dir = '<table id="FSTable" width=90%>';
-	   for (var i = 0; i < json.length - 1; i++) {
-		 dir += "<tr>";
-		 dir += `<td width=250px nowrap><a href ="${json[i].name}" target="_blank">${json[i].name}</a></td>`;
-		 dir += `<td width=100px nowrap><small>${json[i].size}</small></td>`;
-		 dir += `<td width=100px nowrap><a href ="${json[i].name}"download="${json[i].name}"> Download </a></td>`;
-		 dir += `<td width=100px nowrap><a href ="${json[i].name}?delete=/${json[i].name}"> Delete </a></td>`;
-		 dir += "</tr>";
-	   }	// for ..
-	   main.insertAdjacentHTML('beforeend', dir);
-	   document.querySelectorAll('[href*=delete]').forEach((node) => {
-			 node.addEventListener('click', () => {
-					 if (!confirm('Delete, sure ?!')) event.preventDefault();  
-			 });
-	   });
-	   main.insertAdjacentHTML('beforeend', '</table>');
-       main.insertAdjacentHTML('beforeend',
-         `<div id="filecount">
-            <span>${t('lbl-fm-files')}: ${nFilecount}</span>
-            <a id="downloadAllFiles" href="#">Download all</a>
-          </div>`);
-       document.getElementById('downloadAllFiles').addEventListener('click', async event => {
-         event.preventDefault();
-         await downloadFilesSequential(fileUrls);
-       });
-	   main.insertAdjacentHTML('beforeend', `<p id="FSFree">${t('lbl-fm-storage')}: <b>${json[i].usedBytes} ${t('lbl-fm-used')}</b> | ${json[i].totalBytes} ${t('lbl-fm-total')}`);
-	   free = json[i].freeBytes;
-	   fileSize.innerHTML = "<b> &nbsp; </b><p>";    // spacer                
-	   Spinner(false);
-	 });	// function(json)
-	 
-    //view selected filesize
-	  document.getElementById('Ifile').addEventListener('change', () => {
-      //format filesize
-		  let nBytes = document.getElementById('Ifile').files[0].size;
-      let output = `${nBytes} Byte`;
-		  for (let aMultiples = [
-			 ' KB',
-			 ' MB'
-			], i = 0, nApprox = nBytes / 1024; nApprox > 1; nApprox /= 1024, i++) {
-			  output = nApprox.toFixed(2) + aMultiples[i];
-			}
-
-      let fUpload = true;
-      //check freespace
-			if (nBytes > free) {
-			  fileSize.innerHTML = `<p><small> File size: ${output}</small><strong style="color: red;"> not enough space! </strong><p>`;
-        fUpload = false;
-			}
-      //check filecount
-      //TODO: 
-      //  Although uploading a new file is blocked, REPLACING a file when the count is 30 must still be possible.
-      //  check if filename is already on the list, if so, allow this upload.
-			if ( nFilecount >= MAX_FILECOUNT) {
-			  fileSize.innerHTML = `<p><small> file size: ${output}</small><strong style="color: red;"> Max number of files (${MAX_FILECOUNT}) reached! </strong><p>`;
-        fUpload = false;
-			}
-      if( fUpload ){
-        fileSize.innerHTML = `<b>File size:</b> ${output}<p>`;
-			  document.getElementById('Iupload').removeAttribute('disabled');
-      }
-			else {			  
-        document.getElementById('Iupload').setAttribute('disabled', 'disabled');
-			}
-	 });	
+  function formattedSizeToBytes(value) {
+    const match = String(value || "").trim().match(/^([\d.,]+)\s*(B|KB|MB|GB|Byte)?$/i);
+    if (!match) return 0;
+    const amount = Number(match[1].replace(',', '.'));
+    const powers = { B: 0, BYTE: 0, KB: 1, MB: 2, GB: 3 };
+    return amount * Math.pow(1024, powers[(match[2] || 'B').toUpperCase()] || 0);
   }
 
+  function formatUploadSize(bytes) {
+    if (bytes < 1024) return `${bytes} Byte`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  }
+
+  function createFileAction(icon, label, href, extraClass = '') {
+    const action = document.createElement('a');
+    action.className = `fm-file-action ${extraClass}`.trim();
+    action.href = href;
+    action.title = label;
+    action.setAttribute('aria-label', label);
+    action.innerHTML = `<span class="iconify" data-icon="${icon}"></span>`;
+    return action;
+  }
+
+  function updateFileUploadState() {
+    const input = document.getElementById('Ifile');
+    const submit = document.getElementById('Iupload');
+    const status = document.getElementById('fmFileSize');
+    const file = input.files[0];
+
+    status.classList.remove('is-error');
+    submit.disabled = true;
+    if (!file) {
+      status.textContent = '';
+      return;
+    }
+
+    const size = formatUploadSize(file.size);
+    const normalizedName = file.name.replace(/^\/+/, '');
+    const replacesExistingFile = fmFileNames.has(normalizedName);
+    const availableBytes = fmFreeBytes + (fmFileSizes.get(normalizedName) || 0);
+    let error = '';
+
+    if (file.size > availableBytes) error = t('err-fm-no-space');
+    if (fmFileCount >= MAX_FILECOUNT && !replacesExistingFile) error = t('err-fm-max-files').replace('{count}', MAX_FILECOUNT);
+
+    if (error) {
+      status.classList.add('is-error');
+      status.textContent = `${t('lbl-fm-file-size')}: ${size} · ${error}`;
+      return;
+    }
+
+    status.textContent = `${t('lbl-fm-file-size')}: ${size}`;
+    submit.disabled = false;
+  }
+
+  function renderFileManager(files, stats) {
+    const main = document.getElementById('FSmain');
+    const fileUrls = files.map(file => `/${encodeURIComponent(file.name.replace(/^\/+/, ''))}`);
+    main.replaceChildren();
+
+    fmFileCount = files.length;
+    fmFreeBytes = formattedSizeToBytes(stats.freeBytes);
+    fmFileNames = new Set(files.map(file => file.name.replace(/^\/+/, '')));
+    fmFileSizes = new Map(files.map(file => [file.name.replace(/^\/+/, ''), formattedSizeToBytes(file.size)]));
+
+    document.getElementById('fmFileCount').textContent = `${fmFileCount} / ${MAX_FILECOUNT}`;
+    document.getElementById('fmStorageValue').textContent = `${stats.usedBytes} ${t('lbl-fm-used')}`;
+    document.getElementById('fmStorageMeta').textContent = `${stats.freeBytes} ${t('lbl-fm-free')} · ${stats.totalBytes} ${t('lbl-fm-total')}`;
+
+    const usedBytes = formattedSizeToBytes(stats.usedBytes);
+    const totalBytes = formattedSizeToBytes(stats.totalBytes);
+    const usedPercent = totalBytes ? Math.min(100, Math.max(0, (usedBytes / totalBytes) * 100)) : 0;
+    document.getElementById('fmStorageBar').style.width = `${usedPercent.toFixed(1)}%`;
+
+    if (!files.length) {
+      const empty = document.createElement('p');
+      empty.className = 'fm-empty';
+      empty.textContent = t('txt-fm-empty');
+      main.appendChild(empty);
+    } else {
+      const fileList = document.createElement('div');
+      fileList.className = 'fm-file-list';
+
+      files.forEach(file => {
+        const fileUrl = `/${encodeURIComponent(file.name.replace(/^\/+/, ''))}`;
+        const row = document.createElement('div');
+        row.className = 'fm-file-row';
+
+        const name = document.createElement('a');
+        name.className = 'fm-file-name';
+        name.href = fileUrl;
+        name.target = '_blank';
+        name.rel = 'noopener';
+        name.textContent = file.name;
+
+        const size = document.createElement('span');
+        size.className = 'fm-file-size';
+        size.textContent = file.size;
+
+        const actions = document.createElement('div');
+        actions.className = 'fm-file-actions';
+        const openAction = createFileAction('mdi-open-in-new', t('btn-fm-open'), fileUrl);
+        openAction.target = '_blank';
+        openAction.rel = 'noopener';
+        const downloadAction = createFileAction('mdi-download', t('btn-fm-download'), fileUrl);
+        downloadAction.download = file.name.replace(/^\/+/, '');
+        const deleteAction = createFileAction('mdi-delete-outline', t('btn-fm-delete'), `${fileUrl}?delete=/${encodeURIComponent(file.name.replace(/^\/+/, ''))}`, 'fm-file-delete');
+        deleteAction.addEventListener('click', event => {
+          if (!confirm(t('txt-fm-delete-confirm').replace('{name}', file.name))) event.preventDefault();
+        });
+        actions.append(openAction, downloadAction, deleteAction);
+        row.append(name, size, actions);
+        fileList.appendChild(row);
+      });
+      main.appendChild(fileList);
+    }
+
+    const downloadAll = document.getElementById('downloadAllFiles');
+    downloadAll.hidden = !files.length;
+    downloadAll.onclick = async event => {
+      event.preventDefault();
+      await downloadFilesSequential(fileUrls);
+    };
+
+    updateFileUploadState();
+  }
+
+  function FSExplorer() {
+    const main = document.getElementById('FSmain');
+    document.getElementById('Ifile').onchange = updateFileUploadState;
+
+    Spinner(true);
+    fetch('api/listfiles')
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(json => {
+        const stats = json[json.length - 1] || {};
+        renderFileManager(json.slice(0, -1), stats);
+      })
+      .catch(error => {
+        console.error('Unable to load file list:', error);
+        main.innerHTML = `<p class="fm-error">${t('err-fm-load')}</p>`;
+      })
+      .finally(() => Spinner(false));
+  }
+
+function deviceInfoValue(item) {
+  if (item && typeof item === "object") {
+    return `${item.value}${item.unit ? ` ${item.unit}` : ""}`;
+  }
+  return item ?? "-";
+}
+
+function addDeviceInfoRow(container, label, value, valueClass = "") {
+  if (!container || value === undefined || value === null || (value === "" && !valueClass)) return;
+  const row = document.createElement("div");
+  row.className = "sysinfo-row";
+  const labelNode = document.createElement("span");
+  labelNode.className = "sysinfo-label";
+  labelNode.textContent = label;
+  const valueNode = document.createElement("span");
+  valueNode.className = `sysinfo-value ${valueClass}`.trim();
+  valueNode.textContent = deviceInfoValue(value);
+  row.append(labelNode, valueNode);
+  container.appendChild(row);
+  return valueNode;
+}
+
+function addDeviceInfoPartsRow(container, label, parts) {
+  const usableParts = parts.filter(part => part !== undefined && part !== null && part !== "");
+  if (!container || !usableParts.length) return;
+  const valueNode = addDeviceInfoRow(container, label, "", "sysinfo-value-parts");
+  if (!valueNode) return;
+  usableParts.forEach(part => {
+    const partNode = document.createElement("span");
+    partNode.className = "sysinfo-value-part";
+    partNode.textContent = part;
+    valueNode.appendChild(partNode);
+  });
+}
+
+function addDeviceInfoSummary(container, label, value, meta = "") {
+  if (!container || value === undefined || value === null || value === "") return;
+  const card = document.createElement("div");
+  card.className = "sysinfo-summary";
+  const labelNode = document.createElement("span");
+  labelNode.className = "sysinfo-summary-label";
+  labelNode.textContent = label;
+  const valueNode = document.createElement("span");
+  valueNode.className = "sysinfo-summary-value";
+  valueNode.textContent = deviceInfoValue(value);
+  card.append(labelNode, valueNode);
+  if (meta) {
+    const metaNode = document.createElement("span");
+    metaNode.className = "sysinfo-summary-meta";
+    metaNode.textContent = meta;
+    card.appendChild(metaNode);
+  }
+  container.appendChild(card);
+}
+
+function deviceVersionNumber(version) {
+  const match = String(version || "").match(/v?(\d+)\.(\d+)\.(\d+)/i);
+  return match ? Number(match[1]) * 10000 + Number(match[2]) * 100 + Number(match[3]) : 0;
+}
+
+function deviceInfoNumber(value) {
+  const number = Number(value ?? 0);
+  const numberLocale = locale === "se" ? "sv-SE" : locale;
+  return Number.isFinite(number) ? number.toLocaleString(numberLocale) : String(value ?? 0);
+}
+
+function p1ProtocolLabel(obj) {
+  if (obj.meter_source === "HAN") return "HAN";
+  const mode = String(obj.p1_communication_mode || "");
+  if (mode.includes("9600")) return "DSMR 2/3";
+  if (mode.includes("115200")) return "DSMR 4/5";
+  return obj.meter_source || "P1";
+}
+
+function conciseP1Diagnostics(value) {
+  return String(value || "").replace(/\s*·\s*fouten\s+\d+/i, "");
+}
+
+function mqttStatusLabel(status) {
+  switch (String(status || "").toLowerCase()) {
+    case "yes": return t("sysinfo-connected");
+    case "no": return t("sysinfo-disconnected");
+    case "off": return t("sysinfo-disabled");
+    default: return status || "-";
+  }
+}
+
+function addFirmwareUpdateAction(valueNode, channel) {
+  if (!valueNode) return;
+  const link = document.createElement("a");
+  link.className = "sysinfo-update-action";
+  link.href = "#";
+  link.textContent = t("sysinfo-update-action");
+  link.onclick = () => { startUpdateFlow(channel); return false; };
+  valueNode.appendChild(link);
+}
+
+function renderDeviceInformation(obj, manifest) {
+  const containers = {
+    overview: document.getElementById("sysinfo_overview"),
+    update: document.getElementById("sysinfo_update_rows"),
+    smartMeter: document.getElementById("sysinfo_smart_meter"),
+    network: document.getElementById("sysinfo_network"),
+    hardware: document.getElementById("sysinfo_hardware"),
+    status: document.getElementById("sysinfo_status"),
+    connections: document.getElementById("sysinfo_connections"),
+    technical: document.getElementById("sysinfo_technical_rows")
+  };
+  Object.values(containers).forEach(container => { if (container) container.innerHTML = ""; });
+
+  const shortFirmware = String(obj.fwversion || "-").split(" ( ")[0];
+  const telegramCount = Number(obj.telegramcount || 0);
+  const telegramErrors = Number(obj.telegramerrors || 0);
+  const meterDetected = telegramCount > 0;
+  const meterStatus = meterDetected ? t("sysinfo-detected") : t("sysinfo-not-detected");
+  const meterMeta = meterDetected
+    ? `${p1ProtocolLabel(obj)} · ${deviceInfoNumber(telegramCount)} ${t("sysinfo-read")}`
+    : p1ProtocolLabel(obj);
+  const networkMeta = [obj.ssid, obj.ipaddress].filter(Boolean).join(" · ");
+  const installedVersion = deviceVersionNumber(obj.fwversion);
+  const latestVersion = deviceVersionNumber(manifest.version);
+  const firmwareStatus = !latestVersion
+    ? t("sysinfo-checking-update")
+    : latestVersion > installedVersion ? t("sysinfo-update-available") : t("sysinfo-current");
+  addDeviceInfoSummary(containers.overview, t("setting-smart-meter"), meterStatus, meterMeta);
+  addDeviceInfoSummary(containers.overview, t("sysinfo-network"), obj.network, networkMeta);
+  addDeviceInfoSummary(containers.overview, t("sysinfo-firmware"), shortFirmware, firmwareStatus);
+  addDeviceInfoSummary(containers.overview, t("sysinfo-hardware"), obj.hardware);
+  addDeviceInfoSummary(containers.overview, td("uptime"), obj.uptime);
+
+  addDeviceInfoRow(containers.update, td("fwversion"), obj.fwversion);
+  if (manifest.version) {
+    const stableValue = addDeviceInfoRow(containers.update, t("lbl-latest-fwversion"), manifest.version);
+    addFirmwareUpdateAction(stableValue, "stable");
+  }
+  if (manifest.beta) {
+    const betaValue = addDeviceInfoRow(containers.update, t("lbl-beta-fwversion"), manifest.beta);
+    addFirmwareUpdateAction(betaValue, "beta");
+  }
+  const updateCard = document.getElementById("sysinfo_update");
+  updateCard?.classList.toggle("has-update", latestVersion > installedVersion);
+  updateCard?.classList.toggle("is-current", latestVersion > 0 && latestVersion <= installedVersion);
+
+  ["meter_source", "p1_communication_mode"].forEach(key =>
+    addDeviceInfoRow(containers.smartMeter, td(key), obj[key]));
+  addDeviceInfoPartsRow(containers.smartMeter, td("p1_diagnostics"), conciseP1Diagnostics(obj.p1_diagnostics).split("·").map(part => part.trim()));
+  if (obj.telegramcount !== undefined || obj.telegramerrors !== undefined) {
+    addDeviceInfoRow(
+      containers.smartMeter,
+      t("sysinfo-telegrams-breakdown"),
+      `${deviceInfoNumber(telegramCount)} / ${deviceInfoNumber(telegramErrors)}`,
+      "sysinfo-value-part"
+    );
+  }
+
+  const connection = [obj.network, obj.ssid, obj.wifirssi !== undefined ? `${obj.wifirssi} dBm` : ""].filter(Boolean).join(" · ");
+  addDeviceInfoRow(containers.network, td("network"), connection);
+  ["hostname", "ipaddress", "macaddress"].forEach(key => addDeviceInfoRow(containers.network, td(key), obj[key]));
+
+  ["hardware", "chipid", "cpufreq", "freeheap"].forEach(key => addDeviceInfoRow(containers.hardware, td(key), obj[key]));
+  const flashSizeKb = obj.flashchipsize?.value !== undefined ? Number(obj.flashchipsize.value) * 1024 : undefined;
+  const storageValues = [flashSizeKb, obj.sketchsize?.value, obj.FSsize?.value];
+  if (storageValues.every(value => value !== undefined)) {
+    addDeviceInfoRow(
+      containers.hardware,
+      t("sysinfo-storage-breakdown"),
+      `${storageValues.join(" / ")} kB`,
+      "sysinfo-value-part"
+    );
+  }
+
+  ["uptime", "reboots", "lastreset"].forEach(key => addDeviceInfoRow(containers.status, td(key), obj[key]));
+
+  if (obj.mqttbroker !== undefined || obj.mqttbroker_connected !== undefined) {
+    const mqtt = [
+      obj.mqttbroker,
+      mqttStatusLabel(obj.mqttbroker_connected),
+      obj.mqttinterval !== undefined ? `${obj.mqttinterval} s` : ""
+    ].filter(Boolean).join(" | ");
+    addDeviceInfoRow(containers.connections, t("sysinfo-mqtt-breakdown"), mqtt, "sysinfo-value-part");
+  }
+  ["eid_status", "paired"].forEach(key => addDeviceInfoRow(containers.connections, td(key), obj[key]));
+  document.getElementById("sysinfo_connections_card")?.toggleAttribute("hidden", !containers.connections?.children.length);
+
+  const groupedKeys = new Set([
+    "fwversion", "hardware", "meter_source", "p1_communication_mode", "smart_meter_version", "p1_diagnostics",
+    "telegramcount", "telegramerrors", "network", "ssid", "wifirssi", "hostname", "ipaddress", "macaddress",
+    "chipid", "cpufreq", "freeheap", "flashchipsize", "sketchsize", "freesketchspace", "FSsize", "uptime",
+    "reboots", "lastreset", "mqttbroker", "mqttbroker_connected", "mqttinterval", "eid_status", "paired"
+  ]);
+  ["coreversion", "sdkversion", "compileoptions", "indexfile"].forEach(key =>
+    addDeviceInfoRow(containers.technical, td(key), obj[key]));
+  Object.keys(obj).filter(key => !groupedKeys.has(key) && !["coreversion", "sdkversion", "compileoptions", "indexfile"].includes(key))
+    .forEach(key => addDeviceInfoRow(containers.technical, td(key), obj[key]));
+}
+
 function parseDeviceInfo(obj) {
-  const tableRef = document.getElementById('tb_info');
-  tableRef.innerHTML = ""; // clear table
   console.log("dev info compileoptions:", obj.compileoptions);
 
   // NETSW config
-  const showNetSw = obj.compileoptions.includes("[NETSW]");
+  const showNetSw = String(obj.compileoptions || "").includes("[NETSW]");
   document.getElementById("bNETSW").style.display = showNetSw ? "block" : "none";
   updateSystemActionMenu(obj);
-    
-  // add version info 
+
   const manifest = objDAL.version_manifest;
-  if (manifest.version) {
-    const row = tableRef.insertRow(-1);
-    row.insertCell(0).innerHTML = t("lbl-latest-fwversion");
-    row.insertCell(1).innerHTML = manifest.version;
-    row.insertCell(2).innerHTML = `<a style='color:red' onclick='startUpdateFlow("stable")' href='#'>${t('lbl-install')}</a>`;
-    console.log("last version:", manifest.major * 10000 + manifest.minor * 100);
-  }
-  
-    if (manifest.beta) {
-    const row = tableRef.insertRow(-1);
-    row.insertCell(0).innerHTML = t("lbl-beta-fwversion");
-    row.insertCell(1).innerHTML = manifest.beta;
-    row.insertCell(2).innerHTML = `<a style='color:red' onclick='startUpdateFlow("beta")' href='#'>${t('lbl-install')}</a>`;
-  }
-
-  // add dev info
-  for (let k in obj) {
-    if (k === "meter_source") Meter_Source = obj[k];
-
-    const row = tableRef.insertRow(-1);
-    row.insertCell(0).innerHTML = td(k);
-
-    if (typeof obj[k] === "object") {
-      row.insertCell(1).innerHTML = obj[k].value;
-      row.insertCell(2).innerHTML = obj[k].unit;
-      row.cells[1].style.textAlign = "right";
-    } else {
-      row.insertCell(1).innerHTML = obj[k];
-      row.insertCell(2);
-    }
-
-    if (k === "fwversion") {
-      devVersion = obj[k];
-      console.log("fwversion:", devVersion);
-    }
-  }
+  Meter_Source = obj.meter_source || Meter_Source;
+  devVersion = obj.fwversion || "-";
+  renderDeviceInformation(obj, manifest);
 
   // firmware parsing
   document.getElementById('devVersion').innerHTML = devVersion;
@@ -4560,6 +4793,11 @@ function applyTranslations() {
     const key = el.getAttribute('data-i18n-key');
     const translation = t(key);
     if (translation !== key) el.innerHTML = translation;
+  });
+  document.querySelectorAll('[data-i18n-value]').forEach(el => {
+    const key = el.getAttribute('data-i18n-value');
+    const translation = t(key);
+    if (translation !== key) el.value = translation;
   });
   updateBrowserSettingsControls();
   NetSwitchUpdateBar();

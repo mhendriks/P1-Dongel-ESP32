@@ -18,12 +18,6 @@ static uint32_t apiWsLastLive = 0;
 static uint32_t apiWsLastTime = 0;
 static uint32_t apiWsLastHist = 0;
 static uint32_t apiWsLastPong[WEBSOCKETS_SERVER_CLIENT_MAX] = {0};
-static volatile uint8_t apiWsKnownClients = 0;
-static uint32_t apiWsDropNotWritableCount = 0;
-static uint32_t apiWsDropSendFailedCount = 0;
-static uint32_t apiWsDropPongTimeoutCount = 0;
-static uint32_t apiWsSendSlowCount = 0;
-static uint32_t apiWsMaxSendMs = 0;
 
 static void apiWsMarkPong(uint8_t clientNum) {
   if (clientNum < WEBSOCKETS_SERVER_CLIENT_MAX) apiWsLastPong[clientNum] = millis();
@@ -35,7 +29,6 @@ static void apiWsDropClient(uint8_t clientNum, const char* reason) {
 
   DebugTf("API WS client disconnecting: slot=%u reason=%s\r\n", clientNum, reason);
   apiWs.forceDisconnect(clientNum);
-  apiWsKnownClients = apiWs.connectedClients();
 }
 
 static String apiWsMessage(const char* source, const String& body) {
@@ -51,7 +44,6 @@ static String apiWsMessage(const char* source, const String& body) {
 
 static bool apiWsSend(uint8_t clientNum, const char* source, const String& body) {
   if (!apiWs.clientCanWrite(clientNum, API_WS_WRITE_READY_TIMEOUT_MS)) {
-    apiWsDropNotWritableCount++;
     apiWsDropClient(clientNum, "not-writable");
     return false;
   }
@@ -62,12 +54,9 @@ static bool apiWsSend(uint8_t clientNum, const char* source, const String& body)
   uint32_t elapsed = millis() - started;
 
   if (elapsed > API_WS_SEND_WARN_MS) {
-    apiWsSendSlowCount++;
-    if (elapsed > apiWsMaxSendMs) apiWsMaxSendMs = elapsed;
     DebugTf("API WS send slow: slot=%u source=%s ms=%lu sent=%d\r\n", clientNum, source, elapsed, sent);
   }
   if (!sent) {
-    apiWsDropSendFailedCount++;
     apiWsDropClient(clientNum, "send-failed");
     return false;
   }
@@ -83,7 +72,6 @@ static bool apiWsBroadcast(const char* source, const String& body) {
     if (!apiWs.clientIsConnected(clientNum)) continue;
 
     if (!apiWs.clientCanWrite(clientNum, API_WS_WRITE_READY_TIMEOUT_MS)) {
-      apiWsDropNotWritableCount++;
       apiWsDropClient(clientNum, "not-writable");
       continue;
     }
@@ -93,12 +81,9 @@ static bool apiWsBroadcast(const char* source, const String& body) {
     uint32_t elapsed = millis() - started;
 
     if (elapsed > API_WS_SEND_WARN_MS) {
-      apiWsSendSlowCount++;
-      if (elapsed > apiWsMaxSendMs) apiWsMaxSendMs = elapsed;
       DebugTf("API WS send slow: slot=%u source=%s ms=%lu sent=%d\r\n", clientNum, source, elapsed, clientSent);
     }
     if (!clientSent) {
-      apiWsDropSendFailedCount++;
       apiWsDropClient(clientNum, "send-failed");
       continue;
     }
@@ -128,12 +113,10 @@ static void apiWsEvent(uint8_t clientNum, WStype_t type, uint8_t* payload, size_
       return;
     }
     apiWsMarkPong(clientNum);
-    apiWsKnownClients = apiWs.connectedClients();
     DebugTf("API WS client connected: slot=%u clients=%d\r\n", clientNum, apiWs.connectedClients());
     apiWsSendSnapshot(clientNum);
   } else if (type == WStype_DISCONNECTED) {
     if (clientNum < WEBSOCKETS_SERVER_CLIENT_MAX) apiWsLastPong[clientNum] = 0;
-    apiWsKnownClients = apiWs.connectedClients();
     DebugTf("API WS client disconnected: slot=%u clients=%d\r\n", clientNum, apiWs.connectedClients());
   } else if (type == WStype_PONG) {
     apiWsMarkPong(clientNum);
@@ -163,7 +146,6 @@ void handleApiWebSocket() {
 
     uint32_t lastPong = apiWsLastPong[clientNum];
     if (lastPong && nowMs - lastPong > API_WS_PONG_TIMEOUT_MS) {
-      apiWsDropPongTimeoutCount++;
       apiWsDropClient(clientNum, "pong-timeout");
     }
   }
@@ -185,42 +167,4 @@ void handleApiWebSocket() {
     apiWsLastHist = nowMs;
     apiWsBroadcast("dash_hist", dashHistoryApiResponse().body);
   }
-}
-
-uint8_t apiWsStatsClients() {
-  return apiWsKnownClients;
-}
-
-uint32_t apiWsStatsMaxPongAgeMs() {
-  uint32_t nowMs = millis();
-  uint32_t maxAge = 0;
-
-  for (uint8_t clientNum = 0; clientNum < WEBSOCKETS_SERVER_CLIENT_MAX; clientNum++) {
-    uint32_t lastPong = apiWsLastPong[clientNum];
-    if (!lastPong) continue;
-    uint32_t age = nowMs - lastPong;
-    if (age > maxAge) maxAge = age;
-  }
-
-  return maxAge;
-}
-
-uint32_t apiWsStatsDropNotWritable() {
-  return apiWsDropNotWritableCount;
-}
-
-uint32_t apiWsStatsDropSendFailed() {
-  return apiWsDropSendFailedCount;
-}
-
-uint32_t apiWsStatsDropPongTimeout() {
-  return apiWsDropPongTimeoutCount;
-}
-
-uint32_t apiWsStatsSendSlow() {
-  return apiWsSendSlowCount;
-}
-
-uint32_t apiWsStatsMaxSendMs() {
-  return apiWsMaxSendMs;
 }

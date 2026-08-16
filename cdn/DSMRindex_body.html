@@ -478,27 +478,42 @@
   <!-- START SysInfo Tab -->
   <section id="SysInfoTab" class="tabName subTab">
     <h2 data-i18n-key="tle-sysinfo"> Systeeminformatie</h2>
-    <div id='devInfo'>
-      <table id="devInfoTable">
-      <thead>
-        <tr>
-            <th data-i18n-key="lbl-name">Naam</th>
-            <th data-i18n-key="lbl-value">Waarde</th>
-            <th data-i18n-key="lbl-unit">Eenheid</th>
-        </tr>
-      </thead>
-      <tbody id="tb_info">
-      </tbody>
-      <tfoot>
-<!-- 
-        <tr>
-            <td colspan=3>Data uit de Dongle</td>
-        </tr>
- -->
-      </tfoot>
-      </table>
+    <div id="devInfo" class="sysinfo-shell">
+      <div id="sysinfo_overview" class="sysinfo-overview"></div>
+
+      <article id="sysinfo_update" class="sysinfo-card sysinfo-update-card">
+        <h3 data-i18n-key="sysinfo-firmware-update">Firmware-update</h3>
+        <div id="sysinfo_update_rows" class="sysinfo-rows"></div>
+      </article>
+
+      <div class="sysinfo-grid">
+        <article class="sysinfo-card">
+          <h3 data-i18n-key="setting-smart-meter">Slimme meter</h3>
+          <div id="sysinfo_smart_meter" class="sysinfo-rows"></div>
+        </article>
+        <article class="sysinfo-card">
+          <h3 data-i18n-key="sysinfo-network">Netwerk</h3>
+          <div id="sysinfo_network" class="sysinfo-rows"></div>
+        </article>
+        <article class="sysinfo-card">
+          <h3 data-i18n-key="sysinfo-hardware">Hardware</h3>
+          <div id="sysinfo_hardware" class="sysinfo-rows"></div>
+        </article>
+        <article class="sysinfo-card">
+          <h3 data-i18n-key="sysinfo-system-status">Systeemstatus</h3>
+          <div id="sysinfo_status" class="sysinfo-rows"></div>
+        </article>
+        <article id="sysinfo_connections_card" class="sysinfo-card">
+          <h3 data-i18n-key="sysinfo-connections">Koppelingen</h3>
+          <div id="sysinfo_connections" class="sysinfo-rows"></div>
+        </article>
+      </div>
+
+      <details id="sysinfo_technical" class="sysinfo-card sysinfo-technical">
+        <summary data-i18n-key="sysinfo-technical-details">Technische details</summary>
+        <div id="sysinfo_technical_rows" class="sysinfo-rows"></div>
+      </details>
     </div>
-  
   </section>  <!-- END SysInfo Tab -->
 
   <!-- START raw data tab -->
@@ -703,15 +718,45 @@
   
   <!-- START FileExplorer Tab -->
   <section id="FSExplorer" class="tabName"><h2 data-i18n-key="tle-file-mng">Bestandsbeheer</h2>
-      <div>
-         <main id="FSmain"></main>
+    <div class="fm-shell">
+      <div class="fm-overview">
+        <div class="fm-summary">
+          <span class="fm-summary-label" data-i18n-key="lbl-fm-files">Aantal bestanden</span>
+          <strong id="fmFileCount" class="fm-summary-value">–</strong>
+        </div>
+        <div class="fm-summary fm-storage-summary">
+          <span class="fm-summary-label" data-i18n-key="lbl-fm-storage">Opslag</span>
+          <strong id="fmStorageValue" class="fm-summary-value">–</strong>
+          <div class="fm-storage-track" aria-hidden="true"><span id="fmStorageBar"></span></div>
+          <span id="fmStorageMeta" class="fm-summary-meta">–</span>
+        </div>
       </div>
-		<form action="/upload" method="POST" enctype="multipart/form-data">
-		  <input id="Ifile" type="file" name="upload">
-          <input id="Iupload" type="submit" value="Upload" disabled />
+
+      <div class="fm-card">
+        <div class="fm-card-header">
+          <h3 data-i18n-key="lbl-fm-file-list">Bestanden</h3>
+          <a id="downloadAllFiles" class="fm-secondary-action" href="#">
+            <span class="iconify" data-icon="mdi-download-multiple"></span>
+            <span data-i18n-key="btn-fm-download-all">Alles downloaden</span>
+          </a>
+        </div>
+        <main id="FSmain" aria-live="polite"></main>
+      </div>
+
+      <form class="fm-card fm-upload-card" action="/upload" method="POST" enctype="multipart/form-data">
+        <div class="fm-card-header">
+          <div>
+            <h3 data-i18n-key="lbl-fm-upload">Bestand uploaden</h3>
+            <p data-i18n-key="txt-fm-upload-help">Kies een bestand om toe te voegen of te vervangen.</p>
+          </div>
+        </div>
+        <div class="fm-upload-controls">
+          <input id="Ifile" type="file" name="upload">
+          <input id="Iupload" type="submit" data-i18n-value="btn-fm-upload" value="Uploaden" disabled>
+        </div>
+        <div id="fmFileSize" class="fm-upload-status" aria-live="polite"></div>
       </form>
-      <span></span>
-      <fileSize></fileSize>
+    </div>
   </section>
   
  <section id="Logout" class="tabName">

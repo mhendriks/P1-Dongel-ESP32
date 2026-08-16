@@ -625,7 +625,6 @@ void MQTTSend(const char* item, String value, bool ret){}
 void MQTTSend(const char* item, float value){}
 void MQTTConnect() {}
 void handleMQTT(){}
-void SetupMQTT(){}
 void MQTTSetHAUpdateState(bool inProgress, uint8_t progress){}
 void MQTTDisconnect(){}
 

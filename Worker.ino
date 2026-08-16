@@ -5,14 +5,13 @@
 ***************************************************************************
 */
 
-QueueHandle_t qWorkerHigh = nullptr;
 QueueHandle_t qWorkerNormal = nullptr;
 QueueHandle_t qWorkerLow = nullptr;
 TaskHandle_t tWorker = nullptr;
 
 struct WorkerStats {
-  uint32_t enqueued[3];
-  uint32_t dropped[3];
+  uint32_t enqueued[2];
+  uint32_t dropped[2];
   uint32_t processed;
   uint32_t unknown;
 };
@@ -36,7 +35,6 @@ void GetSolarDataNFromWorker();
 
 static QueueHandle_t workerQueueForPriority(WorkerPriority priority) {
   switch (priority) {
-    case WORKER_PRIO_HIGH:   return qWorkerHigh;
     case WORKER_PRIO_NORMAL: return qWorkerNormal;
     case WORKER_PRIO_LOW:    return qWorkerLow;
   }
@@ -82,35 +80,20 @@ static bool workerRngClaimPermit() {
 }
 
 static bool workerReceiveNext(WorkerJob& job) {
-  static uint8_t highBudget = WORKER_HIGH_BUDGET;
-
   if (workerDeferredRngJobValid && workerRngPermitAvailable()) {
     job = workerDeferredRngJob;
     workerDeferredRngJobValid = false;
     return true;
   }
 
-  if (highBudget > 0 && qWorkerHigh && xQueueReceive(qWorkerHigh, &job, 0) == pdTRUE) {
-    highBudget--;
-    return true;
-  }
-
   if (qWorkerNormal && xQueueReceive(qWorkerNormal, &job, 0) == pdTRUE) {
-    highBudget = WORKER_HIGH_BUDGET;
     return true;
   }
 
   if (!workerDeferredRngJobValid && qWorkerLow && xQueueReceive(qWorkerLow, &job, 0) == pdTRUE) {
-    highBudget = WORKER_HIGH_BUDGET;
     return true;
   }
 
-  if (qWorkerHigh && xQueueReceive(qWorkerHigh, &job, 0) == pdTRUE) {
-    highBudget = WORKER_HIGH_BUDGET - 1;
-    return true;
-  }
-
-  highBudget = WORKER_HIGH_BUDGET;
   return false;
 }
 
@@ -120,6 +103,40 @@ static bool workerRngShouldDefer(const WorkerJob& job) {
 
 static bool workerSolarShouldDefer() {
   return RngWritePending() || workerDeferredRngJobValid;
+}
+
+static void workerWake() {
+  if (tWorker) xTaskNotifyGive(tWorker);
+}
+
+static bool workerWatchdogBeginJob() {
+  const esp_err_t result = esp_task_wdt_add(nullptr);
+  if (result == ESP_OK) return true;
+
+  DebugTf("Worker: watchdog subscribe failed: %d\r\n", (int)result);
+  return false;
+}
+
+static void workerWatchdogEndJob(bool subscribed) {
+  if (!subscribed) return;
+
+  esp_task_wdt_reset();
+  const esp_err_t result = esp_task_wdt_delete(nullptr);
+  if (result != ESP_OK) {
+    DebugTf("Worker: watchdog unsubscribe failed: %d\r\n", (int)result);
+  }
+}
+
+static void workerWaitForTrigger() {
+  if (esp_task_wdt_status(nullptr) == ESP_OK) {
+    // Safety fallback: if watchdog unsubscribe ever failed, keep feeding it
+    // while waiting instead of blocking indefinitely as a subscribed task.
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1000));
+    esp_task_wdt_reset();
+    return;
+  }
+
+  ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 }
 
 static void workerHandleJob(const WorkerJob& job) {
@@ -170,27 +187,25 @@ static void workerHandleJob(const WorkerJob& job) {
 
 void fWorker(void* pvParameters) {
   DebugTln(F("Start Worker Thread"));
-  esp_task_wdt_add(nullptr);
 
   while (true) {
-    PrintHWMark(2);
     WorkerJob job;
-    if (workerReceiveNext(job)) {
-      if (workerRngShouldDefer(job)) {
-        workerDeferredRngJob = job;
-        workerDeferredRngJobValid = true;
-        vTaskDelay(20 / portTICK_PERIOD_MS);
-        esp_task_wdt_reset();
-        continue;
-      }
-
-      workerStats.processed++;
-      workerHandleJob(job);
-    } else {
-      vTaskDelay(20 / portTICK_PERIOD_MS);
+    if (!workerReceiveNext(job)) {
+      workerWaitForTrigger();
+      continue;
     }
 
-    esp_task_wdt_reset();
+    if (workerRngShouldDefer(job)) {
+      workerDeferredRngJob = job;
+      workerDeferredRngJobValid = true;
+      continue;
+    }
+
+    PrintHWMark(2);
+    const bool watchdogSubscribed = workerWatchdogBeginJob();
+    workerStats.processed++;
+    workerHandleJob(job);
+    workerWatchdogEndJob(watchdogSubscribed);
   }
 
   DebugTln(F("Worker: unexpected task exit"));
@@ -200,11 +215,10 @@ void fWorker(void* pvParameters) {
 bool WorkerBegin() {
   if (tWorker) return true;
 
-  qWorkerHigh = xQueueCreate(WORKER_QUEUE_HIGH_LEN, sizeof(WorkerJob));
   qWorkerNormal = xQueueCreate(WORKER_QUEUE_NORMAL_LEN, sizeof(WorkerJob));
   qWorkerLow = xQueueCreate(WORKER_QUEUE_LOW_LEN, sizeof(WorkerJob));
 
-  if (!qWorkerHigh || !qWorkerNormal || !qWorkerLow) {
+  if (!qWorkerNormal || !qWorkerLow) {
     DebugTln(F("Worker: queue creation failed"));
     return false;
   }
@@ -228,6 +242,7 @@ bool WorkerEnqueue(const WorkerJob& jobIn, WorkerPriority priority, TickType_t w
   WorkerJob job = jobIn;
   if (xQueueSend(queue, &job, waitTicks) == pdTRUE) {
     workerCountEnqueued(priority);
+    workerWake();
     return true;
   }
 
@@ -294,12 +309,12 @@ void WorkerNotifyP1TelegramOk() {
   workerRngPermitMs = nowMs;
   workerRngRunPermit = true;
   portEXIT_CRITICAL(&workerRngPermitMux);
+
+  workerWake();
 }
 
 void WorkerPrintStats() {
-  DebugTf("Worker queues: H +%lu/-%lu N +%lu/-%lu L +%lu/-%lu processed=%lu unknown=%lu\r\n",
-          workerStats.enqueued[WORKER_PRIO_HIGH],
-          workerStats.dropped[WORKER_PRIO_HIGH],
+  DebugTf("Worker queues: N +%lu/-%lu L +%lu/-%lu processed=%lu unknown=%lu\r\n",
           workerStats.enqueued[WORKER_PRIO_NORMAL],
           workerStats.dropped[WORKER_PRIO_NORMAL],
           workerStats.enqueued[WORKER_PRIO_LOW],

@@ -16,8 +16,8 @@ uint32_t en_error = 0;
 
 void PSPUpdatePlanner();
 
-enum MessageType  { COMMAND, CONFIRMED, NRGACTUALS, NRGTARIFS, NRGSTATIC, UPD_DATA, UPD_VER_RSP, UPD_VER_REQ, UPD_ACK, UPD_GO_UPDATE, STROOMPLANNER,} messageType;
-enum sAction      { CONN_REQUEST, CONN_RESPONSE, CONN_CLEAR, PAIRING, ASK_TARIF, ASK_STATIC, ASK_PLANNER }; 
+enum MessageType  { COMMAND, CONFIRMED, NRGACTUALS, NRGTARIFS, NRGSTATIC, UPD_DATA, UPD_VER_RSP, UPD_VER_REQ, UPD_ACK, UPD_GO_UPDATE, STROOMPLANNER, NRGACCU,} messageType;
+enum sAction      { CONN_REQUEST, CONN_RESPONSE, CONN_CLEAR, PAIRING, ASK_TARIF, ASK_STATIC, ASK_PLANNER, ASK_ACCU };
 // enum ENstates     { EN_OFF, EN_WAIT, EN_PAIRING } en_state;
 
 typedef struct {
@@ -41,6 +41,23 @@ typedef struct {
   uint32_t  Psolar;     // W  
   uint32_t  Esolar;     // Wh  
 } ActualData_t;
+
+enum AccuState : uint8_t {
+  ACCU_UNAVAILABLE,
+  ACCU_IDLE,
+  ACCU_CHARGING,
+  ACCU_DISCHARGING
+};
+
+// Separate opt-in packet: legacy monitors keep receiving the unchanged
+// ActualData_t packet and never see this message unless they request it.
+typedef struct {
+  uint8_t  msgType = NRGACCU;
+  uint8_t  accuAvailable;
+  int32_t  accuPower;       // W
+  uint8_t  accuSoc;         // 0..100 %
+  uint8_t  accuState;       // AccuState
+} __attribute__((packed)) AccuData_t;
 
 //all values x 100.000
 typedef struct { 

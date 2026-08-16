@@ -11,15 +11,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
-#define WORKER_QUEUE_HIGH_LEN    8
-#define WORKER_QUEUE_NORMAL_LEN 16
-#define WORKER_QUEUE_LOW_LEN    16
-#define WORKER_HIGH_BUDGET       5
+#define WORKER_QUEUE_NORMAL_LEN  8
+#define WORKER_QUEUE_LOW_LEN     8
 #define WORKER_STACK_BYTES   (1024 * 12)
 
 enum WorkerPriority : uint8_t {
-  WORKER_PRIO_HIGH = 0,
-  WORKER_PRIO_NORMAL,
+  WORKER_PRIO_NORMAL = 0,
   WORKER_PRIO_LOW
 };
 
@@ -62,7 +59,6 @@ struct WorkerJob {
     WorkerLogPayload log;
     WorkerWebhookPayload webhook;
     WorkerRngPayload rng;
-    uint8_t raw[112];
   } data;
 };
 
