@@ -148,6 +148,10 @@ These headers come from the ESP32 board support package rather than a separate A
   Repo: <https://github.com/jandrassy/TelnetStream>
 - `dsmr3Lib` (`dsmr3.h`)
   Repo: <https://github.com/mhendriks/dsmr3Lib>
+  DSMR-API 5.9.0 and newer require dsmr3Lib 1.0.0 or a newer compatible
+  release. The firmware uses the v3-only `P1FieldWarning`, `P1Diagnostics` and
+  `CompleteRaw(String&)` APIs; dsmr2Lib cannot be substituted without
+  reverting those integrations.
 - `WiFiManager` (`WiFiManager.h`)
   Repo: <https://github.com/tzapu/WiFiManager>
 - `CRC32` (`CRC32.h`)
