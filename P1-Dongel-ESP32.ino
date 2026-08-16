@@ -53,7 +53,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select port>
 
 
-5.9.1
+5.9.2
 - 
 
 5.10...
