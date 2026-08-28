@@ -695,6 +695,12 @@ function updateDashboardControls() {
 		button.classList.toggle("active", Act_Watt);
 		button.textContent = Act_Watt ? "Watt" : "kW";
 	});
+	const dashboardPowerUnit = document.getElementById("dsh-power");
+	if (dashboardPowerUnit) dashboardPowerUnit.textContent = powerUnit();
+	const accuPowerLabel = document.getElementById("dash-accu-power-label");
+	if (accuPowerLabel) {
+		accuPowerLabel.textContent = t("lbl-today-kw").replace(/\[[^\]]+\]/, `[${powerUnit()}]`);
+	}
 	const dashTab = document.getElementById("DashTab");
 	if (dashTab) dashTab.classList.toggle("dashboard-editing", dashboardEditMode);
 }
@@ -913,7 +919,7 @@ function UpdateAccu(){
 		trend_accu.data.datasets[0].data=[json.chargeLevel,100-json.chargeLevel];	
 		trend_accu.options.title.text = Number(json.chargeLevel).toLocaleString('nl-NL', {minimumFractionDigits: 0, maximumFractionDigits: 0} )+" %";
 		trend_accu.update();
-		document.getElementById('dash_accu_p').innerHTML = formatValue(json.currentPower);
+		document.getElementById('dash_accu_p').innerHTML = formatPowerValue(json.currentPower);
 		const statusKey = `accu-status-${String(json.status || "idle").toLowerCase()}`;
 		document.getElementById('accu-status').innerHTML = t(statusKey);
 		setDashboardWidgetAvailable("dash_accu", true);
@@ -4800,6 +4806,7 @@ function applyTranslations() {
     if (translation !== key) el.value = translation;
   });
   updateBrowserSettingsControls();
+  updateDashboardControls();
   NetSwitchUpdateBar();
 }
 

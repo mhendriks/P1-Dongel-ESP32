@@ -827,9 +827,9 @@ static uint16_t readEm24Register(uint16_t address) {
     const uint16_t base = 0x000C + ((address - 0x000C) / 2) * 2;
     const uint8_t phase = (base - 0x000C) / 2;
     if (!threePhase && phase > 0) return 0;
-    const MbSource source = phase == 0 ? MbSource::current_l1_a
-                           : phase == 1 ? MbSource::current_l2_a
-                                        : MbSource::current_l3_a;
+    const MbSource source = phase == 0 ? MbSource::signed_current_l1_a
+                           : phase == 1 ? MbSource::signed_current_l2_a
+                                        : MbSource::signed_current_l3_a;
     return em24Word((uint32_t)em24ScaledValue(source, 1000), base, address);
   }
 

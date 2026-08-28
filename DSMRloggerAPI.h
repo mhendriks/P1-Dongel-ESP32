@@ -391,12 +391,14 @@ using MyData = ParsedData<
 //  /* uint32_t */              ,electricity_failures
 //  /* uint32_t */              ,electricity_long_failures
 //  /* String */                ,electricity_failure_log
-//  /* uint32_t */              ,electricity_sags_l1
-//  /* uint32_t */              ,electricity_sags_l2
-//  /* uint32_t */              ,electricity_sags_l3
-//  /* uint32_t */              ,electricity_swells_l1
-//  /* uint32_t */              ,electricity_swells_l2
-//  /* uint32_t */              ,electricity_swells_l3
+#ifdef POST_KEMP
+  /* uint32_t */              ,electricity_sags_l1
+  /* uint32_t */              ,electricity_sags_l2
+  /* uint32_t */              ,electricity_sags_l3
+  /* uint32_t */              ,electricity_swells_l1
+  /* uint32_t */              ,electricity_swells_l2
+  /* uint32_t */              ,electricity_swells_l3
+#endif
 //  /* String */                ,message_short
 //  /* String */                ,message_long
   /* FixedValue */            ,voltage_l1

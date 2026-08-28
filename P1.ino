@@ -776,6 +776,9 @@ void processTelegram(){
   #ifdef POST_MEENT
     bNewTelegramWebhook = true; // interval handling is done in PostWebhook()
   #endif
+  #ifdef POST_KEMP
+    bNewTelegramWebhook = true; // fixed 60 second interval is handled in PostWebhook()
+  #endif
   #ifdef UDP_BCAST
     New_P1_UDP = true;
   #endif 

@@ -33,13 +33,19 @@ Create `../../_secrets/posts.h` with at least:
 
 // Only needed when POST_MEENT is enabled
 #define URL_MEENT "https://meent.dev.muze.nl/api/data/"
+
+// Only needed when POST_KEMP is enabled
+#define URL_KEMP "https://example.invalid/api/data"
+#define KEMP_API_KEY "replace-with-your-api-key"
 ```
 
 Notes:
 - `OTAURL_PREFIX` is used in `DSMRloggerAPI.h` to build `BaseOTAurl`.
 - If `POST_POWERCH` is not enabled, `URL_POWERCH` is not used.
 - If `POST_MEENT` is not enabled, `URL_MEENT` is not used.
-- `POST_POWERCH` and `POST_MEENT` are mutually exclusive compile-time features.
+- If `POST_KEMP` is not enabled, `URL_KEMP` and `KEMP_API_KEY` are not used.
+- `POST_POWERCH`, `POST_MEENT`, and `POST_KEMP` are mutually exclusive compile-time features.
+- `POST_KEMP` uses a fixed 60-second POST interval and the OTA suffix `kemp/` (for example `p1p/v5/kemp/`).
 
 ## 3) Example `energyid.h`
 

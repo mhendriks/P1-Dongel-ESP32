@@ -52,9 +52,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-
 5.9.2
-- 
+- add: KEMP webhook integration with phase voltages and sag/swell counters
+- fix: report EM24 phase currents as signed values; export is now negative
+- refactor: shared webhook configuration and interval handling
+- fix: battery dashboard power value and unit now follow the W/kW display setting
+
+5.9.3
+- MEENT: new setup
 
 5.10...
 - Normalise energy data (huge change)
@@ -105,6 +110,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define USB_CONFIG
 // #define POST_POWERCH
 // #define POST_MEENT
+// #define POST_KEMP
 // #define VIRTUAL_P1
 // #define HAN_READER
 // #define HAN_TESTDATA
