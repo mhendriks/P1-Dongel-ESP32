@@ -345,6 +345,7 @@ static void setRgbColor(uint32_t color) {
     case LED_RED:   R_value = brightness; break;
     case LED_GREEN: G_value = brightness; break;
     case LED_BLUE:  B_value = brightness; break;
+    case LED_WHITE: R_value = brightness; G_value = brightness; B_value = brightness; break;
   }
 }
 

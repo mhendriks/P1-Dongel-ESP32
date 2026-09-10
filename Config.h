@@ -51,6 +51,7 @@
 #define LED_BLUE  0x07
 #define LED_RED   0x070000
 #define LED_GREEN 0x0700
+#define LED_WHITE (LED_RED | LED_GREEN | LED_BLUE)
 #define LED_BLACK 0x0  
 uint32_t R_value = 0, B_value = 0, G_value = 0;
 

@@ -412,6 +412,7 @@ void MQTTConnect() {
 
       haUpdateStatePending = !MQTTPublishHAUpdateState();
       if ( EnableHAdiscovery ) AutoDiscoverHA();
+      RequestManifestCheckOnMQTTConnect();
     } else {
       LogFile("MQTT: ... connection FAILED! Will try again in 10 sec", true);
       DebugT("error code: ");Debugln(MQTTclient.state());

@@ -21,4 +21,11 @@
   { "register": 40, "source": "net_power_l2_kw",             "scale": 1000, "type": "int32" },
   { "register": 42, "source": "net_power_l3_kw",             "scale": 1000, "type": "int32" },
   { "register": 44, "source": "water_delivered_m3",          "scale": 1000, "type": "uint32" },
-  { "register": 46, "source": "p1_device_id",        "scale": 1,    "type": "uint32" }
+  { "register": 46, "source": "p1_device_id",        "scale": 1,    "type": "uint32" },
+  { "register": 48, "source": "net_power_total_kw",          "scale": 1000, "type": "int32" },
+  { "register": 50, "source": "power_delivered_l1_kw",       "scale": 1000, "type": "uint32" },
+  { "register": 52, "source": "power_delivered_l2_kw",       "scale": 1000, "type": "uint32" },
+  { "register": 54, "source": "power_delivered_l3_kw",       "scale": 1000, "type": "uint32" },
+  { "register": 56, "source": "power_returned_l1_kw",        "scale": 1000, "type": "uint32" },
+  { "register": 58, "source": "power_returned_l2_kw",        "scale": 1000, "type": "uint32" },
+  { "register": 60, "source": "power_returned_l3_kw",        "scale": 1000, "type": "uint32" }

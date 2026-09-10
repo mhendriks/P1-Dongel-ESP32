@@ -13,7 +13,6 @@ BACKLOG
 - Harold B: dynamische tarieven dus de onderverdeling naar Tarief 1 en 2 is niet relevant. (Overigens de P1-meter levert wel twee standen aan). Persoonlijk vind ik de grafieken onleesbaar worden (ik lever ook terug) vier verschillende kleurtjes groen en vier kleurtjes rood. Dus het heeft mijn voorkeur om dit onderscheid in de grafieken achterwege te laten. Dus als dat aan te sturen zou zijn via de instellingen, heel graag!
 - front-end: issue Stroom ( terug + afname bij 3 fase wordt opgeteled ipv - I voor teruglevering )
 - RNGhours files vergroten (nu 48h -> 336h) (Broes)
-- eigen NTP kunnen opgeven of juist niet (stopt pollen)
 - detect and repair issues RNG files
 - Daily Insights: Inzichten vanaf opstarten dongle / 00:00 reset
     - loadbalancing over de fases heen
@@ -23,8 +22,8 @@ BACKLOG
 - inlezen van solar config in frontend
 - issue cost gas 4.16/5.2 (Karel)
 - De waarden in daily insights labelen met het datum/tijdstip waarop gemeten (Harrie)
-- one hostname for all dongles (V6)
 - add tempature  in price cap (A van Dijken) = lat / long of location selection 
+- support new smart meter change
 
 Default checks
 - wifi
@@ -52,13 +51,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.9.2
-- add: KEMP webhook integration with phase voltages and sag/swell counters
-- fix: report EM24 phase currents as signed values; export is now negative
-- refactor: shared webhook configuration and interval handling
-- fix: battery dashboard power value and unit now follow the W/kW display setting
-
 5.9.3
+- changed: add registers in the standaard modbus mapping 
+- changed: version manifest check and fault handling (#70)
 - MEENT: new setup
 
 5.10...
@@ -79,7 +74,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - option for NRG Monitor to show small project image
 - control center which shows the status of a connection (MQTT/EID/P1/HAN/...)
 
-6.0.0 - sources / targets setup - EMS structure
+6.0.0 
+- one hostname for all dongles
+- sources / targets setup - EMS structure
 - kWh meter als bron voor productie data gebruiken (Harrie)
 - refactoring api's (less / atomic / no units)
 
@@ -91,7 +88,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //---  PROFILES  ---
-// #define ULTRA            //ultra (mini) dongle
+#define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       // + D1MC and NRGDH 
@@ -109,7 +106,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define UDP_BCAST
 // #define USB_CONFIG
 // #define POST_POWERCH
-// #define POST_MEENT
+#define POST_MEENT
 // #define POST_KEMP
 // #define VIRTUAL_P1
 // #define HAN_READER

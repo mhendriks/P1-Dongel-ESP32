@@ -273,6 +273,12 @@ enum class MbSource : uint8_t {
   firmware_version_packed,
   device_online,
   uptime_seconds,
+  power_delivered_l1_kw,
+  power_delivered_l2_kw,
+  power_delivered_l3_kw,
+  power_returned_l1_kw,
+  power_returned_l2_kw,
+  power_returned_l3_kw,
 };
 
 struct ActiveRecipe {
@@ -380,6 +386,18 @@ static float readMbSourceValue(MbSource source) {
       return DSMRdata.power_delivered_present ? outputPower(DSMRdata.power_delivered.val()) : NAN;
     case MbSource::power_returned_kw:
       return DSMRdata.power_returned_present ? outputPower(DSMRdata.power_returned.val()) : NAN;
+    case MbSource::power_delivered_l1_kw:
+      return DSMRdata.power_delivered_l1_present ? outputPower(DSMRdata.power_delivered_l1.val()) : NAN;
+    case MbSource::power_delivered_l2_kw:
+      return DSMRdata.power_delivered_l2_present ? outputPower(DSMRdata.power_delivered_l2.val()) : NAN;
+    case MbSource::power_delivered_l3_kw:
+      return DSMRdata.power_delivered_l3_present ? outputPower(DSMRdata.power_delivered_l3.val()) : NAN;
+    case MbSource::power_returned_l1_kw:
+      return DSMRdata.power_returned_l1_present ? outputPower(DSMRdata.power_returned_l1.val()) : NAN;
+    case MbSource::power_returned_l2_kw:
+      return DSMRdata.power_returned_l2_present ? outputPower(DSMRdata.power_returned_l2.val()) : NAN;
+    case MbSource::power_returned_l3_kw:
+      return DSMRdata.power_returned_l3_present ? outputPower(DSMRdata.power_returned_l3.val()) : NAN;
     case MbSource::net_power_total_kw:
       return DSMRdata.power_delivered_present ? outputPower(DSMRdata.power_delivered.val() - DSMRdata.power_returned.val()) : NAN;
     case MbSource::voltage_l1_v:
@@ -549,6 +567,18 @@ static float readScaledMbSourceValue(MbSource source, int16_t scale) {
       return DSMRdata.power_delivered_present ? sign * DSMRdata.power_delivered.int_val() : NAN;
     case MbSource::power_returned_kw:
       return DSMRdata.power_returned_present ? sign * DSMRdata.power_returned.int_val() : NAN;
+    case MbSource::power_delivered_l1_kw:
+      return DSMRdata.power_delivered_l1_present ? sign * DSMRdata.power_delivered_l1.int_val() : NAN;
+    case MbSource::power_delivered_l2_kw:
+      return DSMRdata.power_delivered_l2_present ? sign * DSMRdata.power_delivered_l2.int_val() : NAN;
+    case MbSource::power_delivered_l3_kw:
+      return DSMRdata.power_delivered_l3_present ? sign * DSMRdata.power_delivered_l3.int_val() : NAN;
+    case MbSource::power_returned_l1_kw:
+      return DSMRdata.power_returned_l1_present ? sign * DSMRdata.power_returned_l1.int_val() : NAN;
+    case MbSource::power_returned_l2_kw:
+      return DSMRdata.power_returned_l2_present ? sign * DSMRdata.power_returned_l2.int_val() : NAN;
+    case MbSource::power_returned_l3_kw:
+      return DSMRdata.power_returned_l3_present ? sign * DSMRdata.power_returned_l3.int_val() : NAN;
     case MbSource::voltage_l1_v:
       return DSMRdata.voltage_l1_present ? sign * (float)DSMRdata.voltage_l1.int_val() : NAN;
     case MbSource::voltage_l2_v:

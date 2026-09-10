@@ -55,6 +55,14 @@ static const ActiveRecipe kDefaultRecipes0[] = {
   {42, 1000, (uint8_t)MbSource::net_power_l3_kw,             (uint8_t)ModbusDataType::INT32,  0},
   {44, 1000, (uint8_t)MbSource::water_delivered_m3,          (uint8_t)ModbusDataType::UINT32, 0},
   {46, 1,    (uint8_t)MbSource::p1_device_id,        (uint8_t)ModbusDataType::UINT32, 0},
+  // Appended fields: keep every legacy STD UINT32 register unchanged.
+  {48, 1000, (uint8_t)MbSource::net_power_total_kw,          (uint8_t)ModbusDataType::INT32,  0},
+  {50, 1000, (uint8_t)MbSource::power_delivered_l1_kw,       (uint8_t)ModbusDataType::UINT32, 0},
+  {52, 1000, (uint8_t)MbSource::power_delivered_l2_kw,       (uint8_t)ModbusDataType::UINT32, 0},
+  {54, 1000, (uint8_t)MbSource::power_delivered_l3_kw,       (uint8_t)ModbusDataType::UINT32, 0},
+  {56, 1000, (uint8_t)MbSource::power_returned_l1_kw,        (uint8_t)ModbusDataType::UINT32, 0},
+  {58, 1000, (uint8_t)MbSource::power_returned_l2_kw,        (uint8_t)ModbusDataType::UINT32, 0},
+  {60, 1000, (uint8_t)MbSource::power_returned_l3_kw,        (uint8_t)ModbusDataType::UINT32, 0},
 };
 
 static const ActiveRecipe kSdm630Recipes[] = {
@@ -82,7 +90,7 @@ static const ActiveRecipe kSdm630Recipes[] = {
   {200,   1,    (uint8_t)MbSource::line_voltage_l12_v,    (uint8_t)ModbusDataType::FLOAT,  0},
   {202,   1,    (uint8_t)MbSource::line_voltage_l23_v,    (uint8_t)ModbusDataType::FLOAT,  0},
   {204,   1,    (uint8_t)MbSource::line_voltage_l31_v,    (uint8_t)ModbusDataType::FLOAT,  0},
-  {0xfc00,1,    (uint8_t)MbSource::constant,            (uint8_t)ModbusDataType::UINT32, 22085951},
+  {0xfc00,1,    (uint8_t)MbSource::device_serial_u32,   (uint8_t)ModbusDataType::UINT32, 0},
 };
 
 static const ActiveRecipe kDtsu666Recipes[] = {

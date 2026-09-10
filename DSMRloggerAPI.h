@@ -206,6 +206,7 @@ void writeRingFiles();
 void writeSettings();
 void writeSettingsDirect();
 void ManifestCheckFromWorker();
+void RequestManifestCheckOnMQTTConnect();
 void RemoteUpdate();
 bool QueueRemoteUpdate(const char* versie, bool sketch);
 bool RemoteUpdateAvailable(const char* versie, String* errorDetail = nullptr);
@@ -575,7 +576,11 @@ int8_t      HanIO = -1;
 int8_t      button_io = IO_BUTTON;
 bool        bNRGMenabled = false;
 #ifdef NETSWITCH
+#ifdef POST_MEENT
+bool        bNETSWenabled = false;
+#else
 bool        bNETSWenabled = true;
+#endif
 #endif
 
 #ifdef UDP_BCAST
@@ -690,7 +695,11 @@ bool      StaticInfoSend = false;
 bool      bSendMQTT = false;
 volatile bool mqttPublishActive = false;
 volatile bool mqttConnectActive = false;
+#ifdef POST_MEENT
+bool      bMQTTenabled = false;
+#else
 bool      bMQTTenabled = true;
+#endif
 bool      bMQTToverTLS = false;
 
 bool      hideMQTTsettings = false;
@@ -723,10 +732,18 @@ inline bool isShellyPro3EmMimicSelected() {
 #ifndef OTAURL_PREFIX
   #define OTAURL_PREFIX ""
 #endif
+#ifdef POST_MEENT
+char      BaseOTAurl[45] = "http://ota.smart-stuff.nl/p1u/v5/me/";
+#else
 char      BaseOTAurl[45] = OTAURL OTAURL_PREFIX;
+#endif
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
+#ifdef POST_MEENT
+bool      bAutoUpdate = true;
+#else
 bool      bAutoUpdate = false;
+#endif
 
 //udp
 bool New_P1_UDP = false;
