@@ -1509,7 +1509,8 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 
 /* inputs: neem volledige kolombreedte (strakker) */
 #Settings input[type="text"],
-#Settings input[type="number"]{
+#Settings input[type="number"],
+#Settings input[type="password"]{
   box-sizing: border-box;
   width: 100%;
   max-width: 280px;
@@ -1604,6 +1605,7 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 
 #Settings .settingDiv.is-dirty input[type="text"],
 #Settings .settingDiv.is-dirty input[type="number"],
+#Settings .settingDiv.is-dirty input[type="password"],
 #Settings .settingDiv.is-dirty select,
 #Settings .settingDiv.is-dirty textarea{
   border-color: rgba(255,120,0,0.70);

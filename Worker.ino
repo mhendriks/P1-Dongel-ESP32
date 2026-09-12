@@ -30,6 +30,7 @@ void P1StatusWriteDirect();
 void writeSettingsDirect();
 void ManifestCheckFromWorker();
 void PostWebhookFromWorker(const WorkerWebhookPayload& payload);
+void MeentProvisionFromWorker();
 void RngWriteFromWorker(const WorkerRngPayload& payload);
 void GetSolarDataNFromWorker();
 
@@ -162,6 +163,10 @@ static void workerHandleJob(const WorkerJob& job) {
 
     case WORKER_JOB_HTTP_POST:
       PostWebhookFromWorker(job.data.webhook);
+      break;
+
+    case WORKER_JOB_MEENT_PROVISION:
+      MeentProvisionFromWorker();
       break;
 
     case WORKER_JOB_RNG_WRITE:

@@ -106,7 +106,8 @@ void writeSettingsDirect() {
   docw["CTFactor"] = settingCTFactor;
   docw["VTFactor"] = settingVTFactor;
   docw["MeentInterval"] = settingMeentInterval;
-  docw["MeentToken"] = settingMeentToken;
+  docw["MeentWebId"] = settingMeentWebId;
+  docw["MeentApiKey"] = settingMeentApiKey;
   docw["Fuse"] = settingFuse;
   docw["Phases"] = settingPhases;
   // docw["SmHasFaseInfo"] = settingSmHasFaseInfo;
@@ -214,6 +215,7 @@ void readSettings(bool show)
     writeSettings();
     return;
   }
+  bool settingsBackfillNeeded = false;
   
   //strcpy(LittleFSTimestamp, doc["Timestamp"]);
   strlcpy(settingHostname, doc["Hostname"] | activeDefaultHostname, sizeof(settingHostname));
@@ -239,7 +241,14 @@ void readSettings(bool show)
   if (doc["MeentInterval"].is<int>()) {
     settingMeentInterval = constrain(doc["MeentInterval"].as<int>(), 1, 3600);
   }
-  if (doc["MeentToken"].is<const char*>()) strlcpy(settingMeentToken, doc["MeentToken"].as<const char*>(), sizeof(settingMeentToken));
+  if (doc["MeentWebId"].is<const char*>()) strlcpy(settingMeentWebId, doc["MeentWebId"].as<const char*>(), sizeof(settingMeentWebId));
+  if (doc["MeentApiKey"].is<const char*>()) {
+    strlcpy(settingMeentApiKey, doc["MeentApiKey"].as<const char*>(), sizeof(settingMeentApiKey));
+  } else if (doc["MeentToken"].is<const char*>()) {
+    // Migration from the pre-provisioning MEENT setting.
+    strlcpy(settingMeentApiKey, doc["MeentToken"].as<const char*>(), sizeof(settingMeentApiKey));
+    settingsBackfillNeeded = true;
+  }
   // settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
   if (doc["mqtt-hide"].is<bool>()) hideMQTTsettings = doc["mqtt-hide"];
@@ -269,8 +278,8 @@ void readSettings(bool show)
   if (doc["enableHistory"].is<bool>()) EnableHistory = doc["enableHistory"];
   if (doc["watermeter"].is<bool>() ) WtrMtr = doc["watermeter"];
   if (doc["waterfactor"].is<float>()) WtrFactor = doc["waterfactor"];
-  bool settingsBackfillNeeded = !doc["Fuse"].is<int>() || !doc["Phases"].is<int>() ||
-                                !doc["CTFactor"].is<int>() || !doc["VTFactor"].is<int>();
+  settingsBackfillNeeded = settingsBackfillNeeded || !doc["Fuse"].is<int>() || !doc["Phases"].is<int>() ||
+                            !doc["CTFactor"].is<int>() || !doc["VTFactor"].is<int>();
   if (doc["Fuse"].is<int>()) {
     uint8_t newFuse = doc["Fuse"];
     settingFuse = (newFuse == 16 || newFuse == 25 || newFuse == 35) ? newFuse : 25;
@@ -483,7 +492,16 @@ void updateSetting(const char *field, const char *newValue)
   
   if (!stricmp(field, "b_auth_user")) strCopy(bAuthUser,25, newValue);  
   if (!stricmp(field, "b_auth_pw")) strCopy(bAuthPW,25, newValue); 
-  if (!stricmp(field, "meent_token")) strCopy(settingMeentToken, sizeof(settingMeentToken), newValue);
+  if (!stricmp(field, "meent_webid")) {
+    const bool changed = strncmp(settingMeentWebId, newValue, sizeof(settingMeentWebId)) != 0;
+    strCopy(settingMeentWebId, sizeof(settingMeentWebId), newValue);
+    if (changed) settingMeentApiKey[0] = '\0'; // An API key belongs to one WebID.
+    if (changed) MeentConfigChanged();
+  }
+  if (!stricmp(field, "meent_api_key")) {
+    strCopy(settingMeentApiKey, sizeof(settingMeentApiKey), newValue);
+    MeentConfigChanged();
+  }
 
   if (!stricmp(field, "water_fact")) WtrFactor = String(newValue).toFloat(); 
   

@@ -88,7 +88,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define XTRA_LOG
 
 //---  PROFILES  ---
-#define ULTRA            //ultra (mini) dongle
+// #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       // + D1MC and NRGDH 
@@ -106,7 +106,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define UDP_BCAST
 // #define USB_CONFIG
 // #define POST_POWERCH
-#define POST_MEENT
+// #define POST_MEENT
 // #define POST_KEMP
 // #define VIRTUAL_P1
 // #define HAN_READER

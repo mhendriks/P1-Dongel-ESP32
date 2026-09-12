@@ -18,6 +18,7 @@
    		<select id="languageSelector" onchange="changeLanguage(this.value)">
 		  <option value="nl">NL</option>
 		  <option value="en">EN</option>
+		  <option value="fr">FR</option>
 		  <option value="se">SE</option>
 		  <option value="de">DE</option>		  
 	</select>
@@ -638,6 +639,7 @@
 		  <button type="button" class="subtab-btn" data-target="settings_tariff" data-i18n-key="setting-tariff">Tarieven</button>
 		  <button type="button" class="subtab-btn" data-target="settings_mqtt" data-i18n-key="setting-mqtt">MQTT</button>
 		  <button type="button" class="subtab-btn" data-target="settings_modbus" data-i18n-key="setting-modbus">Modbus</button>
+		  <button type="button" class="subtab-btn" data-target="settings_meent" data-i18n-key="setting-meent" style="display:none">MEENT</button>
 		</div>
 	
 		<!-- staging: hier bouwt refreshSettings() de rows -->
@@ -685,6 +687,7 @@
 			</div>
 		  </div>
 		</div>
+		<div id="settings_meent" class="settings-pane"></div>
 	
 	  </div>
    </div>

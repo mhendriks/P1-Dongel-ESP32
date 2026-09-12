@@ -2,11 +2,9 @@
 // Only used when POST_POWERCH is enabled
 #define URL_POWERCH "https://example.invalid/api/data"
 
-// Only used when POST_MEENT is enabled
-#define URL_MEENT "https://example.invalid/api/data/"
-static const char* MEENT_API_VERSION = "v0.3";
-// Optional fallback when no runtime MEENT token is configured in settings.
-static const char* MEENT_AUTH_TOKEN = "Bearer xxxxxxxxxxxxxxxx";
+// Optional override when POST_MEENT is enabled. Without this override DEBUG
+// uses https://meent.dev.muze.nl/api/ and release builds use production.
+#define MEENT_API_BASE_URL "https://example.invalid/api/"
 
 // Only used when POST_KEMP is enabled
 #define URL_KEMP "https://example.invalid/api/data"

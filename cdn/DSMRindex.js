@@ -2084,6 +2084,19 @@ function renderDeviceInformation(obj, manifest) {
     ].filter(Boolean).join(" | ");
     addDeviceInfoRow(containers.connections, t("sysinfo-mqtt-breakdown"), mqtt, "sysinfo-value-part");
   }
+  if (obj.meent_webid_status !== undefined || obj.meent_api_key_status !== undefined || obj.meent_data_status !== undefined) {
+    const meentLastSuccess = Number(obj.meent_last_success || 0);
+    const meentData = obj.meent_data_status === undefined ? "" :
+      `${obj.meent_data_status}${meentLastSuccess ? ` (${new Date(meentLastSuccess * 1000).toLocaleString()})` : ""}`;
+    const meent = [
+      obj.meent_webid_status !== undefined ? `WebID: ${obj.meent_webid_status}` : "",
+      obj.meent_api_key_status !== undefined ? `API-key: ${obj.meent_api_key_status}` : "",
+      meentData ? `Data: ${meentData}` : ""
+    ].filter(Boolean).join(" | ");
+    // Kept literal: language files are fetched from the CDN and older cached
+    // files do not know this recently added key.
+    addDeviceInfoRow(containers.connections, "MEENT", meent, "sysinfo-value-part");
+  }
   ["eid_status", "paired"].forEach(key => addDeviceInfoRow(containers.connections, td(key), obj[key]));
   document.getElementById("sysinfo_connections_card")?.toggleAttribute("hidden", !containers.connections?.children.length);
 
@@ -2091,7 +2104,7 @@ function renderDeviceInformation(obj, manifest) {
     "fwversion", "hardware", "meter_source", "p1_communication_mode", "smart_meter_version", "p1_diagnostics",
     "telegramcount", "telegramerrors", "network", "ssid", "wifirssi", "hostname", "ipaddress", "macaddress",
     "chipid", "cpufreq", "freeheap", "flashchipsize", "sketchsize", "freesketchspace", "FSsize", "uptime",
-    "reboots", "lastreset", "mqttbroker", "mqttbroker_connected", "mqttinterval", "eid_status", "paired"
+    "reboots", "lastreset", "mqttbroker", "mqttbroker_connected", "mqttinterval", "meent_webid_status", "meent_api_key_status", "meent_data_status", "meent_last_success", "eid_status", "paired"
   ]);
   ["coreversion", "sdkversion", "compileoptions", "indexfile"].forEach(key =>
     addDeviceInfoRow(containers.technical, td(key), obj[key]));
@@ -3467,9 +3480,10 @@ function splitSettingsUI() {
   const smartMeter = document.getElementById("settings_smart_meter");
   const tariff  = document.getElementById("settings_tariff");
   const mqtt    = document.getElementById("settings_mqtt");
+  const meent   = document.getElementById("settings_meent");
   const modbus  = document.getElementById("settings_modbus");
 
-  if ( !table || !general || !smartMeter || !mqtt || !modbus || !tariff ) return;
+  if ( !table || !general || !smartMeter || !mqtt || !meent || !modbus || !tariff ) return;
 
   // velden op basis van "i" (dus zonder "settingR_")
   const MQTT_KEYS = new Set([
@@ -3527,6 +3541,7 @@ function splitSettingsUI() {
     "modbus_bits",
     "modbus_stop"
   ]);
+  const MEENT_KEYS = new Set(["meent_webid", "meent_api_key", "meent_interval"]);
 
   // alle bestaande rows (waar ze ook al staan) opnieuw indelen
   const rows = Array.from(document.querySelectorAll("#Settings .settingDiv"));
@@ -3537,6 +3552,7 @@ function splitSettingsUI() {
     const key = id.startsWith("settingR_") ? id.substring("settingR_".length) : "";
 
     if (MQTT_KEYS.has(key)) mqtt.appendChild(row);
+    else if (MEENT_KEYS.has(key)) meent.appendChild(row);
     else if (SMART_METER_KEY_SET.has(key)) smartMeter.appendChild(row);
     else if (TARIFF_KEYS.has(key)) tariff.appendChild(row);
     else if (MODBUS_KEYS.has(key)) modbus.appendChild(row);
@@ -3547,6 +3563,18 @@ function splitSettingsUI() {
     const row = document.getElementById(`settingR_${key}`);
     if (row) smartMeter.appendChild(row);
   });
+
+  // The HTML shell is shared by all firmware variants. Only POST_MEENT builds
+  // expose MEENT settings through the API, so hide the otherwise empty tab.
+  const hasMeentSettings = Array.from(MEENT_KEYS).some(key => document.getElementById(`settingR_${key}`));
+  const meentTabButton = document.querySelector('#settings_subtabs [data-target="settings_meent"]');
+  if (meentTabButton) meentTabButton.style.display = hasMeentSettings ? "" : "none";
+  if (!hasMeentSettings) {
+    meent.classList.remove("active");
+    const generalTabButton = document.querySelector('#settings_subtabs [data-target="settings_general"]');
+    const generalPane = document.getElementById("settings_general");
+    if (generalTabButton && generalTabButton.classList.contains("active")) generalPane?.classList.add("active");
+  }
 
   const mqttToggleRow = document.getElementById("settingR_mqtt_enabled");
   if (mqttToggleRow) mqtt.prepend(mqttToggleRow);
@@ -3912,7 +3940,7 @@ function initModbusMonitorControls() {
 			  else {
 				switch (data[i].type) {
 				  case "s":
-					sInput.setAttribute("type", "text");
+				sInput.setAttribute("type", i === "meent_api_key" ? "password" : "text");
 					sInput.setAttribute("maxlength", data[i].max);
 					sInput.setAttribute("placeholder", "<max " + data[i].max + ">");
 					break;
@@ -4780,6 +4808,29 @@ const FALLBACK_TRANSLATIONS = {
     "lbl-history-order-old-to-new-short": "gammal→ny",
     "tip-history-graph-new-to-old": "X-axel: nyast till aldst. Klicka for aldst till nyast.",
     "tip-history-graph-old-to-new": "X-axel: aldst till nyast. Klicka for nyast till aldst."
+  },
+  fr: {
+    "accu-status-idle": "Inactif",
+    "accu-status-charging": "En charge",
+    "accu-status-discharging": "En décharge",
+    "net-action-on": "Action de commutation",
+    "net-action-off": "Action de retour",
+    "net-direction": "Réagir à",
+    "net-direction-return": "Injection",
+    "net-direction-deliver": "Consommation",
+    "net-value-on": "À partir de",
+    "net-value-off": "En dessous de",
+    "net-intro-2": "Shelly/IO devient",
+    "net-off-state": "Shelly/IO devient",
+    "net-threshold-error": "Le seuil de retour doit être inférieur au seuil de commutation.",
+    "net-unit-watt": "Watt",
+    "net-unit-seconds": "secondes",
+    "net-on-delay": "Délai",
+    "net-off-delay": "Délai",
+    "lbl-history-order-new-to-old-short": "récent→ancien",
+    "lbl-history-order-old-to-new-short": "ancien→récent",
+    "tip-history-graph-new-to-old": "Axe X : du plus récent au plus ancien. Cliquez pour inverser l'ordre.",
+    "tip-history-graph-old-to-new": "Axe X : du plus ancien au plus récent. Cliquez pour inverser l'ordre."
   }
 };
 const URL_I18N = typeof DEBUG !== 'undefined' && DEBUG
@@ -4818,11 +4869,17 @@ function changeLanguage(lang) {
 }
 
 function loadTranslations(lang) {
-	console.log(URL_I18N + `/${lang}.json`);
-  fetch( URL_I18N + `/${lang}.json` )
-    .then(response => response.json())
-    .then(json => {
-      translations = json;
+  const languages = lang === 'en' ? ['en'] : ['en', lang];
+  Promise.all(languages.map(language => {
+    const url = URL_I18N + `/${language}.json`;
+    console.log(url);
+    return fetch(url).then(response => {
+      if (!response.ok) throw new Error(`Could not load ${language} translations`);
+      return response.json();
+    });
+  }))
+    .then(jsons => {
+      translations = Object.assign({}, ...jsons);
       applyTranslations();
     })
     .catch(err => console.error("Error fetching lang file:", err));

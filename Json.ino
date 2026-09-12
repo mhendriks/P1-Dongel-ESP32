@@ -515,6 +515,7 @@ String deviceInfoJson()
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
   doc["eid_status"] = EIDStatusText();
+  AppendMeentStatus(doc);
 
 #ifndef MQTT_DISABLE
   snprintf(cMsg, sizeof(cMsg), "%s:%04lu", settingMQTTbroker, (unsigned long)settingMQTTbrokerPort);
@@ -601,7 +602,8 @@ if ( !hideMQTTsettings) {
 #endif
 #ifdef POST_MEENT
   ADD_SETTING("meent_interval", "i", 1, 3600, settingMeentInterval);
-  ADD_SETTING("meent_token", "s", 0, sizeof(settingMeentToken) - 1, settingMeentToken);
+  ADD_SETTING("meent_webid", "s", 0, sizeof(settingMeentWebId) - 1, settingMeentWebId);
+  ADD_SETTING("meent_api_key", "s", 0, sizeof(settingMeentApiKey) - 1, settingMeentApiKey);
 #endif
   
   //MODBUS TCP settings
