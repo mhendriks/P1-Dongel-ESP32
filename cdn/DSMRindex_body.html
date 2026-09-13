@@ -559,68 +559,68 @@
     <h2 data-i18n-key="tle-api-docs">API documentatie</h2>
     <table id=ApiDocTable>
   <tr>
-    <th>url</th>
-    <th>omchrijving</th>
+    <th data-i18n-key="api-col-url">URL</th>
+    <th data-i18n-key="api-col-description">Description</th>
   </tr>
   <tr>
     <td><a href="api/v2/dev/info" target="_blank">api/v2/dev/info</a></td>
-    <td>Device info in JSON format</td>
+    <td data-i18n-key="api-dev-info">Device info in JSON format</td>
   </tr>
   <tr>
     <td><a href="api/v2/dev/time" target="_blank">api/v2/dev/time</a></td>
-    <td>Device time (epoch) in JSON format</td>
+    <td data-i18n-key="api-dev-time">Device time (epoch) in JSON format</td>
   </tr>
   <tr>
     <td><a href="api/v2/dev/settings" target="_blank">api/v2/dev/settings</a></td>
-    <td>Device settings in JSON format</td>
+    <td data-i18n-key="api-dev-settings">Device settings in JSON format</td>
   </tr>
   <tr>
     <td><a href="api/v2/dev/settings" target="_blank">api/v2/dev/settings{jsonObj}</a></td>
-    <td>[POST] update Device settings in JSON format. </br>Test with:
+    <td data-i18n-key="api-dev-settings-post">[POST] update Device settings in JSON format. </br>Test with:
         curl -X POST -H \"Content-Type: application/json\" --data '{\"name\":\"mqtt_broker\",\"value\":\"hassio.local\"}'</td>
   </tr>
   <tr>
     <td><a href="api/v2/sm/info" target="_blank">api/v2/sm/info</a></td>
-    <td>Smart Meter info in JSON format</td>
+    <td data-i18n-key="api-sm-info">Smart Meter info in JSON format</td>
   </tr>
   <tr>
     <td><a href="api/v2/sm/actual" target="_blank">api/v2/sm/actual</a></td>
-    <td>Smart Meter Actual data in JSON format</td>
+    <td data-i18n-key="api-sm-actual">Smart Meter Actual data in JSON format</td>
   </tr>
   <tr>
     <td><a href="api/v2/sm/fields" target="_blank">api/v2/sm/fields</a></td>
-    <td>Smart Meter all fields data in JSON format<br>JSON format: {\"name\":[{\"value\":&lt;value&gt;,\"unit\":\"&lt;unit&gt;\"}]}</td>
+    <td data-i18n-key="api-sm-fields">Smart Meter all fields data in JSON format<br>JSON format: {\"name\":[{\"value\":&lt;value&gt;,\"unit\":\"&lt;unit&gt;\"}]}</td>
   </tr>
     <tr>
     <td><a href="api/v2/sm/fields/{fieldName}" target="_blank">api/v2/sm/fields/{fieldName}</a></td>
-    <td>Smart Meter one field data in JSON format</td>
+    <td data-i18n-key="api-sm-field">Smart Meter one field data in JSON format</td>
   </tr>
     <tr>
     <td><a href="api/v2/sm/telegram" target="_blank">api/v2/sm/telegram</a></td>
-    <td>raw smart meter data as sent by the Smart Meter including all \"\\r\\n\" line endings</td>
+    <td data-i18n-key="api-sm-telegram">raw smart meter data as sent by the Smart Meter including all \"\\r\\n\" line endings</td>
   </tr>
   <tr>
     <td><a href="api/v2/stats" target="_blank">api/v2/stats</a></td>
-    <td>daily statistics (eg. peak values)</td>
+    <td data-i18n-key="api-stats">daily statistics (eg. peak values)</td>
   </tr>
     <tr>
     <td><a href="api/v2/hist/hours" target="_blank">api/v2/hist/hours</a></td>
-    <td>History data per hour in JSON format</td>
+    <td data-i18n-key="api-hist-hours">History data per hour in JSON format</td>
   </tr>
     <tr>
     <td><a href="api/v2/hist/days" target="_blank">api/v2/hist/days</a></td>
-    <td>History data per day in JSON format</td>
+    <td data-i18n-key="api-hist-days">History data per day in JSON format</td>
   </tr>
   <tr>
     <td><a href="api/v2/hist/months" target="_blank">api/v2/hist/months</a></td>
-    <td>History data per month in JSON format</td>
+    <td data-i18n-key="api-hist-months">History data per month in JSON format</td>
   </tr>  
   <tr>
     <td><a href="/api/v1/data" target="_blank">/api/v1/data</a></td>
-    <td>HW v1 data api format</td>
+    <td data-i18n-key="api-v1-data">HW v1 data api format</td>
   </tr>
   <tr>
-    <td>History data file structure (month, day, hour)</td>
+    <td data-i18n-key="api-history-structure">History data file structure (month, day, hour)</td>
 	<td>{"actSlot":&lt;actual slot#&gt;,"data":[{"date":&lt;YYMMDDHH&gt;,"values":[&lt;EDT1&gt;,&lt;EDT2&gt;,&lt;ERT1&gt;,&lt;ERT2&gt;,&lt;GDT&gt;]}, ...]}</td>
   </tr>  
 </table>
@@ -702,11 +702,11 @@
    <h2 data-i18n-key="tle-input-mtr-reading">Meterstanden invoeren</h2>
   <div id="tabEditMonths" class="tabName">
     <label for="Period"><b data-i18n-key="tbl-mtr-readering">Meterstand: </b></label>
-      Energy Delivered
+      <label for="MED" data-i18n-key="edit-type-energy-delivered">Energy Delivered</label>
       <input type="radio" name="editType" id="MED" onchange="setEditType('ED')" checked/>
-      Energy Returned
+      <label for="MER" data-i18n-key="edit-type-energy-returned">Energy Returned</label>
       <input type="radio" name="editType" id="MER" onchange="setEditType('ER')"/>
-      Gas Delivered
+      <label for="MGD" data-i18n-key="edit-type-gas-delivered">Gas Delivered</label>
       <input type="radio" name="editType" id="MGD" onchange="setEditType('GD')"/>  
 	  <div id="tabMaanden" class="outer-div">
 		<!-- START edit tabMonths -->

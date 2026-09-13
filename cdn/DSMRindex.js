@@ -999,7 +999,7 @@ function nrgm_getstatus(){
 
 function ProcessEIDClaim(json){
 	if ( "webhookUrl" in json ) {
-		document.getElementById('status').innerHTML = "<FONT COLOR='#70ac4d'>GEKOPPELD";
+		document.getElementById('status').innerHTML = "<FONT COLOR='#70ac4d'>" + t('eid-status-coupled');
 		document.getElementById('claim').style.display = 'none';
 	}	
 	if ( "claimUrl" in json ) {
@@ -1075,7 +1075,7 @@ function ProcessEIDPlanner(jsonData){
 }
 
 function getclaim(){
-	document.getElementById('status').innerHTML = "Status ophalen...";  	
+	document.getElementById('status').textContent = t('eid-status-loading');
 	objDAL.refreshEIDClaim();
 }
 
@@ -1978,7 +1978,19 @@ function p1ProtocolLabel(obj) {
 }
 
 function conciseP1Diagnostics(value) {
-  return String(value || "").replace(/\s*·\s*fouten\s+\d+/i, "");
+  const raw = String(value || "");
+  const crcMode = raw.match(/CRC\s+(detecteren|actief|niet aanwezig)/i)?.[1]?.toLowerCase();
+  const skippedFields = raw.match(/velden overgeslagen\s+(\d+)/i)?.[1];
+  if (!crcMode && skippedFields === undefined) return raw.replace(/\s*·\s*fouten\s+\d+/i, "");
+
+  const crcKey = crcMode === "actief"
+    ? "sysinfo-crc-active"
+    : crcMode === "niet aanwezig"
+      ? "sysinfo-crc-absent"
+      : "sysinfo-crc-detecting";
+  const parts = crcMode ? [t(crcKey)] : [];
+  if (skippedFields !== undefined) parts.push(`${t("sysinfo-fields-skipped")} ${skippedFields}`);
+  return parts.join(" · ");
 }
 
 function mqttStatusLabel(status) {
