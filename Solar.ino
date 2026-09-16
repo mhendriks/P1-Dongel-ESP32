@@ -1,5 +1,6 @@
 struct SolarPwrSystems {
   bool      Available;
+  uint8_t   ApiVersion;
   String    Url;
   String    Token;
   uint64_t  TokenExpire;
@@ -16,10 +17,10 @@ extern float SolarEdgeFlowPvPower;
 extern bool  SolarEdgeFlowPvValid;
 extern AccuPwrSystems SolarEdgeAccu;
 
-SolarPwrSystems Enphase   = { false, "https://envoy/ivp/pdm/energy", "", 0, 0, 0, 0, 0,  60, 0, "/enphase.json"  };
-SolarPwrSystems SolarEdge = { false, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
-SolarPwrSystems SMAinv    = { false, "http://192.168.1.231",      "", 0, 0, 0, 0, 0,  15, 0, "/sma.json" };
-SolarPwrSystems Omniksol  = { false, "", "", 0, 0, 0, 0, 0,  15, 0, "/omniksol.json"  };
+SolarPwrSystems Enphase   = { false, 1, "https://envoy/ivp/pdm/energy", "", 0, 0, 0, 0, 0,  60, 0, "/enphase.json"  };
+SolarPwrSystems SolarEdge = { false, 1, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
+SolarPwrSystems SMAinv    = { false, 1, "http://192.168.1.231",      "", 0, 0, 0, 0, 0,  15, 0, "/sma.json" };
+SolarPwrSystems Omniksol  = { false, 1, "", "", 0, 0, 0, 0, 0,  15, 0, "/omniksol.json"  };
 static uint16_t LastSolarFetchDurationMs = 0;
 
 static String   _sma_sid;
@@ -98,6 +99,78 @@ static void resetSolarEdgeRuntimeState() {
   SolarEdgeAccu.chargeLevel = 0;
   SolarEdgeFlowPvPower = 0.0f;
   SolarEdgeFlowPvValid = false;
+}
+
+// SolarEdge V2 authenticates requests with an API key in a header.  V1 uses the
+// same value as a query parameter, so keep the two paths deliberately separate.
+static bool solarEdgeV2FetchJson(const String& url, const String& apiKey, JsonDocument& doc) {
+  HTTPClient http;
+  WiFiClient client;
+  WiFiClientSecure clientTLS;
+  if (!solarHttpBegin(http, client, clientTLS, url)) return false;
+  http.addHeader("Accept", "application/json");
+  http.addHeader("X-API-Key", apiKey);
+  int rc = http.GET();
+  DebugVerboseT(F("SolarEdge V2 HTTP response: ")); DebugVerboseLn(rc);
+  if (rc != 200) {
+    String response = http.getString();
+    if (response.length()) { DebugTraceT(F("SolarEdge V2 response body: ")); DebugTraceLn(response); }
+    http.end();
+    return false;
+  }
+  String payload = http.getString();
+  http.end();
+  return !deserializeJson(doc, payload);
+}
+
+static bool solarEdgeV2LastValue(JsonVariant source, float& value) {
+  if (source.is<float>() || source.is<int>() || source.is<long>()) {
+    value = source.as<float>();
+    return true;
+  }
+  JsonArray values = source["values"].as<JsonArray>();
+  for (int i = (int)values.size() - 1; i >= 0; --i) {
+    if (!values[i]["value"].isNull()) {
+      value = values[i]["value"].as<float>();
+      return true;
+    }
+  }
+  return false;
+}
+
+static void getSolarEdgeV2Data() {
+  SolarPwrSystems* solarSystem = &SolarEdge;
+  const String baseUrl = "https://monitoringapi.solaredge.com/v2/sites/" + String(SolarEdge.SiteID);
+  const String apiKey = solarSystem->Token;
+  JsonDocument doc;
+  solarSystem->Actual = 0;
+  solarSystem->Daily = 0;
+  resetSolarEdgeRuntimeState();
+
+  // Overview is the V2 running production total for today (Wh).
+  if (solarEdgeV2FetchJson(baseUrl + "/overview", apiKey, doc)) {
+    JsonVariant total = doc["production"]["total"];
+    if (!total.isNull()) solarSystem->Daily = (uint32_t)total.as<float>();
+    doc.clear();
+  }
+
+  // /power/live is the documented live endpoint. Some currently deployed V2
+  // accounts expose the same data at /power, so use it as a compatibility fallback.
+  bool gotPower = solarEdgeV2FetchJson(baseUrl + "/power/live", apiKey, doc);
+  if (!gotPower) {
+    doc.clear();
+    gotPower = solarEdgeV2FetchJson(baseUrl + "/power", apiKey, doc);
+  }
+  if (!gotPower) return;
+
+  float power = 0.0f;
+  if (solarEdgeV2LastValue(doc["power"], power) ||
+      solarEdgeV2LastValue(doc["currentPower"], power) ||
+      solarEdgeV2LastValue(doc.as<JsonVariant>(), power)) {
+    solarSystem->Actual = (uint32_t)power;
+    SolarEdgeFlowPvPower = power;
+    SolarEdgeFlowPvValid = true;
+  }
 }
 
 static bool smaReadMetricValue(JsonObject dev, const char* key, long& out) {
@@ -254,6 +327,7 @@ void ReadSolarConfig(SolarSource src) {
   f.close();
 
   solarSystem->Available = true;
+  solarSystem->ApiVersion = doc["api-version"] | 1;  // Missing in existing files means legacy SolarEdge V1.
   solarSystem->Url   = doc["gateway-url"].as<String>();
   solarSystem->Token = doc["token"].as<String>();    // SMA uses this as the inverter password.
   solarSystem->Wp    = doc["wp"].as<uint32_t>();
@@ -269,6 +343,7 @@ void ReadSolarConfig(SolarSource src) {
   Debug("wp > "); Debugln(solarSystem->Wp);
   Debug("interval > "); Debugln(solarSystem->Interval);
   Debug("siteid > "); Debugln(solarSystem->SiteID);
+  Debug("api-version > "); Debugln(solarSystem->ApiVersion);
 #endif
 
   solarSystem->LastRefresh = 0;
@@ -315,6 +390,11 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   }
 
   if (src == SOLAR_EDGE) {
+    if (solarSystem->ApiVersion >= 2) {
+      getSolarEdgeV2Data();
+      noteSolarFetchDuration(fetchStartMs);
+      return;
+    }
     String baseUrl = "https://monitoringapi.solaredge.com/site/" + String(SolarEdge.SiteID);
     String token = solarSystem->Token;
     token.trim();

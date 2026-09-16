@@ -312,12 +312,25 @@ cfgGaugeWATER.options.plugins.labels.render = renderLabelWater;
 function ShowHidePV(){
 	if ( document.getElementById('pv_enphase').checked ) {
 		document.getElementById('conf_token').style.display = "none";
+		document.getElementById('enphase_token').style.display = "block";
 		document.getElementById('gw_url').value = "https://envoy/api/v1/production";
 	}
 	if ( document.getElementById('pv_solaredge').checked ) {
 		document.getElementById('conf_token').style.display = "block";
+		document.getElementById('enphase_token').style.display = "none";
 		document.getElementById('gw_url').value = "";
 	}
+	UpdateSolarEdgeApiFields();
+}
+
+function UpdateSolarEdgeApiFields(){
+	const version = document.getElementById('solaredge_api_version')?.value || '1';
+	const isV2 = version === '2';
+	document.getElementById('solaredge_token_label').textContent = isV2 ? 'SolarEdge API V2 key or Client Secret:' : 'Legacy API key:';
+	document.getElementById('token').placeholder = isV2 ? 'Value issued by the SolarEdge Developer Platform' : 'eg L4QLVQ1LOKCQX2193VSEICXW61NP6B1O';
+	document.getElementById('solaredge_api_help').textContent = isV2
+		? 'V2 sends this value as an X-API-Key header. Do not share it with anyone.'
+		: 'Use an existing Monitoring API key. SolarEdge no longer issues new legacy keys.';
 }
   
 let latestInsightData = null;
@@ -461,12 +474,14 @@ function InsightData(data){
 }
 
 function SolarSendData() {
+	const isSolarEdge = document.getElementById('pv_solaredge').checked;
 
 	const jsonData = {
 		"gateway-url"     : document.getElementById('gw_url').value,
 		wp                : parseInt(document.getElementById('wp').value),
 		"refresh-interval": parseInt(document.getElementById('interval').value),
-		token             : document.getElementById('token').value,
+		token             : document.getElementById(isSolarEdge ? 'token' : 'token_enphase').value,
+		"api-version"    : isSolarEdge ? parseInt(document.getElementById('solaredge_api_version').value) : 1,
 		expire            : 0,
 		siteid            : parseInt(document.getElementById('siteid').value)
 	};

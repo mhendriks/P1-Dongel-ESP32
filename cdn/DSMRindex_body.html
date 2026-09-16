@@ -850,12 +850,22 @@
 			<input type="number" id="interval" name="interval" value=10><br><br>
 			<label for="gw_url" data-i18n-key="sol-url">Gateway url of ip-adres:</label><br>
 			<input type="text" id="gw_url" name="gw_url" value="https://envoy/api/v1/production" style="width: 100%"><br><br>
-			<label for="token" data-i18n-key="sol-token">Token:</label><br>
-			<input type="text" id="token" name="token" placeholder="eg eyJraWQiOiI3ZDEwMDA1ZC03ODk5LTRk" style="width: 100%"><br><br>
 			<div id="conf_token" style="display: none">
 				<label for="siteid" data-i18n-key="sol-siteid">SiteID:</label><br>
 				<input type="number" id="siteid" name="siteid" placeholder="eg 125231"><br><br>
-			</div>	
+				<label for="solaredge_api_version">SolarEdge API:</label><br>
+				<select id="solaredge_api_version" onchange="UpdateSolarEdgeApiFields()">
+					<option value="1">Legacy API (V1)</option>
+					<option value="2">Developer Platform API (V2)</option>
+				</select><br><br>
+				<label id="solaredge_token_label" for="token">Legacy API key:</label><br>
+				<input type="text" id="token" name="token" placeholder="eg L4QLVQ1LOKCQX2193VSEICXW61NP6B1O" style="width: 100%"><br>
+				<small id="solaredge_api_help">Use an existing Monitoring API key. SolarEdge no longer issues new legacy keys.</small><br><br>
+			</div>
+			<div id="enphase_token">
+			<label for="token_enphase" data-i18n-key="sol-token">Token:</label><br>
+			<input type="text" id="token_enphase" name="token_enphase" placeholder="eg eyJraWQiOiI3ZDEwMDA1ZC03ODk5LTRk" style="width: 100%"><br><br>
+			</div>
 		<hr>						
 			<div class=align-c><button type="button" onclick="SolarSendData()" data-i18n-key="btn-save">Opslaan</button></div>
 		</form>    
