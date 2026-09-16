@@ -5,6 +5,8 @@
 // Optional override when POST_MEENT is enabled. Without this override DEBUG
 // uses https://meent.dev.muze.nl/api/ and release builds use production.
 #define MEENT_API_BASE_URL "https://example.invalid/api/"
+// Header that carries the dongle-generated provisioning/recovery secret.
+#define MEENT_CLIENT_SECRET_HEADER "X-Client-Secret"
 
 // Only used when POST_KEMP is enabled
 #define URL_KEMP "https://example.invalid/api/data"

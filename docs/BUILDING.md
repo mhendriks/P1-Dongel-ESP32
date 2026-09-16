@@ -48,6 +48,16 @@ Notes:
 - `POST_POWERCH`, `POST_MEENT`, and `POST_KEMP` are mutually exclusive compile-time features.
 - `POST_KEMP` uses a fixed 60-second POST interval and the OTA suffix `kemp/` (for example `p1p/v5/kemp/`).
 
+## MEENT provisioning secret
+
+MEENT builds create a cryptographically random 32-byte client secret before the
+first pod/API-key request. It is stored in NVS (separate from the settings
+file) and sent only to `/api/pod/` and `/api/register/` in the
+`X-Client-Secret` header. The MEENT provider should store a hash of this secret
+and use it to make interrupted provisioning requests idempotent. Override the
+header name with `MEENT_CLIENT_SECRET_HEADER` in `posts.h` if the provider
+chooses another name. A factory reset removes the secret deliberately.
+
 ## 3) Example `energyid.h`
 
 Create `../../_secrets/energyid.h` with:

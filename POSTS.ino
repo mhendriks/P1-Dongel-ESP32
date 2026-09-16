@@ -24,6 +24,11 @@
       #define MEENT_API_BASE_URL "https://webhook.energiemeent.nl/api/"
     #endif
   #endif
+  // Shared client credential for idempotent provisioning/recovery. The
+  // provider stores only a hash of this value.
+  #ifndef MEENT_CLIENT_SECRET_HEADER
+    #define MEENT_CLIENT_SECRET_HEADER "X-Client-Secret"
+  #endif
 #endif
 
 #if (defined(POST_POWERCH) + defined(POST_MEENT) + defined(POST_KEMP)) > 1
@@ -99,6 +104,42 @@ static time_t meentLastSuccessfulPost = 0;
 static uint32_t meentLastProvisionAttemptMs = 0;
 static bool meentProvisionPending = false;
 static bool meentProvisionBlocked = false;
+static constexpr const char* MEENT_CLIENT_SECRET_NVS_KEY = "meent_secret";
+static constexpr size_t MEENT_CLIENT_SECRET_BYTES = 32;
+static char meentClientSecret[MEENT_CLIENT_SECRET_BYTES * 2 + 1] = "";
+
+static bool meentClientSecretIsValid(const char* value) {
+  if (!value || strlen(value) != MEENT_CLIENT_SECRET_BYTES * 2) return false;
+  for (const char* p = value; *p; ++p) {
+    if (!isxdigit((unsigned char)*p)) return false;
+  }
+  return true;
+}
+
+// The secret is saved before the first provisioning request. It intentionally
+// lives outside the LittleFS settings file, so a settings-file failure cannot
+// orphan a pod or API key. Factory reset explicitly removes this credential.
+static bool meentEnsureClientSecret() {
+  if (meentClientSecretIsValid(meentClientSecret)) return true;
+
+  preferences.getString(MEENT_CLIENT_SECRET_NVS_KEY, meentClientSecret, sizeof(meentClientSecret));
+  if (meentClientSecretIsValid(meentClientSecret)) return true;
+
+  static const char hex[] = "0123456789abcdef";
+  for (size_t i = 0; i < MEENT_CLIENT_SECRET_BYTES; ++i) {
+    const uint8_t value = (uint8_t)esp_random();
+    meentClientSecret[i * 2] = hex[value >> 4];
+    meentClientSecret[i * 2 + 1] = hex[value & 0x0F];
+  }
+  meentClientSecret[MEENT_CLIENT_SECRET_BYTES * 2] = '\0';
+
+  if (preferences.putString(MEENT_CLIENT_SECRET_NVS_KEY, meentClientSecret) != MEENT_CLIENT_SECRET_BYTES * 2) {
+    meentClientSecret[0] = '\0';
+    DebugTln(F("MEENT: client-secret NVS write failed"));
+    return false;
+  }
+  return true;
+}
 
 static String meentApiKey() {
   String key = settingMeentApiKey;
@@ -125,6 +166,7 @@ static String meentStatusText(uint8_t state, int httpStatus) {
     case MEENT_ERROR:
       if (httpStatus == -1) return "fout (verbinding)";
       if (httpStatus == -2) return "fout (ongeldig antwoord)";
+      if (httpStatus == -3) return "fout (client-secret opslag)";
       return "fout (HTTP " + String(httpStatus) + ")";
   }
   return "onbekend";
@@ -149,16 +191,29 @@ static bool meentPostText(const String& url, const String& request, String& resp
     return false;
   }
   http.addHeader("Content-Type", "text/plain");
+  http.addHeader(MEENT_CLIENT_SECRET_HEADER, meentClientSecret);
   status = http.POST(request);
   response = http.getString();
   http.end();
   DebugTf("MEENT provisioning response: %d\r\n", status);
-  return status == HTTP_CODE_CREATED;
+  // A fresh provisioning response is normally 201; an idempotent recovery
+  // response from the provider may correctly be 200 instead.
+  return status >= 200 && status < 300;
 }
 
 static bool meentProvision() {
   String response;
   meentLastProvisionAttemptMs = millis();
+  if (!meentEnsureClientSecret()) {
+    if (!strlen(settingMeentWebId)) {
+      meentWebIdState = MEENT_ERROR;
+      meentWebIdHttpStatus = -3;
+    } else {
+      meentApiKeyState = MEENT_ERROR;
+      meentApiKeyHttpStatus = -3;
+    }
+    return false;
+  }
   if (!strlen(settingMeentWebId)) {
     meentWebIdState = MEENT_IN_PROGRESS;
     if (!meentPostText(String(MEENT_API_BASE_URL) + "pod/", macID, response, meentWebIdHttpStatus)) {
@@ -396,6 +451,14 @@ void MeentConfigChanged() {
 #endif
 }
 
+void MeentClearClientSecret() {
+#ifdef POST_MEENT
+  preferences.remove(MEENT_CLIENT_SECRET_NVS_KEY);
+  meentClientSecret[0] = '\0';
+  meentResetStatus();
+#endif
+}
+
 void AppendMeentStatus(JsonDocument& doc) {
 #ifdef POST_MEENT
   doc["meent_webid_status"] = meentStatusText(meentWebIdState, meentWebIdHttpStatus);
@@ -413,8 +476,13 @@ void StartWebhook() {
   // It is non-blocking and only runs on a fresh/cleared API-key setting.
   meentResetStatus();
   if (!meentApiKey().length()) {
-    meentProvisionPending = true;
-    WorkerEnqueueSimple(WORKER_JOB_MEENT_PROVISION, WORKER_PRIO_NORMAL);
+    if (meentEnsureClientSecret()) {
+      meentProvisionPending = true;
+      WorkerEnqueueSimple(WORKER_JOB_MEENT_PROVISION, WORKER_PRIO_NORMAL);
+    } else {
+      meentWebIdState = MEENT_ERROR;
+      meentWebIdHttpStatus = -3;
+    }
   }
 #endif
 }
@@ -424,5 +492,6 @@ void StartWebhook() {
   void PostWebhookFromWorker(const WorkerWebhookPayload& payload){}
   void MeentProvisionFromWorker(){}
   void MeentConfigChanged(){}
+  void MeentClearClientSecret(){}
   void AppendMeentStatus(JsonDocument&){}
 #endif

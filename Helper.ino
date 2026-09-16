@@ -307,6 +307,7 @@ void SetConfig(){
 void FacReset() {
   DebugTln(F("/!\\ Factory reset"));
 //  bFacReset = false;
+  MeentClearClientSecret(); // A reset must not retain ownership of the old pod.
   P1StatusClear();
   LittleFS.remove("/DSMRsettings.json");
   LittleFS.remove("/fixedip.json");

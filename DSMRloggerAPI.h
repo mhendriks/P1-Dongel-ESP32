@@ -207,6 +207,7 @@ void writeSettings();
 void writeSettingsDirect();
 void MeentConfigChanged();
 void AppendMeentStatus(JsonDocument& doc);
+void MeentClearClientSecret();
 void ManifestCheckFromWorker();
 void RequestManifestCheckOnMQTTConnect();
 void RemoteUpdate();
