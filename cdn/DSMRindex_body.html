@@ -9,6 +9,19 @@
 ***************************************************************************      
 -->
 <!-- <div class="dev-header"> -->
+<style>
+  /* Connector UI stays self-contained while legacy firmware still loads the
+     shared 5.9 stylesheet from the CDN. */
+  #Connectors .connector-shell { max-width: 900px; width: min(900px, calc(100vw - 24px)); margin: 0 auto; }
+  #Connectors .connector-pane { display: none; margin-top: 14px; }
+  #Connectors .connector-pane.active { display: block; }
+  #Connectors .settings-card { margin: 14px 0; padding: 18px 28px; border: 1px solid #b7b7b7; border-radius: 16px; background: #e8e8e8; }
+  #Connectors .settings-card h3 { margin: 0 0 10px; }
+  #Connectors .settingDiv { display: grid; grid-template-columns: 1fr max-content; gap: 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,.10); }
+  #Connectors .settingDiv:last-child { border-bottom: 0; }
+  #Connectors .settingDiv > div:first-child { text-align: left; }
+  @media (max-width: 600px) { #Connectors .settings-card { padding: 14px; } #Connectors .settingDiv { grid-template-columns: 1fr; } }
+</style>
 <div class="header">
   <nav>
   	<div id=messages></div>
@@ -52,6 +65,7 @@
 			<li><a id='bNRGM'   	  data-i18n-key="mnu-nrgm" class='tabButton nav-item' href="#NRGM" style="display:none">Koppelen</a></li>
 			<li><a id='bNETSW'   	  data-i18n-key="mnu-netsw" class='tabButton nav-item' href="#NETSW" style="display:none" onclick="fetchNetSwitchConfig()">NetSwitch</a></li>
 			<li><a id='bEditSettings' data-i18n-key="mnu-settings" class='tabButton nav-item' href="#Settings" >Settings</a></li>
+			<li><a id='bConnectors' data-i18n-key="mnu-connectors" class='tabButton nav-item' href="#Connectors">Connectors</a></li>
 			<li><a id='bEditMonths'   data-i18n-key="mnu-editmonths" class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
 			<li><a id='bSolar'   	  data-i18n-key="mnu-solar" class='tabButton nav-item' href="#Solar" >Solar Setup</a></li>
 				<li><a id='bESPHome'   	  data-i18n-key="mnu-esphome" class='nav-item' href="javascript:void(0);" onclick="return openESPHomeMigrationFromMenu(event)" style="display:none">ESPHome</a></li>
@@ -697,6 +711,27 @@
       <a id='bSave'   class='btn' onclick="saveData()" data-i18n-key="btn-save">Opslaan</a>
       </div>
   </section> <!-- end Settings Page -->
+
+  <section id="Connectors" class="tabName">
+    <h2 data-i18n-key="tle-connectors">Connectors</h2>
+    <div class="outer-div">
+      <div class="inner-div connector-shell">
+        <div id="connector_subtabs" class="settings-subtabs">
+          <button type="button" class="subtab-btn active" data-target="connector_battery" data-i18n-key="connector-battery">Accu</button>
+          <button type="button" class="subtab-btn" data-target="connector_pv" data-i18n-key="connector-pv">PV</button>
+        </div>
+        <div id="connector_battery" class="connector-pane active">
+          <div id="connector_battery_status" class="connector-status" data-i18n-key="connector-status-waiting">Batterijstatus wordt geladen…</div>
+          <div class="settings-card"><h3 data-i18n-key="connector-driver">Driver · Modbus TCP</h3><div id="connector_battery_driver_fields"></div></div>
+          <div id="connector_battery_mapper_card" class="settings-card"><h3 data-i18n-key="connector-mapper">Mapper</h3><p data-i18n-key="connector-mapper-help">Koppel de vaste batterijvelden aan bronregisters.</p><div id="connector_battery_mapper_fields"></div></div>
+        </div>
+        <div id="connector_pv" class="connector-pane">
+          <div class="settings-card"><h3 data-i18n-key="connector-pv">PV</h3><p data-i18n-key="connector-pv-help">PV-connectors volgen dezelfde driver- en mapperopzet.</p></div>
+        </div>
+      </div>
+    </div>
+    <div id="settings_btns"><a class='btn' onclick="undoReload()" data-i18n-key="btn-undo">Undo</a><a class='btn' onclick="saveSettings()" data-i18n-key="btn-save">Opslaan</a></div>
+  </section>
  
   <section id="EditMonths" class="tabName"> 
    <h2 data-i18n-key="tle-input-mtr-reading">Meterstanden invoeren</h2>

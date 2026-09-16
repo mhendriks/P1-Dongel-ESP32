@@ -60,6 +60,14 @@ Development builds require the Arduino ESP32 core, `arduino-cli` and several ext
 
 The device exposes versioned HTTP endpoints under `/api/v1` and `/api/v2`, together with a WebSocket feed for live data. MQTT publishing, Home Assistant discovery, Modbus and external integrations can be configured from the device web interface where supported.
 
+## Modbus battery connector
+
+The first Energy Edge Gateway connector is a read-only configurable Modbus TCP battery connector. Configure it in **Settings → Battery Connector**: enable the connector, enter its TCP address, port and Modbus unit ID, then map active power, state of charge and operating state. Each mapping has a register address, datatype, word order and scaling. The previous Victron values are its defaults, and existing `victron_accu_*` settings are migrated automatically.
+
+`GET /api/v2/energy/resources/battery-1` exposes a protocol-neutral battery resource.  Its measurements contain a value, unit, uptime timestamp, quality (`good`, `stale`, or `unavailable`) and the native Modbus holding-register reference.  Active power is in W: positive means charging and negative means discharging.  The established `GET /api/v2/accu` dashboard endpoint remains available unchanged.
+
+The fixed energy model is separate from this driver configuration. Capacity and charge/discharge limits are present in the resource schema and deliberately stay unavailable until their optional mappings are added.
+
 Interface behaviour may change between development versions. Consumers should prefer documented, versioned endpoints.
 
 ## License and credits

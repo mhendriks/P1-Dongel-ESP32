@@ -39,11 +39,44 @@ struct {
   uint16_t port = 502;
 } mb_config;
 
-struct VictronModbusConfig {
+enum ModbusBatteryValueType : uint8_t {
+  MODBUS_BATTERY_U16 = 0,
+  MODBUS_BATTERY_S16 = 1,
+  MODBUS_BATTERY_U32 = 2,
+  MODBUS_BATTERY_S32 = 3,
+  MODBUS_BATTERY_F32 = 4
+};
+
+enum class ModbusBatteryPollField : uint8_t {
+  ACTIVE_POWER, STATE_OF_CHARGE, OPERATING_STATE, AVAILABLE_CAPACITY,
+  CHARGE_LIMIT, DISCHARGE_LIMIT, COUNT
+};
+
+struct ModbusBatteryFieldConfig {
+  uint16_t registerAddress;
+  uint8_t valueType;
+  float scale;
+  bool wordSwap;
+};
+
+struct ModbusBatteryConfig {
   bool enabled = false;
   char ip[16] = "";
+  uint16_t port = 502;
   uint8_t id = 100;
-} victronModbusConfig;
+  uint16_t pollIntervalSeconds = 5;
+  ModbusBatteryFieldConfig activePower = {842, MODBUS_BATTERY_S16, 1.0f, false};
+  ModbusBatteryFieldConfig stateOfCharge = {843, MODBUS_BATTERY_U16, 1.0f, false};
+  ModbusBatteryFieldConfig operatingState = {844, MODBUS_BATTERY_U16, 1.0f, false};
+  // Optional model fields deliberately start unmapped (register 0).  A device
+  // that does not expose one keeps it unavailable rather than reporting zero.
+  ModbusBatteryFieldConfig availableCapacity = {0, MODBUS_BATTERY_U16, 1.0f, false};
+  ModbusBatteryFieldConfig chargeLimit = {0, MODBUS_BATTERY_U16, 1.0f, false};
+  ModbusBatteryFieldConfig dischargeLimit = {0, MODBUS_BATTERY_U16, 1.0f, false};
+  int16_t idleStateCode = 0;
+  int16_t chargingStateCode = 1;
+  int16_t dischargingStateCode = 2;
+} modbusBatteryConfig;
 
 #include <WiFi.h>  
 // #include "Insights.h"
@@ -54,6 +87,7 @@ struct VictronModbusConfig {
 #include <TelnetStream.h>       // https://github.com/jandrassy/TelnetStream
 #include "safeTimers.h"
 #include <ArduinoJson.h>
+#include "EnergyModel.h"
 #include <LittleFS.h>
 #include <Preferences.h>
 #include <dsmr3.h>               // https://github.com/mhendriks/dsmr3Lib
@@ -778,11 +812,13 @@ struct AccuPwrSystems {
 
 AccuPwrSystems* dashboardAccu();
 bool fillDashAccuJson(JsonDocument& doc);
-void updateVictronAccu(int16_t powerW, uint16_t chargeLevel, uint16_t state);
+const BatteryEnergyResource& batteryEnergyResource();
+ApiResponse batteryEnergyApiResponse();
+void updateModbusBattery(const BatteryEnergyUpdate& update);
 void invalidateVictronAccu();
-void setupVictronModbus();
-void handleVictronModbus();
-void victronModbusConfigChanged();
+void setupModbusBattery();
+void handleModbusBattery();
+void modbusBatteryConfigChanged();
 void sendHWapiJson();
 void sendDeviceSettingsJson();
 void sendSmActualJson();

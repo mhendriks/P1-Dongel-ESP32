@@ -141,9 +141,38 @@ void writeSettingsDirect() {
   docw["mb_baud"] = mb_config.baud;
   docw["mb_parity"] = mb_config.parity - 134217700;
   docw["mb_monitor"] = bModbusMonitor;
-  docw["victron_accu_enabled"] = victronModbusConfig.enabled;
-  docw["victron_accu_ip"] = victronModbusConfig.ip;
-  docw["victron_accu_id"] = victronModbusConfig.id;
+  docw["battery_modbus_enabled"] = modbusBatteryConfig.enabled;
+  docw["battery_modbus_ip"] = modbusBatteryConfig.ip;
+  docw["battery_modbus_port"] = modbusBatteryConfig.port;
+  docw["battery_modbus_unit_id"] = modbusBatteryConfig.id;
+  docw["battery_modbus_poll_seconds"] = modbusBatteryConfig.pollIntervalSeconds;
+  docw["battery_power_register"] = modbusBatteryConfig.activePower.registerAddress;
+  docw["battery_power_type"] = modbusBatteryConfig.activePower.valueType;
+  docw["battery_power_scale"] = modbusBatteryConfig.activePower.scale;
+  docw["battery_power_word_swap"] = modbusBatteryConfig.activePower.wordSwap;
+  docw["battery_soc_register"] = modbusBatteryConfig.stateOfCharge.registerAddress;
+  docw["battery_soc_type"] = modbusBatteryConfig.stateOfCharge.valueType;
+  docw["battery_soc_scale"] = modbusBatteryConfig.stateOfCharge.scale;
+  docw["battery_soc_word_swap"] = modbusBatteryConfig.stateOfCharge.wordSwap;
+  docw["battery_state_register"] = modbusBatteryConfig.operatingState.registerAddress;
+  docw["battery_state_type"] = modbusBatteryConfig.operatingState.valueType;
+  docw["battery_state_scale"] = modbusBatteryConfig.operatingState.scale;
+  docw["battery_state_word_swap"] = modbusBatteryConfig.operatingState.wordSwap;
+  docw["battery_available_capacity_register"] = modbusBatteryConfig.availableCapacity.registerAddress;
+  docw["battery_available_capacity_type"] = modbusBatteryConfig.availableCapacity.valueType;
+  docw["battery_available_capacity_scale"] = modbusBatteryConfig.availableCapacity.scale;
+  docw["battery_available_capacity_word_swap"] = modbusBatteryConfig.availableCapacity.wordSwap;
+  docw["battery_charge_limit_register"] = modbusBatteryConfig.chargeLimit.registerAddress;
+  docw["battery_charge_limit_type"] = modbusBatteryConfig.chargeLimit.valueType;
+  docw["battery_charge_limit_scale"] = modbusBatteryConfig.chargeLimit.scale;
+  docw["battery_charge_limit_word_swap"] = modbusBatteryConfig.chargeLimit.wordSwap;
+  docw["battery_discharge_limit_register"] = modbusBatteryConfig.dischargeLimit.registerAddress;
+  docw["battery_discharge_limit_type"] = modbusBatteryConfig.dischargeLimit.valueType;
+  docw["battery_discharge_limit_scale"] = modbusBatteryConfig.dischargeLimit.scale;
+  docw["battery_discharge_limit_word_swap"] = modbusBatteryConfig.dischargeLimit.wordSwap;
+  docw["battery_state_idle_code"] = modbusBatteryConfig.idleStateCode;
+  docw["battery_state_charging_code"] = modbusBatteryConfig.chargingStateCode;
+  docw["battery_state_discharging_code"] = modbusBatteryConfig.dischargingStateCode;
   docw["mqtt-hide"] = hideMQTTsettings;
   docw["remove-index"] = RemoveIndexAfterUpdate;
   docw["macid-topic"] = MacIDinToptopic;
@@ -311,9 +340,31 @@ void readSettings(bool show)
   if (doc["mb_baud"].is<int>()) mb_config.baud = doc["mb_baud"];
   if (doc["mb_parity"].is<int>()) mb_config.parity = 134217700 + doc["mb_parity"].as<int>();
   if (doc["mb_monitor"].is<bool>()) bModbusMonitor = doc["mb_monitor"];
-  if (doc["victron_accu_enabled"].is<bool>()) victronModbusConfig.enabled = doc["victron_accu_enabled"];
-  if (doc["victron_accu_ip"].is<const char*>()) strlcpy(victronModbusConfig.ip, doc["victron_accu_ip"].as<const char*>(), sizeof(victronModbusConfig.ip));
-  if (doc["victron_accu_id"].is<int>()) victronModbusConfig.id = constrain(doc["victron_accu_id"].as<int>(), 1, 247);
+  // Version 5.10 migrates the old Victron-only keys into the generic battery
+  // connector.  New keys take precedence when both are present.
+  if (doc["victron_accu_enabled"].is<bool>()) modbusBatteryConfig.enabled = doc["victron_accu_enabled"];
+  if (doc["victron_accu_ip"].is<const char*>()) strlcpy(modbusBatteryConfig.ip, doc["victron_accu_ip"].as<const char*>(), sizeof(modbusBatteryConfig.ip));
+  if (doc["victron_accu_id"].is<int>()) modbusBatteryConfig.id = constrain(doc["victron_accu_id"].as<int>(), 1, 247);
+  if (doc["battery_modbus_enabled"].is<bool>()) modbusBatteryConfig.enabled = doc["battery_modbus_enabled"];
+  if (doc["battery_modbus_ip"].is<const char*>()) strlcpy(modbusBatteryConfig.ip, doc["battery_modbus_ip"].as<const char*>(), sizeof(modbusBatteryConfig.ip));
+  if (doc["battery_modbus_port"].is<int>()) modbusBatteryConfig.port = constrain(doc["battery_modbus_port"].as<int>(), 1, 65535);
+  if (doc["battery_modbus_unit_id"].is<int>()) modbusBatteryConfig.id = constrain(doc["battery_modbus_unit_id"].as<int>(), 1, 247);
+  if (doc["battery_modbus_poll_seconds"].is<int>()) modbusBatteryConfig.pollIntervalSeconds = constrain(doc["battery_modbus_poll_seconds"].as<int>(), 1, 3600);
+#define LOAD_BATTERY_FIELD(prefix, target) \
+  if (doc[prefix "_register"].is<int>()) target.registerAddress = constrain(doc[prefix "_register"].as<int>(), 0, 65535); \
+  if (doc[prefix "_type"].is<int>()) target.valueType = constrain(doc[prefix "_type"].as<int>(), MODBUS_BATTERY_U16, MODBUS_BATTERY_F32); \
+  if (doc[prefix "_scale"].is<float>()) target.scale = doc[prefix "_scale"].as<float>(); \
+  if (doc[prefix "_word_swap"].is<bool>()) target.wordSwap = doc[prefix "_word_swap"];
+  LOAD_BATTERY_FIELD("battery_power", modbusBatteryConfig.activePower)
+  LOAD_BATTERY_FIELD("battery_soc", modbusBatteryConfig.stateOfCharge)
+  LOAD_BATTERY_FIELD("battery_state", modbusBatteryConfig.operatingState)
+  LOAD_BATTERY_FIELD("battery_available_capacity", modbusBatteryConfig.availableCapacity)
+  LOAD_BATTERY_FIELD("battery_charge_limit", modbusBatteryConfig.chargeLimit)
+  LOAD_BATTERY_FIELD("battery_discharge_limit", modbusBatteryConfig.dischargeLimit)
+#undef LOAD_BATTERY_FIELD
+  if (doc["battery_state_idle_code"].is<int>()) modbusBatteryConfig.idleStateCode = doc["battery_state_idle_code"];
+  if (doc["battery_state_charging_code"].is<int>()) modbusBatteryConfig.chargingStateCode = doc["battery_state_charging_code"];
+  if (doc["battery_state_discharging_code"].is<int>()) modbusBatteryConfig.dischargingStateCode = doc["battery_state_discharging_code"];
   if (doc["skip-network"].is<bool>()) skipNetwork = doc["skip-network"];
   if (doc["mimic"].is<int>()) {
     int newMimic = constrain(doc["mimic"].as<int>(), (int)MIMIC_NONE, (int)MIMIC_SHELLY_PRO_3EM);
@@ -563,21 +614,38 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "mb_baud")) mb_config.baud = String(newValue).toInt();  
   if (!stricmp(field, "mb_parity")) mb_config.parity = String(newValue).toInt();  
   if (!stricmp(field, "mb_monitor")) bModbusMonitor = (stricmp(newValue, "true") == 0 ? true : false);
-  bool victronConfigChanged = false;
-  if (!stricmp(field, "victron_accu_enabled")) {
-    victronModbusConfig.enabled = (stricmp(newValue, "true") == 0);
-    victronConfigChanged = true;
+  bool batteryConfigChanged = false;
+  if (!stricmp(field, "battery_modbus_enabled") || !stricmp(field, "victron_accu_enabled")) {
+    modbusBatteryConfig.enabled = (stricmp(newValue, "true") == 0);
+    batteryConfigChanged = true;
   }
-  if (!stricmp(field, "victron_accu_ip")) {
-    strCopy(victronModbusConfig.ip, sizeof(victronModbusConfig.ip), newValue);
-    victronConfigChanged = true;
+  if (!stricmp(field, "battery_modbus_ip") || !stricmp(field, "victron_accu_ip")) {
+    strCopy(modbusBatteryConfig.ip, sizeof(modbusBatteryConfig.ip), newValue);
+    batteryConfigChanged = true;
   }
-  if (!stricmp(field, "victron_accu_id")) {
-    victronModbusConfig.id = constrain(String(newValue).toInt(), 1, 247);
-    victronConfigChanged = true;
+  if (!stricmp(field, "battery_modbus_port")) { modbusBatteryConfig.port = constrain(String(newValue).toInt(), 1, 65535); batteryConfigChanged = true; }
+  if (!stricmp(field, "battery_modbus_poll_seconds")) { modbusBatteryConfig.pollIntervalSeconds = constrain(String(newValue).toInt(), 1, 3600); batteryConfigChanged = true; }
+  #define SET_BATTERY_FIELD(prefix, target) \
+    if (!stricmp(field, prefix "_register")) { target.registerAddress = constrain(String(newValue).toInt(), 0, 65535); batteryConfigChanged = true; } \
+    if (!stricmp(field, prefix "_type")) { target.valueType = constrain(String(newValue).toInt(), MODBUS_BATTERY_U16, MODBUS_BATTERY_F32); batteryConfigChanged = true; } \
+    if (!stricmp(field, prefix "_scale")) { target.scale = String(newValue).toFloat(); batteryConfigChanged = true; } \
+    if (!stricmp(field, prefix "_word_swap")) { target.wordSwap = !stricmp(newValue, "true"); batteryConfigChanged = true; }
+  SET_BATTERY_FIELD("battery_power", modbusBatteryConfig.activePower)
+  SET_BATTERY_FIELD("battery_soc", modbusBatteryConfig.stateOfCharge)
+  SET_BATTERY_FIELD("battery_state", modbusBatteryConfig.operatingState)
+  SET_BATTERY_FIELD("battery_available_capacity", modbusBatteryConfig.availableCapacity)
+  SET_BATTERY_FIELD("battery_charge_limit", modbusBatteryConfig.chargeLimit)
+  SET_BATTERY_FIELD("battery_discharge_limit", modbusBatteryConfig.dischargeLimit)
+  #undef SET_BATTERY_FIELD
+  if (!stricmp(field, "battery_state_idle_code")) { modbusBatteryConfig.idleStateCode = String(newValue).toInt(); batteryConfigChanged = true; }
+  if (!stricmp(field, "battery_state_charging_code")) { modbusBatteryConfig.chargingStateCode = String(newValue).toInt(); batteryConfigChanged = true; }
+  if (!stricmp(field, "battery_state_discharging_code")) { modbusBatteryConfig.dischargingStateCode = String(newValue).toInt(); batteryConfigChanged = true; }
+  if (!stricmp(field, "battery_modbus_unit_id") || !stricmp(field, "victron_accu_id")) {
+    modbusBatteryConfig.id = constrain(String(newValue).toInt(), 1, 247);
+    batteryConfigChanged = true;
   }
 #ifdef MBUS
-  if (victronConfigChanged) victronModbusConfigChanged();
+  if (batteryConfigChanged) modbusBatteryConfigChanged();
 #endif
   if (!stricmp(field, "mimic")) {
     int newMimic = constrain(String(newValue).toInt(), (int)MIMIC_NONE, (int)MIMIC_SHELLY_PRO_3EM);

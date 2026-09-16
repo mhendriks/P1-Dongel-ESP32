@@ -51,10 +51,12 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.9.3
-- changed: add registers in the standaard modbus mapping 
-- changed: version manifest check and fault handling (#70)
-- MEENT: new setup
+5.10.0
+- first implemenation of the normalised Battery connector
+
+5.9.4
+- improve language handling and FR fragments
+
 
 5.10...
 - Normalise energy data (huge change)
@@ -66,7 +68,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - extra report "jaarbalans": op basis van nog te verwachten maandnw ( Leo B )
 - max 3 solar systemen ondersteunen. Max 3 x zelfde of variaties zijn.  
 
-5.10.0
+5.11.0
 - add option to see total counter remotely
 - stable or beta update option in settings
 - Add remote Proxy
@@ -84,7 +86,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 /******************** compiler options  ********************************************/
 
-// #define DEBUG
+#define DEBUG
 // #define XTRA_LOG
 
 //---  PROFILES  ---
@@ -189,7 +191,7 @@ void setup()
 
 #ifdef MBUS
   mbusSetup();
-  setupVictronModbus();
+  setupModbusBattery();
   SetupMB_RTU();
 #endif  
   ReadSolarConfigs();
@@ -223,7 +225,7 @@ void loop () {
   handleRemoteUpdate();
   handleWater();
 #ifdef MBUS
-  handleVictronModbus();
+  handleModbusBattery();
 #endif
   handleEnergyID();  
   GetSolarDataN();

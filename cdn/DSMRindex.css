@@ -1342,6 +1342,29 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 
 #Settings .settings-pane{ display:none; }
 #Settings .settings-pane.active{ display:block; }
+#Connectors .connector-pane{ display:none; }
+#Connectors .connector-pane.active{ display:block; }
+#connector_battery:not(.is-enabled) #connector_battery_status,
+#connector_battery:not(.is-enabled) #connector_battery_mapper_card { display: none; }
+#connector_battery:not(.is-enabled) #connector_battery_driver_fields .settingDiv:not(#settingR_battery_modbus_enabled) { display: none; }
+#Connectors .connector-shell{
+  display: block;
+  max-width: 900px;
+  width: min(900px, calc(100vw - 24px));
+  margin: 0 auto;
+}
+#Connectors .connector-pane{
+  background: transparent;
+  border: 0;
+  padding: 0;
+  width: 100%;
+  max-width: none;
+  margin: 14px 0 0;
+}
+#Connectors .settings-card{
+  margin-top: 14px;
+  background: #e8e8e8;
+}
 
 #settings_btns { text-align: center; }
 
@@ -1354,7 +1377,8 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 }
 
 /* subtabs (pills) */
-#Settings .settings-subtabs{
+#Settings .settings-subtabs,
+#Connectors .settings-subtabs{
   background: #e9e9e9;
   border: 1px solid rgba(0,0,0,0.10);
   border-radius: 999px;
@@ -1365,7 +1389,8 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 }
 
 /* buttons */
-#Settings .subtab-btn{
+#Settings .subtab-btn,
+#Connectors .subtab-btn{
   border: 1px solid transparent;    /* voorkomt “groei” bij active */
   margin: 0 !important;
   background: transparent;
@@ -1377,13 +1402,15 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
   box-shadow: none;
 }
 
-#Settings .subtab-btn:hover{
+#Settings .subtab-btn:hover,
+#Connectors .subtab-btn:hover{
   background: rgba(255,255,255,0.7);
   opacity: 1;
 }
 
 /* active: subtiele oranje outline (zonder visueel breder te worden) */
-#Settings .subtab-btn.active{
+#Settings .subtab-btn.active,
+#Connectors .subtab-btn.active{
   background: rgba(255,255,255,0.85);
   border-color: rgba(255, 120, 0, 0.55);
   box-shadow: inset 0 0 0 2px rgba(255,120,0,0.18);
@@ -1405,7 +1432,8 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 }
 
 /* rows */
-#Settings .settingDiv{
+#Settings .settingDiv,
+#Connectors .settingDiv{
   display: grid;
 /*   grid-template-columns: auto auto; */
   grid-template-columns: 1fr max-content;
@@ -1418,15 +1446,18 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 
 
 #Settings .settingDiv:last-child{ border-bottom: none; }
+#Connectors .settingDiv:last-child{ border-bottom: none; }
 
 /* label */
-#Settings .settingDiv > div:first-child{
+#Settings .settingDiv > div:first-child,
+#Connectors .settingDiv > div:first-child{
   color: #111;
   font-size: 16px;
     text-align: left;
 }
 
-#Settings .settings-card{
+#Settings .settings-card,
+#Connectors .settings-card{
   margin-top: 18px;
   padding: 16px;
   border: 1px solid rgba(0,0,0,0.08);
@@ -1434,12 +1465,14 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
   background: rgba(255,255,255,0.4);
 }
 
-#Settings .settings-card h3{
+#Settings .settings-card h3,
+#Connectors .settings-card h3{
   margin: 0 0 8px 0;
   color: #111;
 }
 
-#Settings .settings-card p{
+#Settings .settings-card p,
+#Connectors .settings-card p{
   color: #222;
 }
 
@@ -1510,7 +1543,11 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 /* inputs: neem volledige kolombreedte (strakker) */
 #Settings input[type="text"],
 #Settings input[type="number"],
-#Settings input[type="password"]{
+#Settings input[type="password"],
+#Connectors input[type="text"],
+#Connectors input[type="number"],
+#Connectors input[type="password"],
+#Connectors select{
   box-sizing: border-box;
   width: 100%;
   max-width: 280px;
@@ -1523,7 +1560,7 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 
 /* mobiel */
 @media (max-width: 640px){
-  #Settings .settingDiv{ grid-template-columns: 1fr; }
+  #Settings .settingDiv, #Connectors .settingDiv{ grid-template-columns: 1fr; }
   #Settings .settings-right{ text-align: left; }
 }
 
@@ -1541,7 +1578,8 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
   min-width: 0;
 }
 
-#Settings input[type="checkbox"]{
+#Settings input[type="checkbox"],
+#Connectors input[type="checkbox"]{
   -webkit-appearance: none ;
   appearance: none ;
   transform: none ;
@@ -1566,7 +1604,8 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
   transition: background-color .18s ease, border-color .18s ease ;
 }
 
-#Settings input[type="checkbox"]::after{
+#Settings input[type="checkbox"]::after,
+#Connectors input[type="checkbox"]::after{
   content: "" ;
   position: absolute ;
   top: 2px ;
@@ -1582,25 +1621,68 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 }
 
 /* ON */
-#Settings input[type="checkbox"]:checked{
+#Settings input[type="checkbox"]:checked,
+#Connectors input[type="checkbox"]:checked{
   background: #34c759 !important;  /* #ff7800 */
   border-color: rgba(0,0,0,0.08) !important;
 }
 
-#Settings input[type="checkbox"]:checked::after{
+#Settings input[type="checkbox"]:checked::after,
+#Connectors input[type="checkbox"]:checked::after{
   transform: translateX(18px);
 }
 
 /* disabled */
-#Settings input[type="checkbox"]:disabled{
+#Settings input[type="checkbox"]:disabled,
+#Connectors input[type="checkbox"]:disabled{
   opacity: 0.45;
   cursor: not-allowed;
 }
 
-#Settings input[type="checkbox"]:active::after{
+#Settings input[type="checkbox"]:active::after,
+#Connectors input[type="checkbox"]:active::after{
   box-shadow:
     0 1px 1px rgba(0,0,0,0.35),
     0 0 0 0.5px rgba(0,0,0,0.15);
+}
+
+#Connectors .mapper-matrix{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 14px;
+}
+#Connectors .mapper-matrix th,
+#Connectors .mapper-matrix td{
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 1px solid rgba(0,0,0,.10);
+  vertical-align: middle;
+}
+#Connectors .mapper-matrix thead th{
+  font-size: 13px;
+  color: #555;
+  white-space: nowrap;
+}
+#Connectors .mapper-matrix tbody th{ font-weight: 600; }
+#Connectors .mapper-source{ color: #555; white-space: nowrap; }
+#Connectors .mapper-matrix input,
+#Connectors .mapper-matrix select{ max-width: 125px; }
+#Connectors .mapper-state-codes{ display: flex; gap: 18px; flex-wrap: wrap; margin-top: 16px; }
+#Connectors .mapper-state-codes label{ display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+#Connectors .connector-status{
+  margin: 14px 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #ececec;
+  color: #333;
+}
+#Connectors .connector-status.quality-good{ background: #dff5e5; color: #146c2e; }
+#Connectors .connector-status.quality-stale{ background: #fff0cc; color: #805600; }
+@media (max-width: 700px){
+  #Connectors .mapper-matrix{ display: block; overflow-x: auto; }
+  #Connectors .mapper-matrix th,
+  #Connectors .mapper-matrix td{ white-space: nowrap; }
 }
 
 #Settings .settingDiv.is-dirty input[type="text"],

@@ -1738,6 +1738,10 @@ function SendNetSwitchJson() {
 			objDAL.ensureDeviceInformation(true);
 			activeTab = "bEditSettings";
 			break;
+		case "bConnectors":
+			data = {};
+			objDAL.ensureDeviceInformation(true);
+			break;
 		case "bEID":
 			getclaim();
 			break;
@@ -3486,6 +3490,98 @@ function initSettingsSubTabsOnce() {
   });
 }
 
+function initConnectorSubTabsOnce() {
+  const root = document.getElementById("Connectors");
+  if (!root || root.dataset.tabsReady) return;
+  root.dataset.tabsReady = "true";
+  const buttons = root.querySelectorAll("#connector_subtabs .subtab-btn");
+  const panes = root.querySelectorAll(".connector-pane");
+  buttons.forEach(button => button.addEventListener("click", () => {
+    buttons.forEach(item => item.classList.remove("active"));
+    panes.forEach(item => item.classList.remove("active"));
+    button.classList.add("active");
+    document.getElementById(button.dataset.target)?.classList.add("active");
+    if (button.dataset.target === "connector_battery") refreshConnectorBatteryStatus();
+  }));
+}
+
+function refreshConnectorBatteryStatus() {
+  const output = document.getElementById("connector_battery_status");
+  if (!output) return;
+  fetch("/api/v2/energy/resources/battery-1")
+    .then(response => response.ok ? response.json() : Promise.reject())
+    .then(data => {
+      const quality = data?.measurements?.active_power?.quality || "unavailable";
+      const state = data?.operating_state?.value || "unknown";
+      output.textContent = `Status: ${state} · Datakwaliteit: ${quality}`;
+      output.className = `connector-status quality-${quality}`;
+    })
+    .catch(() => {
+      output.textContent = "Batterijstatus niet beschikbaar";
+      output.className = "connector-status quality-unavailable";
+    });
+}
+
+function buildBatteryMapperMatrix(container) {
+  const fields = [
+    { key: "battery_power", label: "Actief vermogen" },
+    { key: "battery_soc", label: "State of charge" },
+    { key: "battery_state", label: "Operating state" },
+    { key: "battery_available_capacity", label: "Beschikbare energie (Wh)" },
+    { key: "battery_charge_limit", label: "Laadlimiet (W)" },
+    { key: "battery_discharge_limit", label: "Ontlaadlimiet (W)" }
+  ];
+  if (!document.getElementById("setFld_battery_power_register")) return false;
+
+  const table = document.createElement("table");
+  table.className = "mapper-matrix";
+  table.innerHTML = "<thead><tr><th>Vast energieveld</th><th>Bron</th><th>Register</th><th>Datatype</th><th>Factor</th><th>Word swap</th></tr></thead>";
+  const body = document.createElement("tbody");
+  fields.forEach(field => {
+    const row = document.createElement("tr");
+    const label = document.createElement("th");
+    label.scope = "row";
+    label.textContent = field.label;
+    row.appendChild(label);
+    const source = document.createElement("td");
+    source.textContent = "Holding register";
+    source.className = "mapper-source";
+    row.appendChild(source);
+    ["register", "type", "scale", "word_swap"].forEach(suffix => {
+      const cell = document.createElement("td");
+      const input = document.getElementById(`setFld_${field.key}_${suffix}`);
+      if (input) {
+        const sourceRow = input.closest(".settingDiv");
+        cell.appendChild(input);
+        if (sourceRow) sourceRow.remove();
+      }
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+  });
+  table.appendChild(body);
+  container.appendChild(table);
+
+  const stateCodes = document.createElement("div");
+  stateCodes.className = "mapper-state-codes";
+  [
+    ["battery_state_idle_code", "Code idle"],
+    ["battery_state_charging_code", "Code laden"],
+    ["battery_state_discharging_code", "Code ontladen"]
+  ].forEach(([key, label]) => {
+    const input = document.getElementById(`setFld_${key}`);
+    if (!input) return;
+    const sourceRow = input.closest(".settingDiv");
+    const item = document.createElement("label");
+    item.textContent = label;
+    item.appendChild(input);
+    stateCodes.appendChild(item);
+    if (sourceRow) sourceRow.remove();
+  });
+  if (stateCodes.children.length) container.appendChild(stateCodes);
+  return true;
+}
+
 function splitSettingsUI() {
   const table   = document.getElementById("settings_table");
   const general = document.getElementById("settings_general");
@@ -3494,8 +3590,10 @@ function splitSettingsUI() {
   const mqtt    = document.getElementById("settings_mqtt");
   const meent   = document.getElementById("settings_meent");
   const modbus  = document.getElementById("settings_modbus");
+  const batteryDriver = document.getElementById("connector_battery_driver_fields");
+  const batteryMapper = document.getElementById("connector_battery_mapper_fields");
 
-  if ( !table || !general || !smartMeter || !mqtt || !meent || !modbus || !tariff ) return;
+  if ( !table || !general || !smartMeter || !mqtt || !meent || !modbus || !batteryDriver || !batteryMapper || !tariff ) return;
 
   // velden op basis van "i" (dus zonder "settingR_")
   const MQTT_KEYS = new Set([
@@ -3535,13 +3633,20 @@ function splitSettingsUI() {
   ];
   const SMART_METER_KEY_SET = new Set(SMART_METER_KEYS);
   
+  const BATTERY_KEYS = new Set([
+    "battery_modbus_enabled", "battery_modbus_ip", "battery_modbus_port", "battery_modbus_unit_id", "battery_modbus_poll_seconds",
+    "battery_power_register", "battery_power_type", "battery_power_scale", "battery_power_word_swap",
+    "battery_soc_register", "battery_soc_type", "battery_soc_scale", "battery_soc_word_swap",
+    "battery_state_register", "battery_state_type", "battery_state_scale", "battery_state_word_swap",
+    "battery_available_capacity_register", "battery_available_capacity_type", "battery_available_capacity_scale", "battery_available_capacity_word_swap",
+    "battery_charge_limit_register", "battery_charge_limit_type", "battery_charge_limit_scale", "battery_charge_limit_word_swap",
+    "battery_discharge_limit_register", "battery_discharge_limit_type", "battery_discharge_limit_scale", "battery_discharge_limit_word_swap",
+    "battery_state_idle_code", "battery_state_charging_code", "battery_state_discharging_code"
+  ]);
   const MODBUS_KEYS = new Set([
     "mb_map",
     "mb_id",
     "mb_port",
-    "victron_accu_enabled",
-    "victron_accu_ip",
-    "victron_accu_id",
     "mb_parity",
     "mb_baud",
     "mb_bits",
@@ -3555,6 +3660,11 @@ function splitSettingsUI() {
   ]);
   const MEENT_KEYS = new Set(["meent_webid", "meent_api_key", "meent_interval"]);
 
+  // Connector rows live outside Settings after the first render; discard the
+  // previous view before moving freshly received settings into place.
+  batteryDriver.replaceChildren();
+  batteryMapper.replaceChildren();
+
   // alle bestaande rows (waar ze ook al staan) opnieuw indelen
   const rows = Array.from(document.querySelectorAll("#Settings .settingDiv"));
 
@@ -3567,6 +3677,10 @@ function splitSettingsUI() {
     else if (MEENT_KEYS.has(key)) meent.appendChild(row);
     else if (SMART_METER_KEY_SET.has(key)) smartMeter.appendChild(row);
     else if (TARIFF_KEYS.has(key)) tariff.appendChild(row);
+    else if (BATTERY_KEYS.has(key)) {
+      (key.startsWith("battery_power_") || key.startsWith("battery_soc_") || key.startsWith("battery_state_"))
+        ? batteryMapper.appendChild(row) : batteryDriver.appendChild(row);
+    }
     else if (MODBUS_KEYS.has(key)) modbus.appendChild(row);
     else general.appendChild(row);
   });
@@ -3592,8 +3706,15 @@ function splitSettingsUI() {
   if (mqttToggleRow) mqtt.prepend(mqttToggleRow);
   const modbusMonitorCard = document.getElementById("modbus_monitor_card");
   if (modbusMonitorCard) modbus.appendChild(modbusMonitorCard);
+  if (!buildBatteryMapperMatrix(batteryMapper)) {
+    const notice = document.createElement("p");
+    notice.className = "settings-help";
+    notice.textContent = "De mapper wordt beschikbaar na installatie van firmware met de configureerbare batterijdriver.";
+    batteryMapper.appendChild(notice);
+  }
   updateMQTTSettingsVisibility();
-  updateVictronSettingsVisibility();
+  updateBatteryModbusSettingsVisibility();
+  refreshConnectorBatteryStatus();
 }
 
 function updateMQTTSettingsVisibility() {
@@ -3608,15 +3729,27 @@ function updateMQTTSettingsVisibility() {
   });
 }
 
-function updateVictronSettingsVisibility() {
-  const victronEnabled = document.getElementById("setFld_victron_accu_enabled");
-  if (!victronEnabled) return;
+function updateBatteryModbusSettingsVisibility() {
+  const enabled = document.getElementById("setFld_battery_modbus_enabled");
+  if (!enabled) return;
 
-  const showVictronFields = victronEnabled.checked;
-  ["victron_accu_ip", "victron_accu_id"].forEach(key => {
+  const showConnectionFields = enabled.checked;
+  const connector = document.getElementById("connector_battery");
+  if (connector) {
+    connector.classList.toggle("is-enabled", showConnectionFields);
+    connector.querySelectorAll(".settingDiv").forEach(row => {
+    if (row.id === "settingR_battery_modbus_enabled") return;
+    row.style.display = showConnectionFields ? "" : "none";
+    });
+  }
+  ["battery_modbus_ip", "battery_modbus_port", "battery_modbus_unit_id"].forEach(key => {
     const row = document.getElementById(`settingR_${key}`);
-    if (row) row.style.display = showVictronFields ? "" : "none";
+    if (row) row.style.display = showConnectionFields ? "" : "none";
   });
+  const mapperCard = document.getElementById("connector_battery_mapper_fields")?.closest(".settings-card");
+  if (mapperCard) mapperCard.style.display = showConnectionFields ? "" : "none";
+  const status = document.getElementById("connector_battery_status");
+  if (status) status.style.display = showConnectionFields ? "" : "none";
 }
 
 function markDirty(el) {
@@ -3887,6 +4020,23 @@ function initModbusMonitorControls() {
 
 			  sInput = sel;
 			}
+			else if (i.endsWith("_type") && i.startsWith("battery_")) {
+			  const profiles = [
+				{ v: "0", t: "uint16" }, { v: "1", t: "int16" }, { v: "2", t: "uint32" },
+				{ v: "3", t: "int32" }, { v: "4", t: "float32" }
+			  ];
+			  const sel = document.createElement("select");
+			  sel.setAttribute("id", fldId);
+			  const current = String(data[i].value ?? "0");
+			  profiles.forEach(profile => {
+				const option = document.createElement("option");
+				option.value = profile.v;
+				option.textContent = profile.t;
+				option.selected = profile.v === current;
+				sel.appendChild(option);
+			  });
+			  sInput = sel;
+			}
 			else if (i === "mb_parity") {
 			  const SERIAL_CONFIGS = [
 				{ v: 134217744, t: "5N1" },
@@ -3979,8 +4129,8 @@ function initModbusMonitorControls() {
 			if (i === "mqtt_enabled") {
 			  sInput.addEventListener("change", updateMQTTSettingsVisibility);
 			}
-			if (i === "victron_accu_enabled") {
-			  sInput.addEventListener("change", updateVictronSettingsVisibility);
+			if (i === "battery_modbus_enabled") {
+			  sInput.addEventListener("change", updateBatteryModbusSettingsVisibility);
 			}
 			
 			inputDiv.appendChild(sInput);
@@ -4001,6 +4151,7 @@ function initModbusMonitorControls() {
 	}
 
   initSettingsSubTabsOnce();
+  initConnectorSubTabsOnce();
   splitSettingsUI();
   updateBrowserSettingsControls();
   initModbusMonitorControls();
@@ -4730,6 +4881,15 @@ function handle_menu_click()
 let translations = {};
 const FALLBACK_TRANSLATIONS = {
   nl: {
+    "mnu-connectors": "Connectors", "tle-connectors": "Connectors", "connector-battery": "Accu", "connector-pv": "PV",
+    "connector-driver": "Driver · Modbus TCP", "connector-mapper": "Mapper", "connector-mapper-help": "Koppel de vaste batterijvelden aan bronregisters.",
+    "connector-pv-help": "PV-connectors volgen dezelfde driver- en mapperopzet.",
+    "dict_battery_modbus_enabled": "Batterijconnector inschakelen", "dict_battery_modbus_ip": "TCP-adres", "dict_battery_modbus_port": "TCP-poort",
+    "dict_battery_modbus_unit_id": "Modbus unit-ID", "dict_battery_modbus_poll_seconds": "Poll-interval (seconden)",
+    "dict_battery_power_register": "Actief vermogen: register", "dict_battery_power_type": "Actief vermogen: datatype", "dict_battery_power_scale": "Actief vermogen: scaling", "dict_battery_power_word_swap": "Actief vermogen: word swap",
+    "dict_battery_soc_register": "State of charge: register", "dict_battery_soc_type": "State of charge: datatype", "dict_battery_soc_scale": "State of charge: scaling", "dict_battery_soc_word_swap": "State of charge: word swap",
+    "dict_battery_state_register": "Operating state: register", "dict_battery_state_type": "Operating state: datatype", "dict_battery_state_scale": "Operating state: scaling", "dict_battery_state_word_swap": "Operating state: word swap",
+    "dict_battery_state_idle_code": "Operating state: code idle", "dict_battery_state_charging_code": "Operating state: code laden", "dict_battery_state_discharging_code": "Operating state: code ontladen",
     "accu-status-idle": "Inactief",
     "accu-status-charging": "Laden",
     "accu-status-discharging": "Ontladen",

@@ -1,5 +1,7 @@
 #ifdef MBUS
 
+#include "ModbusBatteryDecoding.h"
+
 #define MBUS_DEV_ID       1
 #define MBUS_CLIENTS      4
 #define MBUS_TIMEOUT  10000
@@ -16,8 +18,8 @@ float calculateLineVoltage(float V1, float V2) {
 // Set up a Modbus server
 ModbusServerWiFi MBserver;
 
-// Dedicated client/socket for reading the system battery from a Victron GX.
-// This runs independently from MBserver, which keeps serving the grid mapping.
+// Configurable Modbus-TCP battery connector. The energy model is fixed; only
+// this compact driver configuration changes per physical battery system.
 static WiFiClient victronModbusSocket;
 static ModbusClientTCP victronModbusClient(victronModbusSocket, 2);
 static bool victronModbusClientStarted = false;
@@ -26,37 +28,120 @@ static volatile bool victronModbusRequestPending = false;
 static volatile uint32_t victronModbusActiveToken = 0;
 static uint32_t victronModbusToken = 0;
 static uint32_t victronModbusLastPoll = 0;
-static constexpr uint32_t VICTRON_MODBUS_POLL_MS = 5000;
-static constexpr uint16_t VICTRON_MODBUS_POWER_REGISTER = 842;
-static constexpr uint16_t VICTRON_MODBUS_REGISTER_COUNT = 3;
 
 static portMUX_TYPE victronModbusDataMux = portMUX_INITIALIZER_UNLOCKED;
-static volatile bool victronModbusDataPending = false;
-static int16_t victronModbusPendingPower = 0;
-static uint16_t victronModbusPendingSoc = 0;
-static uint16_t victronModbusPendingState = 0;
+static ModbusBatteryPollField victronModbusPendingField = ModbusBatteryPollField::ACTIVE_POWER;
+static ModbusBatteryPollField victronModbusNextField = ModbusBatteryPollField::ACTIVE_POWER;
+static bool victronModbusHavePower = false;
+static bool victronModbusHaveSoc = false;
+static bool victronModbusHaveState = false;
+static BatteryEnergyUpdate victronModbusSample = {};
+
+static const ModbusBatteryFieldConfig& modbusBatteryFieldConfig(ModbusBatteryPollField field) {
+  switch (field) {
+    case ModbusBatteryPollField::ACTIVE_POWER: return modbusBatteryConfig.activePower;
+    case ModbusBatteryPollField::STATE_OF_CHARGE: return modbusBatteryConfig.stateOfCharge;
+    case ModbusBatteryPollField::OPERATING_STATE: return modbusBatteryConfig.operatingState;
+    case ModbusBatteryPollField::AVAILABLE_CAPACITY: return modbusBatteryConfig.availableCapacity;
+    case ModbusBatteryPollField::CHARGE_LIMIT: return modbusBatteryConfig.chargeLimit;
+    default: return modbusBatteryConfig.dischargeLimit;
+  }
+}
+
+static uint8_t modbusBatteryWordCount(uint8_t valueType) {
+  return valueType == MODBUS_BATTERY_U32 || valueType == MODBUS_BATTERY_S32 ||
+         valueType == MODBUS_BATTERY_F32 ? 2 : 1;
+}
+
+static bool decodeModbusBatteryValue(const ModbusBatteryFieldConfig& field,
+                                     uint16_t firstWord, uint16_t secondWord,
+                                     float& value, int32_t& nativeValue) {
+  uint32_t raw32 = decodeModbusU32(firstWord, secondWord, field.wordSwap);
+  switch (field.valueType) {
+    case MODBUS_BATTERY_U16: nativeValue = firstWord; value = scaleModbusValue(firstWord, field.scale); return true;
+    case MODBUS_BATTERY_S16: nativeValue = decodeModbusS16(firstWord); value = scaleModbusValue(nativeValue, field.scale); return true;
+    case MODBUS_BATTERY_U32: nativeValue = raw32 > INT32_MAX ? INT32_MAX : (int32_t)raw32; value = (float)raw32 * field.scale; return true;
+    case MODBUS_BATTERY_S32: nativeValue = (int32_t)raw32; value = scaleModbusValue(nativeValue, field.scale); return true;
+    case MODBUS_BATTERY_F32: {
+      float rawFloat;
+      memcpy(&rawFloat, &raw32, sizeof(rawFloat));
+      if (!isfinite(rawFloat)) return false;
+      nativeValue = (int32_t)rawFloat;
+      value = rawFloat * field.scale;
+      return true;
+    }
+  }
+  return false;
+}
 
 static void handleVictronModbusData(ModbusMessage response, uint32_t token) {
   if (token != victronModbusActiveToken) return;
   victronModbusRequestPending = false;
 
-  if (response.getServerID() != victronModbusConfig.id ||
+  const ModbusBatteryFieldConfig& field = modbusBatteryFieldConfig(victronModbusPendingField);
+  const uint8_t words = modbusBatteryWordCount(field.valueType);
+  if (response.getServerID() != modbusBatteryConfig.id ||
       response.getFunctionCode() != READ_HOLD_REGISTER ||
-      response.size() < 9 || response[2] != 6) {
-    DebugVerboseTln(F("Victron Modbus: invalid response"));
+      response.size() < (size_t)(3 + words * 2) || response[2] != words * 2) {
+    DebugVerboseTln(F("Modbus battery: invalid response"));
     return;
   }
-
-  int16_t powerW;
-  uint16_t soc;
-  uint16_t state;
-  response.get(3, powerW, soc, state);
-
+  uint16_t firstWord = 0, secondWord = 0;
+  if (words == 1) response.get(3, firstWord);
+  else response.get(3, firstWord, secondWord);
+  float value;
+  int32_t nativeValue;
+  if (!decodeModbusBatteryValue(field, firstWord, secondWord, value, nativeValue)) return;
   portENTER_CRITICAL(&victronModbusDataMux);
-  victronModbusPendingPower = powerW;
-  victronModbusPendingSoc = soc;
-  victronModbusPendingState = state;
-  victronModbusDataPending = true;
+  victronModbusSample.profileId = "configured-modbus-tcp-battery";
+  victronModbusSample.sourceUnitId = modbusBatteryConfig.id;
+  const uint32_t timestampMs = millis();
+  victronModbusSample.timestampMs = timestampMs;
+  switch (victronModbusPendingField) {
+    case ModbusBatteryPollField::ACTIVE_POWER:
+      victronModbusSample.activePowerW = value;
+      victronModbusSample.activePowerRegister = field.registerAddress;
+      victronModbusSample.activePowerTimestampMs = timestampMs;
+      victronModbusSample.hasActivePower = true;
+      victronModbusHavePower = true;
+      break;
+    case ModbusBatteryPollField::STATE_OF_CHARGE:
+      victronModbusSample.stateOfChargePercent = constrain(value, 0.0f, 100.0f);
+      victronModbusSample.stateOfChargeRegister = field.registerAddress;
+      victronModbusSample.stateOfChargeTimestampMs = timestampMs;
+      victronModbusSample.hasStateOfCharge = true;
+      victronModbusHaveSoc = true;
+      break;
+    case ModbusBatteryPollField::OPERATING_STATE:
+      victronModbusSample.nativeOperatingState = (uint16_t)nativeValue;
+      victronModbusSample.operatingState = nativeValue == modbusBatteryConfig.idleStateCode ? BatteryOperatingState::IDLE
+          : nativeValue == modbusBatteryConfig.chargingStateCode ? BatteryOperatingState::CHARGING
+          : nativeValue == modbusBatteryConfig.dischargingStateCode ? BatteryOperatingState::DISCHARGING
+          : BatteryOperatingState::UNKNOWN;
+      victronModbusSample.operatingStateTimestampMs = timestampMs;
+      victronModbusSample.hasOperatingState = true;
+      victronModbusHaveState = true;
+      break;
+    case ModbusBatteryPollField::AVAILABLE_CAPACITY:
+      victronModbusSample.availableCapacityWh = value;
+      victronModbusSample.availableCapacityRegister = field.registerAddress;
+      victronModbusSample.availableCapacityTimestampMs = timestampMs;
+      victronModbusSample.hasAvailableCapacity = true;
+      break;
+    case ModbusBatteryPollField::CHARGE_LIMIT:
+      victronModbusSample.chargeLimitW = value;
+      victronModbusSample.chargeLimitRegister = field.registerAddress;
+      victronModbusSample.chargeLimitTimestampMs = timestampMs;
+      victronModbusSample.hasChargeLimit = true;
+      break;
+    case ModbusBatteryPollField::DISCHARGE_LIMIT:
+      victronModbusSample.dischargeLimitW = value;
+      victronModbusSample.dischargeLimitRegister = field.registerAddress;
+      victronModbusSample.dischargeLimitTimestampMs = timestampMs;
+      victronModbusSample.hasDischargeLimit = true;
+      break;
+    default: break;
+  }
   portEXIT_CRITICAL(&victronModbusDataMux);
 }
 
@@ -66,17 +151,23 @@ static void handleVictronModbusError(Error error, uint32_t token) {
   DebugVerboseTf("Victron Modbus error: 0x%02X\r\n", (uint8_t)error);
 }
 
-void victronModbusConfigChanged() {
+void modbusBatteryConfigChanged() {
   victronModbusActiveToken = 0;
   victronModbusRequestPending = false;
   portENTER_CRITICAL(&victronModbusDataMux);
-  victronModbusDataPending = false;
+  victronModbusHavePower = false;
+  victronModbusHaveSoc = false;
+  victronModbusHaveState = false;
+  victronModbusSample = {};
+  victronModbusNextField = ModbusBatteryPollField::ACTIVE_POWER;
   portEXIT_CRITICAL(&victronModbusDataMux);
   victronModbusTargetValid = false;
   victronModbusSocket.stop();
 
   IPAddress target;
-  if (!victronModbusConfig.enabled || !target.fromString(victronModbusConfig.ip)) {
+  if (!modbusBatteryConfig.enabled || !modbusBatteryConfig.activePower.registerAddress ||
+      !modbusBatteryConfig.stateOfCharge.registerAddress || !modbusBatteryConfig.operatingState.registerAddress ||
+      !target.fromString(modbusBatteryConfig.ip)) {
     invalidateVictronAccu();
     return;
   }
@@ -89,49 +180,60 @@ void victronModbusConfigChanged() {
     victronModbusClientStarted = true;
   }
 
-  victronModbusClient.setTarget(target, 502);
+  victronModbusClient.setTarget(target, modbusBatteryConfig.port);
   victronModbusTargetValid = true;
   victronModbusLastPoll = 0;
   invalidateVictronAccu();
-  DebugVerboseTf("Victron Modbus target: %s:502 id=%u\r\n",
-                 victronModbusConfig.ip, victronModbusConfig.id);
+  DebugVerboseTf("Modbus battery target: %s:%u id=%u\r\n",
+                 modbusBatteryConfig.ip, modbusBatteryConfig.port, modbusBatteryConfig.id);
 }
 
-void setupVictronModbus() {
-  victronModbusConfigChanged();
+void setupModbusBattery() {
+  modbusBatteryConfigChanged();
 }
 
-void handleVictronModbus() {
-  if (victronModbusDataPending) {
-    int16_t powerW;
-    uint16_t soc;
-    uint16_t state;
+void handleModbusBattery() {
+  if (victronModbusHavePower && victronModbusHaveSoc && victronModbusHaveState) {
+    BatteryEnergyUpdate update;
     portENTER_CRITICAL(&victronModbusDataMux);
-    powerW = victronModbusPendingPower;
-    soc = victronModbusPendingSoc;
-    state = victronModbusPendingState;
-    victronModbusDataPending = false;
+    update = victronModbusSample;
+    victronModbusHavePower = false;
+    victronModbusHaveSoc = false;
+    victronModbusHaveState = false;
     portEXIT_CRITICAL(&victronModbusDataMux);
 
-    if (victronModbusConfig.enabled) updateVictronAccu(powerW, soc, state);
+    if (modbusBatteryConfig.enabled) updateModbusBattery(update);
   }
 
-  if (!victronModbusConfig.enabled || !victronModbusTargetValid ||
+  if (!modbusBatteryConfig.enabled || !victronModbusTargetValid ||
       (netw_state != NW_ETH && netw_state != NW_WIFI) ||
       victronModbusRequestPending) return;
 
   uint32_t nowMs = millis();
-  if (victronModbusLastPoll && nowMs - victronModbusLastPoll < VICTRON_MODBUS_POLL_MS) return;
+  uint32_t fieldInterval = (uint32_t)constrain((int)modbusBatteryConfig.pollIntervalSeconds, 1, 3600) * 1000UL / 6;
+  if (fieldInterval < 250) fieldInterval = 250;
+  if (victronModbusLastPoll && nowMs - victronModbusLastPoll < fieldInterval) return;
   victronModbusLastPoll = nowMs;
 
   uint32_t token = ++victronModbusToken;
   victronModbusActiveToken = token;
   victronModbusRequestPending = true;
+  // Register 0 means this optional energy-model value is not mapped.  Skip it
+  // without creating traffic or an artificial zero measurement.
+  for (uint8_t attempts = 0; attempts < (uint8_t)ModbusBatteryPollField::COUNT; attempts++) {
+    if (modbusBatteryFieldConfig(victronModbusNextField).registerAddress) break;
+    victronModbusNextField = (ModbusBatteryPollField)(((uint8_t)victronModbusNextField + 1) % (uint8_t)ModbusBatteryPollField::COUNT);
+  }
+  const ModbusBatteryFieldConfig& field = modbusBatteryFieldConfig(victronModbusNextField);
+  if (!field.registerAddress) { victronModbusRequestPending = false; return; }
+  const uint8_t words = modbusBatteryWordCount(field.valueType);
+  victronModbusPendingField = victronModbusNextField;
+  victronModbusNextField = (ModbusBatteryPollField)(((uint8_t)victronModbusNextField + 1) % (uint8_t)ModbusBatteryPollField::COUNT);
   Error error = victronModbusClient.addRequest(token,
-                                               victronModbusConfig.id,
+                                               modbusBatteryConfig.id,
                                                READ_HOLD_REGISTER,
-                                               VICTRON_MODBUS_POWER_REGISTER,
-                                               VICTRON_MODBUS_REGISTER_COUNT);
+                                               field.registerAddress,
+                                               words);
   if (error != SUCCESS) {
     victronModbusRequestPending = false;
     DebugVerboseTf("Victron Modbus queue error: 0x%02X\r\n", (uint8_t)error);

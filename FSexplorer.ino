@@ -201,6 +201,10 @@ void setupFSexplorer() {
     if (!auth()) return;
     sendApiResponse(accuApiResponse());
   });
+  httpServer.on("/api/v2/energy/resources/battery-1", HTTP_GET, []() {
+    if (!auth()) return;
+    sendApiResponse(batteryEnergyApiResponse());
+  });
 #if !DIRECT_AP_CONNECT
   httpServer.on("/FSformat", []() {
     if (!auth()) return;

@@ -610,9 +610,26 @@ if ( !hideMQTTsettings) {
   ADD_SETTING("mb_map", "i", 0, 16, SelMap); //RTU+TCP
   ADD_SETTING("mb_id", "i", 1, 255, mb_config.id); //RTU+TCP
   ADD_SETTING("mb_port", "i", 0, 65535, mb_config.port); //TCP
-  doc["victron_accu_enabled"] = victronModbusConfig.enabled;
-  ADD_SETTING("victron_accu_ip", "s", 0, sizeof(victronModbusConfig.ip) - 1, victronModbusConfig.ip);
-  ADD_SETTING("victron_accu_id", "i", 1, 247, victronModbusConfig.id);
+  doc["battery_modbus_enabled"] = modbusBatteryConfig.enabled;
+  ADD_SETTING("battery_modbus_ip", "s", 0, sizeof(modbusBatteryConfig.ip) - 1, modbusBatteryConfig.ip);
+  ADD_SETTING("battery_modbus_port", "i", 1, 65535, modbusBatteryConfig.port);
+  ADD_SETTING("battery_modbus_unit_id", "i", 1, 247, modbusBatteryConfig.id);
+  ADD_SETTING("battery_modbus_poll_seconds", "i", 1, 3600, modbusBatteryConfig.pollIntervalSeconds);
+#define ADD_BATTERY_FIELD(prefix, field) \
+  ADD_SETTING(prefix "_register", "i", 0, 65535, field.registerAddress); \
+  ADD_SETTING(prefix "_type", "i", MODBUS_BATTERY_U16, MODBUS_BATTERY_F32, field.valueType); \
+  ADD_SETTING(prefix "_scale", "f", -100000, 100000, field.scale); \
+  doc[prefix "_word_swap"] = field.wordSwap;
+  ADD_BATTERY_FIELD("battery_power", modbusBatteryConfig.activePower)
+  ADD_BATTERY_FIELD("battery_soc", modbusBatteryConfig.stateOfCharge)
+  ADD_BATTERY_FIELD("battery_state", modbusBatteryConfig.operatingState)
+  ADD_BATTERY_FIELD("battery_available_capacity", modbusBatteryConfig.availableCapacity)
+  ADD_BATTERY_FIELD("battery_charge_limit", modbusBatteryConfig.chargeLimit)
+  ADD_BATTERY_FIELD("battery_discharge_limit", modbusBatteryConfig.dischargeLimit)
+#undef ADD_BATTERY_FIELD
+  ADD_SETTING("battery_state_idle_code", "i", -32768, 32767, modbusBatteryConfig.idleStateCode);
+  ADD_SETTING("battery_state_charging_code", "i", -32768, 32767, modbusBatteryConfig.chargingStateCode);
+  ADD_SETTING("battery_state_discharging_code", "i", -32768, 32767, modbusBatteryConfig.dischargingStateCode);
   if ( mb_rx != -1 ){ //check if modbus rtu hardware is available
     ADD_SETTING("mb_baud", "i", 300, 115200, mb_config.baud); //RTU
     ADD_SETTING("mb_parity", "i", 134217744, 134217791, mb_config.parity); //RTU
