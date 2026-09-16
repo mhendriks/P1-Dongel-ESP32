@@ -2113,8 +2113,14 @@ function renderDeviceInformation(obj, manifest) {
   }
   if (obj.meent_webid_status !== undefined || obj.meent_api_key_status !== undefined || obj.meent_data_status !== undefined) {
     const meentLastSuccess = Number(obj.meent_last_success || 0);
+    // DSMR timestamps are local meter time. The firmware's epoch representation
+    // deliberately has no timezone offset, so render it as UTC to prevent the
+    // browser from applying the local offset a second time.
+    const meentLastSuccessText = meentLastSuccess
+      ? new Date(meentLastSuccess * 1000).toLocaleString(undefined, { timeZone: "UTC" })
+      : "";
     const meentData = obj.meent_data_status === undefined ? "" :
-      `${obj.meent_data_status}${meentLastSuccess ? ` (${new Date(meentLastSuccess * 1000).toLocaleString()})` : ""}`;
+      `${obj.meent_data_status}${meentLastSuccessText ? ` (${meentLastSuccessText})` : ""}`;
     const meent = [
       obj.meent_webid_status !== undefined ? `WebID: ${obj.meent_webid_status}` : "",
       obj.meent_api_key_status !== undefined ? `API-key: ${obj.meent_api_key_status}` : "",
