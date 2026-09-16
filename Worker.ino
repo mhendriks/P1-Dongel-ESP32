@@ -106,6 +106,14 @@ static bool workerSolarShouldDefer() {
   return RngWritePending() || workerDeferredRngJobValid;
 }
 
+// HTTPClient can legitimately block until its network timeout. Do not let a
+// temporary missing internet route reboot the dongle while that bounded wait
+// is in progress; all short worker jobs remain watchdog-protected.
+static bool workerJobNeedsWatchdog(const WorkerJob& job) {
+  return job.type != WORKER_JOB_HTTP_POST &&
+         job.type != WORKER_JOB_MEENT_PROVISION;
+}
+
 static void workerWake() {
   if (tWorker) xTaskNotifyGive(tWorker);
 }
@@ -207,7 +215,7 @@ void fWorker(void* pvParameters) {
     }
 
     PrintHWMark(2);
-    const bool watchdogSubscribed = workerWatchdogBeginJob();
+    const bool watchdogSubscribed = workerJobNeedsWatchdog(job) && workerWatchdogBeginJob();
     workerStats.processed++;
     workerHandleJob(job);
     workerWatchdogEndJob(watchdogSubscribed);

@@ -38,7 +38,7 @@
 #if defined(POST_POWERCH) || defined(POST_MEENT) || defined(POST_KEMP)
 
 static WiFiClientSecure webhookTlsClient;
-uint8_t webhookPostErrors = 0;
+uint32_t webhookPostErrors = 0;
 uint32_t webhookLastPostMs = 0;
 bool webhookPostPending = false;
 
@@ -101,7 +101,7 @@ static int meentWebIdHttpStatus = 0;
 static int meentApiKeyHttpStatus = 0;
 static int meentDataHttpStatus = 0;
 static time_t meentLastSuccessfulPost = 0;
-static uint32_t meentLastProvisionAttemptMs = 0;
+static uint32_t meentNextProvisionAttemptMs = 0;
 static bool meentProvisionPending = false;
 static bool meentProvisionBlocked = false;
 static constexpr const char* MEENT_CLIENT_SECRET_NVS_KEY = "meent_secret";
@@ -162,7 +162,7 @@ static String meentStatusText(uint8_t state, int httpStatus) {
     case MEENT_STORED: return "OK";
     case MEENT_IN_PROGRESS: return "bezig";
     case MEENT_OK: return "OK";
-    case MEENT_BLOCKED: return "fout (HTTP 409, actie nodig)";
+    case MEENT_BLOCKED: return "fout (HTTP " + String(httpStatus) + ", actie nodig)";
     case MEENT_ERROR:
       if (httpStatus == -1) return "fout (verbinding)";
       if (httpStatus == -2) return "fout (ongeldig antwoord)";
@@ -172,25 +172,34 @@ static String meentStatusText(uint8_t state, int httpStatus) {
   return "onbekend";
 }
 
+// A conflict means the current provider cannot recover this provisioning
+// state. Other responses, including a transitional 401 while the provider is
+// being updated, are retried at the configured interval.
+static bool meentProvisionFailureNeedsAction(int httpStatus) {
+  return httpStatus == HTTP_CODE_CONFLICT;
+}
+
 static void meentResetStatus() {
   meentWebIdState = strlen(settingMeentWebId) ? MEENT_STORED : MEENT_NOT_SET;
   meentApiKeyState = meentApiKey().length() ? MEENT_STORED : MEENT_NOT_SET;
   meentDataState = MEENT_NOT_SET;
   meentWebIdHttpStatus = meentApiKeyHttpStatus = meentDataHttpStatus = 0;
   meentLastSuccessfulPost = 0;
-  meentLastProvisionAttemptMs = 0;
+  meentNextProvisionAttemptMs = 0;
   meentProvisionPending = false;
   meentProvisionBlocked = false;
 }
 
 static bool meentPostText(const String& url, const String& request, String& response, int& status) {
   HTTPClient http;
-  http.setTimeout(15000); // Pod creation can take 5–10 seconds.
+  http.setTimeout(10000); // Keep failed internet routes from delaying provisioning too long.
   if (!http.begin(webhookTlsClient, url)) {
     status = -1;
     return false;
   }
   http.addHeader("Content-Type", "text/plain");
+  // Recovery credential: expose only in explicitly enabled Verbose 2 logs.
+  DebugTraceTf("MEENT client-secret: %s\r\n", meentClientSecret);
   http.addHeader(MEENT_CLIENT_SECRET_HEADER, meentClientSecret);
   status = http.POST(request);
   response = http.getString();
@@ -203,7 +212,9 @@ static bool meentPostText(const String& url, const String& request, String& resp
 
 static bool meentProvision() {
   String response;
-  meentLastProvisionAttemptMs = millis();
+  // Reserve the next slot before doing any network I/O. A failed request must
+  // never cause another provisioning request for every incoming telegram.
+  meentNextProvisionAttemptMs = millis() + meentIntervalMs();
   if (!meentEnsureClientSecret()) {
     if (!strlen(settingMeentWebId)) {
       meentWebIdState = MEENT_ERROR;
@@ -217,7 +228,7 @@ static bool meentProvision() {
   if (!strlen(settingMeentWebId)) {
     meentWebIdState = MEENT_IN_PROGRESS;
     if (!meentPostText(String(MEENT_API_BASE_URL) + "pod/", macID, response, meentWebIdHttpStatus)) {
-      meentWebIdState = meentWebIdHttpStatus == HTTP_CODE_CONFLICT ? MEENT_BLOCKED : MEENT_ERROR;
+      meentWebIdState = meentProvisionFailureNeedsAction(meentWebIdHttpStatus) ? MEENT_BLOCKED : MEENT_ERROR;
       meentProvisionBlocked = meentWebIdState == MEENT_BLOCKED;
       DebugTln(F("MEENT: WebID creation failed"));
       return false;
@@ -238,7 +249,7 @@ static bool meentProvision() {
   if (!meentApiKey().length()) {
     meentApiKeyState = MEENT_IN_PROGRESS;
     if (!meentPostText(String(MEENT_API_BASE_URL) + "register/", settingMeentWebId, response, meentApiKeyHttpStatus)) {
-      meentApiKeyState = meentApiKeyHttpStatus == HTTP_CODE_CONFLICT ? MEENT_BLOCKED : MEENT_ERROR;
+      meentApiKeyState = meentProvisionFailureNeedsAction(meentApiKeyHttpStatus) ? MEENT_BLOCKED : MEENT_ERROR;
       meentProvisionBlocked = meentApiKeyState == MEENT_BLOCKED;
       DebugTln(F("MEENT: API-key registration failed"));
       return false;
@@ -278,14 +289,6 @@ static void meentApplyServerInterval(const String& response) {
 
 void PostWebhook() {
   if (!bNewTelegramWebhook || netw_state == NW_NONE || webhookPostPending) return;
-#ifdef POST_MEENT
-  // Provisioning retries are already interval-limited below. Do not turn a
-  // temporary outage into a permanent failure after 100 attempts.
-  if (meentApiKey().length() && webhookPostErrors > 100) return;
-#else
-  if (webhookPostErrors > 100) return;
-#endif
-
 #if defined(POST_MEENT) || defined(POST_KEMP)
 #ifdef POST_MEENT
   const uint32_t webhookIntervalMs = meentIntervalMs();
@@ -296,7 +299,7 @@ void PostWebhook() {
 #ifdef POST_MEENT
   if (!meentApiKey().length()) {
     if (meentProvisionPending || meentProvisionBlocked) return;
-    if (meentLastProvisionAttemptMs != 0 && (uint32_t)(nowMs - meentLastProvisionAttemptMs) < webhookIntervalMs) return;
+    if (meentNextProvisionAttemptMs != 0 && (int32_t)(nowMs - meentNextProvisionAttemptMs) < 0) return;
   } else if (webhookLastPostMs != 0 && (uint32_t)(nowMs - webhookLastPostMs) < webhookIntervalMs) return;
 #else
   if (webhookLastPostMs != 0 && (uint32_t)(nowMs - webhookLastPostMs) < webhookIntervalMs) return;
@@ -358,7 +361,7 @@ void PostWebhookFromWorker(const WorkerWebhookPayload& payload) {
 #ifdef DEBUG
   webhookStartMs = millis();
 #endif
-  if (netw_state == NW_NONE || webhookPostErrors > 100 ) {
+  if (netw_state == NW_NONE) {
     webhookPostPending = false;
     return;
   }
@@ -397,14 +400,19 @@ void PostWebhookFromWorker(const WorkerWebhookPayload& payload) {
       meentDataState = MEENT_OK;
       meentDataHttpStatus = httpResponseCode;
       meentLastSuccessfulPost = payload.timestamp;
+      meentApiKeyState = MEENT_OK; // The data endpoint has authenticated this key.
+      meentApiKeyHttpStatus = httpResponseCode;
       meentApplyServerInterval(responseBody);
       webhookPostErrors = 0;
-#if defined(POST_MEENT) || defined(POST_KEMP)
-      webhookLastPostMs = millis();
-#endif
     } else {
       meentDataState = MEENT_ERROR;
       meentDataHttpStatus = httpResponseCode;
+#ifdef POST_MEENT
+      if (httpResponseCode == HTTP_CODE_UNAUTHORIZED || httpResponseCode == HTTP_CODE_FORBIDDEN) {
+        meentApiKeyState = MEENT_ERROR;
+        meentApiKeyHttpStatus = httpResponseCode;
+      }
+#endif
       webhookPostErrors++;
       webhookTlsClient.stop(); // hard reset van de TLS-socket zodat volgende call schoon start
       delay(10);
@@ -421,6 +429,12 @@ void PostWebhookFromWorker(const WorkerWebhookPayload& payload) {
     webhookTlsClient.stop();
     delay(10);
   }
+
+#if defined(POST_MEENT) || defined(POST_KEMP)
+  // The interval limits attempts, not only successful deliveries. Otherwise a
+  // 401/connection failure would produce a request for every P1 telegram.
+  webhookLastPostMs = millis();
+#endif
 
 #ifdef DEBUG
   Debugf("Webhook process time: %d\n", millis() - webhookStartMs);
@@ -470,7 +484,7 @@ void AppendMeentStatus(JsonDocument& doc) {
 
 void StartWebhook() {
   webhookTlsClient.setInsecure();
-  webhookTlsClient.setTimeout(15000);
+  webhookTlsClient.setTimeout(10000);
 #ifdef POST_MEENT
   // Queue provisioning after network, filesystem and the worker are ready.
   // It is non-blocking and only runs on a fresh/cleared API-key setting.
