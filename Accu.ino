@@ -1,14 +1,12 @@
-AccuPwrSystems SolarEdgeAccu = {
-  false, "", "", 0.0, 0
-};
-
-AccuPwrSystems VictronAccu = {
-  false, "kW", "", 0.0, 0
-};
-
-static uint32_t victronAccuLastUpdate = 0;
 static const uint32_t VICTRON_ACCU_STALE_MS = 20000;
 static BatteryEnergyResource g_batteryEnergyResource;
+
+static uint32_t batteryStaleAfterMs() {
+  if (batteryConnectorDriver == BATTERY_DRIVER_SOLAREDGE_HTTP) {
+    return (uint32_t)constrain((int)solarEdgeBatteryConfig.pollIntervalSeconds * 2, 60, 3600) * 1000UL;
+  }
+  return VICTRON_ACCU_STALE_MS;
+}
 
 static void setBatteryMeasurement(EnergyMeasurement& measurement, float value,
                                   uint16_t sourceRegister, uint32_t timestampMs) {
@@ -30,30 +28,24 @@ static void invalidateBatteryMeasurements() {
 float SolarEdgeFlowPvPower = 0.0f;
 bool  SolarEdgeFlowPvValid = false;
 
-static bool victronAccuAvailable() {
-  return VictronAccu.Available && (millis() - victronAccuLastUpdate <= VICTRON_ACCU_STALE_MS);
+bool batteryDashboardData(float& powerKw, uint8_t& stateOfCharge, BatteryOperatingState& operatingState) {
+  const BatteryEnergyResource& battery = batteryEnergyResource();
+  const uint32_t nowMs = millis();
+  if (batteryMeasurementQuality(battery.activePower, nowMs, batteryStaleAfterMs()) != EnergyMeasurementQuality::GOOD ||
+      batteryMeasurementQuality(battery.stateOfCharge, nowMs, batteryStaleAfterMs()) != EnergyMeasurementQuality::GOOD) return false;
+  powerKw = battery.activePower.value / 1000.0f;
+  stateOfCharge = (uint8_t)constrain((int)battery.stateOfCharge.value, 0, 100);
+  operatingState = battery.operatingState;
+  return true;
 }
 
-AccuPwrSystems* dashboardAccu() {
-  if (victronAccuAvailable()) return &VictronAccu;
-  if (SolarEdgeAccu.Available) return &SolarEdgeAccu;
-  return nullptr;
-}
-
-void updateModbusBattery(const BatteryEnergyUpdate& update) {
-  if (update.hasActivePower) VictronAccu.currentPower = update.activePowerW / 1000.0f;
-  if (update.hasStateOfCharge) VictronAccu.chargeLevel = (uint8_t)constrain((int)update.stateOfChargePercent, 0, 100);
-  switch (update.operatingState) {
-    case BatteryOperatingState::CHARGING: VictronAccu.status = "Charging"; break;
-    case BatteryOperatingState::DISCHARGING: VictronAccu.status = "Discharging"; break;
-    default: VictronAccu.status = "Idle"; break;
-  }
-  VictronAccu.Available = true;
-  victronAccuLastUpdate = update.timestampMs;
-
-  // Keep the dashboard projection separate from the canonical battery
-  // resource.  These registers are profile metadata, not connector logic.
+static void updateBatteryResource(const BatteryEnergyUpdate& update, const char* connectorId,
+                                  const char* sourceProtocol) {
+  // All drivers write the one canonical resource. Dashboard/API/ESP-NOW use
+  // this resource directly; no driver-specific battery cache remains.
   g_batteryEnergyResource.profileId = update.profileId;
+  g_batteryEnergyResource.connectorId = connectorId;
+  g_batteryEnergyResource.sourceProtocol = sourceProtocol;
   g_batteryEnergyResource.sourceUnitId = update.sourceUnitId;
   g_batteryEnergyResource.lastSuccessfulPollMs = update.timestampMs;
   if (update.hasOperatingState) {
@@ -73,9 +65,35 @@ void updateModbusBattery(const BatteryEnergyUpdate& update) {
   apiWsMarkLiveDirty();
 }
 
-void invalidateVictronAccu() {
-  bool changed = VictronAccu.Available;
-  VictronAccu.Available = false;
+void updateModbusBattery(const BatteryEnergyUpdate& update) {
+  updateBatteryResource(update, "modbus-tcp", "modbus-tcp");
+}
+
+void updateSolarEdgeBattery(float power, const char* powerUnit, uint8_t stateOfCharge,
+                            const char* status, uint32_t timestampMs) {
+  BatteryEnergyUpdate update = {};
+  update.profileId = "solaredge-monitoring-api-v1";
+  update.sourceUnitId = 0;
+  update.timestampMs = timestampMs;
+  update.activePowerW = String(powerUnit).equalsIgnoreCase("kW") ? power * 1000.0f : power;
+  String stateText(status ? status : "");
+  stateText.toLowerCase();
+  update.operatingState = stateText.indexOf("discharg") >= 0 ? BatteryOperatingState::DISCHARGING
+      : stateText.indexOf("charg") >= 0 ? BatteryOperatingState::CHARGING : BatteryOperatingState::IDLE;
+  if (update.operatingState == BatteryOperatingState::DISCHARGING && update.activePowerW > 0) update.activePowerW = -update.activePowerW;
+  if (update.operatingState == BatteryOperatingState::CHARGING && update.activePowerW < 0) update.activePowerW = -update.activePowerW;
+  update.activePowerTimestampMs = timestampMs;
+  update.stateOfChargePercent = stateOfCharge;
+  update.stateOfChargeTimestampMs = timestampMs;
+  update.operatingStateTimestampMs = timestampMs;
+  update.hasActivePower = true;
+  update.hasStateOfCharge = true;
+  update.hasOperatingState = true;
+  updateBatteryResource(update, "solaredge-http", "http-json");
+}
+
+void invalidateBatteryResource() {
+  bool changed = g_batteryEnergyResource.activePower.available || g_batteryEnergyResource.stateOfCharge.available;
   invalidateBatteryMeasurements();
   if (changed) apiWsMarkLiveDirty();
 }
@@ -85,16 +103,16 @@ const BatteryEnergyResource& batteryEnergyResource() {
 }
 
 static void addBatteryMeasurementJson(JsonObject measurements, const char* name,
-                                      const EnergyMeasurement& measurement,
+                                      const EnergyMeasurement& measurement, const char* protocol,
                                       uint32_t nowMs) {
   JsonObject output = measurements[name].to<JsonObject>();
-  EnergyMeasurementQuality quality = batteryMeasurementQuality(measurement, nowMs, VICTRON_ACCU_STALE_MS);
+  EnergyMeasurementQuality quality = batteryMeasurementQuality(measurement, nowMs, batteryStaleAfterMs());
   output["quality"] = energyMeasurementQualityText(quality);
   output["unit"] = measurement.unit;
   output["timestamp_ms"] = measurement.available ? measurement.timestampMs : 0;
   JsonObject source = output["source"].to<JsonObject>();
-  source["protocol"] = "modbus-tcp";
-  source["register_type"] = "holding";
+  source["protocol"] = protocol;
+  if (!strcmp(protocol, "modbus-tcp")) source["register_type"] = "holding";
   if (measurement.sourceRegister) source["register"] = measurement.sourceRegister;
   else source["register"] = nullptr;
   if (measurement.available) {
@@ -117,14 +135,14 @@ ApiResponse batteryEnergyApiResponse() {
   state["value"] = batteryOperatingStateText(battery.operatingState);
   state["native_code"] = battery.nativeOperatingState;
   state["quality"] = energyMeasurementQualityText(
-      batteryMeasurementQuality(battery.activePower, nowMs, VICTRON_ACCU_STALE_MS));
+      batteryMeasurementQuality(battery.activePower, nowMs, batteryStaleAfterMs()));
 
   JsonObject measurements = doc["measurements"].to<JsonObject>();
-  addBatteryMeasurementJson(measurements, "state_of_charge", battery.stateOfCharge, nowMs);
-  addBatteryMeasurementJson(measurements, "active_power", battery.activePower, nowMs);
-  addBatteryMeasurementJson(measurements, "available_capacity", battery.availableCapacity, nowMs);
-  addBatteryMeasurementJson(measurements, "charge_limit", battery.chargeLimit, nowMs);
-  addBatteryMeasurementJson(measurements, "discharge_limit", battery.dischargeLimit, nowMs);
+  addBatteryMeasurementJson(measurements, "state_of_charge", battery.stateOfCharge, battery.sourceProtocol, nowMs);
+  addBatteryMeasurementJson(measurements, "active_power", battery.activePower, battery.sourceProtocol, nowMs);
+  addBatteryMeasurementJson(measurements, "available_capacity", battery.availableCapacity, battery.sourceProtocol, nowMs);
+  addBatteryMeasurementJson(measurements, "charge_limit", battery.chargeLimit, battery.sourceProtocol, nowMs);
+  addBatteryMeasurementJson(measurements, "discharge_limit", battery.dischargeLimit, battery.sourceProtocol, nowMs);
 
   String body;
   serializeJson(doc, body);
@@ -132,17 +150,21 @@ ApiResponse batteryEnergyApiResponse() {
 }
 
 ApiResponse accuApiResponse() {
-  AccuPwrSystems* accu = dashboardAccu();
-  if (!accu) {
+  float powerKw;
+  uint8_t stateOfCharge;
+  BatteryOperatingState operatingState;
+  if (!batteryDashboardData(powerKw, stateOfCharge, operatingState)) {
     return {200, "application/json", "{\"active\":false}"};
   }
 
   JsonDocument doc;
   doc["active"] = true;
-  doc["status"] = accu->status;
-  doc["unit"] = accu->unit;
-  doc["currentPower"] = accu->currentPower;
-  doc["chargeLevel"] = accu->chargeLevel;
+  doc["status"] = operatingState == BatteryOperatingState::CHARGING ? "Charging" :
+                  operatingState == BatteryOperatingState::DISCHARGING ? "Discharging" :
+                  operatingState == BatteryOperatingState::UNKNOWN ? "Unknown" : "Idle";
+  doc["unit"] = "kW";
+  doc["currentPower"] = powerKw;
+  doc["chargeLevel"] = stateOfCharge;
 
   String body;
   serializeJson(doc, body);
@@ -156,14 +178,18 @@ ApiResponse accuApiResponse() {
 }
 
 bool fillDashAccuJson(JsonDocument& doc) {
-  AccuPwrSystems* source = dashboardAccu();
-  if (!source) return false;
+  float powerKw;
+  uint8_t stateOfCharge;
+  BatteryOperatingState operatingState;
+  if (!batteryDashboardData(powerKw, stateOfCharge, operatingState)) return false;
 
   JsonObject accu = doc["accu"].to<JsonObject>();
   accu["active"] = true;
-  accu["status"] = source->status;
-  accu["currentPower"] = source->currentPower;
-  accu["chargeLevel"] = source->chargeLevel;
+  accu["status"] = operatingState == BatteryOperatingState::CHARGING ? "Charging" :
+                   operatingState == BatteryOperatingState::DISCHARGING ? "Discharging" :
+                   operatingState == BatteryOperatingState::UNKNOWN ? "Unknown" : "Idle";
+  accu["currentPower"] = powerKw;
+  accu["chargeLevel"] = stateOfCharge;
 
   return true;
 }

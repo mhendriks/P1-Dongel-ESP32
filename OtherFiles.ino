@@ -141,11 +141,15 @@ void writeSettingsDirect() {
   docw["mb_baud"] = mb_config.baud;
   docw["mb_parity"] = mb_config.parity - 134217700;
   docw["mb_monitor"] = bModbusMonitor;
+  docw["battery_driver"] = batteryConnectorDriver;
   docw["battery_modbus_enabled"] = modbusBatteryConfig.enabled;
   docw["battery_modbus_ip"] = modbusBatteryConfig.ip;
   docw["battery_modbus_port"] = modbusBatteryConfig.port;
   docw["battery_modbus_unit_id"] = modbusBatteryConfig.id;
   docw["battery_modbus_poll_seconds"] = modbusBatteryConfig.pollIntervalSeconds;
+  docw["battery_solaredge_site_id"] = solarEdgeBatteryConfig.siteId;
+  docw["battery_solaredge_api_key"] = solarEdgeBatteryConfig.apiKey;
+  docw["battery_solaredge_poll_seconds"] = solarEdgeBatteryConfig.pollIntervalSeconds;
   docw["battery_power_register"] = modbusBatteryConfig.activePower.registerAddress;
   docw["battery_power_type"] = modbusBatteryConfig.activePower.valueType;
   docw["battery_power_scale"] = modbusBatteryConfig.activePower.scale;
@@ -340,16 +344,21 @@ void readSettings(bool show)
   if (doc["mb_baud"].is<int>()) mb_config.baud = doc["mb_baud"];
   if (doc["mb_parity"].is<int>()) mb_config.parity = 134217700 + doc["mb_parity"].as<int>();
   if (doc["mb_monitor"].is<bool>()) bModbusMonitor = doc["mb_monitor"];
+  if (doc["battery_driver"].is<int>()) batteryConnectorDriver = (BatteryConnectorDriver)constrain(doc["battery_driver"].as<int>(), BATTERY_DRIVER_NONE, BATTERY_DRIVER_SOLAREDGE_HTTP);
   // Version 5.10 migrates the old Victron-only keys into the generic battery
   // connector.  New keys take precedence when both are present.
   if (doc["victron_accu_enabled"].is<bool>()) modbusBatteryConfig.enabled = doc["victron_accu_enabled"];
   if (doc["victron_accu_ip"].is<const char*>()) strlcpy(modbusBatteryConfig.ip, doc["victron_accu_ip"].as<const char*>(), sizeof(modbusBatteryConfig.ip));
   if (doc["victron_accu_id"].is<int>()) modbusBatteryConfig.id = constrain(doc["victron_accu_id"].as<int>(), 1, 247);
   if (doc["battery_modbus_enabled"].is<bool>()) modbusBatteryConfig.enabled = doc["battery_modbus_enabled"];
+  if (!doc["battery_driver"].is<int>() && modbusBatteryConfig.enabled) batteryConnectorDriver = BATTERY_DRIVER_MODBUS_TCP;
   if (doc["battery_modbus_ip"].is<const char*>()) strlcpy(modbusBatteryConfig.ip, doc["battery_modbus_ip"].as<const char*>(), sizeof(modbusBatteryConfig.ip));
   if (doc["battery_modbus_port"].is<int>()) modbusBatteryConfig.port = constrain(doc["battery_modbus_port"].as<int>(), 1, 65535);
   if (doc["battery_modbus_unit_id"].is<int>()) modbusBatteryConfig.id = constrain(doc["battery_modbus_unit_id"].as<int>(), 1, 247);
   if (doc["battery_modbus_poll_seconds"].is<int>()) modbusBatteryConfig.pollIntervalSeconds = constrain(doc["battery_modbus_poll_seconds"].as<int>(), 1, 3600);
+  if (doc["battery_solaredge_site_id"].is<uint32_t>()) solarEdgeBatteryConfig.siteId = doc["battery_solaredge_site_id"];
+  if (doc["battery_solaredge_api_key"].is<const char*>()) strlcpy(solarEdgeBatteryConfig.apiKey, doc["battery_solaredge_api_key"].as<const char*>(), sizeof(solarEdgeBatteryConfig.apiKey));
+  if (doc["battery_solaredge_poll_seconds"].is<int>()) solarEdgeBatteryConfig.pollIntervalSeconds = constrain(doc["battery_solaredge_poll_seconds"].as<int>(), 300, 3600);
 #define LOAD_BATTERY_FIELD(prefix, target) \
   if (doc[prefix "_register"].is<int>()) target.registerAddress = constrain(doc[prefix "_register"].as<int>(), 0, 65535); \
   if (doc[prefix "_type"].is<int>()) target.valueType = constrain(doc[prefix "_type"].as<int>(), MODBUS_BATTERY_U16, MODBUS_BATTERY_F32); \
@@ -615,6 +624,11 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "mb_parity")) mb_config.parity = String(newValue).toInt();  
   if (!stricmp(field, "mb_monitor")) bModbusMonitor = (stricmp(newValue, "true") == 0 ? true : false);
   bool batteryConfigChanged = false;
+  if (!stricmp(field, "battery_driver")) {
+    batteryConnectorDriver = (BatteryConnectorDriver)constrain(String(newValue).toInt(), BATTERY_DRIVER_NONE, BATTERY_DRIVER_SOLAREDGE_HTTP);
+    modbusBatteryConfig.enabled = batteryConnectorDriver == BATTERY_DRIVER_MODBUS_TCP;
+    batteryConfigChanged = true;
+  }
   if (!stricmp(field, "battery_modbus_enabled") || !stricmp(field, "victron_accu_enabled")) {
     modbusBatteryConfig.enabled = (stricmp(newValue, "true") == 0);
     batteryConfigChanged = true;
@@ -625,6 +639,9 @@ void updateSetting(const char *field, const char *newValue)
   }
   if (!stricmp(field, "battery_modbus_port")) { modbusBatteryConfig.port = constrain(String(newValue).toInt(), 1, 65535); batteryConfigChanged = true; }
   if (!stricmp(field, "battery_modbus_poll_seconds")) { modbusBatteryConfig.pollIntervalSeconds = constrain(String(newValue).toInt(), 1, 3600); batteryConfigChanged = true; }
+  if (!stricmp(field, "battery_solaredge_site_id")) { solarEdgeBatteryConfig.siteId = String(newValue).toInt(); batteryConfigChanged = true; }
+  if (!stricmp(field, "battery_solaredge_api_key") && strlen(newValue) && strcmp(newValue, "********")) { strCopy(solarEdgeBatteryConfig.apiKey, sizeof(solarEdgeBatteryConfig.apiKey), newValue); batteryConfigChanged = true; }
+  if (!stricmp(field, "battery_solaredge_poll_seconds")) { solarEdgeBatteryConfig.pollIntervalSeconds = constrain(String(newValue).toInt(), 300, 3600); batteryConfigChanged = true; }
   #define SET_BATTERY_FIELD(prefix, target) \
     if (!stricmp(field, prefix "_register")) { target.registerAddress = constrain(String(newValue).toInt(), 0, 65535); batteryConfigChanged = true; } \
     if (!stricmp(field, prefix "_type")) { target.valueType = constrain(String(newValue).toInt(), MODBUS_BATTERY_U16, MODBUS_BATTERY_F32); batteryConfigChanged = true; } \
@@ -647,6 +664,7 @@ void updateSetting(const char *field, const char *newValue)
 #ifdef MBUS
   if (batteryConfigChanged) modbusBatteryConfigChanged();
 #endif
+  if (batteryConfigChanged) solarEdgeBatteryConfigChanged();
   if (!stricmp(field, "mimic")) {
     int newMimic = constrain(String(newValue).toInt(), (int)MIMIC_NONE, (int)MIMIC_SHELLY_PRO_3EM);
     reboot_required = (mimicType != newMimic);

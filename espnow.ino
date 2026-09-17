@@ -417,16 +417,17 @@ void P2PSendAccuData() {
   AccuData.accuSoc = 0;
   AccuData.accuState = ACCU_UNAVAILABLE;
 
-  AccuPwrSystems* source = dashboardAccu();
-  if (source) {
+  float powerKw;
+  uint8_t stateOfCharge;
+  BatteryOperatingState operatingState;
+  if (batteryDashboardData(powerKw, stateOfCharge, operatingState)) {
     AccuData.accuAvailable = true;
-    float powerMultiplier = source->unit.equalsIgnoreCase("kW") ? 1000.0f : 1.0f;
-    AccuData.accuPower = (int32_t)roundf(source->currentPower * powerMultiplier);
-    AccuData.accuSoc = constrain(source->chargeLevel, 0, 100);
+    AccuData.accuPower = (int32_t)roundf(powerKw * 1000.0f);
+    AccuData.accuSoc = constrain(stateOfCharge, 0, 100);
 
-    if (source->status.equalsIgnoreCase("Charging")) AccuData.accuState = ACCU_CHARGING;
-    else if (source->status.equalsIgnoreCase("Discharging")) AccuData.accuState = ACCU_DISCHARGING;
-    else AccuData.accuState = ACCU_IDLE;
+    if (operatingState == BatteryOperatingState::CHARGING) AccuData.accuState = ACCU_CHARGING;
+    else if (operatingState == BatteryOperatingState::DISCHARGING) AccuData.accuState = ACCU_DISCHARGING;
+    else if (operatingState == BatteryOperatingState::IDLE) AccuData.accuState = ACCU_IDLE;
   }
 
   esp_err_t rs = esp_now_send(NULL, (uint8_t*)&AccuData, sizeof(AccuData));

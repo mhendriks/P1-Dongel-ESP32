@@ -610,11 +610,17 @@ if ( !hideMQTTsettings) {
   ADD_SETTING("mb_map", "i", 0, 16, SelMap); //RTU+TCP
   ADD_SETTING("mb_id", "i", 1, 255, mb_config.id); //RTU+TCP
   ADD_SETTING("mb_port", "i", 0, 65535, mb_config.port); //TCP
-  doc["battery_modbus_enabled"] = modbusBatteryConfig.enabled;
+  ADD_SETTING("battery_driver", "i", BATTERY_DRIVER_NONE, BATTERY_DRIVER_SOLAREDGE_HTTP, batteryConnectorDriver);
   ADD_SETTING("battery_modbus_ip", "s", 0, sizeof(modbusBatteryConfig.ip) - 1, modbusBatteryConfig.ip);
   ADD_SETTING("battery_modbus_port", "i", 1, 65535, modbusBatteryConfig.port);
   ADD_SETTING("battery_modbus_unit_id", "i", 1, 247, modbusBatteryConfig.id);
   ADD_SETTING("battery_modbus_poll_seconds", "i", 1, 3600, modbusBatteryConfig.pollIntervalSeconds);
+  ADD_SETTING("battery_solaredge_site_id", "i", 0, 2147483647, solarEdgeBatteryConfig.siteId);
+  // Never expose the saved API key. A visible marker confirms it is present;
+  // updateSetting() treats that marker as "leave unchanged".
+  ADD_SETTING("battery_solaredge_api_key", "s", 0, sizeof(solarEdgeBatteryConfig.apiKey) - 1,
+              solarEdgeBatteryConfig.apiKey[0] ? "********" : "");
+  ADD_SETTING("battery_solaredge_poll_seconds", "i", 300, 3600, solarEdgeBatteryConfig.pollIntervalSeconds);
 #define ADD_BATTERY_FIELD(prefix, field) \
   ADD_SETTING(prefix "_register", "i", 0, 65535, field.registerAddress); \
   ADD_SETTING(prefix "_type", "i", MODBUS_BATTERY_U16, MODBUS_BATTERY_F32, field.valueType); \
@@ -817,7 +823,11 @@ ApiResponse handleDevApi(const ApiRequestContext& request)
     {
       String jsonIn  = request.body;
       DebugT("json in :");Debugln(jsonIn);
-      char field[25] = "";
+      // Connector mappings use descriptive keys such as
+      // "battery_available_capacity_register". Keep the full key intact
+      // before handing it to updateSetting(); truncation silently discarded
+      // otherwise valid settings.
+      char field[64] = "";
       char newValue[101]="";
 
       JsonDocument doc;

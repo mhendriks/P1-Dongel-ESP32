@@ -59,6 +59,21 @@ struct ModbusBatteryFieldConfig {
   bool wordSwap;
 };
 
+enum BatteryConnectorDriver : uint8_t {
+  BATTERY_DRIVER_NONE = 0,
+  BATTERY_DRIVER_MODBUS_TCP = 1,
+  BATTERY_DRIVER_SOLAREDGE_HTTP = 2
+};
+
+struct SolarEdgeBatteryConfig {
+  uint32_t siteId = 0;
+  char apiKey[128] = "";
+  uint16_t pollIntervalSeconds = 300;
+};
+
+BatteryConnectorDriver batteryConnectorDriver = BATTERY_DRIVER_NONE;
+SolarEdgeBatteryConfig solarEdgeBatteryConfig;
+
 struct ModbusBatteryConfig {
   bool enabled = false;
   char ip[16] = "";
@@ -802,20 +817,15 @@ ApiResponse dashLiveApiResponse();
 ApiResponse historyMonthsApiResponse(const String& body);
 ApiResponse listFilesApiResponse();
 bool fillDashSolarJson(JsonDocument& doc);
-struct AccuPwrSystems {
-  bool      Available;
-  String    unit;
-  String    status;
-  float     currentPower;
-  uint8_t   chargeLevel;
-};
-
-AccuPwrSystems* dashboardAccu();
+bool batteryDashboardData(float& powerKw, uint8_t& stateOfCharge, BatteryOperatingState& operatingState);
 bool fillDashAccuJson(JsonDocument& doc);
 const BatteryEnergyResource& batteryEnergyResource();
 ApiResponse batteryEnergyApiResponse();
 void updateModbusBattery(const BatteryEnergyUpdate& update);
-void invalidateVictronAccu();
+void updateSolarEdgeBattery(float power, const char* powerUnit, uint8_t stateOfCharge,
+                            const char* status, uint32_t timestampMs);
+void solarEdgeBatteryConfigChanged();
+void invalidateBatteryResource();
 void setupModbusBattery();
 void handleModbusBattery();
 void modbusBatteryConfigChanged();

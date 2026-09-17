@@ -3591,9 +3591,23 @@ function splitSettingsUI() {
   const meent   = document.getElementById("settings_meent");
   const modbus  = document.getElementById("settings_modbus");
   const batteryDriver = document.getElementById("connector_battery_driver_fields");
+  const batteryChoice = document.getElementById("connector_battery_choice_fields");
+  const batterySolarEdge = document.getElementById("connector_battery_solaredge_fields");
   const batteryMapper = document.getElementById("connector_battery_mapper_fields");
 
-  if ( !table || !general || !smartMeter || !mqtt || !meent || !modbus || !batteryDriver || !batteryMapper || !tariff ) return;
+  if ( !table || !general || !smartMeter || !mqtt || !meent || !modbus || !batteryDriver || !batteryChoice || !batterySolarEdge || !batteryMapper || !tariff ) return;
+
+  // The mapper moves its controls into a table and intentionally removes their
+  // original setting rows. Rebuilding that structure on every tab refresh
+  // detached those controls, leaving the driver card empty despite its toggle
+  // still being enabled. A settings refresh can update the existing controls
+  // in place, so only build the connector layout once per page load.
+  if (batteryMapper.querySelector(".mapper-matrix")) {
+    updateMQTTSettingsVisibility();
+    updateBatteryModbusSettingsVisibility();
+    refreshConnectorBatteryStatus();
+    return;
+  }
 
   // velden op basis van "i" (dus zonder "settingR_")
   const MQTT_KEYS = new Set([
@@ -3634,7 +3648,7 @@ function splitSettingsUI() {
   const SMART_METER_KEY_SET = new Set(SMART_METER_KEYS);
   
   const BATTERY_KEYS = new Set([
-    "battery_modbus_enabled", "battery_modbus_ip", "battery_modbus_port", "battery_modbus_unit_id", "battery_modbus_poll_seconds",
+    "battery_modbus_ip", "battery_modbus_port", "battery_modbus_unit_id", "battery_modbus_poll_seconds",
     "battery_power_register", "battery_power_type", "battery_power_scale", "battery_power_word_swap",
     "battery_soc_register", "battery_soc_type", "battery_soc_scale", "battery_soc_word_swap",
     "battery_state_register", "battery_state_type", "battery_state_scale", "battery_state_word_swap",
@@ -3662,7 +3676,9 @@ function splitSettingsUI() {
 
   // Connector rows live outside Settings after the first render; discard the
   // previous view before moving freshly received settings into place.
+  batteryChoice.replaceChildren();
   batteryDriver.replaceChildren();
+  batterySolarEdge.replaceChildren();
   batteryMapper.replaceChildren();
 
   // alle bestaande rows (waar ze ook al staan) opnieuw indelen
@@ -3677,8 +3693,11 @@ function splitSettingsUI() {
     else if (MEENT_KEYS.has(key)) meent.appendChild(row);
     else if (SMART_METER_KEY_SET.has(key)) smartMeter.appendChild(row);
     else if (TARIFF_KEYS.has(key)) tariff.appendChild(row);
+    else if (key === "battery_driver") batteryChoice.appendChild(row);
+    else if (key.startsWith("battery_solaredge_")) batterySolarEdge.appendChild(row);
     else if (BATTERY_KEYS.has(key)) {
-      (key.startsWith("battery_power_") || key.startsWith("battery_soc_") || key.startsWith("battery_state_"))
+      (key.startsWith("battery_power_") || key.startsWith("battery_soc_") || key.startsWith("battery_state_") ||
+       key.startsWith("battery_available_capacity_") || key.startsWith("battery_charge_limit_") || key.startsWith("battery_discharge_limit_"))
         ? batteryMapper.appendChild(row) : batteryDriver.appendChild(row);
     }
     else if (MODBUS_KEYS.has(key)) modbus.appendChild(row);
@@ -3730,26 +3749,25 @@ function updateMQTTSettingsVisibility() {
 }
 
 function updateBatteryModbusSettingsVisibility() {
-  const enabled = document.getElementById("setFld_battery_modbus_enabled");
-  if (!enabled) return;
+  const driver = document.getElementById("setFld_battery_driver");
+  if (!driver) return;
 
-  const showConnectionFields = enabled.checked;
+  const selectedDriver = Number(driver.value);
+  const showModbus = selectedDriver === 1;
+  const showSolarEdge = selectedDriver === 2;
+  const showConnectionFields = showModbus;
   const connector = document.getElementById("connector_battery");
   if (connector) {
     connector.classList.toggle("is-enabled", showConnectionFields);
-    connector.querySelectorAll(".settingDiv").forEach(row => {
-    if (row.id === "settingR_battery_modbus_enabled") return;
-    row.style.display = showConnectionFields ? "" : "none";
-    });
   }
-  ["battery_modbus_ip", "battery_modbus_port", "battery_modbus_unit_id"].forEach(key => {
-    const row = document.getElementById(`settingR_${key}`);
-    if (row) row.style.display = showConnectionFields ? "" : "none";
-  });
   const mapperCard = document.getElementById("connector_battery_mapper_fields")?.closest(".settings-card");
   if (mapperCard) mapperCard.style.display = showConnectionFields ? "" : "none";
+  const modbusCard = document.getElementById("connector_battery_modbus_card");
+  if (modbusCard) modbusCard.style.display = showModbus ? "" : "none";
+  const solarEdgeCard = document.getElementById("connector_battery_solaredge_card");
+  if (solarEdgeCard) solarEdgeCard.style.display = showSolarEdge ? "" : "none";
   const status = document.getElementById("connector_battery_status");
-  if (status) status.style.display = showConnectionFields ? "" : "none";
+  if (status) status.style.display = selectedDriver ? "" : "none";
 }
 
 function markDirty(el) {
@@ -3920,8 +3938,22 @@ function initModbusMonitorControls() {
 			let sInput; // kan INPUT of SELECT worden
 			const fldId = "setFld_" + i;
 			
+			// --- batterijdriver als dropdown: één actieve implementatie per connector ---
+			if (i === "battery_driver") {
+			  const sel = document.createElement("select");
+			  sel.setAttribute("id", fldId);
+			  const current = parseInt(data[i].value ?? "0", 10);
+			  [[0, "Niet actief"], [1, "Modbus TCP"], [2, "SolarEdge Monitoring API V1"]].forEach(([value, label]) => {
+			    const option = document.createElement("option");
+			    option.value = String(value);
+			    option.textContent = label;
+			    option.selected = value === current;
+			    sel.appendChild(option);
+			  });
+			  sInput = sel;
+			}
 			// --- mb_map als dropdown ---
-			if (i === "mb_map") {
+			else if (i === "mb_map") {
 			  const MAPS = [
 				{ v: 0, t: "Default - uint32" },
 				{ v: 1, t: "SDM630" },
@@ -4102,7 +4134,7 @@ function initModbusMonitorControls() {
 			  else {
 				switch (data[i].type) {
 				  case "s":
-				sInput.setAttribute("type", i === "meent_api_key" ? "password" : "text");
+					sInput.setAttribute("type", i === "meent_api_key" ? "password" : "text");
 					sInput.setAttribute("maxlength", data[i].max);
 					sInput.setAttribute("placeholder", "<max " + data[i].max + ">");
 					break;
@@ -4129,7 +4161,7 @@ function initModbusMonitorControls() {
 			if (i === "mqtt_enabled") {
 			  sInput.addEventListener("change", updateMQTTSettingsVisibility);
 			}
-			if (i === "battery_modbus_enabled") {
+			if (i === "battery_driver") {
 			  sInput.addEventListener("change", updateBatteryModbusSettingsVisibility);
 			}
 			
@@ -4886,6 +4918,7 @@ const FALLBACK_TRANSLATIONS = {
     "connector-pv-help": "PV-connectors volgen dezelfde driver- en mapperopzet.",
     "dict_battery_modbus_enabled": "Batterijconnector inschakelen", "dict_battery_modbus_ip": "TCP-adres", "dict_battery_modbus_port": "TCP-poort",
     "dict_battery_modbus_unit_id": "Modbus unit-ID", "dict_battery_modbus_poll_seconds": "Poll-interval (seconden)",
+    "dict_battery_driver": "Actieve driver", "dict_battery_solaredge_site_id": "SolarEdge Site-ID", "dict_battery_solaredge_api_key": "SolarEdge API-sleutel", "dict_battery_solaredge_poll_seconds": "Poll-interval (seconden)",
     "dict_battery_power_register": "Actief vermogen: register", "dict_battery_power_type": "Actief vermogen: datatype", "dict_battery_power_scale": "Actief vermogen: scaling", "dict_battery_power_word_swap": "Actief vermogen: word swap",
     "dict_battery_soc_register": "State of charge: register", "dict_battery_soc_type": "State of charge: datatype", "dict_battery_soc_scale": "State of charge: scaling", "dict_battery_soc_word_swap": "State of charge: word swap",
     "dict_battery_state_register": "Operating state: register", "dict_battery_state_type": "Operating state: datatype", "dict_battery_state_scale": "Operating state: scaling", "dict_battery_state_word_swap": "Operating state: word swap",

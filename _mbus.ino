@@ -165,10 +165,10 @@ void modbusBatteryConfigChanged() {
   victronModbusSocket.stop();
 
   IPAddress target;
-  if (!modbusBatteryConfig.enabled || !modbusBatteryConfig.activePower.registerAddress ||
+  if (batteryConnectorDriver != BATTERY_DRIVER_MODBUS_TCP || !modbusBatteryConfig.enabled || !modbusBatteryConfig.activePower.registerAddress ||
       !modbusBatteryConfig.stateOfCharge.registerAddress || !modbusBatteryConfig.operatingState.registerAddress ||
       !target.fromString(modbusBatteryConfig.ip)) {
-    invalidateVictronAccu();
+    invalidateBatteryResource();
     return;
   }
 
@@ -183,7 +183,7 @@ void modbusBatteryConfigChanged() {
   victronModbusClient.setTarget(target, modbusBatteryConfig.port);
   victronModbusTargetValid = true;
   victronModbusLastPoll = 0;
-  invalidateVictronAccu();
+  invalidateBatteryResource();
   DebugVerboseTf("Modbus battery target: %s:%u id=%u\r\n",
                  modbusBatteryConfig.ip, modbusBatteryConfig.port, modbusBatteryConfig.id);
 }
@@ -202,10 +202,10 @@ void handleModbusBattery() {
     victronModbusHaveState = false;
     portEXIT_CRITICAL(&victronModbusDataMux);
 
-    if (modbusBatteryConfig.enabled) updateModbusBattery(update);
+    if (batteryConnectorDriver == BATTERY_DRIVER_MODBUS_TCP && modbusBatteryConfig.enabled) updateModbusBattery(update);
   }
 
-  if (!modbusBatteryConfig.enabled || !victronModbusTargetValid ||
+  if (batteryConnectorDriver != BATTERY_DRIVER_MODBUS_TCP || !modbusBatteryConfig.enabled || !victronModbusTargetValid ||
       (netw_state != NW_ETH && netw_state != NW_WIFI) ||
       victronModbusRequestPending) return;
 

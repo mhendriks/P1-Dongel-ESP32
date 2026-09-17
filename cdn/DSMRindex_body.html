@@ -722,7 +722,9 @@
         </div>
         <div id="connector_battery" class="connector-pane active">
           <div id="connector_battery_status" class="connector-status" data-i18n-key="connector-status-waiting">Batterijstatus wordt geladen…</div>
-          <div class="settings-card"><h3 data-i18n-key="connector-driver">Driver · Modbus TCP</h3><div id="connector_battery_driver_fields"></div></div>
+          <div class="settings-card" id="connector_battery_choice_card"><h3>Driver</h3><div id="connector_battery_choice_fields"></div></div>
+          <div class="settings-card" id="connector_battery_modbus_card"><h3 data-i18n-key="connector-driver">Driver · Modbus TCP</h3><p>De vooraf ingevulde registerwaarden zijn voor een Victron Cerbo GX (systeem, Unit-ID 100). Pas register, datatype, factor en word swap aan voor andere Modbus TCP-batterijsystemen.</p><div id="connector_battery_driver_fields"></div></div>
+          <div class="settings-card" id="connector_battery_solaredge_card"><h3>Driver · SolarEdge Monitoring API V1</h3><p>De SolarEdge JSON-velden worden vast naar het accumodel vertaald. <code>********</code> bevestigt een opgeslagen sleutel; alleen een andere waarde vervangt die sleutel.</p><div id="connector_battery_solaredge_fields"></div></div>
           <div id="connector_battery_mapper_card" class="settings-card"><h3 data-i18n-key="connector-mapper">Mapper</h3><p data-i18n-key="connector-mapper-help">Koppel de vaste batterijvelden aan bronregisters.</p><div id="connector_battery_mapper_fields"></div></div>
         </div>
         <div id="connector_pv" class="connector-pane">

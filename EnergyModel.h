@@ -24,6 +24,7 @@ struct EnergyMeasurement {
 struct BatteryEnergyResource {
   const char* resourceId;
   const char* connectorId;
+  const char* sourceProtocol;
   const char* profileId;
   uint8_t sourceUnitId;
   uint32_t lastSuccessfulPollMs;
@@ -36,7 +37,7 @@ struct BatteryEnergyResource {
   EnergyMeasurement dischargeLimit {0.0f, "W"};
 
   BatteryEnergyResource()
-      : resourceId("battery-1"), connectorId("modbus-tcp"), profileId(""),
+      : resourceId("battery-1"), connectorId(""), sourceProtocol(""), profileId(""),
         sourceUnitId(0), lastSuccessfulPollMs(0), nativeOperatingState(0),
         operatingState(BatteryOperatingState::UNKNOWN) {}
 };

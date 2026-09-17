@@ -14,7 +14,6 @@ struct SolarPwrSystems {
 
 extern float SolarEdgeFlowPvPower;
 extern bool  SolarEdgeFlowPvValid;
-extern AccuPwrSystems SolarEdgeAccu;
 
 SolarPwrSystems Enphase   = { false, "https://envoy/ivp/pdm/energy", "", 0, 0, 0, 0, 0,  60, 0, "/enphase.json"  };
 SolarPwrSystems SolarEdge = { false, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
@@ -91,11 +90,6 @@ uint16_t SolarEnphaseAgeSec() {
 }
 
 static void resetSolarEdgeRuntimeState() {
-  SolarEdgeAccu.Available = false;
-  SolarEdgeAccu.unit = "";
-  SolarEdgeAccu.status = "";
-  SolarEdgeAccu.currentPower = 0.0f;
-  SolarEdgeAccu.chargeLevel = 0;
   SolarEdgeFlowPvPower = 0.0f;
   SolarEdgeFlowPvValid = false;
 }
@@ -281,6 +275,20 @@ void ReadSolarConfigs() {
   ReadSolarConfig(SMA);
   ReadSolarConfig(OMNIKSOL);
 
+  // One-time migration: existing SolarEdge users keep their credentials in
+  // /solaredge.json. Copy them into the Accu connector settings and select the
+  // HTTP driver only when no battery driver was chosen previously.
+  if (!solarEdgeBatteryConfig.siteId && SolarEdge.SiteID && SolarEdge.Token.length()) {
+    solarEdgeBatteryConfig.siteId = SolarEdge.SiteID;
+    strlcpy(solarEdgeBatteryConfig.apiKey, SolarEdge.Token.c_str(), sizeof(solarEdgeBatteryConfig.apiKey));
+    solarEdgeBatteryConfig.pollIntervalSeconds = constrain(SolarEdge.Interval, 300U, 3600U);
+    if (batteryConnectorDriver == BATTERY_DRIVER_NONE) batteryConnectorDriver = BATTERY_DRIVER_SOLAREDGE_HTTP;
+    writeSettings();
+  }
+  // The connector owns the credentials when SolarEdge is its active battery
+  // driver. The same HTTP request remains shared with the PV integration.
+  solarEdgeBatteryConfigChanged();
+
   if (telegramCount == 0) {
     GetSolarData(ENPHASE, true);
     GetSolarData(SOLAR_EDGE, true);
@@ -289,6 +297,18 @@ void ReadSolarConfigs() {
   } else {
     WorkerEnqueueSolarFetch();
   }
+}
+
+void solarEdgeBatteryConfigChanged() {
+  if (batteryConnectorDriver != BATTERY_DRIVER_SOLAREDGE_HTTP || !solarEdgeBatteryConfig.siteId || !solarEdgeBatteryConfig.apiKey[0]) return;
+  SolarEdge.Available = true;
+  SolarEdge.SiteID = solarEdgeBatteryConfig.siteId;
+  SolarEdge.Token = solarEdgeBatteryConfig.apiKey;
+  SolarEdge.Interval = solarEdgeBatteryConfig.pollIntervalSeconds;
+  // The normal low-priority scheduler sees LastRefresh == 0 and performs one
+  // fetch. Do not enqueue a direct job here: settings may arrive in a burst
+  // and must never turn into repeated HTTPS connection attempts.
+  SolarEdge.LastRefresh = 0;
 }
 
 void GetSolarData(SolarSource src, bool forceUpdate) {
@@ -400,11 +420,10 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
 
         JsonObject storage = flow["STORAGE"];
         if (!storage.isNull()) {
-          SolarEdgeAccu.Available = true;
-          SolarEdgeAccu.unit = flowUnit;
-          SolarEdgeAccu.status = storage["status"].as<const char*>();
-          SolarEdgeAccu.currentPower = storage["currentPower"].as<float>();
-          SolarEdgeAccu.chargeLevel = storage["chargeLevel"].as<uint8_t>();
+          if (batteryConnectorDriver == BATTERY_DRIVER_SOLAREDGE_HTTP) {
+            updateSolarEdgeBattery(storage["currentPower"].as<float>(), flowUnit.c_str(),
+                                   storage["chargeLevel"].as<uint8_t>(), storage["status"] | "", millis());
+          }
         }
       } else {
         SolarEdgeFlowPvValid = false;
