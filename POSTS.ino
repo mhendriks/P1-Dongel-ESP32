@@ -42,6 +42,28 @@ uint32_t webhookPostErrors = 0;
 uint32_t webhookLastPostMs = 0;
 bool webhookPostPending = false;
 
+#ifdef POST_KEMP
+// Keep the normal log useful during an outage: report the first failed push
+// and the eventual recovery, rather than every 60-second retry.
+static bool kempPushFailed = false;
+
+static void kempLogPushFailure(const char* detail) {
+  if (kempPushFailed) return;
+
+  char message[96];
+  snprintf(message, sizeof(message), "KEMP: push failed (%s); retrying every 60 sec", detail);
+  LogFile(message, true);
+  kempPushFailed = true;
+}
+
+static void kempLogPushRecovered() {
+  if (!kempPushFailed) return;
+
+  LogFile("KEMP: push recovered", true);
+  kempPushFailed = false;
+}
+#endif
+
 String JsonWebhook(const WorkerWebhookPayload& payload) {
   
   JsonDocument doc;
@@ -397,23 +419,33 @@ void PostWebhookFromWorker(const WorkerWebhookPayload& payload) {
     DebugT(F("HTTP Response code: ")); Debugln(httpResponseCode);
 
     if (httpResponseCode >= 200 && httpResponseCode < 300) {
+#ifdef POST_MEENT
       meentDataState = MEENT_OK;
       meentDataHttpStatus = httpResponseCode;
       meentLastSuccessfulPost = payload.timestamp;
       meentApiKeyState = MEENT_OK; // The data endpoint has authenticated this key.
       meentApiKeyHttpStatus = httpResponseCode;
       meentApplyServerInterval(responseBody);
+#endif
       webhookPostErrors = 0;
+#ifdef POST_KEMP
+      kempLogPushRecovered();
+#endif
     } else {
+#ifdef POST_MEENT
       meentDataState = MEENT_ERROR;
       meentDataHttpStatus = httpResponseCode;
-#ifdef POST_MEENT
       if (httpResponseCode == HTTP_CODE_UNAUTHORIZED || httpResponseCode == HTTP_CODE_FORBIDDEN) {
         meentApiKeyState = MEENT_ERROR;
         meentApiKeyHttpStatus = httpResponseCode;
       }
 #endif
       webhookPostErrors++;
+#ifdef POST_KEMP
+      char errorDetail[24];
+      snprintf(errorDetail, sizeof(errorDetail), "HTTP %d", httpResponseCode);
+      kempLogPushFailure(errorDetail);
+#endif
       webhookTlsClient.stop(); // hard reset van de TLS-socket zodat volgende call schoon start
       delay(10);
     }
@@ -425,6 +457,9 @@ void PostWebhookFromWorker(const WorkerWebhookPayload& payload) {
 #endif
     webhookPostErrors++;
     DebugTln(F("HTTP begin failed"));
+#ifdef POST_KEMP
+    kempLogPushFailure("HTTP begin");
+#endif
     // begin() faalt? zorg ook hier dat de client schoon is
     webhookTlsClient.stop();
     delay(10);
