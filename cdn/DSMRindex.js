@@ -2113,6 +2113,16 @@ function renderDeviceInformation(obj, manifest) {
     // files do not know this recently added key.
     addDeviceInfoRow(containers.connections, "MEENT", meent, "sysinfo-value-part");
   }
+  if (obj.http_post_status !== undefined) {
+    const lastSuccess = Number(obj.http_post_last_success || 0);
+    const httpStatus = obj.http_post_http_status !== undefined ? `HTTP ${obj.http_post_http_status}` : "";
+    const post = [
+      obj.http_post_status,
+      lastSuccess ? `verzonden: ${new Date(lastSuccess * 1000).toLocaleString()}` : "",
+      httpStatus
+    ].filter(Boolean).join(" | ");
+    addDeviceInfoRow(containers.connections, "HTTP POST", post, "sysinfo-value-part");
+  }
   ["eid_status", "paired"].forEach(key => addDeviceInfoRow(containers.connections, td(key), obj[key]));
   document.getElementById("sysinfo_connections_card")?.toggleAttribute("hidden", !containers.connections?.children.length);
 
@@ -2120,20 +2130,21 @@ function renderDeviceInformation(obj, manifest) {
     "fwversion", "hardware", "meter_source", "p1_communication_mode", "smart_meter_version", "p1_diagnostics",
     "telegramcount", "telegramerrors", "network", "ssid", "wifirssi", "hostname", "ipaddress", "macaddress",
     "chipid", "cpufreq", "freeheap", "flashchipsize", "sketchsize", "freesketchspace", "FSsize", "uptime",
-    "reboots", "lastreset", "mqttbroker", "mqttbroker_connected", "mqttinterval", "meent_webid_status", "meent_api_key_status", "meent_data_status", "meent_last_success", "eid_status", "paired"
+    "reboots", "lastreset", "mqttbroker", "mqttbroker_connected", "mqttinterval", "meent_webid_status", "meent_api_key_status", "meent_data_status", "meent_last_success", "http_post_status", "http_post_enabled", "http_post_last_success", "http_post_http_status", "eid_status", "paired"
   ]);
-  ["coreversion", "sdkversion", "compileoptions", "indexfile"].forEach(key =>
+  ["coreversion", "sdkversion", "indexfile"].forEach(key =>
     addDeviceInfoRow(containers.technical, td(key), obj[key]));
-  Object.keys(obj).filter(key => !groupedKeys.has(key) && !["coreversion", "sdkversion", "compileoptions", "indexfile"].includes(key))
+  Object.keys(obj).filter(key => !groupedKeys.has(key) && !["coreversion", "sdkversion", "indexfile"].includes(key))
     .forEach(key => addDeviceInfoRow(containers.technical, td(key), obj[key]));
 }
 
-function parseDeviceInfo(obj) {
-  console.log("dev info compileoptions:", obj.compileoptions);
+function updateNetSwitchAvailability(settings = objDAL?.getDeviceSettings?.()) {
+  const button = document.getElementById("bNETSW");
+  if (button) button.style.display = settings && "netsw-enabled" in settings ? "block" : "none";
+}
 
-  // NETSW config
-  const showNetSw = String(obj.compileoptions || "").includes("[NETSW]");
-  document.getElementById("bNETSW").style.display = showNetSw ? "block" : "none";
+function parseDeviceInfo(obj) {
+  updateNetSwitchAvailability();
   updateSystemActionMenu(obj);
 
   const manifest = objDAL.version_manifest;
@@ -2243,9 +2254,8 @@ function deviceSupportsWifi(info) {
 	const network = String(info?.network || "").toUpperCase();
 	if (network) return !network.startsWith("ETHERNET");
 
-	const hardware = String(info?.hardware || "").toUpperCase();
-	const compileoptions = String(info?.compileoptions || "").toUpperCase();
-	return !(hardware === "P1E" || hardware === "P1EP" || (compileoptions.includes("[ETH]") || compileoptions.includes("[P1EP]")) && !compileoptions.includes("[ULTRA]"));
+  const hardware = String(info?.hardware || "").toUpperCase();
+  return hardware !== "P1E" && hardware !== "P1EP";
 }
 
 function updateSystemActionMenu(info) {
@@ -3371,6 +3381,7 @@ function formatValue(value)
         if ( eid_enabled ) document.getElementById("bEid").style.display = "block"; else document.getElementById("bEid").style.display = "none";
         if ( eid_planner_enabled ) setDashboardWidgetAvailable("dash_eid", true); else setDashboardWidgetAvailable("dash_eid", false);
         if ( pairing_enabled ) document.getElementById("bNRGM").style.display = "block"; else document.getElementById("bNRGM").style.display = "none";
+        updateNetSwitchAvailability(json);
                 
         gas_netw_costs = json.gas_netw_costs.value;
         hostName = json.hostname.value;
@@ -3672,7 +3683,6 @@ function splitSettingsUI() {
     "modbus_bits",
     "modbus_stop"
   ]);
-  const MEENT_KEYS = new Set(["meent_webid", "meent_api_key", "meent_interval"]);
 
   // Connector rows live outside Settings after the first render; discard the
   // previous view before moving freshly received settings into place.
@@ -3690,7 +3700,6 @@ function splitSettingsUI() {
     const key = id.startsWith("settingR_") ? id.substring("settingR_".length) : "";
 
     if (MQTT_KEYS.has(key)) mqtt.appendChild(row);
-    else if (MEENT_KEYS.has(key)) meent.appendChild(row);
     else if (SMART_METER_KEY_SET.has(key)) smartMeter.appendChild(row);
     else if (TARIFF_KEYS.has(key)) tariff.appendChild(row);
     else if (key === "battery_driver") batteryChoice.appendChild(row);
@@ -3709,9 +3718,9 @@ function splitSettingsUI() {
     if (row) smartMeter.appendChild(row);
   });
 
-  // The HTML shell is shared by all firmware variants. Only POST_MEENT builds
-  // expose MEENT settings through the API, so hide the otherwise empty tab.
-  const hasMeentSettings = Array.from(MEENT_KEYS).some(key => document.getElementById(`settingR_${key}`));
+  // The HTML shell retains the historic MEENT tab. Hide it while it has no
+  // settings; generic HTTP POST settings live in the General tab.
+  const hasMeentSettings = meent.children.length > 0;
   const meentTabButton = document.querySelector('#settings_subtabs [data-target="settings_meent"]');
   if (meentTabButton) meentTabButton.style.display = hasMeentSettings ? "" : "none";
   if (!hasMeentSettings) {

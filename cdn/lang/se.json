@@ -392,7 +392,6 @@
   "dict_flashchipspeed": "Flash-chipets hastighet",
   "dict_flashchipmode": "Flash Chip-läge",
   "dict_boardtype": "Kort-typ",
-  "dict_compileoptions": "Alternativ för kompilator",
   "dict_ssid": "WiFi SSID",
   "dict_wifirssi": "WiFi RSSI",
   "dict_uptime": "Upptid [dagar] - [hh:mm]",

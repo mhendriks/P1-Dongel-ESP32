@@ -86,7 +86,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 /******************** compiler options  ********************************************/
 
-#define DEBUG
+// #define DEBUG
 // #define XTRA_LOG
 
 //---  PROFILES  ---
@@ -98,7 +98,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 
 //SPECIAL
 // #define __Az__
-// #define OTAURL_PREFIX "me/"
 
 //FEATURES
 #define MBUS
@@ -107,9 +106,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 #define ESPNOW  
 // #define UDP_BCAST
 // #define USB_CONFIG
-// #define POST_POWERCH
-// #define POST_MEENT
-// #define POST_KEMP
 // #define VIRTUAL_P1
 // #define HAN_READER
 // #define HAN_TESTDATA

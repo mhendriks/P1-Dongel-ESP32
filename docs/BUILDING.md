@@ -12,41 +12,21 @@ That resolves (relative to this project) to a sibling folder outside the repo. T
 
 ### Expected files
 
-1. `../../_secrets/posts.h`
-2. `../../_secrets/energyid.h`
-3. `../../_secrets/direct_ap.h`
+1. `../../_secrets/energyid.h`
+2. `../../_secrets/direct_ap.h`
 
 The code now compiles without them (safe defaults are provided), but if you want the related features you should create them.
 
-## 2) Example `posts.h`
+## 2) HTTP push connector
 
-Create `../../_secrets/posts.h` with at least:
-
-```cpp
-#pragma once
-
-// Optional suffix appended to OTAURL, e.g. "latest/" or ""
-#define OTAURL_PREFIX ""
-
-// Only needed when POST_POWERCH is enabled
-#define URL_POWERCH "https://example.invalid/api/power"
-
-// Optional override when POST_MEENT is enabled. By default DEBUG uses the
-// MEENT staging API and release firmware uses the production API.
-#define MEENT_API_BASE_URL "https://meent.dev.muze.nl/api/"
-
-// Only needed when POST_KEMP is enabled
-#define URL_KEMP "https://example.invalid/api/data"
-#define KEMP_API_KEY "replace-with-your-api-key"
-```
-
-Notes:
-- `OTAURL_PREFIX` is used in `DSMRloggerAPI.h` to build `BaseOTAurl`.
-- If `POST_POWERCH` is not enabled, `URL_POWERCH` is not used.
-- If `POST_MEENT` is not enabled, `MEENT_API_BASE_URL` is not used.
-- If `POST_KEMP` is not enabled, `URL_KEMP` and `KEMP_API_KEY` are not used.
-- `POST_POWERCH`, `POST_MEENT`, and `POST_KEMP` are mutually exclusive compile-time features.
-- `POST_KEMP` uses a fixed 60-second POST interval and the OTA suffix `kemp/` (for example `p1p/v5/kemp/`).
+The HTTP push connector is compiled into every standard build and is disabled
+by default. Configure it through `DSMRsettings.json` instead of build-time
+`POST_*` macros. Its keys are `HttpPostEnabled`, `HttpPostUrl`,
+`HttpPostInterval`, `HttpPostPayload` (0 basic, 1 meter totals, 2 power
+quality, 3 full), `HttpPostAuth` (0 none, 1 Bearer, 2 header, 3 JSON body),
+`HttpPostAuthKey`, `HttpPostAuthName`, `HttpPostExtraHeaderName`,
+`HttpPostExtraHeaderValue` (supports `{mac}`), and
+`HttpPostAcceptInterval`.
 
 ## 3) Example `energyid.h`
 

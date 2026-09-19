@@ -474,7 +474,6 @@ String deviceInfoJson()
   doc["flashchipsize"]["unit"] = "MB";
   doc["FSsize"] ["value"] = (uint32_t)(LittleFS.totalBytes() / (1024.0));
   doc["FSsize"]["unit"] = "kB";
-  doc["compileoptions"] = ALL_OPTIONS;
 
   if ( netw_state == NW_WIFI ) {
     doc["ssid"] = WiFi.SSID();
@@ -515,7 +514,7 @@ String deviceInfoJson()
   doc["telegramcount"] = (int)telegramCount;
   doc["telegramerrors"] = (int)telegramErrors;
   doc["eid_status"] = EIDStatusText();
-  AppendMeentStatus(doc);
+  AppendHttpPostStatus(doc);
 
 #ifndef MQTT_DISABLE
   snprintf(cMsg, sizeof(cMsg), "%s:%04lu", settingMQTTbroker, (unsigned long)settingMQTTbrokerPort);
@@ -600,12 +599,6 @@ if ( !hideMQTTsettings) {
 #ifdef VIRTUAL_P1
   ADD_SETTING("virtual_p1_ip", "s", 0, sizeof(virtual_p1_ip) - 1, virtual_p1_ip);
 #endif
-#ifdef POST_MEENT
-  ADD_SETTING("meent_interval", "i", 1, 3600, settingMeentInterval);
-  ADD_SETTING("meent_webid", "s", 0, sizeof(settingMeentWebId) - 1, settingMeentWebId);
-  ADD_SETTING("meent_api_key", "s", 0, sizeof(settingMeentApiKey) - 1, settingMeentApiKey);
-#endif
-  
   //MODBUS TCP settings
   ADD_SETTING("mb_map", "i", 0, 16, SelMap); //RTU+TCP
   ADD_SETTING("mb_id", "i", 1, 255, mb_config.id); //RTU+TCP

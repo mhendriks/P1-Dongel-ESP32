@@ -79,10 +79,6 @@
 #ifndef OTAURL_PREFIX
   #if DIRECT_AP_CONNECT
     #define OTAURL_PREFIX     DIRECT_AP_OTAURL_PREFIX
-  #elif defined(POST_POWERCH)
-    #define OTAURL_PREFIX     "pc/"
-  #elif defined(POST_KEMP)
-    #define OTAURL_PREFIX     "kemp/"
   #else
     #define OTAURL_PREFIX     ""
   #endif

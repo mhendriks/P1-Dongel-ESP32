@@ -316,7 +316,6 @@
   "dict_flashchipspeed": "Flash-Chip-Geschwindigkeit",
   "dict_flashchipmode": "Flash-Chip-Modus",
   "dict_boardtype": "Plattenart",
-  "dict_compileoptions": "Compiler-Optionen",
   "dict_ssid": "WiFi-SSID",
   "dict_wifirssi": "WiFi RSSI",
   "dict_uptime": "Betriebszeit [Tage] - [hh:mm]",

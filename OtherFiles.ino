@@ -105,9 +105,16 @@ void writeSettingsDirect() {
   docw["OverVoltageThreshold"] = settingOvervoltageThreshold;
   docw["CTFactor"] = settingCTFactor;
   docw["VTFactor"] = settingVTFactor;
-  docw["MeentInterval"] = settingMeentInterval;
-  docw["MeentWebId"] = settingMeentWebId;
-  docw["MeentApiKey"] = settingMeentApiKey;
+  docw["HttpPostEnabled"] = bHttpPostEnabled;
+  docw["HttpPostUrl"] = settingHttpPostUrl;
+  docw["HttpPostInterval"] = settingHttpPostInterval;
+  docw["HttpPostPayload"] = settingHttpPostPayload;
+  docw["HttpPostAuth"] = settingHttpPostAuth;
+  docw["HttpPostAuthKey"] = settingHttpPostAuthKey;
+  docw["HttpPostAuthName"] = settingHttpPostAuthName;
+  docw["HttpPostExtraHeaderName"] = settingHttpPostExtraHeaderName;
+  docw["HttpPostExtraHeaderValue"] = settingHttpPostExtraHeaderValue;
+  docw["HttpPostAcceptInterval"] = settingHttpPostAcceptInterval;
   docw["Fuse"] = settingFuse;
   docw["Phases"] = settingPhases;
   // docw["SmHasFaseInfo"] = settingSmHasFaseInfo;
@@ -271,17 +278,16 @@ void readSettings(bool show)
   if (doc["VTFactor"].is<int>()) {
     settingVTFactor = constrain(doc["VTFactor"].as<int>(), (int)METER_FACTOR_MIN, (int)METER_FACTOR_MAX);
   }
-  if (doc["MeentInterval"].is<int>()) {
-    settingMeentInterval = constrain(doc["MeentInterval"].as<int>(), 1, 3600);
-  }
-  if (doc["MeentWebId"].is<const char*>()) strlcpy(settingMeentWebId, doc["MeentWebId"].as<const char*>(), sizeof(settingMeentWebId));
-  if (doc["MeentApiKey"].is<const char*>()) {
-    strlcpy(settingMeentApiKey, doc["MeentApiKey"].as<const char*>(), sizeof(settingMeentApiKey));
-  } else if (doc["MeentToken"].is<const char*>()) {
-    // Migration from the pre-provisioning MEENT setting.
-    strlcpy(settingMeentApiKey, doc["MeentToken"].as<const char*>(), sizeof(settingMeentApiKey));
-    settingsBackfillNeeded = true;
-  }
+  if (doc["HttpPostEnabled"].is<bool>()) bHttpPostEnabled = doc["HttpPostEnabled"];
+  if (doc["HttpPostUrl"].is<const char*>()) strlcpy(settingHttpPostUrl, doc["HttpPostUrl"], sizeof(settingHttpPostUrl));
+  if (doc["HttpPostInterval"].is<int>()) settingHttpPostInterval = constrain(doc["HttpPostInterval"].as<int>(), 1, 3600);
+  if (doc["HttpPostPayload"].is<int>()) settingHttpPostPayload = constrain(doc["HttpPostPayload"].as<int>(), 0, 3);
+  if (doc["HttpPostAuth"].is<int>()) settingHttpPostAuth = constrain(doc["HttpPostAuth"].as<int>(), 0, 3);
+  if (doc["HttpPostAuthKey"].is<const char*>()) strlcpy(settingHttpPostAuthKey, doc["HttpPostAuthKey"], sizeof(settingHttpPostAuthKey));
+  if (doc["HttpPostAuthName"].is<const char*>()) strlcpy(settingHttpPostAuthName, doc["HttpPostAuthName"], sizeof(settingHttpPostAuthName));
+  if (doc["HttpPostExtraHeaderName"].is<const char*>()) strlcpy(settingHttpPostExtraHeaderName, doc["HttpPostExtraHeaderName"], sizeof(settingHttpPostExtraHeaderName));
+  if (doc["HttpPostExtraHeaderValue"].is<const char*>()) strlcpy(settingHttpPostExtraHeaderValue, doc["HttpPostExtraHeaderValue"], sizeof(settingHttpPostExtraHeaderValue));
+  if (doc["HttpPostAcceptInterval"].is<bool>()) settingHttpPostAcceptInterval = doc["HttpPostAcceptInterval"];
   // settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
   if (doc["mqtt-hide"].is<bool>()) hideMQTTsettings = doc["mqtt-hide"];
@@ -409,7 +415,7 @@ void readSettings(bool show)
   if (strlen(settingIndexPage) < 7) strCopy(settingIndexPage, (sizeof(settingIndexPage) -1), _DEFAULT_HOMEPAGE);
   
   if (settingMQTTbrokerPort    < 1) settingMQTTbrokerPort   = 1883;
-  settingMeentInterval = constrain(settingMeentInterval, 1, 3600);
+  settingHttpPostInterval = constrain(settingHttpPostInterval, 1, 3600);
 
   if (!show) return;
 
@@ -456,9 +462,6 @@ void updateSetting(const char *field, const char *newValue)
   }
   if (!stricmp(field, "vt_factor")) {
     settingVTFactor = constrain(String(newValue).toInt(), (int)METER_FACTOR_MIN, (int)METER_FACTOR_MAX);
-  }
-  if (!stricmp(field, "meent_interval")) {
-    settingMeentInterval = constrain(String(newValue).toInt(), 1, 3600);
   }
   if (!stricmp(field, "fuse")) {
     uint8_t newFuse = String(newValue).toInt();
@@ -552,17 +555,6 @@ void updateSetting(const char *field, const char *newValue)
   
   if (!stricmp(field, "b_auth_user")) strCopy(bAuthUser,25, newValue);  
   if (!stricmp(field, "b_auth_pw")) strCopy(bAuthPW,25, newValue); 
-  if (!stricmp(field, "meent_webid")) {
-    const bool changed = strncmp(settingMeentWebId, newValue, sizeof(settingMeentWebId)) != 0;
-    strCopy(settingMeentWebId, sizeof(settingMeentWebId), newValue);
-    if (changed) settingMeentApiKey[0] = '\0'; // An API key belongs to one WebID.
-    if (changed) MeentConfigChanged();
-  }
-  if (!stricmp(field, "meent_api_key")) {
-    strCopy(settingMeentApiKey, sizeof(settingMeentApiKey), newValue);
-    MeentConfigChanged();
-  }
-
   if (!stricmp(field, "water_fact")) WtrFactor = String(newValue).toFloat(); 
   
   if (!stricmp(field, "ota_url")) {

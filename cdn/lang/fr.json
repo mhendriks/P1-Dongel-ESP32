@@ -26,7 +26,6 @@
   "dict_boardtype": "Type de carte",
   "dict_chipid": "ID de la puce",
   "dict_compiled": "Compilé",
-  "dict_compileoptions": "Options de compilation",
   "dict_coreversion": "Version du noyau ESP",
   "dict_cpufreq": "Fréquence du processeur",
   "dict_ct_factor": "Facteur CT (transformateur de courant)",

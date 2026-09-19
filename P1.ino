@@ -769,16 +769,9 @@ void processTelegram(){
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
   actT = newT;
   
-  // PostHomey();
-  #ifdef POST_POWERCH
-    if ( (bV5meter && telegramCount % 3 == 0 ) || !bV5meter ) bNewTelegramWebhook = true; //every 3 secs (v5) or new meter data (v2/4)
-  #endif
-  #ifdef POST_MEENT
-    bNewTelegramWebhook = true; // interval handling is done in PostWebhook()
-  #endif
-  #ifdef POST_KEMP
-    bNewTelegramWebhook = true; // fixed 60 second interval is handled in PostWebhook()
-  #endif
+  // The generic HTTP push connector decides at runtime whether this telegram
+  // is due; setting the trigger is harmless while the connector is disabled.
+  bNewTelegramWebhook = true;
   #ifdef UDP_BCAST
     New_P1_UDP = true;
   #endif 

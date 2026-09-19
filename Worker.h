@@ -46,12 +46,11 @@ struct WorkerWebhookPayload {
   uint64_t t1r;
   uint64_t t2r;
   time_t timestamp;
-#ifdef POST_KEMP
   uint32_t voltage[3];
   uint32_t voltageSags[3];
   uint32_t voltageSwells[3];
+  uint8_t voltagePresentMask;
   uint8_t sagSwellPresentMask;
-#endif
 };
 
 struct WorkerRngPayload {

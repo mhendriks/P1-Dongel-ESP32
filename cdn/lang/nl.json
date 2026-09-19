@@ -406,7 +406,6 @@
   "dict_flashchipspeed": "Flash Chip Snelheid",
   "dict_flashchipmode": "Flash Chip Modus",
   "dict_boardtype": "Bord Type",
-  "dict_compileoptions": "Compiler Opties",
   "dict_ssid": "WiFi SSID",
   "dict_wifirssi": "WiFi RSSI",
   "dict_uptime": "Up Time [dagen] - [uu:mm]",
