@@ -52,6 +52,44 @@ class StdUint32MappingTest(unittest.TestCase):
             pattern = rf"\{{{register},\s+1000,\s+\(uint8_t\)MbSource::{source},"
             self.assertRegex(table, re.compile(pattern))
 
+    def test_sdm630_total_active_energy_register(self):
+        table = (ROOT / "_mbus_mapping.h").read_text()
+        pattern = (
+            r"\{342,\s+1,\s+\(uint8_t\)MbSource::energy_total_abs_kwh,"
+            r"\s+\(uint8_t\)ModbusDataType::FLOAT,\s+0\}"
+        )
+        self.assertRegex(table, re.compile(pattern))
+
+    def test_sdm630_extended_measurements(self):
+        table = (ROOT / "_mbus_mapping.h").read_text()
+        expected = {
+            18: (1, "apparent_power_l1_va"),
+            20: (1, "apparent_power_l2_va"),
+            22: (1, "apparent_power_l3_va"),
+            48: (1, "current_total_a"),
+            56: (1, "apparent_power_total_va"),
+        }
+        for register, (scale, source) in expected.items():
+            pattern = (
+                rf"\{{{register},\s+{scale},\s+\(uint8_t\)MbSource::{source},\s*"
+                rf"\(uint8_t\)ModbusDataType::FLOAT,\s+0\}}"
+            )
+            self.assertRegex(table, re.compile(pattern))
+
+    def test_sdm630_reactive_power_is_zero(self):
+        table = (ROOT / "_mbus_mapping.h").read_text()
+        for register in (24, 26, 28, 60):
+            pattern = (
+                rf"\{{{register},\s+1,\s+\(uint8_t\)MbSource::constant,"
+                rf"\s+\(uint8_t\)ModbusDataType::FLOAT,\s+0\}}"
+            )
+            self.assertRegex(table, re.compile(pattern))
+
+    def test_sdm630_zero_fill_is_profile_specific(self):
+        implementation = (ROOT / "_mbus.ino").read_text()
+        self.assertIn("activeRecipeZeroFill = (mappingChoice == 1);", implementation)
+        self.assertIn("activeRecipeZeroFill ? 0U : MBUS_VAL_UNAVAILABLE", implementation)
+
 
 if __name__ == "__main__":
     unittest.main()

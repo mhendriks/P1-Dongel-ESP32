@@ -256,6 +256,9 @@ enum class MbSource : uint8_t {
   power_factor_l1,
   power_factor_l2,
   power_factor_l3,
+  apparent_power_l1_va,
+  apparent_power_l2_va,
+  apparent_power_l3_va,
   apparent_power_total_va,
   direction_total,
   direction_l1,
@@ -294,6 +297,7 @@ static const ActiveRecipe* activeRecipes = nullptr;
 static size_t activeRecipeCount = 0;
 static uint16_t activeRecipeMaxReg = 0;
 static bool activeRecipeLswFirst = false;
+static bool activeRecipeZeroFill = false;
 static constexpr int kModbusMappingEm24Tcp = 16;
 static constexpr int kModbusMappingFroniusSunSpec203 = 15;
 
@@ -459,6 +463,15 @@ static float readMbSourceValue(MbSource source) {
     case MbSource::power_factor_l3: {
       float value = readMbSourceValue(MbSource::net_power_l3_kw);
       return isnan(value) ? NAN : (value < 0.0f ? -1.0f : 1.0f);
+    }
+    case MbSource::apparent_power_l1_va:
+    case MbSource::apparent_power_l2_va:
+    case MbSource::apparent_power_l3_va: {
+      const MbSource activeSource = source == MbSource::apparent_power_l1_va
+        ? MbSource::net_power_l1_kw
+        : (source == MbSource::apparent_power_l2_va ? MbSource::net_power_l2_kw : MbSource::net_power_l3_kw);
+      const float value = readMbSourceValue(activeSource);
+      return isnan(value) ? NAN : fabsf(value) * 1000.0f;
     }
     case MbSource::apparent_power_total_va: {
       float value = readMbSourceValue(MbSource::net_power_total_kw);
@@ -689,6 +702,7 @@ static uint32_t encodeActiveRecipeValue(const ActiveRecipe& recipe) {
     : readScaledMbSourceValue(source, recipe.scale);
 
   if (type == ModbusDataType::FLOAT) {
+    if (isnan(value) && activeRecipeZeroFill) return 0U;
     return packF(value);
   }
 
@@ -738,6 +752,7 @@ static bool loadActiveRecipes(const ActiveRecipe* recipes, size_t recipeCount) {
 
 static bool loadPresetRecipes(int mappingChoice) {
   activeRecipeLswFirst = (mappingChoice == 4 || mappingChoice == kModbusMappingEm24Tcp);
+  activeRecipeZeroFill = (mappingChoice == 1);
 
   switch (mappingChoice) {
     case 0:
@@ -985,7 +1000,7 @@ static ModbusMessage MBusHandleRequestInternal(ModbusMessage request, uint8_t tr
 
         if (!hasValue) {
             Debugf("MBUS WRONG VALUE -- addr: %d\n", currentAddr);
-            val.u = MBUS_VAL_UNAVAILABLE;
+            val.u = activeRecipeZeroFill ? 0U : MBUS_VAL_UNAVAILABLE;
         }
 
 #ifdef DEBUG
