@@ -20,13 +20,34 @@ The code now compiles without them (safe defaults are provided), but if you want
 ## 2) HTTP push connector
 
 The HTTP push connector is compiled into every standard build and is disabled
-by default. Configure it through `DSMRsettings.json` instead of build-time
-`POST_*` macros. Its keys are `HttpPostEnabled`, `HttpPostUrl`,
-`HttpPostInterval`, `HttpPostPayload` (0 basic, 1 meter totals, 2 power
-quality, 3 full), `HttpPostAuth` (0 none, 1 Bearer, 2 header, 3 JSON body),
-`HttpPostAuthKey`, `HttpPostAuthName`, `HttpPostExtraHeaderName`,
-`HttpPostExtraHeaderValue` (supports `{mac}`), and
-`HttpPostAcceptInterval`.
+by default. Provision it with a separate `/post.json` at flash time, never
+through `DSMRsettings.json` or the settings API. At boot a valid file is
+copied to NVS and immediately deleted; a malformed file is left in place so
+it can be corrected. The settings screen and API deliberately never expose
+these values.
+
+```json
+{
+  "enabled": true,
+  "url": "https://example.invalid/data",
+  "interval": 60,
+  "payload": 1,
+  "auth": 1,
+  "auth_key": "secret",
+  "auth_name": "Authorization",
+  "extra_header_name": "X-MAC-Address",
+  "extra_header_value": "{mac}",
+  "accept_interval": false
+}
+```
+
+`payload` is 0 (basic), 1 (meter totals), 2 (power quality), or 3 (all).
+`auth` is 0 (none), 1 (Bearer), 2 (named HTTP header), or 3 (JSON field).
+`{mac}` in an extra-header value is replaced by the dongle MAC address.
+
+Existing MEENT installations are migrated automatically when both their
+legacy `MeentWebId` and saved API key are present in `DSMRsettings.json`.
+The values are copied to NVS and then removed from the settings file.
 
 ## 3) Example `energyid.h`
 

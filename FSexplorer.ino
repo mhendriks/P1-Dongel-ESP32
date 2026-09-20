@@ -205,6 +205,10 @@ void setupFSexplorer() {
     if (!auth()) return;
     sendApiResponse(batteryEnergyApiResponse());
   });
+  httpServer.on("/api/v2/energy/resources/pv-1", HTTP_GET, []() {
+    if (!auth()) return;
+    sendApiResponse(pvEnergyApiResponse());
+  });
 #if !DIRECT_AP_CONNECT
   httpServer.on("/FSformat", []() {
     if (!auth()) return;

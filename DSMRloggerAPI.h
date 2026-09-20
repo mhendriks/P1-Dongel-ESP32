@@ -93,6 +93,61 @@ struct ModbusBatteryConfig {
   int16_t dischargingStateCode = 2;
 } modbusBatteryConfig;
 
+// The PV connector deliberately has a single active driver, just like the
+// battery connector.  SolarEdge's cloud API remains useful where local
+// Modbus is unavailable; SunSpec is the local Modbus-TCP alternative.
+enum PvConnectorDriver : uint8_t {
+  PV_DRIVER_NONE = 0,
+  // Keep 1/2 stable: early PV connector firmware already stored SolarEdge
+  // HTTP as 1 and Modbus TCP as 2 in settings.json.
+  PV_DRIVER_SOLAREDGE_HTTP = 1,
+  PV_DRIVER_MODBUS_TCP = 2,
+  PV_DRIVER_ENPHASE_HTTP = 3,
+  PV_DRIVER_SMA_HTTP = 4,
+  PV_DRIVER_OMNIKSOL_HTTP = 5
+};
+
+// Defined by the Modbus implementation; the declaration also keeps Arduino's
+// generated function prototypes from being placed before the enum.
+enum class SunSpecPvPollField : uint8_t;
+
+struct SolarEdgePvConfig {
+  uint32_t siteId = 0;
+  char apiKey[128] = "";
+  uint16_t pollIntervalSeconds = 300;
+  uint32_t wattPeak = 0;
+};
+
+struct SunSpecPvConfig {
+  char ip[16] = "";
+  uint16_t port = 502;
+  uint8_t id = 1;
+  uint16_t pollIntervalSeconds = 5;
+  uint32_t wattPeak = 0;
+  // SolarEdge SunSpec values are merely the initial mapper profile. Other
+  // Modbus-TCP devices can replace these addresses and use manual factors.
+  ModbusBatteryFieldConfig activePower = {40083, MODBUS_BATTERY_S16, 1.0f, false};
+  uint16_t activePowerScaleRegister = 40084;
+  ModbusBatteryFieldConfig dailyEnergy = {40094, MODBUS_BATTERY_U32, 1.0f, false};
+  uint16_t dailyEnergyScaleRegister = 40096;
+  bool useRegisterScaleFactors = true;
+};
+
+struct HttpPvConfig {
+  char url[192] = "";
+  char token[192] = "";
+  uint16_t pollIntervalSeconds = 60;
+  uint32_t wattPeak = 0;
+};
+
+PvConnectorDriver pvConnectorDriver = PV_DRIVER_NONE;
+uint32_t pvWattPeak = 0;
+SolarEdgePvConfig solarEdgePvConfig;
+SunSpecPvConfig sunSpecPvConfig;
+HttpPvConfig enphasePvConfig;
+HttpPvConfig smaPvConfig;
+HttpPvConfig omniksolPvConfig;
+
 #include <WiFi.h>  
 // #include "Insights.h"
 #include <WiFiClientSecure.h>        
@@ -255,6 +310,8 @@ void writeRingFiles();
 void writeSettings();
 void writeSettingsDirect();
 void AppendHttpPostStatus(JsonDocument& doc);
+void ProcessPostProvisioning();
+bool ImportLegacyMeentConfiguration(const char* webId, const char* apiKey, uint16_t interval);
 void ManifestCheckFromWorker();
 void RequestManifestCheckOnMQTTConnect();
 void RemoteUpdate();
@@ -361,6 +418,10 @@ TaskHandle_t tP1Reader; //  own proces for P1 reading
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS};
 enum  SolarSource { ENPHASE, SOLAR_EDGE, SMA, OMNIKSOL };
+// Solar.ino owns the definition.  Arduino generates function prototypes
+// before concatenating .ino files, so callers that take a reference need the
+// forward declaration here.
+struct SolarPwrSystems;
 
 //test
 struct RingRecord {
@@ -818,6 +879,16 @@ void invalidateBatteryResource();
 void setupModbusBattery();
 void handleModbusBattery();
 void modbusBatteryConfigChanged();
+void setupModbusPv();
+void handleModbusPv();
+void sunSpecPvConfigChanged();
+void solarEdgePvConfigChanged();
+void pvConnectorConfigChanged();
+const PvEnergyResource& pvEnergyResource();
+bool pvDashboardData(uint32_t& actualW, uint32_t& dailyWh, uint32_t& wattPeak);
+ApiResponse pvEnergyApiResponse();
+void updatePvResourceValues(const char* connector, const char* protocol, const char* profile,
+                            uint8_t unitId, uint32_t actualW, uint32_t dailyWh, uint32_t wattPeak);
 void sendHWapiJson();
 void sendDeviceSettingsJson();
 void sendSmActualJson();

@@ -3513,6 +3513,7 @@ function initConnectorSubTabsOnce() {
     button.classList.add("active");
     document.getElementById(button.dataset.target)?.classList.add("active");
     if (button.dataset.target === "connector_battery") refreshConnectorBatteryStatus();
+    updateSolarEdgeSharedSettingsVisibility();
   }));
 }
 
@@ -3593,6 +3594,36 @@ function buildBatteryMapperMatrix(container) {
   return true;
 }
 
+function buildPvMapperMatrix(container) {
+  const fields = [
+    { key: "pv_modbus_power", label: "Actueel vermogen (W)" },
+    { key: "pv_modbus_energy", label: "Totaalenergie (Wh)" }
+  ];
+  if (!document.getElementById("setFld_pv_modbus_power_register")) return false;
+  const table = document.createElement("table");
+  table.className = "mapper-matrix";
+  table.innerHTML = "<thead><tr><th>Vast energieveld</th><th>Bron</th><th>Register</th><th>Datatype</th><th>Factor</th><th>Word swap</th></tr></thead>";
+  const body = document.createElement("tbody");
+  fields.forEach(field => {
+    const row = document.createElement("tr");
+    const label = document.createElement("th"); label.scope = "row"; label.textContent = field.label; row.appendChild(label);
+    const source = document.createElement("td"); source.textContent = "Holding register"; source.className = "mapper-source"; row.appendChild(source);
+    ["register", "type", "scale", "word_swap"].forEach(suffix => {
+      const cell = document.createElement("td");
+      const input = document.getElementById(`setFld_${field.key}_${suffix}`);
+      if (input) { const sourceRow = input.closest(".settingDiv"); cell.appendChild(input); if (sourceRow) sourceRow.remove(); }
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+  });
+  table.appendChild(body); container.appendChild(table);
+  ["pv_modbus_power_sf_register", "pv_modbus_energy_sf_register", "pv_modbus_use_register_scale_factors"].forEach(key => {
+    const input = document.getElementById(`setFld_${key}`); if (!input) return;
+    const row = input.closest(".settingDiv"); if (row) container.appendChild(row);
+  });
+  return true;
+}
+
 function splitSettingsUI() {
   const table   = document.getElementById("settings_table");
   const general = document.getElementById("settings_general");
@@ -3603,19 +3634,25 @@ function splitSettingsUI() {
   const modbus  = document.getElementById("settings_modbus");
   const batteryDriver = document.getElementById("connector_battery_driver_fields");
   const batteryChoice = document.getElementById("connector_battery_choice_fields");
-  const batterySolarEdge = document.getElementById("connector_battery_solaredge_fields");
+  const batterySolarEdge = document.getElementById("connector_solaredge_fields");
   const batteryMapper = document.getElementById("connector_battery_mapper_fields");
+  const pvChoice = document.getElementById("connector_pv_choice_fields");
+  const pvSystem = document.getElementById("connector_pv_system_fields");
+  const pvSolarEdge = document.getElementById("connector_pv_solaredge_fields");
+  const pvSunSpec = document.getElementById("connector_pv_sunspec_fields");
+  const pvMapper = document.getElementById("connector_pv_mapper_fields");
 
-  if ( !table || !general || !smartMeter || !mqtt || !meent || !modbus || !batteryDriver || !batteryChoice || !batterySolarEdge || !batteryMapper || !tariff ) return;
+  if ( !table || !general || !smartMeter || !mqtt || !meent || !modbus || !batteryDriver || !batteryChoice || !batterySolarEdge || !batteryMapper || !pvChoice || !pvSystem || !pvSolarEdge || !pvSunSpec || !pvMapper || !tariff ) return;
 
   // The mapper moves its controls into a table and intentionally removes their
   // original setting rows. Rebuilding that structure on every tab refresh
   // detached those controls, leaving the driver card empty despite its toggle
   // still being enabled. A settings refresh can update the existing controls
   // in place, so only build the connector layout once per page load.
-  if (batteryMapper.querySelector(".mapper-matrix")) {
+  if (batteryMapper.querySelector(".mapper-matrix") && pvMapper.querySelector(".mapper-matrix")) {
     updateMQTTSettingsVisibility();
     updateBatteryModbusSettingsVisibility();
+    updatePvConnectorSettingsVisibility();
     refreshConnectorBatteryStatus();
     return;
   }
@@ -3668,6 +3705,12 @@ function splitSettingsUI() {
     "battery_discharge_limit_register", "battery_discharge_limit_type", "battery_discharge_limit_scale", "battery_discharge_limit_word_swap",
     "battery_state_idle_code", "battery_state_charging_code", "battery_state_discharging_code"
   ]);
+  const PV_SOLAREDGE_KEYS = new Set(["pv_solaredge_site_id", "pv_solaredge_api_key", "pv_solaredge_poll_seconds",
+    "pv_enphase_url", "pv_enphase_token", "pv_enphase_poll_seconds",
+    "pv_sma_url", "pv_sma_token", "pv_sma_poll_seconds",
+    "pv_omniksol_url", "pv_omniksol_token", "pv_omniksol_poll_seconds"]);
+  const PV_SUNSPEC_KEYS = new Set(["pv_sunspec_ip", "pv_sunspec_port", "pv_sunspec_unit_id", "pv_sunspec_poll_seconds"]);
+  const PV_MAPPER_KEYS = new Set(["pv_modbus_power_register", "pv_modbus_power_type", "pv_modbus_power_scale", "pv_modbus_power_word_swap", "pv_modbus_power_sf_register", "pv_modbus_energy_register", "pv_modbus_energy_type", "pv_modbus_energy_scale", "pv_modbus_energy_word_swap", "pv_modbus_energy_sf_register", "pv_modbus_use_register_scale_factors"]);
   const MODBUS_KEYS = new Set([
     "mb_map",
     "mb_id",
@@ -3690,6 +3733,11 @@ function splitSettingsUI() {
   batteryDriver.replaceChildren();
   batterySolarEdge.replaceChildren();
   batteryMapper.replaceChildren();
+  pvChoice.replaceChildren();
+  pvSystem.replaceChildren();
+  pvSolarEdge.replaceChildren();
+  pvSunSpec.replaceChildren();
+  pvMapper.replaceChildren();
 
   // alle bestaande rows (waar ze ook al staan) opnieuw indelen
   const rows = Array.from(document.querySelectorAll("#Settings .settingDiv"));
@@ -3703,6 +3751,11 @@ function splitSettingsUI() {
     else if (SMART_METER_KEY_SET.has(key)) smartMeter.appendChild(row);
     else if (TARIFF_KEYS.has(key)) tariff.appendChild(row);
     else if (key === "battery_driver") batteryChoice.appendChild(row);
+    else if (key === "pv_driver") pvChoice.appendChild(row);
+    else if (key === "pv_wp") pvSystem.appendChild(row);
+    else if (PV_SOLAREDGE_KEYS.has(key)) pvSolarEdge.appendChild(row);
+    else if (PV_SUNSPEC_KEYS.has(key)) pvSunSpec.appendChild(row);
+    else if (PV_MAPPER_KEYS.has(key)) pvMapper.appendChild(row);
     else if (key.startsWith("battery_solaredge_")) batterySolarEdge.appendChild(row);
     else if (BATTERY_KEYS.has(key)) {
       (key.startsWith("battery_power_") || key.startsWith("battery_soc_") || key.startsWith("battery_state_") ||
@@ -3740,8 +3793,14 @@ function splitSettingsUI() {
     notice.textContent = "De mapper wordt beschikbaar na installatie van firmware met de configureerbare batterijdriver.";
     batteryMapper.appendChild(notice);
   }
+  if (!buildPvMapperMatrix(pvMapper)) {
+    const notice = document.createElement("p"); notice.className = "settings-help";
+    notice.textContent = "De PV-mapper wordt beschikbaar na installatie van firmware met de universele Modbus TCP-driver.";
+    pvMapper.appendChild(notice);
+  }
   updateMQTTSettingsVisibility();
   updateBatteryModbusSettingsVisibility();
+  updatePvConnectorSettingsVisibility();
   refreshConnectorBatteryStatus();
 }
 
@@ -3770,13 +3829,50 @@ function updateBatteryModbusSettingsVisibility() {
     connector.classList.toggle("is-enabled", showConnectionFields);
   }
   const mapperCard = document.getElementById("connector_battery_mapper_fields")?.closest(".settings-card");
-  if (mapperCard) mapperCard.style.display = showConnectionFields ? "" : "none";
+  if (mapperCard) mapperCard.style.display = showConnectionFields ? "block" : "none";
   const modbusCard = document.getElementById("connector_battery_modbus_card");
-  if (modbusCard) modbusCard.style.display = showModbus ? "" : "none";
-  const solarEdgeCard = document.getElementById("connector_battery_solaredge_card");
-  if (solarEdgeCard) solarEdgeCard.style.display = showSolarEdge ? "" : "none";
+  if (modbusCard) modbusCard.style.display = showModbus ? "block" : "none";
+  updateSolarEdgeSharedSettingsVisibility();
   const status = document.getElementById("connector_battery_status");
   if (status) status.style.display = selectedDriver ? "" : "none";
+}
+
+function updatePvConnectorSettingsVisibility() {
+  const driver = document.getElementById("setFld_pv_driver");
+  if (!driver) return;
+  const selectedDriver = Number(driver.value);
+  const httpCard = document.getElementById("connector_pv_solaredge_card");
+  const systemCard = document.getElementById("connector_pv_system_card");
+  const sunSpecCard = document.getElementById("connector_pv_sunspec_card");
+  const mapperCard = document.getElementById("connector_pv_mapper_card");
+  if (systemCard) systemCard.style.display = selectedDriver ? "block" : "none";
+  if (httpCard) httpCard.style.display = selectedDriver >= 3 ? "block" : "none";
+  if (httpCard) {
+    const activePrefix = selectedDriver === 1 ? "pv_solaredge_"
+      : selectedDriver === 3 ? "pv_enphase_"
+      : selectedDriver === 4 ? "pv_sma_"
+      : selectedDriver === 5 ? "pv_omniksol_" : "";
+    httpCard.querySelectorAll(".settingDiv").forEach(row => {
+      const key = (row.id || "").replace(/^settingR_/, "");
+      row.style.display = key.startsWith(activePrefix) ? "" : "none";
+    });
+  }
+  if (sunSpecCard) sunSpecCard.style.display = selectedDriver === 2 ? "block" : "none";
+  if (mapperCard) mapperCard.style.display = selectedDriver === 2 ? "block" : "none";
+  updateSolarEdgeSharedSettingsVisibility();
+}
+
+function updateSolarEdgeSharedSettingsVisibility() {
+  const card = document.getElementById("connector_solaredge_card");
+  const batteryDriver = Number(document.getElementById("setFld_battery_driver")?.value || 0);
+  const pvDriver = Number(document.getElementById("setFld_pv_driver")?.value || 0);
+  const pvPaneActive = document.getElementById("connector_pv")?.classList.contains("active");
+  const activeDriverUsesSolarEdge = pvPaneActive ? pvDriver === 1 : batteryDriver === 2;
+  if (!card) return;
+  card.style.display = activeDriverUsesSolarEdge ? "block" : "none";
+  if (!activeDriverUsesSolarEdge) return;
+  const choiceCard = document.getElementById(pvPaneActive ? "connector_pv_choice_card" : "connector_battery_choice_card");
+  if (choiceCard?.parentElement) choiceCard.insertAdjacentElement("afterend", card);
 }
 
 function markDirty(el) {
@@ -3928,7 +4024,11 @@ function initModbusMonitorControls() {
 	  if ( i == "mb_monitor") continue;
 	  console.log("["+i+"]=>["+data[i].value+"]");
 	  let settings = document.getElementById('settings_table');
-	  if( ( document.getElementById("settingR_"+i)) == null )
+	  // Mapper controls are moved out of their original setting row. The row
+	  // may therefore be gone on a refresh while its input still exists in the
+	  // matrix; checking both prevents duplicate setFld_* IDs.
+	  if( ( document.getElementById("settingR_"+i)) == null &&
+	      ( document.getElementById("setFld_"+i)) == null )
 	  {
 	   
 		let rowDiv = document.createElement("div");
@@ -3947,12 +4047,15 @@ function initModbusMonitorControls() {
 			let sInput; // kan INPUT of SELECT worden
 			const fldId = "setFld_" + i;
 			
-			// --- batterijdriver als dropdown: één actieve implementatie per connector ---
-			if (i === "battery_driver") {
+			// --- connector drivers: één actieve implementatie per connector ---
+			if (i === "battery_driver" || i === "pv_driver") {
 			  const sel = document.createElement("select");
 			  sel.setAttribute("id", fldId);
 			  const current = parseInt(data[i].value ?? "0", 10);
-			  [[0, "Niet actief"], [1, "Modbus TCP"], [2, "SolarEdge Monitoring API V1"]].forEach(([value, label]) => {
+			  const choices = i === "battery_driver"
+			    ? [[0, "Niet actief"], [1, "Modbus TCP"], [2, "SolarEdge Monitoring API V1"]]
+			    : [[0, "Niet actief"], [1, "SolarEdge Monitoring API V1"], [2, "Modbus TCP (SunSpec-profiel)"], [3, "Enphase HTTP API"], [4, "SMA HTTP API"], [5, "Omnik/Solis HTTP API"]];
+			  choices.forEach(([value, label]) => {
 			    const option = document.createElement("option");
 			    option.value = String(value);
 			    option.textContent = label;
@@ -4172,6 +4275,9 @@ function initModbusMonitorControls() {
 			}
 			if (i === "battery_driver") {
 			  sInput.addEventListener("change", updateBatteryModbusSettingsVisibility);
+			}
+			if (i === "pv_driver") {
+			  sInput.addEventListener("change", updatePvConnectorSettingsVisibility);
 			}
 			
 			inputDiv.appendChild(sInput);
@@ -4922,7 +5028,7 @@ function handle_menu_click()
 let translations = {};
 const FALLBACK_TRANSLATIONS = {
   nl: {
-    "mnu-connectors": "Connectors", "tle-connectors": "Connectors", "connector-battery": "Accu", "connector-pv": "PV",
+    "mnu-connectors": "Connectors", "tle-connectors": "Connectors", "connector-battery": "Accu", "connector-battery-help": "Choose a driver to read the battery status and power data.", "connector-pv": "PV",
     "connector-driver": "Driver · Modbus TCP", "connector-mapper": "Mapper", "connector-mapper-help": "Koppel de vaste batterijvelden aan bronregisters.",
     "connector-pv-help": "PV-connectors volgen dezelfde driver- en mapperopzet.",
     "dict_battery_modbus_enabled": "Batterijconnector inschakelen", "dict_battery_modbus_ip": "TCP-adres", "dict_battery_modbus_port": "TCP-poort",

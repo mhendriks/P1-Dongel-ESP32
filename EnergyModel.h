@@ -97,3 +97,21 @@ inline const char* batteryOperatingStateText(BatteryOperatingState state) {
     default: return "unknown";
   }
 }
+
+// A PV connector produces the same small, protocol-neutral resource whether
+// its values came from a cloud API or a Modbus register map.
+struct PvEnergyResource {
+  const char* resourceId;
+  const char* connectorId;
+  const char* sourceProtocol;
+  const char* profileId;
+  uint8_t sourceUnitId;
+  uint32_t lastSuccessfulPollMs;
+  EnergyMeasurement activePower {0.0f, "W"};
+  EnergyMeasurement dailyEnergy {0.0f, "Wh"};
+  EnergyMeasurement maximumPower {0.0f, "Wp"};
+
+  PvEnergyResource()
+      : resourceId("pv-1"), connectorId(""), sourceProtocol(""), profileId(""),
+        sourceUnitId(0), lastSuccessfulPollMs(0) {}
+};

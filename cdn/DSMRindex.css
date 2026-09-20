@@ -32,12 +32,12 @@ html {
   min-width:375px
 }
 
-#settings_btns{
+#settings_btns, .settings_btns{
 	margin-top: 30px;
 	cursor: pointer;
 }
 
-#settings_btns a{ 
+#settings_btns a, .settings_btns a{
     background-color: #555;
     padding: 10px 25px;
     border-radius: 20px;
@@ -57,7 +57,7 @@ input[type=submit]:disabled {
  	cursor: auto;
 }
 
-#settings_btns a:hover, .button:hover {
+#settings_btns a:hover, .settings_btns a:hover, .button:hover {
 	background-color: #999;
 }
 
@@ -1216,7 +1216,7 @@ a.eid_link:hover, button:hover {filter: brightness(75%);}
 /*** NRGM styles ***/
 #Solar h1, #NRGM h1 { margin-top:0 }
 #NRGM button { min-width: 100px }
-#pulse_ico { font-size: 80px;display: block;margin: 0 auto;}
+#pulse_ico, .pulse_ico { font-size: 80px;display: block;margin: 0 auto;}
 
 /*** NETSWITCH styles ***/
 .netsw-action { border-top: 1px solid #aaa; padding-top: 14px; margin-top: 16px; }
@@ -1366,7 +1366,7 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
   background: #e8e8e8;
 }
 
-#settings_btns { text-align: center; }
+#settings_btns, .settings_btns { text-align: center; }
 
 /* container width */
 #Settings #tabEditSettings .inner-div{

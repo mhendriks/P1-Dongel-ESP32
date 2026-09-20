@@ -629,6 +629,32 @@ if ( !hideMQTTsettings) {
   ADD_SETTING("battery_state_idle_code", "i", -32768, 32767, modbusBatteryConfig.idleStateCode);
   ADD_SETTING("battery_state_charging_code", "i", -32768, 32767, modbusBatteryConfig.chargingStateCode);
   ADD_SETTING("battery_state_discharging_code", "i", -32768, 32767, modbusBatteryConfig.dischargingStateCode);
+  ADD_SETTING("pv_driver", "i", PV_DRIVER_NONE, PV_DRIVER_OMNIKSOL_HTTP, pvConnectorDriver);
+  ADD_SETTING("pv_wp", "i", 0, 1000000, pvWattPeak);
+  ADD_SETTING("pv_sunspec_ip", "s", 0, sizeof(sunSpecPvConfig.ip) - 1, sunSpecPvConfig.ip);
+  ADD_SETTING("pv_sunspec_port", "i", 1, 65535, sunSpecPvConfig.port);
+  ADD_SETTING("pv_sunspec_unit_id", "i", 1, 247, sunSpecPvConfig.id);
+  ADD_SETTING("pv_sunspec_poll_seconds", "i", 1, 3600, sunSpecPvConfig.pollIntervalSeconds);
+  ADD_SETTING("pv_modbus_power_register", "i", 0, 65535, sunSpecPvConfig.activePower.registerAddress);
+  ADD_SETTING("pv_modbus_power_type", "i", MODBUS_BATTERY_U16, MODBUS_BATTERY_F32, sunSpecPvConfig.activePower.valueType);
+  ADD_SETTING("pv_modbus_power_scale", "f", -100000, 100000, sunSpecPvConfig.activePower.scale);
+  doc["pv_modbus_power_word_swap"] = sunSpecPvConfig.activePower.wordSwap;
+  ADD_SETTING("pv_modbus_power_sf_register", "i", 0, 65535, sunSpecPvConfig.activePowerScaleRegister);
+  ADD_SETTING("pv_modbus_energy_register", "i", 0, 65535, sunSpecPvConfig.dailyEnergy.registerAddress);
+  ADD_SETTING("pv_modbus_energy_type", "i", MODBUS_BATTERY_U16, MODBUS_BATTERY_F32, sunSpecPvConfig.dailyEnergy.valueType);
+  ADD_SETTING("pv_modbus_energy_scale", "f", -100000, 100000, sunSpecPvConfig.dailyEnergy.scale);
+  doc["pv_modbus_energy_word_swap"] = sunSpecPvConfig.dailyEnergy.wordSwap;
+  ADD_SETTING("pv_modbus_energy_sf_register", "i", 0, 65535, sunSpecPvConfig.dailyEnergyScaleRegister);
+  doc["pv_modbus_use_register_scale_factors"] = sunSpecPvConfig.useRegisterScaleFactors;
+  ADD_SETTING("pv_enphase_url", "s", 0, sizeof(enphasePvConfig.url) - 1, enphasePvConfig.url);
+  ADD_SETTING("pv_enphase_token", "s", 0, sizeof(enphasePvConfig.token) - 1, enphasePvConfig.token[0] ? "********" : "");
+  ADD_SETTING("pv_enphase_poll_seconds", "i", 5, 3600, enphasePvConfig.pollIntervalSeconds);
+  ADD_SETTING("pv_sma_url", "s", 0, sizeof(smaPvConfig.url) - 1, smaPvConfig.url);
+  ADD_SETTING("pv_sma_token", "s", 0, sizeof(smaPvConfig.token) - 1, smaPvConfig.token[0] ? "********" : "");
+  ADD_SETTING("pv_sma_poll_seconds", "i", 5, 3600, smaPvConfig.pollIntervalSeconds);
+  ADD_SETTING("pv_omniksol_url", "s", 0, sizeof(omniksolPvConfig.url) - 1, omniksolPvConfig.url);
+  ADD_SETTING("pv_omniksol_token", "s", 0, sizeof(omniksolPvConfig.token) - 1, omniksolPvConfig.token[0] ? "********" : "");
+  ADD_SETTING("pv_omniksol_poll_seconds", "i", 5, 3600, omniksolPvConfig.pollIntervalSeconds);
   if ( mb_rx != -1 ){ //check if modbus rtu hardware is available
     ADD_SETTING("mb_baud", "i", 300, 115200, mb_config.baud); //RTU
     ADD_SETTING("mb_parity", "i", 134217744, 134217791, mb_config.parity); //RTU

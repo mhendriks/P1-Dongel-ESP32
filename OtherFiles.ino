@@ -105,16 +105,6 @@ void writeSettingsDirect() {
   docw["OverVoltageThreshold"] = settingOvervoltageThreshold;
   docw["CTFactor"] = settingCTFactor;
   docw["VTFactor"] = settingVTFactor;
-  docw["HttpPostEnabled"] = bHttpPostEnabled;
-  docw["HttpPostUrl"] = settingHttpPostUrl;
-  docw["HttpPostInterval"] = settingHttpPostInterval;
-  docw["HttpPostPayload"] = settingHttpPostPayload;
-  docw["HttpPostAuth"] = settingHttpPostAuth;
-  docw["HttpPostAuthKey"] = settingHttpPostAuthKey;
-  docw["HttpPostAuthName"] = settingHttpPostAuthName;
-  docw["HttpPostExtraHeaderName"] = settingHttpPostExtraHeaderName;
-  docw["HttpPostExtraHeaderValue"] = settingHttpPostExtraHeaderValue;
-  docw["HttpPostAcceptInterval"] = settingHttpPostAcceptInterval;
   docw["Fuse"] = settingFuse;
   docw["Phases"] = settingPhases;
   // docw["SmHasFaseInfo"] = settingSmHasFaseInfo;
@@ -184,6 +174,32 @@ void writeSettingsDirect() {
   docw["battery_state_idle_code"] = modbusBatteryConfig.idleStateCode;
   docw["battery_state_charging_code"] = modbusBatteryConfig.chargingStateCode;
   docw["battery_state_discharging_code"] = modbusBatteryConfig.dischargingStateCode;
+  docw["pv_driver"] = pvConnectorDriver;
+  docw["pv_wp"] = pvWattPeak;
+  docw["pv_sunspec_ip"] = sunSpecPvConfig.ip;
+  docw["pv_sunspec_port"] = sunSpecPvConfig.port;
+  docw["pv_sunspec_unit_id"] = sunSpecPvConfig.id;
+  docw["pv_sunspec_poll_seconds"] = sunSpecPvConfig.pollIntervalSeconds;
+  docw["pv_modbus_power_register"] = sunSpecPvConfig.activePower.registerAddress;
+  docw["pv_modbus_power_type"] = sunSpecPvConfig.activePower.valueType;
+  docw["pv_modbus_power_scale"] = sunSpecPvConfig.activePower.scale;
+  docw["pv_modbus_power_word_swap"] = sunSpecPvConfig.activePower.wordSwap;
+  docw["pv_modbus_power_sf_register"] = sunSpecPvConfig.activePowerScaleRegister;
+  docw["pv_modbus_energy_register"] = sunSpecPvConfig.dailyEnergy.registerAddress;
+  docw["pv_modbus_energy_type"] = sunSpecPvConfig.dailyEnergy.valueType;
+  docw["pv_modbus_energy_scale"] = sunSpecPvConfig.dailyEnergy.scale;
+  docw["pv_modbus_energy_word_swap"] = sunSpecPvConfig.dailyEnergy.wordSwap;
+  docw["pv_modbus_energy_sf_register"] = sunSpecPvConfig.dailyEnergyScaleRegister;
+  docw["pv_modbus_use_register_scale_factors"] = sunSpecPvConfig.useRegisterScaleFactors;
+  docw["pv_enphase_url"] = enphasePvConfig.url;
+  docw["pv_enphase_token"] = enphasePvConfig.token;
+  docw["pv_enphase_poll_seconds"] = enphasePvConfig.pollIntervalSeconds;
+  docw["pv_sma_url"] = smaPvConfig.url;
+  docw["pv_sma_token"] = smaPvConfig.token;
+  docw["pv_sma_poll_seconds"] = smaPvConfig.pollIntervalSeconds;
+  docw["pv_omniksol_url"] = omniksolPvConfig.url;
+  docw["pv_omniksol_token"] = omniksolPvConfig.token;
+  docw["pv_omniksol_poll_seconds"] = omniksolPvConfig.pollIntervalSeconds;
   docw["mqtt-hide"] = hideMQTTsettings;
   docw["remove-index"] = RemoveIndexAfterUpdate;
   docw["macid-topic"] = MacIDinToptopic;
@@ -278,16 +294,16 @@ void readSettings(bool show)
   if (doc["VTFactor"].is<int>()) {
     settingVTFactor = constrain(doc["VTFactor"].as<int>(), (int)METER_FACTOR_MIN, (int)METER_FACTOR_MAX);
   }
-  if (doc["HttpPostEnabled"].is<bool>()) bHttpPostEnabled = doc["HttpPostEnabled"];
-  if (doc["HttpPostUrl"].is<const char*>()) strlcpy(settingHttpPostUrl, doc["HttpPostUrl"], sizeof(settingHttpPostUrl));
-  if (doc["HttpPostInterval"].is<int>()) settingHttpPostInterval = constrain(doc["HttpPostInterval"].as<int>(), 1, 3600);
-  if (doc["HttpPostPayload"].is<int>()) settingHttpPostPayload = constrain(doc["HttpPostPayload"].as<int>(), 0, 3);
-  if (doc["HttpPostAuth"].is<int>()) settingHttpPostAuth = constrain(doc["HttpPostAuth"].as<int>(), 0, 3);
-  if (doc["HttpPostAuthKey"].is<const char*>()) strlcpy(settingHttpPostAuthKey, doc["HttpPostAuthKey"], sizeof(settingHttpPostAuthKey));
-  if (doc["HttpPostAuthName"].is<const char*>()) strlcpy(settingHttpPostAuthName, doc["HttpPostAuthName"], sizeof(settingHttpPostAuthName));
-  if (doc["HttpPostExtraHeaderName"].is<const char*>()) strlcpy(settingHttpPostExtraHeaderName, doc["HttpPostExtraHeaderName"], sizeof(settingHttpPostExtraHeaderName));
-  if (doc["HttpPostExtraHeaderValue"].is<const char*>()) strlcpy(settingHttpPostExtraHeaderValue, doc["HttpPostExtraHeaderValue"], sizeof(settingHttpPostExtraHeaderValue));
-  if (doc["HttpPostAcceptInterval"].is<bool>()) settingHttpPostAcceptInterval = doc["HttpPostAcceptInterval"];
+  // HTTP POST credentials deliberately do not live in DSMRsettings.json.
+  // A legacy MEENT installation is recognised solely by its saved WebID and
+  // migrated once to the private NVS connector store.
+  if (doc["MeentWebId"].is<const char*>()) {
+    const char* legacyApiKey = doc["MeentApiKey"].is<const char*>() ? doc["MeentApiKey"].as<const char*>() : "";
+    const uint16_t legacyInterval = doc["MeentInterval"].is<int>()
+        ? constrain(doc["MeentInterval"].as<int>(), 1, 3600) : 300;
+    settingsBackfillNeeded = ImportLegacyMeentConfiguration(doc["MeentWebId"].as<const char*>(), legacyApiKey, legacyInterval)
+        || settingsBackfillNeeded;
+  }
   // settingSmHasFaseInfo = doc["SmHasFaseInfo"];
   
   if (doc["mqtt-hide"].is<bool>()) hideMQTTsettings = doc["mqtt-hide"];
@@ -380,6 +396,44 @@ void readSettings(bool show)
   if (doc["battery_state_idle_code"].is<int>()) modbusBatteryConfig.idleStateCode = doc["battery_state_idle_code"];
   if (doc["battery_state_charging_code"].is<int>()) modbusBatteryConfig.chargingStateCode = doc["battery_state_charging_code"];
   if (doc["battery_state_discharging_code"].is<int>()) modbusBatteryConfig.dischargingStateCode = doc["battery_state_discharging_code"];
+  if (doc["pv_driver"].is<int>()) pvConnectorDriver = (PvConnectorDriver)constrain(doc["pv_driver"].as<int>(), PV_DRIVER_NONE, PV_DRIVER_OMNIKSOL_HTTP);
+  if (doc["pv_wp"].is<uint32_t>()) pvWattPeak = doc["pv_wp"];
+  if (doc["pv_solaredge_site_id"].is<uint32_t>()) solarEdgePvConfig.siteId = doc["pv_solaredge_site_id"];
+  if (doc["pv_solaredge_api_key"].is<const char*>()) strlcpy(solarEdgePvConfig.apiKey, doc["pv_solaredge_api_key"].as<const char*>(), sizeof(solarEdgePvConfig.apiKey));
+  if (doc["pv_solaredge_poll_seconds"].is<int>()) solarEdgePvConfig.pollIntervalSeconds = constrain(doc["pv_solaredge_poll_seconds"].as<int>(), 300, 3600);
+  // PV connector releases before the shared connection stored these values
+  // under pv_solaredge_*. Adopt them only when no shared credentials exist.
+  if (!solarEdgeBatteryConfig.siteId && solarEdgePvConfig.siteId) {
+    solarEdgeBatteryConfig.siteId = solarEdgePvConfig.siteId;
+    strlcpy(solarEdgeBatteryConfig.apiKey, solarEdgePvConfig.apiKey, sizeof(solarEdgeBatteryConfig.apiKey));
+    solarEdgeBatteryConfig.pollIntervalSeconds = solarEdgePvConfig.pollIntervalSeconds;
+  }
+  if (doc["pv_solaredge_wp"].is<uint32_t>()) solarEdgePvConfig.wattPeak = doc["pv_solaredge_wp"];
+  if (doc["pv_sunspec_ip"].is<const char*>()) strlcpy(sunSpecPvConfig.ip, doc["pv_sunspec_ip"].as<const char*>(), sizeof(sunSpecPvConfig.ip));
+  if (doc["pv_sunspec_port"].is<int>()) sunSpecPvConfig.port = constrain(doc["pv_sunspec_port"].as<int>(), 1, 65535);
+  if (doc["pv_sunspec_unit_id"].is<int>()) sunSpecPvConfig.id = constrain(doc["pv_sunspec_unit_id"].as<int>(), 1, 247);
+  if (doc["pv_sunspec_poll_seconds"].is<int>()) sunSpecPvConfig.pollIntervalSeconds = constrain(doc["pv_sunspec_poll_seconds"].as<int>(), 1, 3600);
+  if (doc["pv_sunspec_wp"].is<uint32_t>()) sunSpecPvConfig.wattPeak = doc["pv_sunspec_wp"];
+  if (doc["pv_modbus_power_register"].is<int>()) sunSpecPvConfig.activePower.registerAddress = constrain(doc["pv_modbus_power_register"].as<int>(), 0, 65535);
+  if (doc["pv_modbus_power_type"].is<int>()) sunSpecPvConfig.activePower.valueType = constrain(doc["pv_modbus_power_type"].as<int>(), MODBUS_BATTERY_U16, MODBUS_BATTERY_F32);
+  if (doc["pv_modbus_power_scale"].is<float>()) sunSpecPvConfig.activePower.scale = doc["pv_modbus_power_scale"];
+  if (doc["pv_modbus_power_word_swap"].is<bool>()) sunSpecPvConfig.activePower.wordSwap = doc["pv_modbus_power_word_swap"];
+  if (doc["pv_modbus_power_sf_register"].is<int>()) sunSpecPvConfig.activePowerScaleRegister = constrain(doc["pv_modbus_power_sf_register"].as<int>(), 0, 65535);
+  if (doc["pv_modbus_energy_register"].is<int>()) sunSpecPvConfig.dailyEnergy.registerAddress = constrain(doc["pv_modbus_energy_register"].as<int>(), 0, 65535);
+  if (doc["pv_modbus_energy_type"].is<int>()) sunSpecPvConfig.dailyEnergy.valueType = constrain(doc["pv_modbus_energy_type"].as<int>(), MODBUS_BATTERY_U16, MODBUS_BATTERY_F32);
+  if (doc["pv_modbus_energy_scale"].is<float>()) sunSpecPvConfig.dailyEnergy.scale = doc["pv_modbus_energy_scale"];
+  if (doc["pv_modbus_energy_word_swap"].is<bool>()) sunSpecPvConfig.dailyEnergy.wordSwap = doc["pv_modbus_energy_word_swap"];
+  if (doc["pv_modbus_energy_sf_register"].is<int>()) sunSpecPvConfig.dailyEnergyScaleRegister = constrain(doc["pv_modbus_energy_sf_register"].as<int>(), 0, 65535);
+  if (doc["pv_modbus_use_register_scale_factors"].is<bool>()) sunSpecPvConfig.useRegisterScaleFactors = doc["pv_modbus_use_register_scale_factors"];
+#define LOAD_PV_HTTP(prefix, target) \
+  if (doc[prefix "_url"].is<const char*>()) strlcpy(target.url, doc[prefix "_url"].as<const char*>(), sizeof(target.url)); \
+  if (doc[prefix "_token"].is<const char*>()) strlcpy(target.token, doc[prefix "_token"].as<const char*>(), sizeof(target.token)); \
+  if (doc[prefix "_poll_seconds"].is<int>()) target.pollIntervalSeconds = constrain(doc[prefix "_poll_seconds"].as<int>(), 5, 3600); \
+  if (doc[prefix "_wp"].is<uint32_t>()) target.wattPeak = doc[prefix "_wp"];
+  LOAD_PV_HTTP("pv_enphase", enphasePvConfig)
+  LOAD_PV_HTTP("pv_sma", smaPvConfig)
+  LOAD_PV_HTTP("pv_omniksol", omniksolPvConfig)
+#undef LOAD_PV_HTTP
   if (doc["skip-network"].is<bool>()) skipNetwork = doc["skip-network"];
   if (doc["mimic"].is<int>()) {
     int newMimic = constrain(doc["mimic"].as<int>(), (int)MIMIC_NONE, (int)MIMIC_SHELLY_PRO_3EM);
@@ -657,6 +711,47 @@ void updateSetting(const char *field, const char *newValue)
   if (batteryConfigChanged) modbusBatteryConfigChanged();
 #endif
   if (batteryConfigChanged) solarEdgeBatteryConfigChanged();
+  bool pvConfigChanged = false;
+  if (!stricmp(field, "pv_driver")) {
+    pvConnectorDriver = (PvConnectorDriver)constrain(String(newValue).toInt(), PV_DRIVER_NONE, PV_DRIVER_OMNIKSOL_HTTP);
+    pvConfigChanged = true;
+  }
+  if (!stricmp(field, "pv_wp")) { pvWattPeak = constrain(String(newValue).toInt(), 0, 1000000); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_solaredge_site_id")) { solarEdgeBatteryConfig.siteId = String(newValue).toInt(); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_solaredge_api_key") && strlen(newValue) && strcmp(newValue, "********")) { strCopy(solarEdgeBatteryConfig.apiKey, sizeof(solarEdgeBatteryConfig.apiKey), newValue); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_solaredge_poll_seconds")) { solarEdgeBatteryConfig.pollIntervalSeconds = constrain(String(newValue).toInt(), 300, 3600); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_solaredge_wp")) { solarEdgePvConfig.wattPeak = constrain(String(newValue).toInt(), 0, 1000000); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_sunspec_ip")) { strCopy(sunSpecPvConfig.ip, sizeof(sunSpecPvConfig.ip), newValue); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_sunspec_port")) { sunSpecPvConfig.port = constrain(String(newValue).toInt(), 1, 65535); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_sunspec_unit_id")) { sunSpecPvConfig.id = constrain(String(newValue).toInt(), 1, 247); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_sunspec_poll_seconds")) { sunSpecPvConfig.pollIntervalSeconds = constrain(String(newValue).toInt(), 1, 3600); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_sunspec_wp")) { sunSpecPvConfig.wattPeak = constrain(String(newValue).toInt(), 0, 1000000); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_modbus_power_register")) { sunSpecPvConfig.activePower.registerAddress = constrain(String(newValue).toInt(), 0, 65535); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_modbus_power_type")) { sunSpecPvConfig.activePower.valueType = constrain(String(newValue).toInt(), MODBUS_BATTERY_U16, MODBUS_BATTERY_F32); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_modbus_power_scale")) { sunSpecPvConfig.activePower.scale = String(newValue).toFloat(); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_modbus_power_word_swap")) { sunSpecPvConfig.activePower.wordSwap = !stricmp(newValue, "true"); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_modbus_power_sf_register")) { sunSpecPvConfig.activePowerScaleRegister = constrain(String(newValue).toInt(), 0, 65535); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_modbus_energy_register")) { sunSpecPvConfig.dailyEnergy.registerAddress = constrain(String(newValue).toInt(), 0, 65535); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_modbus_energy_type")) { sunSpecPvConfig.dailyEnergy.valueType = constrain(String(newValue).toInt(), MODBUS_BATTERY_U16, MODBUS_BATTERY_F32); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_modbus_energy_scale")) { sunSpecPvConfig.dailyEnergy.scale = String(newValue).toFloat(); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_modbus_energy_word_swap")) { sunSpecPvConfig.dailyEnergy.wordSwap = !stricmp(newValue, "true"); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_modbus_energy_sf_register")) { sunSpecPvConfig.dailyEnergyScaleRegister = constrain(String(newValue).toInt(), 0, 65535); pvConfigChanged = true; }
+  if (!stricmp(field, "pv_modbus_use_register_scale_factors")) { sunSpecPvConfig.useRegisterScaleFactors = !stricmp(newValue, "true"); pvConfigChanged = true; }
+#define SET_PV_HTTP(prefix, target) \
+  if (!stricmp(field, prefix "_url")) { strCopy(target.url, sizeof(target.url), newValue); pvConfigChanged = true; } \
+  if (!stricmp(field, prefix "_token") && strlen(newValue) && strcmp(newValue, "********")) { strCopy(target.token, sizeof(target.token), newValue); pvConfigChanged = true; } \
+  if (!stricmp(field, prefix "_poll_seconds")) { target.pollIntervalSeconds = constrain(String(newValue).toInt(), 5, 3600); pvConfigChanged = true; } \
+  if (!stricmp(field, prefix "_wp")) { target.wattPeak = constrain(String(newValue).toInt(), 0, 1000000); pvConfigChanged = true; }
+  SET_PV_HTTP("pv_enphase", enphasePvConfig)
+  SET_PV_HTTP("pv_sma", smaPvConfig)
+  SET_PV_HTTP("pv_omniksol", omniksolPvConfig)
+#undef SET_PV_HTTP
+  if (pvConfigChanged) {
+    pvConnectorConfigChanged();
+#ifdef MBUS
+    sunSpecPvConfigChanged();
+#endif
+  }
   if (!stricmp(field, "mimic")) {
     int newMimic = constrain(String(newValue).toInt(), (int)MIMIC_NONE, (int)MIMIC_SHELLY_PRO_3EM);
     reboot_required = (mimicType != newMimic);

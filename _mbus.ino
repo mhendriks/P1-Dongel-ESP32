@@ -240,6 +240,161 @@ void handleModbusBattery() {
   }
 }
 
+// A configurable Modbus TCP PV mapper. SolarEdge SunSpec addresses are only
+// its defaults: AC power 40083/40084 and lifetime energy 40094..40096.
+enum class SunSpecPvPollField : uint8_t { POWER, POWER_SCALE, ENERGY, ENERGY_SCALE, COUNT };
+static WiFiClient sunSpecPvSocket;
+static ModbusClientTCP sunSpecPvClient(sunSpecPvSocket, 2);
+static bool sunSpecPvClientStarted = false;
+static bool sunSpecPvTargetValid = false;
+static volatile bool sunSpecPvRequestPending = false;
+static volatile uint32_t sunSpecPvActiveToken = 0;
+static uint32_t sunSpecPvToken = 0;
+static uint32_t sunSpecPvLastPoll = 0;
+static SunSpecPvPollField sunSpecPvPendingField = SunSpecPvPollField::POWER;
+static SunSpecPvPollField sunSpecPvNextField = SunSpecPvPollField::POWER;
+static float sunSpecPvPower = 0;
+static int16_t sunSpecPvPowerScale = 0;
+static float sunSpecPvEnergy = 0;
+static int16_t sunSpecPvEnergyScale = 0;
+static float sunSpecPvDayStartEnergy = 0;
+static uint8_t sunSpecPvEnergyDay = 0;
+
+static uint16_t sunSpecPvRegister(SunSpecPvPollField field) {
+  switch (field) {
+    case SunSpecPvPollField::POWER: return sunSpecPvConfig.activePower.registerAddress;
+    case SunSpecPvPollField::POWER_SCALE: return sunSpecPvConfig.activePowerScaleRegister;
+    case SunSpecPvPollField::ENERGY: return sunSpecPvConfig.dailyEnergy.registerAddress;
+    default: return sunSpecPvConfig.dailyEnergyScaleRegister;
+  }
+}
+
+static uint8_t sunSpecPvWordCount(SunSpecPvPollField field) {
+  if (field == SunSpecPvPollField::POWER) return modbusBatteryWordCount(sunSpecPvConfig.activePower.valueType);
+  if (field == SunSpecPvPollField::ENERGY) return modbusBatteryWordCount(sunSpecPvConfig.dailyEnergy.valueType);
+  return 1;
+}
+
+static float sunSpecScale(int16_t exponent) {
+  float scale = 1.0f;
+  while (exponent > 0) { scale *= 10.0f; exponent--; }
+  while (exponent < 0) { scale /= 10.0f; exponent++; }
+  return scale;
+}
+
+static void updateSunSpecPvOutput() {
+  if (pvConnectorDriver != PV_DRIVER_MODBUS_TCP) return;
+  float watts = sunSpecPvPower *
+                (sunSpecPvConfig.useRegisterScaleFactors ? sunSpecScale(sunSpecPvPowerScale) : 1.0f);
+  SolarEdge.Actual = watts > 0.0f ? (uint32_t)watts : 0;
+  const uint8_t today = day();
+  if (!sunSpecPvEnergyDay || sunSpecPvEnergyDay != today || sunSpecPvEnergy < sunSpecPvDayStartEnergy) {
+    sunSpecPvEnergyDay = today;
+    sunSpecPvDayStartEnergy = sunSpecPvEnergy;
+  }
+  float energyWh = (sunSpecPvEnergy - sunSpecPvDayStartEnergy) *
+                   (sunSpecPvConfig.useRegisterScaleFactors ? sunSpecScale(sunSpecPvEnergyScale) : 1.0f);
+  SolarEdge.Daily = energyWh > 0.0f ? (uint32_t)energyWh : 0;
+  updatePvResourceValues("modbus-tcp", "modbus-tcp", "sunspec-inverter", sunSpecPvConfig.id,
+                         SolarEdge.Actual, SolarEdge.Daily, pvWattPeak);
+}
+
+static void handleSunSpecPvData(ModbusMessage response, uint32_t token) {
+  if (token != sunSpecPvActiveToken) return;
+  sunSpecPvRequestPending = false;
+  const uint8_t words = sunSpecPvWordCount(sunSpecPvPendingField);
+  if (response.getServerID() != sunSpecPvConfig.id || response.getFunctionCode() != READ_HOLD_REGISTER ||
+      response.size() < (size_t)(3 + words * 2) || response[2] != words * 2) {
+    DebugVerboseTln(F("SunSpec PV: invalid response"));
+    return;
+  }
+  uint16_t first = 0, second = 0;
+  if (words == 1) response.get(3, first); else response.get(3, first, second);
+  float value = 0; int32_t nativeValue = 0;
+  switch (sunSpecPvPendingField) {
+    case SunSpecPvPollField::POWER:
+      if (!decodeModbusBatteryValue(sunSpecPvConfig.activePower, first, second, value, nativeValue)) return;
+      sunSpecPvPower = value;
+      break;
+    case SunSpecPvPollField::POWER_SCALE: sunSpecPvPowerScale = decodeModbusS16(first); break;
+    case SunSpecPvPollField::ENERGY:
+      if (!decodeModbusBatteryValue(sunSpecPvConfig.dailyEnergy, first, second, value, nativeValue)) return;
+      sunSpecPvEnergy = value;
+      if (!sunSpecPvConfig.useRegisterScaleFactors) updateSunSpecPvOutput();
+      break;
+    case SunSpecPvPollField::ENERGY_SCALE:
+      sunSpecPvEnergyScale = decodeModbusS16(first);
+      updateSunSpecPvOutput();
+      break;
+    default: break;
+  }
+}
+
+static void handleSunSpecPvError(Error error, uint32_t token) {
+  if (token != sunSpecPvActiveToken) return;
+  sunSpecPvRequestPending = false;
+  DebugVerboseTf("SunSpec PV Modbus error: 0x%02X\r\n", (uint8_t)error);
+}
+
+void sunSpecPvConfigChanged() {
+  sunSpecPvActiveToken = 0;
+  sunSpecPvRequestPending = false;
+  sunSpecPvTargetValid = false;
+  sunSpecPvSocket.stop();
+  IPAddress target;
+  if (pvConnectorDriver != PV_DRIVER_MODBUS_TCP) return;
+  if (!target.fromString(sunSpecPvConfig.ip)) {
+    SolarEdge.Available = false;
+    SolarEdge.Actual = 0;
+    SolarEdge.Daily = 0;
+    return;
+  }
+  if (!sunSpecPvClientStarted) {
+    sunSpecPvClient.onDataHandler(&handleSunSpecPvData);
+    sunSpecPvClient.onErrorHandler(&handleSunSpecPvError);
+    sunSpecPvClient.setTimeout(1500, 200);
+    sunSpecPvClient.begin();
+    sunSpecPvClientStarted = true;
+  }
+  sunSpecPvClient.setTarget(target, sunSpecPvConfig.port);
+  sunSpecPvTargetValid = true;
+  sunSpecPvLastPoll = 0;
+  SolarEdge.Available = true;
+  SolarEdge.Wp = pvWattPeak;
+  SolarEdge.Actual = 0;
+  SolarEdge.Daily = 0;
+  DebugVerboseTf("SunSpec PV target: %s:%u id=%u\r\n", sunSpecPvConfig.ip, sunSpecPvConfig.port, sunSpecPvConfig.id);
+}
+
+void setupModbusPv() { sunSpecPvConfigChanged(); }
+
+void handleModbusPv() {
+  if (pvConnectorDriver != PV_DRIVER_MODBUS_TCP || !sunSpecPvTargetValid ||
+      (netw_state != NW_ETH && netw_state != NW_WIFI) || sunSpecPvRequestPending) return;
+  const uint32_t interval = max(250UL, (uint32_t)constrain((int)sunSpecPvConfig.pollIntervalSeconds, 1, 3600) * 250UL);
+  const uint32_t nowMs = millis();
+  if (sunSpecPvLastPoll && nowMs - sunSpecPvLastPoll < interval) return;
+  sunSpecPvLastPoll = nowMs;
+  // A generic device may provide values with manual factors only; do not
+  // request scale-factor registers in that mode.
+  if (!sunSpecPvConfig.useRegisterScaleFactors &&
+      (sunSpecPvNextField == SunSpecPvPollField::POWER_SCALE || sunSpecPvNextField == SunSpecPvPollField::ENERGY_SCALE)) {
+    sunSpecPvNextField = sunSpecPvNextField == SunSpecPvPollField::POWER_SCALE
+        ? SunSpecPvPollField::ENERGY : SunSpecPvPollField::POWER;
+  }
+  const uint32_t token = ++sunSpecPvToken;
+  sunSpecPvActiveToken = token;
+  sunSpecPvRequestPending = true;
+  sunSpecPvPendingField = sunSpecPvNextField;
+  sunSpecPvNextField = (SunSpecPvPollField)(((uint8_t)sunSpecPvNextField + 1) % (uint8_t)SunSpecPvPollField::COUNT);
+  Error error = sunSpecPvClient.addRequest(token, sunSpecPvConfig.id, READ_HOLD_REGISTER,
+                                            sunSpecPvRegister(sunSpecPvPendingField), sunSpecPvWordCount(sunSpecPvPendingField));
+  if (error != SUCCESS) {
+    sunSpecPvRequestPending = false;
+    DebugVerboseTf("SunSpec PV Modbus queue error: 0x%02X\r\n", (uint8_t)error);
+  }
+}
+
 static constexpr uint8_t kModbusTransportTcp = 0;
 static constexpr uint8_t kModbusTransportRtu = 1;
 

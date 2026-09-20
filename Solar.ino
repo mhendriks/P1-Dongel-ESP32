@@ -20,6 +20,76 @@ SolarPwrSystems SolarEdge = { false, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.
 SolarPwrSystems SMAinv    = { false, "http://192.168.1.231",      "", 0, 0, 0, 0, 0,  15, 0, "/sma.json" };
 SolarPwrSystems Omniksol  = { false, "", "", 0, 0, 0, 0, 0,  15, 0, "/omniksol.json"  };
 static uint16_t LastSolarFetchDurationMs = 0;
+static PvEnergyResource g_pvEnergyResource;
+
+static uint32_t pvStaleAfterMs() {
+  uint16_t interval = 60;
+  switch (pvConnectorDriver) {
+    case PV_DRIVER_MODBUS_TCP: interval = sunSpecPvConfig.pollIntervalSeconds; break;
+    case PV_DRIVER_SOLAREDGE_HTTP: interval = solarEdgeBatteryConfig.pollIntervalSeconds; break;
+    case PV_DRIVER_ENPHASE_HTTP: interval = enphasePvConfig.pollIntervalSeconds; break;
+    case PV_DRIVER_SMA_HTTP: interval = smaPvConfig.pollIntervalSeconds; break;
+    case PV_DRIVER_OMNIKSOL_HTTP: interval = omniksolPvConfig.pollIntervalSeconds; break;
+    default: break;
+  }
+  return (uint32_t)constrain((int)interval * 2, 30, 3600) * 1000UL;
+}
+
+void updatePvResourceValues(const char* connector, const char* protocol, const char* profile,
+                            uint8_t unitId, uint32_t actualW, uint32_t dailyWh, uint32_t wattPeak) {
+  const uint32_t nowMs = millis();
+  g_pvEnergyResource.connectorId = connector;
+  g_pvEnergyResource.sourceProtocol = protocol;
+  g_pvEnergyResource.profileId = profile;
+  g_pvEnergyResource.sourceUnitId = unitId;
+  g_pvEnergyResource.lastSuccessfulPollMs = nowMs;
+  g_pvEnergyResource.activePower = EnergyMeasurement(actualW, "W", nowMs, 0, true);
+  g_pvEnergyResource.dailyEnergy = EnergyMeasurement(dailyWh, "Wh", nowMs, 0, true);
+  g_pvEnergyResource.maximumPower = EnergyMeasurement(wattPeak, "Wp", nowMs, 0, true);
+}
+
+const PvEnergyResource& pvEnergyResource() { return g_pvEnergyResource; }
+
+static void invalidatePvResource() {
+  g_pvEnergyResource.activePower.available = false;
+  g_pvEnergyResource.dailyEnergy.available = false;
+  g_pvEnergyResource.maximumPower.available = false;
+}
+
+bool pvDashboardData(uint32_t& actualW, uint32_t& dailyWh, uint32_t& wattPeak) {
+  const uint32_t nowMs = millis();
+  if (batteryMeasurementQuality(g_pvEnergyResource.activePower, nowMs, pvStaleAfterMs()) != EnergyMeasurementQuality::GOOD ||
+      batteryMeasurementQuality(g_pvEnergyResource.dailyEnergy, nowMs, pvStaleAfterMs()) != EnergyMeasurementQuality::GOOD) return false;
+  actualW = (uint32_t)g_pvEnergyResource.activePower.value;
+  dailyWh = (uint32_t)g_pvEnergyResource.dailyEnergy.value;
+  wattPeak = (uint32_t)g_pvEnergyResource.maximumPower.value;
+  return true;
+}
+
+ApiResponse pvEnergyApiResponse() {
+  const PvEnergyResource& pv = pvEnergyResource();
+  JsonDocument doc;
+  const uint32_t nowMs = millis();
+  doc["id"] = pv.resourceId;
+  doc["type"] = "pv";
+  doc["connector"] = pv.connectorId;
+  doc["profile"] = pv.profileId;
+  doc["protocol"] = pv.sourceProtocol;
+  doc["unit_id"] = pv.sourceUnitId;
+  doc["last_successful_poll_ms"] = pv.lastSuccessfulPollMs;
+  JsonObject measurements = doc["measurements"].to<JsonObject>();
+#define ADD_PV_MEASUREMENT(name, field) \
+  { JsonObject measurement = measurements[name].to<JsonObject>(); \
+    measurement["value"] = pv.field.value; measurement["unit"] = pv.field.unit; \
+    measurement["timestamp_ms"] = pv.field.timestampMs; \
+    measurement["quality"] = energyMeasurementQualityText(batteryMeasurementQuality(pv.field, nowMs, pvStaleAfterMs())); }
+  ADD_PV_MEASUREMENT("active_power", activePower)
+  ADD_PV_MEASUREMENT("daily_energy", dailyEnergy)
+  ADD_PV_MEASUREMENT("maximum_power", maximumPower)
+#undef ADD_PV_MEASUREMENT
+  String body; serializeJson(doc, body);
+  return {200, "application/json", body};
+}
 
 static String   _sma_sid;
 static uint32_t _sma_sid_t0 = 0;
@@ -35,6 +105,42 @@ static void* solarSystemForSource(SolarSource src) {
     case OMNIKSOL:   return &Omniksol;
   }
   return &Omniksol;
+}
+
+static SolarSource pvDriverSource() {
+  switch (pvConnectorDriver) {
+    case PV_DRIVER_SOLAREDGE_HTTP: return SOLAR_EDGE;
+    case PV_DRIVER_ENPHASE_HTTP: return ENPHASE;
+    case PV_DRIVER_SMA_HTTP: return SMA;
+    default: return OMNIKSOL;
+  }
+}
+
+void pvConnectorConfigChanged() {
+  Enphase.Available = SolarEdge.Available = SMAinv.Available = Omniksol.Available = false;
+  if (pvConnectorDriver == PV_DRIVER_NONE) {
+    invalidatePvResource();
+    solarEdgeBatteryConfigChanged();
+    return;
+  }
+  if (pvConnectorDriver == PV_DRIVER_MODBUS_TCP) {
+    solarEdgeBatteryConfigChanged();
+    return;
+  }
+  if (pvConnectorDriver == PV_DRIVER_SOLAREDGE_HTTP) { solarEdgeBatteryConfigChanged(); return; }
+  SolarPwrSystems* target = (SolarPwrSystems*)solarSystemForSource(pvDriverSource());
+  HttpPvConfig* config = pvConnectorDriver == PV_DRIVER_ENPHASE_HTTP ? &enphasePvConfig
+                       : pvConnectorDriver == PV_DRIVER_SMA_HTTP ? &smaPvConfig : &omniksolPvConfig;
+  if (!config->url[0]) return;
+  target->Url = config->url;
+  target->Token = config->token;
+  target->Interval = config->pollIntervalSeconds;
+  target->Wp = pvWattPeak;
+  target->Available = true;
+  target->LastRefresh = 0;
+  // The battery HTTP driver shares SolarEdge's power-flow endpoint. Keep its
+  // separate poll alive when PV itself uses another connector.
+  solarEdgeBatteryConfigChanged();
 }
 
 static uint32_t defaultSolarRefreshInterval(SolarSource src) {
@@ -55,6 +161,13 @@ static const char* solarFetchTag(SolarSource src) {
     case OMNIKSOL:   return "solar-omnik";
   }
   return "solar-fetch";
+}
+
+static void publishPvSource(SolarSource src, const SolarPwrSystems& system) {
+  if (pvConnectorDriver == PV_DRIVER_NONE || pvConnectorDriver == PV_DRIVER_MODBUS_TCP || src != pvDriverSource()) return;
+  const char* profile = src == ENPHASE ? "enphase-http" : src == SOLAR_EDGE ? "solaredge-monitoring-api-v1"
+                      : src == SMA ? "sma-http" : "omniksol-http";
+  updatePvResourceValues(profile, "http-json", profile, 0, system.Actual, system.Daily, system.Wp);
 }
 
 static bool solarHttpBegin(HTTPClient& http, WiFiClient& client, WiFiClientSecure& clientTLS, const String& url) {
@@ -275,36 +388,73 @@ void ReadSolarConfigs() {
   ReadSolarConfig(SMA);
   ReadSolarConfig(OMNIKSOL);
 
-  // One-time migration: existing SolarEdge users keep their credentials in
-  // /solaredge.json. Copy them into the Accu connector settings and select the
-  // HTTP driver only when no battery driver was chosen previously.
+  // Migrate each historic JSON integration into the connector settings.  The
+  // selected driver determines which one is polled; none of the old files is
+  // consulted again by the scheduler afterwards.
+#define MIGRATE_PV_HTTP(target, source) \
+  if (!target.url[0] && source.Url.length()) { strlcpy(target.url, source.Url.c_str(), sizeof(target.url)); strlcpy(target.token, source.Token.c_str(), sizeof(target.token)); target.pollIntervalSeconds = source.Interval; target.wattPeak = source.Wp; }
+  MIGRATE_PV_HTTP(enphasePvConfig, Enphase)
+  MIGRATE_PV_HTTP(smaPvConfig, SMAinv)
+  MIGRATE_PV_HTTP(omniksolPvConfig, Omniksol)
+#undef MIGRATE_PV_HTTP
+
+  // Previous connector versions kept Wp inside each driver profile. Retain
+  // the active profile's value once, then use the installation-wide setting.
+  if (!pvWattPeak) {
+    pvWattPeak = pvConnectorDriver == PV_DRIVER_MODBUS_TCP ? sunSpecPvConfig.wattPeak
+        : pvConnectorDriver == PV_DRIVER_SOLAREDGE_HTTP ? solarEdgePvConfig.wattPeak
+        : pvConnectorDriver == PV_DRIVER_ENPHASE_HTTP ? enphasePvConfig.wattPeak
+        : pvConnectorDriver == PV_DRIVER_SMA_HTTP ? smaPvConfig.wattPeak : omniksolPvConfig.wattPeak;
+  }
+
+  // Existing SolarEdge PV installations were configured in solaredge.json.
+  // Adopt those values once so they appear in the new connector without
+  // making users enter their monitoring credentials again.
+  if (pvConnectorDriver == PV_DRIVER_NONE && !solarEdgeBatteryConfig.siteId && SolarEdge.SiteID && SolarEdge.Token.length()) {
+    solarEdgeBatteryConfig.siteId = SolarEdge.SiteID;
+    strlcpy(solarEdgeBatteryConfig.apiKey, SolarEdge.Token.c_str(), sizeof(solarEdgeBatteryConfig.apiKey));
+    solarEdgeBatteryConfig.pollIntervalSeconds = constrain(SolarEdge.Interval, 300U, 3600U);
+    solarEdgePvConfig.wattPeak = SolarEdge.Wp;
+    pvConnectorDriver = PV_DRIVER_SOLAREDGE_HTTP;
+    writeSettings();
+  }
+
+  // One-time migration: retain old SolarEdge credentials in the shared
+  // connection. Do not activate a battery just because credentials exist;
+  // STORAGE in the power-flow response decides that later.
   if (!solarEdgeBatteryConfig.siteId && SolarEdge.SiteID && SolarEdge.Token.length()) {
     solarEdgeBatteryConfig.siteId = SolarEdge.SiteID;
     strlcpy(solarEdgeBatteryConfig.apiKey, SolarEdge.Token.c_str(), sizeof(solarEdgeBatteryConfig.apiKey));
     solarEdgeBatteryConfig.pollIntervalSeconds = constrain(SolarEdge.Interval, 300U, 3600U);
-    if (batteryConnectorDriver == BATTERY_DRIVER_NONE) batteryConnectorDriver = BATTERY_DRIVER_SOLAREDGE_HTTP;
     writeSettings();
   }
   // The connector owns the credentials when SolarEdge is its active battery
   // driver. The same HTTP request remains shared with the PV integration.
   solarEdgeBatteryConfigChanged();
+  // Keep the legacy /solaredge.json route working, but use the connector
+  // settings as soon as the user explicitly selects a PV driver.
+  pvConnectorConfigChanged();
 
   if (telegramCount == 0) {
-    GetSolarData(ENPHASE, true);
-    GetSolarData(SOLAR_EDGE, true);
-    GetSolarData(SMA, true);
-    GetSolarData(OMNIKSOL, true);
+    if (pvConnectorDriver != PV_DRIVER_MODBUS_TCP && pvConnectorDriver != PV_DRIVER_NONE) GetSolarData(pvDriverSource(), true);
+    if (batteryConnectorDriver == BATTERY_DRIVER_SOLAREDGE_HTTP && pvDriverSource() != SOLAR_EDGE) GetSolarData(SOLAR_EDGE, true);
   } else {
     WorkerEnqueueSolarFetch();
   }
 }
 
+void solarEdgePvConfigChanged() {
+  solarEdgeBatteryConfigChanged();
+}
+
 void solarEdgeBatteryConfigChanged() {
-  if (batteryConnectorDriver != BATTERY_DRIVER_SOLAREDGE_HTTP || !solarEdgeBatteryConfig.siteId || !solarEdgeBatteryConfig.apiKey[0]) return;
+  if ((batteryConnectorDriver != BATTERY_DRIVER_SOLAREDGE_HTTP && pvConnectorDriver != PV_DRIVER_SOLAREDGE_HTTP) ||
+      !solarEdgeBatteryConfig.siteId || !solarEdgeBatteryConfig.apiKey[0]) return;
   SolarEdge.Available = true;
   SolarEdge.SiteID = solarEdgeBatteryConfig.siteId;
   SolarEdge.Token = solarEdgeBatteryConfig.apiKey;
   SolarEdge.Interval = solarEdgeBatteryConfig.pollIntervalSeconds;
+  SolarEdge.Wp = pvWattPeak;
   // The normal low-priority scheduler sees LastRefresh == 0 and performs one
   // fetch. Do not enqueue a direct job here: settings may arrive in a burst
   // and must never turn into repeated HTTPS connection attempts.
@@ -312,10 +462,16 @@ void solarEdgeBatteryConfigChanged() {
 }
 
 void GetSolarData(SolarSource src, bool forceUpdate) {
+  // This source object also feeds the dashboard and history for the local
+  // SunSpec driver.  Do not let the HTTP scheduler overwrite it.
+  if (src == SOLAR_EDGE && pvConnectorDriver == PV_DRIVER_MODBUS_TCP) return;
   SolarPwrSystems* solarSystem = (SolarPwrSystems*)solarSystemForSource(src);
 
   if (!solarSystem->Available) return;
-  if (!forceUpdate && ((uptime() - solarSystem->LastRefresh) < solarSystem->Interval)) return;
+  // LastRefresh == 0 explicitly requests an immediate first poll. This is
+  // set after changing connector settings and at startup.
+  if (!forceUpdate && solarSystem->LastRefresh &&
+      ((uptime() - solarSystem->LastRefresh) < solarSystem->Interval)) return;
   CrashLogMark(solarFetchTag(src), __LINE__);
   solarSystem->LastRefresh = uptime();
   uint32_t fetchStartMs = millis();
@@ -331,6 +487,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
 #endif
     }
     noteSolarFetchDuration(fetchStartMs);
+    publishPvSource(src, *solarSystem);
     return;
   }
 
@@ -404,6 +561,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
       if (!flow.isNull()) {
         String flowUnit = flow["unit"].as<const char*>();
         JsonObject pv = flow["PV"];
+        JsonObject storage = flow["STORAGE"];
         if (!pv.isNull()) {
           float pvPower = pv["currentPower"].as<float>();
           SolarEdgeFlowPvPower = pvPower;
@@ -418,7 +576,6 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
           SolarEdgeFlowPvValid = false;
         }
 
-        JsonObject storage = flow["STORAGE"];
         if (!storage.isNull()) {
           if (batteryConnectorDriver == BATTERY_DRIVER_SOLAREDGE_HTTP) {
             updateSolarEdgeBattery(storage["currentPower"].as<float>(), flowUnit.c_str(),
@@ -433,6 +590,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
     }
 
     noteSolarFetchDuration(fetchStartMs);
+    publishPvSource(src, *solarSystem);
     return;
   }
 
@@ -488,17 +646,13 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   Debug("Actual > "); Debugln(solarSystem->Actual);
 #endif
   noteSolarFetchDuration(fetchStartMs);
+  publishPvSource(src, *solarSystem);
 }
 
 void GetSolarDataNFromWorker() {
   if ( skipNetwork ) return;
-  GetSolarData(ENPHASE,    false);
-  WDT_FEED();
-  GetSolarData(SOLAR_EDGE, false);
-  WDT_FEED();
-  GetSolarData(SMA,        false);
-  WDT_FEED();
-  GetSolarData(OMNIKSOL,   false);
+  if (pvConnectorDriver != PV_DRIVER_NONE && pvConnectorDriver != PV_DRIVER_MODBUS_TCP) GetSolarData(pvDriverSource(), false);
+  if (batteryConnectorDriver == BATTERY_DRIVER_SOLAREDGE_HTTP && pvDriverSource() != SOLAR_EDGE) GetSolarData(SOLAR_EDGE, false);
   WDT_FEED();
 }
 
@@ -513,16 +667,13 @@ void GetSolarDataN() {
 }
 
 uint32_t totalSolarDailyWh() {
-  return Enphase.Daily + SolarEdge.Daily + SMAinv.Daily + Omniksol.Daily;
+  uint32_t actualW, dailyWh, wattPeak;
+  return pvDashboardData(actualW, dailyWh, wattPeak) ? dailyWh : 0;
 }
 
 ApiResponse solarApiResponse() {
-  bool any = Enphase.Available || SolarEdge.Available || SMAinv.Available || Omniksol.Available;
-  if (!any) return {200, "application/json", "{\"active\":false}"};
-
-  uint32_t totalDaily  = totalSolarDailyWh();
-  uint32_t totalActual = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual + Omniksol.Actual;
-  uint32_t totalWp     = Enphase.Wp     + SolarEdge.Wp     + SMAinv.Wp     + Omniksol.Wp;
+  uint32_t totalActual, totalDaily, totalWp;
+  if (!pvDashboardData(totalActual, totalDaily, totalWp)) return {200, "application/json", "{\"active\":false}"};
 
   JsonDocument doc;
   doc["active"] = true;
@@ -546,15 +697,15 @@ ApiResponse solarApiResponse() {
 }
 
 bool fillDashSolarJson(JsonDocument& doc) {
-  bool any = Enphase.Available || SolarEdge.Available || SMAinv.Available || Omniksol.Available;
-  if (!any) return false;
+  uint32_t actualW, dailyWh, wattPeak;
+  if (!pvDashboardData(actualW, dailyWh, wattPeak)) return false;
 
   JsonObject solar = doc["solar"].to<JsonObject>();
   solar["active"] = true;
   JsonObject total = solar["total"].to<JsonObject>();
-  total["daily"] = totalSolarDailyWh();
-  total["actual"] = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual + Omniksol.Actual;
-  solar["Wp"] = Enphase.Wp + SolarEdge.Wp + SMAinv.Wp + Omniksol.Wp;
+  total["daily"] = dailyWh;
+  total["actual"] = actualW;
+  solar["Wp"] = wattPeak;
 
   return true;
 }

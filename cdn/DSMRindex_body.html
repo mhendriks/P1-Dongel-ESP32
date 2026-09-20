@@ -17,6 +17,10 @@
   #Connectors .connector-pane.active { display: block; }
   #Connectors .settings-card { margin: 14px 0; padding: 18px 28px; border: 1px solid #b7b7b7; border-radius: 16px; background: #e8e8e8; }
   #Connectors .settings-card h3 { margin: 0 0 10px; }
+  /* Settings arrive asynchronously. Keep every dependent card hidden until
+     the chosen driver is known, so refreshes do not briefly expose them. */
+  #connector_battery_modbus_card, #connector_solaredge_card, #connector_battery_mapper_card,
+  #connector_pv_system_card, #connector_pv_solaredge_card, #connector_pv_sunspec_card, #connector_pv_mapper_card { display: none; }
   #Connectors .settingDiv { display: grid; grid-template-columns: 1fr max-content; gap: 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,.10); }
   #Connectors .settingDiv:last-child { border-bottom: 0; }
   #Connectors .settingDiv > div:first-child { text-align: left; }
@@ -67,7 +71,6 @@
 			<li><a id='bEditSettings' data-i18n-key="mnu-settings" class='tabButton nav-item' href="#Settings" >Settings</a></li>
 			<li><a id='bConnectors' data-i18n-key="mnu-connectors" class='tabButton nav-item' href="#Connectors">Connectors</a></li>
 			<li><a id='bEditMonths'   data-i18n-key="mnu-editmonths" class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
-			<li><a id='bSolar'   	  data-i18n-key="mnu-solar" class='tabButton nav-item' href="#Solar" >Solar Setup</a></li>
 				<li><a id='bESPHome'   	  data-i18n-key="mnu-esphome" class='nav-item' href="javascript:void(0);" onclick="return openESPHomeMigrationFromMenu(event)" style="display:none">ESPHome</a></li>
 <!-- 			<li><a id='bAbout'   	  class='tabButton nav-item' href="#About" >About</a></li> -->
 		</ul></li>
@@ -86,11 +89,11 @@
   <section id="HoursTab" class="tabName">
     <h2 data-i18n-key="tle-hours">Afgelopen Uren</h2>
 	<div>
-      <label for="pType"><b data-i18n-key="lbl-presentation">Presentatie: </b></label>
-      <span data-i18n-key="lbl-table">Tabel</span>
+      <span><b data-i18n-key="lbl-presentation">Presentatie: </b></span>
+      <label for="hTAB" data-i18n-key="lbl-table">Tabel</label>
       <input type="radio" id="hTAB" onchange="setPresentationType('TAB')" checked/>
       &nbsp;&nbsp;
-      <span data-i18n-key="lbl-graphical">Grafisch</span>
+      <label for="hGRAPH" data-i18n-key="lbl-graphical">Grafisch</label>
       <input type="radio" id="hGRAPH" onchange="setPresentationType('GRAPH')"/>
       &nbsp;&nbsp;
       <button type="button" class="history-order-toggle" onclick="toggleHistoryGraphOrder()" title="X-as omdraaien">
@@ -126,11 +129,11 @@
   <section id="DaysTab" class="tabName">
     <h2 data-i18n-key="tle-days">Afgelopen Dagen</h2>
     <div>
-      <label for="pType"><b data-i18n-key="lbl-presentation">Presentatie: </b></label>
-            <span data-i18n-key="lbl-table">Tabel</span>
+      <span><b data-i18n-key="lbl-presentation">Presentatie: </b></span>
+      <label for="dTAB" data-i18n-key="lbl-table">Tabel</label>
       <input type="radio" id="dTAB" onchange="setPresentationType('TAB')" checked/>
       &nbsp;&nbsp;
-	  <span data-i18n-key="lbl-graphical">Grafisch</span>
+	  <label for="dGRAPH" data-i18n-key="lbl-graphical">Grafisch</label>
       <input type="radio" id="dGRAPH" onchange="setPresentationType('GRAPH')"/>
       &nbsp;&nbsp;
       <button type="button" class="history-order-toggle" onclick="toggleHistoryGraphOrder()" title="X-as omdraaien">
@@ -170,14 +173,14 @@
   <section id="MonthsTab" class="tabName">
 	<h2 data-i18n-key="tle-months">Afgelopen Maanden</h2>
 	<div>
-      <label for="pType"><b data-i18n-key="lbl-presentation">Presentatie: </b></label>
-     <span data-i18n-key="lbl-table">Tabel</span>
+      <span><b data-i18n-key="lbl-presentation">Presentatie: </b></span>
+     <label for="mTAB" data-i18n-key="lbl-table">Tabel</label>
       <input type="radio" id="mTAB" onchange="setPresentationType('TAB')" checked/>
       &nbsp;&nbsp;
       <span data-i18n-key="lbl-costs">Kosten</span>
       <input type="checkbox" id="mCOST" onchange="setMonthTableType()"/>
       &nbsp;&nbsp;
-     <span data-i18n-key="lbl-graphical">Grafisch</span>
+     <label for="mGRAPH" data-i18n-key="lbl-graphical">Grafisch</label>
       <input type="radio" id="mGRAPH" onchange="setPresentationType('GRAPH')"/>
       &nbsp;&nbsp;
       <button type="button" class="history-order-toggle" onclick="toggleHistoryGraphOrder()" title="X-as omdraaien">
@@ -720,25 +723,31 @@
           <button type="button" class="subtab-btn active" data-target="connector_battery" data-i18n-key="connector-battery">Accu</button>
           <button type="button" class="subtab-btn" data-target="connector_pv" data-i18n-key="connector-pv">PV</button>
         </div>
+        <div class="settings-card" id="connector_solaredge_card"><h3>SolarEdge HTTP-verbinding</h3><p>Deze Site-ID, API-sleutel en interval worden gedeeld door de PV- en accuconnector.</p><div id="connector_solaredge_fields"></div></div>
         <div id="connector_battery" class="connector-pane active">
           <div id="connector_battery_status" class="connector-status" data-i18n-key="connector-status-waiting">Batterijstatus wordt geladen…</div>
+          <p data-i18n-key="connector-battery-help">Kies een driver om de status en vermogensgegevens van de accu uit te lezen.</p>
           <div class="settings-card" id="connector_battery_choice_card"><h3>Driver</h3><div id="connector_battery_choice_fields"></div></div>
           <div class="settings-card" id="connector_battery_modbus_card"><h3 data-i18n-key="connector-driver">Driver · Modbus TCP</h3><p>De vooraf ingevulde registerwaarden zijn voor een Victron Cerbo GX (systeem, Unit-ID 100). Pas register, datatype, factor en word swap aan voor andere Modbus TCP-batterijsystemen.</p><div id="connector_battery_driver_fields"></div></div>
-          <div class="settings-card" id="connector_battery_solaredge_card"><h3>Driver · SolarEdge Monitoring API V1</h3><p>De SolarEdge JSON-velden worden vast naar het accumodel vertaald. <code>********</code> bevestigt een opgeslagen sleutel; alleen een andere waarde vervangt die sleutel.</p><div id="connector_battery_solaredge_fields"></div></div>
           <div id="connector_battery_mapper_card" class="settings-card"><h3 data-i18n-key="connector-mapper">Mapper</h3><p data-i18n-key="connector-mapper-help">Koppel de vaste batterijvelden aan bronregisters.</p><div id="connector_battery_mapper_fields"></div></div>
         </div>
         <div id="connector_pv" class="connector-pane">
-          <div class="settings-card"><h3 data-i18n-key="connector-pv">PV</h3><p data-i18n-key="connector-pv-help">PV-connectors volgen dezelfde driver- en mapperopzet.</p></div>
+          <p data-i18n-key="connector-pv-help">Kies een driver om productiedata van de PV-installatie uit te lezen.</p>
+          <div class="settings-card" id="connector_pv_system_card"><h3 data-i18n-key="connector-pv-system">PV-installatie</h3><p data-i18n-key="connector-pv-system-help">Dit vermogen geldt voor de hele installatie, ongeacht de gekozen driver.</p><div id="connector_pv_system_fields"></div></div>
+          <div class="settings-card" id="connector_pv_choice_card"><h3>Driver</h3><div id="connector_pv_choice_fields"></div></div>
+          <div class="settings-card" id="connector_pv_solaredge_card"><h3>Driver · HTTP API</h3><div id="connector_pv_solaredge_fields"></div></div>
+          <div class="settings-card" id="connector_pv_sunspec_card"><h3>Driver · Universele Modbus TCP</h3><p>Het standaardprofiel is SolarEdge SunSpec. De dagproductie wordt lokaal uit de totaalstand bepaald.</p><div id="connector_pv_sunspec_fields"></div></div>
+          <div class="settings-card" id="connector_pv_mapper_card"><h3 data-i18n-key="connector-mapper">Mapper</h3><p data-i18n-key="connector-pv-mapper-help">Koppel vermogen en totaalenergie aan Modbus holding registers.</p><div id="connector_pv_mapper_fields"></div></div>
         </div>
       </div>
     </div>
-    <div id="settings_btns"><a class='btn' onclick="undoReload()" data-i18n-key="btn-undo">Undo</a><a class='btn' onclick="saveSettings()" data-i18n-key="btn-save">Opslaan</a></div>
+    <div class="settings_btns"><a class='btn' onclick="undoReload()" data-i18n-key="btn-undo">Undo</a><a class='btn' onclick="saveSettings()" data-i18n-key="btn-save">Opslaan</a></div>
   </section>
  
   <section id="EditMonths" class="tabName"> 
    <h2 data-i18n-key="tle-input-mtr-reading">Meterstanden invoeren</h2>
   <div id="tabEditMonths" class="tabName">
-    <label for="Period"><b data-i18n-key="tbl-mtr-readering">Meterstand: </b></label>
+    <span><b data-i18n-key="tbl-mtr-readering">Meterstand: </b></span>
       <label for="MED" data-i18n-key="edit-type-energy-delivered">Energy Delivered</label>
       <input type="radio" name="editType" id="MED" onchange="setEditType('ED')" checked/>
       <label for="MER" data-i18n-key="edit-type-energy-returned">Energy Returned</label>
@@ -750,9 +759,9 @@
 		  <div id="editMonths" class="inner-div"></div> 
 	  </div>  <!-- END tabMonthss -->
   </div> <!-- tabMonths -->
-  <div id="settings_btns">
-      <a id='bUndo'   class='btn' onclick="undoReload()" data-i18n-key="btn-undo">Undo</a>
-      <a id='bSave'   class='btn' onclick="saveData()" data-i18n-key="btn-save">Opslaan</a>
+  <div class="settings_btns">
+      <a class='btn' onclick="undoReload()" data-i18n-key="btn-undo">Undo</a>
+      <a class='btn' onclick="saveData()" data-i18n-key="btn-save">Opslaan</a>
       </div>
   </section> <!-- end tabEditMonths Page -->
   
@@ -868,7 +877,7 @@
 
 	<section id="Solar" class="tabName">
 		<div id=eid-setup>
-		<i id=pulse_ico class="iconify" data-icon="mdi-pulse"></i>
+		<i id="pulse_nrgm" class="iconify pulse_ico" data-icon="mdi-pulse"></i>
 		<h1 class=align-c>Solar Setup</h1><br>
 		<div data-i18n-key="sol-intro-1">Instellen van de koppeling met de PV omvormer om de opbrengst zichtbaar te maken in NRG Monitor. Deze configuratie is in te zien en te wijzigen via het bestandsbeheer van de dongle.<br>
 		<br>
@@ -877,13 +886,13 @@
 		<form id="dataForm">
 		<p data-i18n-key="sol-sys">Welk systeem dient gekoppeld te worden?</p>
  		  <input type="radio" id="pv_enphase" name="solar_system" value="Enphase" onClick="ShowHidePV();" checked="checked">
- 		  <label for="enphase">Enphase</label><br>
+		   <label for="pv_enphase">Enphase</label><br>
 		  <input type="radio" id="pv_solaredge" name="solar_system" value="SolarEdge" onClick="ShowHidePV();">
-		  <label for="solaredge">SolarEdge</label><br>
+		   <label for="pv_solaredge">SolarEdge</label><br>
 		<br> 
 			<label for="wp" data-i18n-key="sol-wp">Systeemvermogen (Wp):</label><br>
 			<input type="number" id="wp" name="wp" value=3500><br><br>
-			<label for="Interval" data-i18n-key="sol-interval">Update interval (seconden):</label><br>
+			<label for="interval" data-i18n-key="sol-interval">Update interval (seconden):</label><br>
 			<input type="number" id="interval" name="interval" value=10><br><br>
 			<label for="gw_url" data-i18n-key="sol-url">Gateway url of ip-adres:</label><br>
 			<input type="text" id="gw_url" name="gw_url" value="https://envoy/api/v1/production" style="width: 100%"><br><br>
@@ -1044,11 +1053,11 @@
     <!-- START actueelTab Dummy -->
         <h2 data-i18n-key="tle-actual">Actueel</h2>
     <div>
-        <label for="pType"><b data-i18n-key="lbl-presentation">Presentatie: </b></label>
-        <span data-i18n-key="lbl-table">Tabel</span>
+        <span><b data-i18n-key="lbl-presentation">Presentatie: </b></span>
+        <label for="aTAB" data-i18n-key="lbl-table">Tabel</label>
         <input type="radio" id="aTAB" onchange="setPresentationType('TAB')" checked/>
         &nbsp;&nbsp;
-        <span data-i18n-key="lbl-graphical">Grafisch</span>
+        <label for="aGRAPH" data-i18n-key="lbl-graphical">Grafisch</label>
         <input type="radio" id="aGRAPH" onchange="setPresentationType('GRAPH')"/>
         &nbsp;&nbsp;
     </div>
@@ -1118,11 +1127,11 @@
             <h2 id=dash_solar_p>0.0</h2>
             <div style="text-align:center" ><span data-i18n-key="lbl-solar-self-sufficient">Zelfvoorzienend: </span><b><span id="seue">-</span> <span>%</span></b></div>
             <div style="text-align:center" ><span data-i18n-key="lbl-solar-self-use">Zelfverbruik: </span><b><span id="scr">-</span> <span>%</span></b></div>
-<!--             <div style="text-align:center">Wh/Wp: <b><span id="wpwh">-</span> <span>%</span></b></div> -->
+<!--             <div style="text-align:center">Wh/Wp: <b><span id="wpwh_accu">-</span> <span>%</span></b></div> -->
         </div>
         
         <div class=card id=dash_accu data-widget="dash_accu" style="display:none">
-            <h1 id=dash_solar_h style="background:#007700"><span class="iconify" data-icon="mdi-battery-low"></span><span data-i18n-key="dsh-accu">Opslag<span></h1>
+            <h1 id=dash_accu_h style="background:#007700"><span class="iconify" data-icon="mdi-battery-low"></span><span data-i18n-key="dsh-accu">Opslag<span></h1>
             <canvas class="chart-container" id="container-accu"></canvas>
 			<div id=legenda style="padding-top:25px">
 			</div>
