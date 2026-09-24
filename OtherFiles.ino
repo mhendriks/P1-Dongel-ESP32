@@ -160,6 +160,7 @@ void writeSettingsDirect() {
   docw["udp"] = bUDPenabled;
   #endif
   docw["nrgm-enabled"] = bNRGMenabled;
+  docw["espnow-mode"] = (uint8_t)espNowMode;
   #ifdef NETSWITCH
   docw["netsw-enabled"] = bNETSWenabled;
   #endif
@@ -325,12 +326,17 @@ void readSettings(bool show)
   #ifdef UDP_BCAST
   if (doc["udp"].is<bool>()) bUDPenabled = doc["udp"];
   #endif
-  if (doc["nrgm-enabled"].is<bool>()) bNRGMenabled = doc["nrgm-enabled"];
-  else {
+  if (doc["nrgm-enabled"].is<bool>()) {
+    bNRGMenabled = doc["nrgm-enabled"];
+  } else {
     // legacy migration from <=5.2.9
     bNRGMenabled = (Pref.peers > 0);
     writeSettings();
   }
+  const uint8_t storedEspNowMode = doc["espnow-mode"] | (bNRGMenabled ? 1 : 0);
+  espNowMode = storedEspNowMode <= (uint8_t)EspNowMode::modbus_slave_sink
+    ? (EspNowMode)storedEspNowMode : EspNowMode::off;
+  if (espNowMode == EspNowMode::modbus_slave_sink) bNRGMenabled = false;
 
   #ifdef NETSWITCH
   if (doc["netsw-enabled"].is<bool>()) bNETSWenabled = doc["netsw-enabled"];
@@ -541,10 +547,11 @@ void updateSetting(const char *field, const char *newValue)
   #endif
   if (!stricmp(field, "nrgm-enabled")) {
     bool newNrgmEnabled = (stricmp(newValue, "true") == 0?true:false);
-    if ( bNRGMenabled != newNrgmEnabled ) {
-      bNRGMenabled = newNrgmEnabled;
-      SyncESPNOW();
-    }
+    SetEspNowMode(newNrgmEnabled ? EspNowMode::nrg_monitor : EspNowMode::off);
+  }
+  if (!stricmp(field, "espnow-mode")) {
+    const uint8_t mode = (uint8_t)String(newValue).toInt();
+    if (mode <= (uint8_t)EspNowMode::modbus_slave_sink) SetEspNowMode((EspNowMode)mode);
   }
   #ifdef NETSWITCH
   if (!stricmp(field, "netsw-enabled")) bNETSWenabled = (stricmp(newValue, "true") == 0?true:false);

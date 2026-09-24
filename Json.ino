@@ -523,9 +523,14 @@ String deviceInfoJson()
   doc["mqttinterval"] = settingMQTTinterval;
   doc["mqttbroker_connected"] = !bMQTTenabled ? "off" : (MQTTclient.connected() ? "yes" : "no");
 #endif
-  char paired[18];
-    sprintf(paired,"%i - %s", Pref.peers, en_connected?"connected":"unconnected");
+  char paired[48];
+  if (espNowMode == EspNowMode::modbus_slave_sink) {
+    snprintf(paired, sizeof(paired), "Modbus satellite - %s", en_connected ? "connected" : "waiting");
+  } else {
+    snprintf(paired, sizeof(paired), "%i - %s", Pref.peers, en_connected ? "connected" : "unconnected");
+  }
   doc["paired"] = paired;
+  AppendEspNowSinkDiagnostics(doc);
 
   doc["reboots"] = (int)P1Status.reboots;
   doc["lastreset"] = lastReset;  
@@ -627,7 +632,8 @@ if ( !hideMQTTsettings) {
   doc["try_calc_i"] = try_calc_i;
   doc["eid-enabled"] = bEID_enabled;
   doc["eid-planner"] = StroomPlanData.size() > 0 ? true : false;
-  doc["nrgm-enabled"] = bNRGMenabled;
+  // One explicit mode replaces the old independent NRG Monitor toggle.
+  ADD_SETTING("espnow-mode", "i", 0, 2, (uint8_t)espNowMode);
   #ifdef NETSWITCH
   doc["netsw-enabled"] = bNETSWenabled;
   #endif

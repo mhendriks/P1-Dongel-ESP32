@@ -60,6 +60,8 @@ struct VictronModbusConfig {
 #include "esp_chip_info.h"
 #include <esp_now.h>             //https://randomnerdtutorials.com/esp-now-auto-pairing-esp32-esp8266/
 #include <esp_task_wdt.h>
+#include "espnow_mode.h"
+#include "espnow_modbus_snapshot.h"
 #include "Worker.h"
 
 JsonDocument StroomPlanData;
@@ -802,6 +804,10 @@ void serviceHttpServerRecovery();
 void handleRawPort();
 void SyncESPNOW();
 void SetNRGMPairingMode(bool enabled);
+void SetEspNowMode(EspNowMode mode);
+void P2PSendModbusSinkSnapshot();
+void buildModbusSinkSnapshot(smartstuff::modbus_sink::Snapshot& snapshot);
+void AppendEspNowSinkDiagnostics(JsonDocument& doc);
 
 #include "Debug.h"
 #include <ESPmDNS.h>

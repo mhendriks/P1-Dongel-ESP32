@@ -12,6 +12,7 @@
 
 #include <CRC32.h>
 #include "espnow.h"
+#include "espnow_modbus_snapshot.h"
 
 volatile bool ackReceived = false;
 volatile uint16_t lastAckPacketId = 0;
@@ -30,6 +31,34 @@ static const uint32_t ESPNOW_ASK_TARIF_LOG_INTERVAL_MS = 10000;
 static uint32_t lastAskTarifQueuedMs = 0;
 static uint32_t lastAskTarifThrottleLogMs = 0;
 static bool peerSupportsAccu = false;
+
+// Reported by the satellite in a small, periodic status frame. Keep this
+// gateway-side state separate from the snapshot payload and pairing state.
+struct ModbusSinkLinkDiagnostics {
+  bool received = false;
+  int8_t satelliteRssi = -127;  // RSSI measured by the satellite for snapshots
+  int8_t gatewayRssi = -127;    // RSSI measured by the gateway for status frames
+  uint32_t accepted = 0;
+  uint32_t missed = 0;
+  uint32_t duplicates = 0;
+  uint32_t old = 0;
+  uint32_t lastStatusMs = 0;
+  uint32_t snapshotsQueued = 0;
+  uint32_t snapshotSendFailures = 0;
+};
+static ModbusSinkLinkDiagnostics modbusSinkLink;
+
+static bool isStoredPeer(const uint8_t* mac) {
+  return Pref.peers && mac && memcmp(Pref.mac, mac, 6) == 0;
+}
+
+void SetEspNowMode(EspNowMode mode) {
+  if (espNowMode == mode) return;
+  StopESPNOW();
+  espNowMode = mode;
+  bNRGMenabled = mode == EspNowMode::nrg_monitor;
+  if (mode != EspNowMode::off) StartESPNOW();
+}
 
 void SyncESPNOW();
 
@@ -59,11 +88,12 @@ static void FinishNRGMPairing(bool success) {
 
 void SetNRGMPairingMode(bool enabled) {
   if (enabled) {
-    if (!bNRGMenabled) {
+    if (espNowMode == EspNowMode::off) espNowMode = EspNowMode::nrg_monitor;
+    if (espNowMode == EspNowMode::nrg_monitor && !bNRGMenabled) {
       bNRGMenabled = true;
       bNRGMEnabledByPairing = true;
       SyncESPNOW();
-    } else if (!bPairingmode) {
+    } else if (espNowMode == EspNowMode::nrg_monitor && !bPairingmode) {
       bNRGMEnabledByPairing = false;
     }
 
@@ -105,6 +135,22 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
     return true;
   };
 
+  if (typ == smartstuff::modbus_sink::kLinkStatusMessageType) {
+    smartstuff::modbus_sink::LinkStatus status;
+    if (espNowMode != EspNowMode::modbus_slave_sink || !isStoredPeer(info->src_addr) ||
+        !smartstuff::modbus_sink::decodeLinkStatus(incomingData, (size_t)len, status)) return;
+    modbusSinkLink.received = true;
+    modbusSinkLink.satelliteRssi = status.rssi_dbm;
+    modbusSinkLink.gatewayRssi = info->rx_ctrl->rssi;
+    modbusSinkLink.accepted = status.accepted;
+    modbusSinkLink.missed = status.missed;
+    modbusSinkLink.duplicates = status.duplicates;
+    modbusSinkLink.old = status.old;
+    modbusSinkLink.lastStatusMs = millis();
+    en_connected = true;
+    return;
+  }
+
   DebugTrace("msgTyp: ");DebugTraceLn( typ );
   switch ( typ ){
     case COMMAND:
@@ -116,7 +162,7 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
         case CONN_REQUEST:
           Debugln("CONN_REQUEST");
           peerSupportsAccu = false;
-          if ( Pref.peers ) {
+          if ( isStoredPeer(info->src_addr) ) {
             Debugln("CONN_REQUEST: peer aanwezig");
             Command.action = CONN_RESPONSE;
             Command.channel = WiFi.channel();
@@ -166,7 +212,10 @@ void OnDataRecv(const esp_now_recv_info_t *info, const uint8_t *incomingData, in
           if ( bPairingmode ) {
             String hostname = Command.host;
             Debugln("CONN_REQUEST: pair mode");
-            if ( hostname.indexOf( PEER_NAME_CONTAINS ) != -1 ) {
+            const bool nrgMonitor = hostname.indexOf(PEER_NAME_CONTAINS) != -1;
+            const bool modbusSink = hostname.indexOf(MODBUS_SINK_PEER_NAME_CONTAINS) != -1;
+            if ((espNowMode == EspNowMode::nrg_monitor && nrgMonitor) ||
+                (espNowMode == EspNowMode::modbus_slave_sink && modbusSink)) {
               Debugln("CONN_REQUEST: pair mode en juiste hostname");
               memcpy(Pref.mac, info->src_addr,6);
               AddPeer(Pref.mac);
@@ -240,8 +289,8 @@ void StopESPNOW(){
 }
 
 void StartESPNOW(){
-  if ( !bNRGMenabled ) {
-    Debugln("StartESPNOW: skipped, NRG Monitor disabled");
+  if ( espNowMode == EspNowMode::off && !bNRGMenabled ) {
+    Debugln("StartESPNOW: skipped, ESP-NOW disabled");
     return;
   }
   if ( bESPNowInit ) {
@@ -250,6 +299,10 @@ void StartESPNOW(){
   }
   if ( skipNetwork || bEthUsage || netw_state == NW_ETH || netw_state == NW_ETH_LINK ) {
     WiFi.mode(WIFI_STA);
+  }
+  if (espNowMode == EspNowMode::modbus_slave_sink) {
+    WiFi.enableLongRange(true);
+    Debugln("StartESPNOW: Long Range enabled for modbus slave sink");
   }
   Debugf("StartESPNOW: peers=%u nrgm=%u\n", Pref.peers, bNRGMenabled ? 1 : 0);
   if (esp_now_init() != ESP_OK) {
@@ -276,7 +329,7 @@ void StartESPNOW(){
 }
 
 void SyncESPNOW(){
-  if ( bNRGMenabled ) StartESPNOW();
+  if ( bNRGMenabled || espNowMode == EspNowMode::modbus_slave_sink ) StartESPNOW();
   else {
     StopESPNOW();
 #ifdef ETHERNET
@@ -408,8 +461,44 @@ void P2PSendActualData(){
   if (rs != ESP_OK) Debugf("P2P actual send failed: %d\n", (int)rs);
 }
 
+void P2PSendModbusSinkSnapshot() {
+  using namespace smartstuff::modbus_sink;
+  if (espNowMode != EspNowMode::modbus_slave_sink || !espNowReadyForPeerData() || !en_connected) return;
+
+  Snapshot snapshot;
+  buildModbusSinkSnapshot(snapshot);
+
+  uint8_t bytes[kPacketBytes];
+  const size_t length = encode(snapshot, bytes, sizeof(bytes));
+  if (!length) return;
+  ++modbusSinkLink.snapshotsQueued;
+  if (esp_now_send(Pref.mac, bytes, length) != ESP_OK) {
+    ++en_error;
+    ++modbusSinkLink.snapshotSendFailures;
+  }
+}
+
+void AppendEspNowSinkDiagnostics(JsonDocument& doc) {
+  if (espNowMode != EspNowMode::modbus_slave_sink) return;
+  JsonObject sink = doc["espnow_modbus_sink"].to<JsonObject>();
+  sink["paired"] = Pref.peers != 0;
+  sink["connected"] = en_connected;
+  sink["status_received"] = modbusSinkLink.received;
+  if (modbusSinkLink.received) {
+    sink["status_age_ms"] = millis() - modbusSinkLink.lastStatusMs;
+    sink["satellite_rssi"] = modbusSinkLink.satelliteRssi;
+    sink["gateway_rssi"] = modbusSinkLink.gatewayRssi;
+    sink["accepted"] = modbusSinkLink.accepted;
+    sink["missed"] = modbusSinkLink.missed;
+    sink["duplicates"] = modbusSinkLink.duplicates;
+    sink["old"] = modbusSinkLink.old;
+  }
+  sink["snapshots_queued"] = modbusSinkLink.snapshotsQueued;
+  sink["snapshot_send_failures"] = modbusSinkLink.snapshotSendFailures;
+}
+
 void P2PSendAccuData() {
-  if (!espNowReadyForPeerData() || !bNRGMenabled || !en_connected || !peerSupportsAccu) return;
+  if (!espNowReadyForPeerData() || espNowMode != EspNowMode::nrg_monitor || !bNRGMenabled || !en_connected || !peerSupportsAccu) return;
 
   AccuData.msgType = NRGACCU;
   AccuData.accuAvailable = false;

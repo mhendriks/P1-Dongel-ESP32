@@ -761,9 +761,11 @@ void processTelegram(){
   }
 
 	#ifdef ESPNOW
-		// if ( telegramCount % 3 == 1 ) SendActualData();
-		P2PSendActualData();
-		P2PSendAccuData();
+		if (espNowMode == EspNowMode::modbus_slave_sink) P2PSendModbusSinkSnapshot();
+		else {
+		  P2PSendActualData();
+		  P2PSendAccuData();
+		}
 	#endif
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 

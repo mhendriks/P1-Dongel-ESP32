@@ -2131,6 +2131,25 @@ function renderDeviceInformation(obj, manifest) {
     addDeviceInfoRow(containers.connections, "MEENT", meent, "sysinfo-value-part");
   }
   ["eid_status", "paired"].forEach(key => addDeviceInfoRow(containers.connections, td(key), obj[key]));
+  const modbusSink = obj.espnow_modbus_sink;
+  if (modbusSink) {
+    const linkState = !modbusSink.paired ? "Waiting for pairing"
+      : modbusSink.connected ? "Paired and connected" : "Paired; waiting for satellite";
+    addDeviceInfoRow(containers.connections, "ESP-NOW Modbus satellite", linkState);
+    if (modbusSink.status_received) {
+      const age = deviceInfoNumber(modbusSink.status_age_ms);
+      addDeviceInfoRow(
+        containers.connections,
+        "Satellite link quality",
+        `at satellite ${modbusSink.satellite_rssi} dBm · at gateway ${modbusSink.gateway_rssi} dBm · status ${age} ms ago`
+      );
+      addDeviceInfoRow(
+        containers.connections,
+        "Satellite frames",
+        `${deviceInfoNumber(modbusSink.accepted)} accepted · ${deviceInfoNumber(modbusSink.missed)} missed · ${deviceInfoNumber(modbusSink.duplicates)} duplicate · ${deviceInfoNumber(modbusSink.old)} old`
+      );
+    }
+  }
   document.getElementById("sysinfo_connections_card")?.toggleAttribute("hidden", !containers.connections?.children.length);
 
   const groupedKeys = new Set([
@@ -3808,8 +3827,27 @@ function initModbusMonitorControls() {
 			let sInput; // kan INPUT of SELECT worden
 			const fldId = "setFld_" + i;
 			
+			// --- ESP-NOW operating mode ---
+			if (i === "espnow-mode") {
+			  const MODES = [
+				{ v: 0, t: "Uit" },
+				{ v: 1, t: "NRG Monitor" },
+				{ v: 2, t: "Modbus-satelliet" },
+			  ];
+			  const sel = document.createElement("select");
+			  sel.setAttribute("id", fldId);
+			  const cur = parseInt(data[i].value ?? "0", 10);
+			  MODES.forEach(o => {
+				const opt = document.createElement("option");
+				opt.value = String(o.v);
+				opt.textContent = o.t;
+				if (o.v === cur) opt.selected = true;
+				sel.appendChild(opt);
+			  });
+			  sInput = sel;
+			}
 			// --- mb_map als dropdown ---
-			if (i === "mb_map") {
+			else if (i === "mb_map") {
 			  const MAPS = [
 				{ v: 0, t: "Default - uint32" },
 				{ v: 1, t: "SDM630" },
