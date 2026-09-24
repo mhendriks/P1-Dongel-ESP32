@@ -436,7 +436,25 @@ struct buildJsonMQTT {
     void apply(Item &i) {
      char Name[25];
      strncpy(Name,String(Item::name).c_str(),sizeof(Name));
-    if ( isInFieldsArray(Name) && i.present() ) {
+     Name[sizeof(Name) - 1] = '\0';
+    if ( isInFieldsArray(Name) ) {
+          uint8_t phase = 0;
+          if (!strcmp(Name, "current_l1")) phase = 1;
+          else if (!strcmp(Name, "current_l2")) phase = 2;
+          else if (!strcmp(Name, "current_l3")) phase = 3;
+          if (phase) {
+            const MeterCurrent current = GetMeterCurrent(phase);
+            if (current.present) {
+              const float value = outputCurrentMilliAmps(current.milliAmps);
+              if (bActJsonMQTT) jsonDoc[Name] = value;
+              else if (MQTTclient.connected() && (!bActJsonMQTT || EnableHAdiscovery)) {
+                sprintf(cMsg, "%s%s", MQTopTopic, Name);
+                MQTTclient.publish(cMsg, String(value, 3).c_str());
+              }
+            }
+            return;
+          }
+    if (i.present()) {
           // add value to '/all' topic
           uint32_t factor = outputFactorForField(Name);
           if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val(), factor);
@@ -444,7 +462,8 @@ struct buildJsonMQTT {
             sprintf(cMsg,"%s%s",MQTopTopic,Name);
             MQTTclient.publish( cMsg, String(value_to_json(i.val(), factor)).c_str() );
           }
-    } // if isInFieldsArray && present
+    } // if present
+    } // if isInFieldsArray
   } //apply
 
   template<typename Item>
@@ -533,6 +552,10 @@ void MQTTSendVictronData(){
   auto gridPower = [](auto delivered, auto returned) -> int32_t {
     return (int32_t)((delivered.int_val() + returned.int_val()) * (returned ? -1.0 : 1.0));
   };
+  auto currentValue = [](uint8_t phase) -> float {
+    const MeterCurrent current = GetMeterCurrent(phase);
+    return current.present ? roundf(outputCurrentMilliAmps(current.milliAmps)) : 0.0f;
+  };
   auto fixedValue = [](auto value, uint8_t decimals) -> float {
     float scaled = value.int_val() / 1000.0f;
     if (decimals == 0) return roundf(scaled);
@@ -547,17 +570,17 @@ void MQTTSendVictronData(){
   JsonObject l1 = grid["L1"].to<JsonObject>();
   l1["power"] = outputPowerInt(gridPower(DSMRdata.power_delivered_l1, DSMRdata.power_returned_l1));
   l1["voltage"] = outputVoltage(fixedValue(DSMRdata.voltage_l1, 1));
-  l1["current"] = outputCurrent(fixedValue(DSMRdata.current_l1, 0));
+  l1["current"] = currentValue(1);
 
   JsonObject l2 = grid["L2"].to<JsonObject>();
   l2["power"] = outputPowerInt(gridPower(DSMRdata.power_delivered_l2, DSMRdata.power_returned_l2));
   l2["voltage"] = outputVoltage(fixedValue(DSMRdata.voltage_l2, 1));
-  l2["current"] = outputCurrent(fixedValue(DSMRdata.current_l2, 0));
+  l2["current"] = currentValue(2);
 
   JsonObject l3 = grid["L3"].to<JsonObject>();
   l3["power"] = outputPowerInt(gridPower(DSMRdata.power_delivered_l3, DSMRdata.power_returned_l3));
   l3["voltage"] = outputVoltage(fixedValue(DSMRdata.voltage_l3, 1));
-  l3["current"] = outputCurrent(fixedValue(DSMRdata.current_l3, 0));
+  l3["current"] = currentValue(3);
 
   String jsondata;
   serializeJson(doc, jsondata);

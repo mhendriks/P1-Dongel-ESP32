@@ -77,6 +77,14 @@ struct ApiRequestContext {
   String uri;
 };
 
+// Telegram currents are immutable source data. Calculated currents are kept
+// separately and selected centrally according to try_calc_i.
+struct MeterCurrent {
+  bool present = false;
+  bool calculated = false;
+  uint32_t milliAmps = 0;
+};
+
 #ifdef MBUS
   #include "ModbusServerWiFi.h"
   #include "ModbusClientTCP.h"
@@ -223,6 +231,8 @@ void SendTariffData();
 void EID_RESTART_IDLE_TIMER();
 uint32_t actueleOverspanningSeconden(uint32_t overspanningTotaal, unsigned long startTijd, bool overspanning);
 void ResetOvervoltageStats();
+void UpdateCalculatedCurrents();
+MeterCurrent GetMeterCurrent(uint8_t phase);
 String smActualJsonDebug();
 
 class ApiWebSocketsServer : public WebSocketsServer {
@@ -636,6 +646,10 @@ inline uint32_t outputPowerFactor() {
 
 inline float outputCurrent(float rawValue) {
   return rawValue * (float)settingCTFactor;
+}
+
+inline float outputCurrentMilliAmps(uint32_t milliAmps) {
+  return outputCurrent((float)milliAmps / 1000.0f);
 }
 
 inline float outputVoltage(float rawValue) {

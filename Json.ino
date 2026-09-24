@@ -113,9 +113,12 @@ ApiResponse dashLiveApiResponse() {
   if (power.size() == 0) doc.remove("power");
 
   JsonObject current = doc["current"].to<JsonObject>();
-  if (DSMRdata.current_l1_present) current["l1"] = outputCurrent(DSMRdata.current_l1.val());
-  if (DSMRdata.current_l2_present) current["l2"] = outputCurrent(DSMRdata.current_l2.val());
-  if (DSMRdata.current_l3_present) current["l3"] = outputCurrent(DSMRdata.current_l3.val());
+  const MeterCurrent currentL1 = GetMeterCurrent(1);
+  const MeterCurrent currentL2 = GetMeterCurrent(2);
+  const MeterCurrent currentL3 = GetMeterCurrent(3);
+  if (currentL1.present) current["l1"] = outputCurrentMilliAmps(currentL1.milliAmps);
+  if (currentL2.present) current["l2"] = outputCurrentMilliAmps(currentL2.milliAmps);
+  if (currentL3.present) current["l3"] = outputCurrentMilliAmps(currentL3.milliAmps);
   if (current.size() == 0) doc.remove("current");
 
   JsonObject voltage = doc["voltage"].to<JsonObject>();
@@ -164,9 +167,9 @@ ApiResponse dashLiveApiResponse() {
 String apiStatsJson() {
   return jsonResponse([&](JsonDocument& doc){
     
-    if ( DSMRdata.current_l1_present ) doc["I1piek"]  = outputCurrent(P1Stats.I1piek);
-    if ( DSMRdata.current_l2_present ) doc["I2piek"]  = outputCurrent(P1Stats.I2piek);
-    if ( DSMRdata.current_l3_present ) doc["I3piek"]  = outputCurrent(P1Stats.I3piek);
+    if ( GetMeterCurrent(1).present ) doc["I1piek"]  = outputCurrentMilliAmps(P1Stats.I1piek);
+    if ( GetMeterCurrent(2).present ) doc["I2piek"]  = outputCurrentMilliAmps(P1Stats.I2piek);
+    if ( GetMeterCurrent(3).present ) doc["I3piek"]  = outputCurrentMilliAmps(P1Stats.I3piek);
     
     if ( DSMRdata.power_delivered_l1_present ) doc["P1max"]   = outputPowerInt(P1Stats.P1max);
     if ( DSMRdata.power_delivered_l2_present ) doc["P2max"]   = outputPowerInt(P1Stats.P2max);
@@ -322,9 +325,12 @@ static void fillHWapiJson(JsonDocument& jsonDoc) {
     jsonDoc["active_voltage_l2_v"] = F3DEC(outputVoltage(DSMRdata.voltage_l2.val()));
     jsonDoc["active_voltage_l3_v"] = F3DEC(outputVoltage(DSMRdata.voltage_l3.val()));
 
-    float i1 = (DSMRdata.voltage_l1_present&&DSMRdata.voltage_l1.val())?jsonDoc["active_power_l1_w"].as<float>()/outputVoltage(DSMRdata.voltage_l1.val()):0.0f;
-    float i2 = (DSMRdata.voltage_l2_present&&DSMRdata.voltage_l2.val())?jsonDoc["active_power_l2_w"].as<float>()/outputVoltage(DSMRdata.voltage_l2.val()):0.0f;
-    float i3 = (DSMRdata.voltage_l3_present&&DSMRdata.voltage_l3.val())?jsonDoc["active_power_l3_w"].as<float>()/outputVoltage(DSMRdata.voltage_l3.val()):0.0f;
+    const MeterCurrent currentL1 = GetMeterCurrent(1);
+    const MeterCurrent currentL2 = GetMeterCurrent(2);
+    const MeterCurrent currentL3 = GetMeterCurrent(3);
+    const float i1 = currentL1.present ? outputCurrentMilliAmps(currentL1.milliAmps) : 0.0f;
+    const float i2 = currentL2.present ? outputCurrentMilliAmps(currentL2.milliAmps) : 0.0f;
+    const float i3 = currentL3.present ? outputCurrentMilliAmps(currentL3.milliAmps) : 0.0f;
 
     jsonDoc["active_current_a"]    = F3DEC( abs(i1) + abs(i2) + abs(i3) );
     jsonDoc["active_current_l1_a"] = F3DEC(i1);

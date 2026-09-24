@@ -51,6 +51,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
+5.9.6
+- fix current issues
+
 5.10...
 - Normalise energy data (huge change)
 - dynamic prices 
@@ -87,7 +90,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
 // #define NRG_DONGLE       // + D1MC and NRGDH 
-// #define _P1P
+#define _P1P
 
 //SPECIAL
 // #define __Az__

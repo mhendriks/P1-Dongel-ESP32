@@ -708,29 +708,7 @@ void processTelegram(){
 
   newT = epoch(DSMRdata.timestamp.c_str(), DSMRdata.timestamp.length(), true); // update system time
   
-  // Calculate current only when phase power has a usable, non-zero value.
-  // Some Belgian meters report zero for every phase power while providing
-  // valid phase currents; do not overwrite those currents with zero.
-  if ( try_calc_i ) {
-    if ( DSMRdata.voltage_l1_present && DSMRdata.voltage_l1 &&
-         ((DSMRdata.power_delivered_l1_present && DSMRdata.power_delivered_l1.int_val()) ||
-          (DSMRdata.power_returned_l1_present && DSMRdata.power_returned_l1.int_val())) ){
-      DSMRdata.current_l1._value = (uint32_t)((DSMRdata.power_delivered_l1.int_val() + DSMRdata.power_returned_l1.int_val())/DSMRdata.voltage_l1*1000);
-      DSMRdata.current_l1_present = true;
-    }
-    if ( DSMRdata.voltage_l2_present && DSMRdata.voltage_l2 &&
-         ((DSMRdata.power_delivered_l2_present && DSMRdata.power_delivered_l2.int_val()) ||
-          (DSMRdata.power_returned_l2_present && DSMRdata.power_returned_l2.int_val())) ){
-      DSMRdata.current_l2._value = (uint32_t)((DSMRdata.power_delivered_l2.int_val() + DSMRdata.power_returned_l2.int_val())/DSMRdata.voltage_l2*1000);
-      DSMRdata.current_l2_present = true;
-    }
-    if ( DSMRdata.voltage_l3_present && DSMRdata.voltage_l3 &&
-         ((DSMRdata.power_delivered_l3_present && DSMRdata.power_delivered_l3.int_val()) ||
-          (DSMRdata.power_returned_l3_present && DSMRdata.power_returned_l3.int_val())) ){
-      DSMRdata.current_l3._value = (uint32_t)((DSMRdata.power_delivered_l3.int_val() + DSMRdata.power_returned_l3.int_val())/DSMRdata.voltage_l3*1000);
-      DSMRdata.current_l3_present = true;
-    }
-  }//try calc i
+  UpdateCalculatedCurrents();
   // has the hour changed write ringfiles
 #ifdef DEBUG
   DebugTf("actMin[%02d] -- newMin[%02d]\r\n", minute(actT), minute(newT));  
@@ -873,9 +851,12 @@ uint32_t actueleOverspanningSeconden(uint32_t overspanningTotaal, unsigned long 
 }
 
 void ProcessStats(){
-  if ( DSMRdata.current_l1_present && DSMRdata.current_l1.int_val() > P1Stats.I1piek ) P1Stats.I1piek = DSMRdata.current_l1.int_val();
-  if ( DSMRdata.current_l2_present && DSMRdata.current_l2.int_val() > P1Stats.I2piek ) P1Stats.I2piek = DSMRdata.current_l2.int_val();
-  if ( DSMRdata.current_l3_present && DSMRdata.current_l3.int_val() > P1Stats.I3piek ) P1Stats.I3piek = DSMRdata.current_l3.int_val();
+  const MeterCurrent currentL1 = GetMeterCurrent(1);
+  const MeterCurrent currentL2 = GetMeterCurrent(2);
+  const MeterCurrent currentL3 = GetMeterCurrent(3);
+  if ( currentL1.present && currentL1.milliAmps > P1Stats.I1piek ) P1Stats.I1piek = currentL1.milliAmps;
+  if ( currentL2.present && currentL2.milliAmps > P1Stats.I2piek ) P1Stats.I2piek = currentL2.milliAmps;
+  if ( currentL3.present && currentL3.milliAmps > P1Stats.I3piek ) P1Stats.I3piek = currentL3.milliAmps;
   
   if ( DSMRdata.power_delivered_l1_present) {
     if ( DSMRdata.power_delivered_l1.int_val() > P1Stats.P1max ) P1Stats.P1max = DSMRdata.power_delivered_l1.int_val();

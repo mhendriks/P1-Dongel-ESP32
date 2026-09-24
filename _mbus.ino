@@ -418,22 +418,35 @@ static float readMbSourceValue(MbSource source) {
       if (DSMRdata.voltage_l3_present) { value += (float)DSMRdata.voltage_l3.val(); count++; }
       return count ? outputVoltage(value / (float)count) : NAN;
     }
-    case MbSource::current_l1_a:
-      return DSMRdata.current_l1_present ? outputCurrent((float)DSMRdata.current_l1.val()) : NAN;
-    case MbSource::current_l2_a:
-      return DSMRdata.current_l2_present ? outputCurrent((float)DSMRdata.current_l2.val()) : NAN;
-    case MbSource::current_l3_a:
-      return DSMRdata.current_l3_present ? outputCurrent((float)DSMRdata.current_l3.val()) : NAN;
-    case MbSource::current_total_a:
-      return DSMRdata.current_l1_present
-        ? outputCurrent((float)(DSMRdata.current_l1.val() + DSMRdata.current_l2.val() + DSMRdata.current_l3.val()))
-        : NAN;
-    case MbSource::signed_current_l1_a:
-      return DSMRdata.current_l1_present ? outputCurrent(mbSignedCurrent((float)DSMRdata.current_l1.val(), DSMRdata.power_returned_l1.val())) : NAN;
-    case MbSource::signed_current_l2_a:
-      return DSMRdata.current_l2_present ? outputCurrent(mbSignedCurrent((float)DSMRdata.current_l2.val(), DSMRdata.power_returned_l2.val())) : NAN;
-    case MbSource::signed_current_l3_a:
-      return DSMRdata.current_l3_present ? outputCurrent(mbSignedCurrent((float)DSMRdata.current_l3.val(), DSMRdata.power_returned_l3.val())) : NAN;
+    case MbSource::current_l1_a: {
+      const MeterCurrent current = GetMeterCurrent(1);
+      return current.present ? outputCurrentMilliAmps(current.milliAmps) : NAN;
+    }
+    case MbSource::current_l2_a: {
+      const MeterCurrent current = GetMeterCurrent(2);
+      return current.present ? outputCurrentMilliAmps(current.milliAmps) : NAN;
+    }
+    case MbSource::current_l3_a: {
+      const MeterCurrent current = GetMeterCurrent(3);
+      return current.present ? outputCurrentMilliAmps(current.milliAmps) : NAN;
+    }
+    case MbSource::current_total_a: {
+      const MeterCurrent l1 = GetMeterCurrent(1), l2 = GetMeterCurrent(2), l3 = GetMeterCurrent(3);
+      return (l1.present || l2.present || l3.present)
+        ? outputCurrentMilliAmps((l1.present ? l1.milliAmps : 0) + (l2.present ? l2.milliAmps : 0) + (l3.present ? l3.milliAmps : 0)) : NAN;
+    }
+    case MbSource::signed_current_l1_a: {
+      const MeterCurrent current = GetMeterCurrent(1);
+      return current.present ? outputCurrent(mbSignedCurrent((float)current.milliAmps / 1000.0f, DSMRdata.power_returned_l1.val())) : NAN;
+    }
+    case MbSource::signed_current_l2_a: {
+      const MeterCurrent current = GetMeterCurrent(2);
+      return current.present ? outputCurrent(mbSignedCurrent((float)current.milliAmps / 1000.0f, DSMRdata.power_returned_l2.val())) : NAN;
+    }
+    case MbSource::signed_current_l3_a: {
+      const MeterCurrent current = GetMeterCurrent(3);
+      return current.present ? outputCurrent(mbSignedCurrent((float)current.milliAmps / 1000.0f, DSMRdata.power_returned_l3.val())) : NAN;
+    }
     case MbSource::gas_timestamp_epoch:
       return mbusGas ? (float)(epoch(gasDeliveredTimestamp.c_str(), 10, false) - (actTimestamp[12] == 'S' ? 7200 : 3600)) : NAN;
     case MbSource::gas_delivered_m3:
@@ -606,16 +619,23 @@ static float readScaledMbSourceValue(MbSource source, int16_t scale) {
       if (DSMRdata.voltage_l3_present) { value += DSMRdata.voltage_l3.int_val(); count++; }
       return count ? sign * (float)(value / count) : NAN;
     }
-    case MbSource::current_l1_a:
-      return DSMRdata.current_l1_present ? sign * (float)DSMRdata.current_l1.int_val() : NAN;
-    case MbSource::current_l2_a:
-      return DSMRdata.current_l2_present ? sign * (float)DSMRdata.current_l2.int_val() : NAN;
-    case MbSource::current_l3_a:
-      return DSMRdata.current_l3_present ? sign * (float)DSMRdata.current_l3.int_val() : NAN;
-    case MbSource::current_total_a:
-      return DSMRdata.current_l1_present
-        ? sign * (float)(DSMRdata.current_l1.int_val() + DSMRdata.current_l2.int_val() + DSMRdata.current_l3.int_val())
-        : NAN;
+    case MbSource::current_l1_a: {
+      const MeterCurrent current = GetMeterCurrent(1);
+      return current.present ? sign * (float)current.milliAmps : NAN;
+    }
+    case MbSource::current_l2_a: {
+      const MeterCurrent current = GetMeterCurrent(2);
+      return current.present ? sign * (float)current.milliAmps : NAN;
+    }
+    case MbSource::current_l3_a: {
+      const MeterCurrent current = GetMeterCurrent(3);
+      return current.present ? sign * (float)current.milliAmps : NAN;
+    }
+    case MbSource::current_total_a: {
+      const MeterCurrent l1 = GetMeterCurrent(1), l2 = GetMeterCurrent(2), l3 = GetMeterCurrent(3);
+      return (l1.present || l2.present || l3.present)
+        ? sign * (float)((l1.present ? l1.milliAmps : 0) + (l2.present ? l2.milliAmps : 0) + (l3.present ? l3.milliAmps : 0)) : NAN;
+    }
     case MbSource::peak_pwr_last_q_kw:
       return DSMRdata.peak_pwr_last_q_present ? sign * DSMRdata.peak_pwr_last_q.int_val() : NAN;
     case MbSource::net_power_total_kw:
