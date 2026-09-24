@@ -144,6 +144,126 @@ static bool readPreferredEthMac(uint8_t *mac){
 
 WiFiManager manageWiFi;
 
+// Keep the provisioning access point active after a successful connection
+// until the user has confirmed they are ready to leave the portal.
+static const uint32_t WIFI_PROVISION_CONTINUE_TIMEOUT_MS = 60000;
+// Three 15-second connection attempts may be needed before WiFiManager gives
+// up, so keep the portal feedback pending a little longer than that.
+static const uint32_t WIFI_PROVISION_CONNECT_TIMEOUT_MS = 50000;
+static const uint8_t WIFI_BOOT_CONNECT_ATTEMPTS = 3;
+static uint32_t wifiProvisioningConnectStartedAt = 0;
+static bool wifiProvisioningContinueRequested = false;
+static bool wifiProvisioningRetryPrepared = false;
+static uint8_t wifiLastDisconnectReason = 0;
+
+static bool wifiAuthenticationFailed(uint8_t reason) {
+  return reason == WIFI_REASON_AUTH_EXPIRE ||
+         reason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT ||
+         reason == WIFI_REASON_AUTH_FAIL ||
+         reason == WIFI_REASON_HANDSHAKE_TIMEOUT;
+}
+
+static const char WIFI_PROVISIONING_DARK_STYLE[] PROGMEM =
+  "<style>body{font-family:verdana,sans-serif;text-align:center;margin:0;padding:1.5em;line-height:1.5;background:#060606;color:#fff}"
+  "h1{color:#fff}.address{display:block;margin:.7em 0;padding:.8em;background:#282828;color:#fff;border:1px solid #555;border-radius:.4em;font-size:1.05em;word-break:break-all;text-decoration:none}"
+  ".action,button{display:inline-block;margin-top:1em;padding:.8em 1em;border:0;border-radius:.3em;background:#1fa3ec;color:#fff;font-size:1em;text-decoration:none}"
+  "small{display:block;margin-top:1.5em;color:#ccc}</style></head><body>";
+
+static String wifiProvisioningPageStart(const __FlashStringHelper* title, size_t capacity) {
+  String page;
+  page.reserve(capacity);
+  page += F("<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'><meta http-equiv='cache-control' content='no-store'><title>");
+  page += title;
+  page += F("</title>");
+  page += FPSTR(WIFI_PROVISIONING_DARK_STYLE);
+  return page;
+}
+
+static String wifiProvisioningSuccessPage() {
+  const String ipAddress = WiFi.localIP().toString();
+  const String hostname = manageWiFi.htmlEntities(String(settingHostname));
+
+  String page = wifiProvisioningPageStart(F("Wi-Fi connected"), 1400);
+  page += F("<h1>Wi-Fi connected</h1><p>The dongle is connected to your Wi-Fi network.</p>");
+  page += F("<p>IP address:</p><a class='address' href='http://");
+  page += ipAddress;
+  page += F("/'>http://");
+  page += ipAddress;
+  page += F("/</a><p>Hostname:</p><a class='address' href='http://");
+  page += hostname;
+  page += F(".local/'>http://");
+  page += hostname;
+  page += F(".local/");
+  page += F("</a><small>Keep this page open until you have noted the addresses. Select Continue when you are ready to reconnect your phone to your normal Wi-Fi network.</small><form action='/provisioning-continue'><button id='continueButton' type='submit'>Continue (60)</button></form><script>let seconds=60;const button=document.getElementById('continueButton');setInterval(()=>{if(seconds>0){button.textContent='Continue ('+(--seconds)+')';}},1000);</script></body></html>");
+  return page;
+}
+
+static String wifiProvisioningCompletePage() {
+  String page = wifiProvisioningPageStart(F("Configuration complete"), 600);
+  page += F("<h1>Configuration complete</h1><p>You can now reconnect to your normal Wi-Fi network.</p></body></html>");
+  return page;
+}
+
+static String wifiProvisioningFailurePage() {
+  String page = wifiProvisioningPageStart(F("Wi-Fi not connected"), 900);
+  page += F("<h1>Wi-Fi not connected</h1><p>The dongle could not connect to this Wi-Fi network.</p>");
+  page += F("<p>Check the network name and password, then try again.</p><a class='action' href='/wifi?refresh=1'>Try again</a>");
+  page += F("<small>The configuration hotspot remains available.</small></body></html>");
+  return page;
+}
+
+static void sendWifiProvisioningPage(const String& page) {
+  manageWiFi.server->sendHeader("Cache-Control", "no-store");
+  manageWiFi.server->send(200, "text/html", page);
+}
+
+static void wifiProvisioningConnectStarted() {
+  wifiProvisioningConnectStartedAt = millis();
+  wifiProvisioningRetryPrepared = false;
+}
+
+static bool wifiProvisioningConnectionFailed() {
+  const uint8_t result = manageWiFi.getLastConxResult();
+  return result == WL_CONNECT_FAILED || result == WL_NO_SSID_AVAIL ||
+         result == WL_CONNECTION_LOST || result == WL_DISCONNECTED;
+}
+
+static void wifiProvisioningPrepareRetry() {
+  if (wifiProvisioningRetryPrepared) return;
+  // WiFiManager leaves the failed STA connection running in non-blocking mode.
+  // Stop only STA (not the provisioning AP) so its native Wi-Fi page can make
+  // a fresh scan when the user selects Try again.
+  WiFi.disconnect(false, false);
+  WiFi.scanDelete();
+  wifiProvisioningRetryPrepared = true;
+}
+
+static void setupWifiProvisioningSuccessPage() {
+  // This callback runs after WiFiManager has created its web server but before
+  // it installs its own routes. Our distinct route therefore remains intact.
+  manageWiFi.server->on("/provisioning-success", []() {
+    if (WiFi.status() == WL_CONNECTED) {
+      sendWifiProvisioningPage(wifiProvisioningSuccessPage());
+      return;
+    }
+    if (wifiProvisioningConnectStartedAt != 0 &&
+        (wifiProvisioningConnectionFailed() ||
+         (uint32_t)(millis() - wifiProvisioningConnectStartedAt) >= WIFI_PROVISION_CONNECT_TIMEOUT_MS)) {
+      wifiProvisioningPrepareRetry();
+      sendWifiProvisioningPage(wifiProvisioningFailurePage());
+      return;
+    }
+    manageWiFi.server->send(204, "text/plain", "");
+  });
+  manageWiFi.server->on("/provisioning-continue", []() {
+    wifiProvisioningContinueRequested = true;
+    sendWifiProvisioningPage(wifiProvisioningCompletePage());
+  });
+}
+
+static const char WIFI_PROVISIONING_SUCCESS_SCRIPT[] PROGMEM =
+  "<script>if(location.pathname=='/wifisave')addEventListener('DOMContentLoaded',()=>{document.body.innerHTML='<h2>Connecting to Wi-Fi...</h2><p>Please wait.</p>';(async function poll(){try{const r=await fetch('/provisioning-success',{cache:'no-store'});if(r.status==200){document.open();document.write(await r.text());document.close();return}}catch(_){}setTimeout(poll,1000)})()})</script>";
+
 #if DIRECT_AP_CONNECT
 static bool directApIsHex(char c) {
   return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
@@ -388,6 +508,7 @@ static void onNetworkEvent (WiFiEvent_t event, arduino_event_info_t info) {
           SwitchLED( LED_OFF, LED_BLUE );
         #endif      
         uint8_t reason = info.wifi_sta_disconnected.reason;
+        wifiLastDisconnectReason = reason;
         String discon_res = "Wifi connection lost - DISCONNECTED | reason: " + String(reason);
         signalWifiLoss(discon_res);
         break;
@@ -463,13 +584,21 @@ void startWiFi(const char* hostname, int timeOut) {
 #endif
   
   manageWiFi.setConnectTimeout(15);
+  // WiFiManager performs retry attempts in one blocking call. That can starve
+  // our task watchdog, so retries are deliberately scheduled below instead.
+  manageWiFi.setConnectRetries(1);
   manageWiFi.setConfigPortalBlocking(false);
+  // Keep the AP and portal available while we present the DHCP result.
+  manageWiFi.setDisableConfigPortal(false);
   manageWiFi.setDebugOutput(false);
   manageWiFi.setShowStaticFields(true);
   manageWiFi.setShowDnsFields(true);
   manageWiFi.setRemoveDuplicateAPs(false);
   manageWiFi.setScanDispPerc(true);
   manageWiFi.setClass("invert");
+  manageWiFi.setWebServerCallback(setupWifiProvisioningSuccessPage);
+  manageWiFi.setPreSaveConfigCallback(wifiProvisioningConnectStarted);
+  manageWiFi.setCustomHeadElement(WIFI_PROVISIONING_SUCCESS_SCRIPT);
   
   manageWiFi.setAPCallback(configModeCallback);
   manageWiFi.setConfigPortalTimeout(timeOut);
@@ -477,7 +606,34 @@ void startWiFi(const char* hostname, int timeOut) {
   esp_task_wdt_reset();
   allowSkipNetworkByButton = true;
   wifiPortalWasUsed = false;
-  manageWiFi.autoConnect(settingHostname);
+  wifiProvisioningConnectStartedAt = 0;
+  wifiProvisioningContinueRequested = false;
+  wifiProvisioningRetryPrepared = false;
+  wifiLastDisconnectReason = 0;
+  bool wifiConnected = false;
+  manageWiFi.setEnableConfigPortal(false);
+  for (uint8_t attempt = 1; attempt <= WIFI_BOOT_CONNECT_ATTEMPTS; attempt++) {
+    DebugVerboseTf("WiFi boot connection attempt %u of %u\n", attempt, WIFI_BOOT_CONNECT_ATTEMPTS);
+    if (manageWiFi.autoConnect(settingHostname) || WiFi.status() == WL_CONNECTED) {
+      wifiConnected = true;
+      break;
+    }
+    esp_task_wdt_reset();
+    if (wifiAuthenticationFailed(wifiLastDisconnectReason)) {
+      LogFile("WiFi authentication failed; opening configuration portal", true);
+      break;
+    }
+    if (attempt < WIFI_BOOT_CONNECT_ATTEMPTS) {
+      // Give the ESP-IDF station state machine time to finish its failed
+      // attempt before WiFiManager restarts the station for the next one.
+      delay(1000);
+      esp_task_wdt_reset();
+    }
+  }
+  if (!wifiConnected) {
+    manageWiFi.setEnableConfigPortal(true);
+    manageWiFi.startConfigPortal(settingHostname);
+  }
 
   uint16_t i = 0;
   while ( (i++ < 3000) && (netw_state == NW_NONE) && !bEthUsage && !skipNetwork ) {
@@ -491,8 +647,22 @@ void startWiFi(const char* hostname, int timeOut) {
   DebugTraceLn();
   allowSkipNetworkByButton = false;
   if (wifiPortalWasUsed && !skipNetwork && !bEthUsage && (WiFi.status() == WL_CONNECTED || netw_state == NW_WIFI)) {
-    LogFile("reboot: Wifi configured via captive portal", true);
-    P1Reboot();
+    LogFile("Wifi configured via captive portal; showing IP address", true);
+    // Do not let the original portal timeout cut short the confirmation page.
+    manageWiFi.setConfigPortalTimeout(0);
+    const uint32_t continueWaitStartedAt = millis();
+    while (!wifiProvisioningContinueRequested &&
+           (uint32_t)(millis() - continueWaitStartedAt) < WIFI_PROVISION_CONTINUE_TIMEOUT_MS) {
+      manageWiFi.process();
+      delay(10);
+      esp_task_wdt_reset();
+      SwitchLED(LED_ON, LED_BLUE);
+    }
+    // Let the response to the Continue button leave the webserver before its
+    // portal and access point are shut down.
+    delay(500);
+    manageWiFi.stopConfigPortal();
+    LogFile("Wifi provisioning confirmation complete", true);
   }
   if ( skipNetwork ) return; 
   if ( netw_state == NW_NONE && !bEthUsage ) {

@@ -52,7 +52,9 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Port: <select port>
 
 5.9.6
-- fix current issues
+- fix: current issues
+- add: Wifi hitspot feedback ip-address/hostname or fault
+- 
 
 5.10...
 - Normalise energy data (huge change)
@@ -89,8 +91,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE       // + D1MC and NRGDH 
-#define _P1P
+#define NRG_DONGLE       // + D1MC and NRGDH 
+// #define _P1P
 
 //SPECIAL
 // #define __Az__
