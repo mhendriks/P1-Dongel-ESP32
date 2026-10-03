@@ -5,8 +5,6 @@
 ***************************************************************************      
 */
 
-#ifdef ESPNOW 
-
 #ifndef __ESPNOW
 #define __ESPNOW
 
@@ -626,10 +624,3 @@ void handleP2P(){
 }
 
 #endif // __ESPNOW
-#else
-  void StartESPNOW(){}
-  void StopESPNOW(){}
-  void SyncESPNOW(){}
-  void SetNRGMPairingMode(bool enabled){ (void)enabled; }
-  void handleP2P(){}
-#endif // ESPNOW

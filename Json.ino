@@ -522,6 +522,7 @@ String deviceInfoJson()
   doc["telegramerrors"] = (int)telegramErrors;
   doc["eid_status"] = EIDStatusText();
   AppendMeentStatus(doc);
+  AppendHttpPostStatus(doc);
 
 #ifndef MQTT_DISABLE
   snprintf(cMsg, sizeof(cMsg), "%s:%04lu", settingMQTTbroker, (unsigned long)settingMQTTbrokerPort);
@@ -606,11 +607,11 @@ if ( !hideMQTTsettings) {
 #ifdef VIRTUAL_P1
   ADD_SETTING("virtual_p1_ip", "s", 0, sizeof(virtual_p1_ip) - 1, virtual_p1_ip);
 #endif
-#ifdef POST_MEENT
-  ADD_SETTING("meent_interval", "i", 1, 3600, settingMeentInterval);
-  ADD_SETTING("meent_webid", "s", 0, sizeof(settingMeentWebId) - 1, settingMeentWebId);
-  ADD_SETTING("meent_api_key", "s", 0, sizeof(settingMeentApiKey) - 1, settingMeentApiKey);
-#endif
+  if (bMeentEnabled && bHttpPostEnabled && settingHttpPostProvider == HTTP_POST_MEENT) {
+    ADD_SETTING("meent_interval", "i", 1, 3600, settingMeentInterval);
+    ADD_SETTING("meent_webid", "s", 0, sizeof(settingMeentWebId) - 1, settingMeentWebId);
+    ADD_SETTING("meent_api_key", "s", 0, sizeof(settingMeentApiKey) - 1, settingMeentApiKey);
+  }
   
   //MODBUS TCP settings
   ADD_SETTING("mb_map", "i", 0, 16, SelMap); //RTU+TCP

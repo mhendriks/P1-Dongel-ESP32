@@ -105,6 +105,7 @@ void writeSettingsDirect() {
   docw["OverVoltageThreshold"] = settingOvervoltageThreshold;
   docw["CTFactor"] = settingCTFactor;
   docw["VTFactor"] = settingVTFactor;
+  docw["MeentEnabled"] = bMeentEnabled;
   docw["MeentInterval"] = settingMeentInterval;
   docw["MeentWebId"] = settingMeentWebId;
   docw["MeentApiKey"] = settingMeentApiKey;
@@ -238,6 +239,7 @@ void readSettings(bool show)
   if (doc["VTFactor"].is<int>()) {
     settingVTFactor = constrain(doc["VTFactor"].as<int>(), (int)METER_FACTOR_MIN, (int)METER_FACTOR_MAX);
   }
+  if (doc["MeentEnabled"].is<bool>()) bMeentEnabled = doc["MeentEnabled"].as<bool>();
   if (doc["MeentInterval"].is<int>()) {
     settingMeentInterval = constrain(doc["MeentInterval"].as<int>(), 1, 3600);
   }
@@ -399,6 +401,7 @@ void updateSetting(const char *field, const char *newValue)
   }
   if (!stricmp(field, "meent_interval")) {
     settingMeentInterval = constrain(String(newValue).toInt(), 1, 3600);
+    if (bMeentEnabled) MeentConfigChanged();
   }
   if (!stricmp(field, "fuse")) {
     uint8_t newFuse = String(newValue).toInt();
@@ -576,9 +579,7 @@ void updateSetting(const char *field, const char *newValue)
     victronModbusConfig.id = constrain(String(newValue).toInt(), 1, 247);
     victronConfigChanged = true;
   }
-#ifdef MBUS
   if (victronConfigChanged) victronModbusConfigChanged();
-#endif
   if (!stricmp(field, "mimic")) {
     int newMimic = constrain(String(newValue).toInt(), (int)MIMIC_NONE, (int)MIMIC_SHELLY_PRO_3EM);
     reboot_required = (mimicType != newMimic);

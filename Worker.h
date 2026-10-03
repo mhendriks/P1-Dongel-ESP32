@@ -27,6 +27,7 @@ enum WorkerJobType : uint8_t {
   WORKER_JOB_P1_STATUS_WRITE,
   WORKER_JOB_RNG_WRITE,
   WORKER_JOB_HTTP_POST,
+  WORKER_JOB_KEMP_CONFIG,
   WORKER_JOB_MEENT_PROVISION,
   WORKER_JOB_MANIFEST_CHECK,
   WORKER_JOB_SOLAR_FETCH
@@ -46,12 +47,11 @@ struct WorkerWebhookPayload {
   uint64_t t1r;
   uint64_t t2r;
   time_t timestamp;
-#ifdef POST_KEMP
   uint32_t voltage[3];
   uint32_t voltageSags[3];
   uint32_t voltageSwells[3];
+  uint8_t voltagePresentMask;
   uint8_t sagSwellPresentMask;
-#endif
 };
 
 struct WorkerRngPayload {

@@ -738,25 +738,16 @@ void processTelegram(){
 	  NetSwitchStateMngr();
   }
 
-	#ifdef ESPNOW
-		// if ( telegramCount % 3 == 1 ) SendActualData();
-		P2PSendActualData();
-		P2PSendAccuData();
-	#endif
+	// if ( telegramCount % 3 == 1 ) SendActualData();
+	P2PSendActualData();
+	P2PSendAccuData();
   //update actual time
   strCopy(actTimestamp, sizeof(actTimestamp), DSMRdata.timestamp.c_str()); 
   actT = newT;
   
-  // PostHomey();
-  #ifdef POST_POWERCH
-    if ( (bV5meter && telegramCount % 3 == 0 ) || !bV5meter ) bNewTelegramWebhook = true; //every 3 secs (v5) or new meter data (v2/4)
-  #endif
-  #ifdef POST_MEENT
-    bNewTelegramWebhook = true; // interval handling is done in PostWebhook()
-  #endif
-  #ifdef POST_KEMP
-    bNewTelegramWebhook = true; // fixed 60 second interval is handled in PostWebhook()
-  #endif
+  // The optional HTTP connector decides at runtime whether this telegram is
+  // due.  The trigger is harmless until post.json or MEENT enables it.
+  bNewTelegramWebhook = true;
   #ifdef UDP_BCAST
     New_P1_UDP = true;
   #endif 

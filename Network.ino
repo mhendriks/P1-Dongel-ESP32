@@ -431,10 +431,8 @@ void PostMacIP() {
 }
 
 void WifiOff() {
-#ifdef ESPNOW
   if ( bNRGMenabled ) return;
   StopESPNOW();
-#endif
   if ( WiFi.isConnected() ) WiFi.disconnect(true,true);
   WiFi.mode(WIFI_OFF);
   esp_wifi_stop();

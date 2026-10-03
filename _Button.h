@@ -54,7 +54,6 @@ void handleButtonPressed(btn_types btn){
 
   if (btn != BTN_NONE) {
     if ( btn == BTN_SHORT_PRESS ) {
-#ifdef ESPNOW
 	  if ( allowSkipNetworkByButton && netw_state == NW_NONE && !skipNetwork ) { 
 	  	skipNetwork = true; 
 	  	LogFile( "SKIP NETWORK ENABLED",true );
@@ -67,9 +66,6 @@ void handleButtonPressed(btn_types btn){
       }
       SetNRGMPairingMode(!bPairingmode);
       Debugln(bPairingmode ? "ON" : "OFF");
-#else 
-      P1Reboot();
-#endif      
     }
     else if ( btn == BTN_LONG_PRESS ) {
       DebugTln(F("\n\nButton LONG Press = Factory Reset"));

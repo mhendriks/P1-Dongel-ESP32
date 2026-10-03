@@ -2130,6 +2130,20 @@ function renderDeviceInformation(obj, manifest) {
     // files do not know this recently added key.
     addDeviceInfoRow(containers.connections, "MEENT", meent, "sysinfo-value-part");
   }
+  if (obj.http_post_enabled) {
+    const postLastSuccess = Number(obj.http_post_last_success || 0);
+    const postLastSuccessText = postLastSuccess
+      ? new Date(postLastSuccess * 1000).toLocaleString(undefined, { timeZone: "UTC" })
+      : "";
+    const post = [
+      "Actief",
+      obj.http_post_provider || "generic",
+      obj.http_post_interval_s ? `interval: ${obj.http_post_interval_s} s` : "",
+      obj.http_post_status || "wacht op verzending",
+      postLastSuccessText ? `laatst verzonden: ${postLastSuccessText}` : ""
+    ].filter(Boolean).join(" · ");
+    addDeviceInfoRow(containers.connections, "POST", post, "sysinfo-value-part");
+  }
   ["eid_status", "paired"].forEach(key => addDeviceInfoRow(containers.connections, td(key), obj[key]));
   document.getElementById("sysinfo_connections_card")?.toggleAttribute("hidden", !containers.connections?.children.length);
 
@@ -2137,7 +2151,7 @@ function renderDeviceInformation(obj, manifest) {
     "fwversion", "hardware", "meter_source", "p1_communication_mode", "smart_meter_version", "p1_diagnostics",
     "telegramcount", "telegramerrors", "network", "ssid", "wifirssi", "hostname", "ipaddress", "macaddress",
     "chipid", "cpufreq", "freeheap", "flashchipsize", "sketchsize", "freesketchspace", "FSsize", "uptime",
-    "reboots", "lastreset", "mqttbroker", "mqttbroker_connected", "mqttinterval", "meent_webid_status", "meent_api_key_status", "meent_data_status", "meent_last_success", "eid_status", "paired"
+    "reboots", "lastreset", "mqttbroker", "mqttbroker_connected", "mqttinterval", "meent_webid_status", "meent_api_key_status", "meent_data_status", "meent_last_success", "http_post_enabled", "http_post_provider", "http_post_interval_s", "http_post_status", "http_post_http_status", "http_post_last_success", "eid_status", "paired"
   ]);
   ["coreversion", "sdkversion", "compileoptions", "indexfile"].forEach(key =>
     addDeviceInfoRow(containers.technical, td(key), obj[key]));
@@ -3574,7 +3588,7 @@ function splitSettingsUI() {
     "modbus_bits",
     "modbus_stop"
   ]);
-  const MEENT_KEYS = new Set(["meent_webid", "meent_api_key", "meent_interval"]);
+  const MEENT_KEYS = new Set(["meent_enabled", "meent_webid", "meent_api_key", "meent_interval"]);
 
   // alle bestaande rows (waar ze ook al staan) opnieuw indelen
   const rows = Array.from(document.querySelectorAll("#Settings .settingDiv"));
@@ -3597,8 +3611,7 @@ function splitSettingsUI() {
     if (row) smartMeter.appendChild(row);
   });
 
-  // The HTML shell is shared by all firmware variants. Only POST_MEENT builds
-  // expose MEENT settings through the API, so hide the otherwise empty tab.
+  // MEENT settings exist only when `post.json` selects the MEENT provider.
   const hasMeentSettings = Array.from(MEENT_KEYS).some(key => document.getElementById(`settingR_${key}`));
   const meentTabButton = document.querySelector('#settings_subtabs [data-target="settings_meent"]');
   if (meentTabButton) meentTabButton.style.display = hasMeentSettings ? "" : "none";

@@ -51,11 +51,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.9.6
-- fix: current issues
-- add: Wifi hitspot feedback ip-address/hostname or fault
-- 
-
 5.10...
 - Normalise energy data (huge change)
 - dynamic prices 
@@ -91,7 +86,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-#define NRG_DONGLE       // + D1MC and NRGDH 
+// #define NRG_DONGLE       // + D1MC and NRGDH
 // #define _P1P
 
 //SPECIAL
@@ -99,15 +94,10 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define OTAURL_PREFIX "me/"
 
 //FEATURES
-#define MBUS
 // #define MQTT_DISABLE
 // #define MB_RTU
-#define ESPNOW  
 // #define UDP_BCAST
 // #define USB_CONFIG
-// #define POST_POWERCH
-// #define POST_MEENT   
-// #define POST_KEMP
 // #define VIRTUAL_P1
 // #define HAN_READER
 // #define HAN_TESTDATA
@@ -150,6 +140,7 @@ void setup()
   LogFile("",false); // write reboot status to file
   if (!LittleFS.exists(SETTINGS_FILE)) writeSettingsDirect(); //otherwise the dongle crashes some times on the first boot
   else readSettings(true);
+  ProcessPostProvisioning();
   if (LittleFS.exists("/Frontend.json")) LittleFS.remove("/Frontend.json");
 #if DIRECT_AP_CONNECT
   EnableHistory = false;
@@ -187,11 +178,9 @@ void setup()
 
 //================ Start Slimme Meter ===============================
 
-#ifdef MBUS
   mbusSetup();
   setupVictronModbus();
   SetupMB_RTU();
-#endif  
   ReadSolarConfigs();
   delay(500);
   setCpuFrequencyMhz(Freq); //restore original clockspeed
@@ -222,9 +211,7 @@ void loop () {
   WifiWatchDog();
   handleRemoteUpdate();
   handleWater();
-#ifdef MBUS
   handleVictronModbus();
-#endif
   handleEnergyID();  
   GetSolarDataN();
   handleRawPort();

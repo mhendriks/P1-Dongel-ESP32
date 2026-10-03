@@ -148,11 +148,7 @@ mod_conf *active_mod_conf = &module_config[0];
   #define OPT3A
 #endif
 
-#ifdef MBUS
-  #define OPT4  "[MODBUS]"
-#else
-  #define OPT4  
-#endif
+#define OPT4  "[MODBUS]"
 
 #ifdef UDP_BCAST
   #define OPT5  "[UDP]"

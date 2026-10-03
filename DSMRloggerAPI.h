@@ -85,10 +85,8 @@ struct MeterCurrent {
   uint32_t milliAmps = 0;
 };
 
-#ifdef MBUS
-  #include "ModbusServerWiFi.h"
-  #include "ModbusClientTCP.h"
-#endif
+#include "ModbusServerWiFi.h"
+#include "ModbusClientTCP.h"
 
 #define JSON_BUFF_MAX     255
 #define MQTT_BUFF_MAX     1024
@@ -213,6 +211,8 @@ void RngInvalidateHeaderCache(const char* filename);
 void writeRingFiles();
 void writeSettings();
 void writeSettingsDirect();
+void ProcessPostProvisioning();
+void AppendHttpPostStatus(JsonDocument& doc);
 void MeentConfigChanged();
 void AppendMeentStatus(JsonDocument& doc);
 void MeentClearClientSecret();
@@ -405,14 +405,12 @@ using MyData = ParsedData<
 //  /* uint32_t */              ,electricity_failures
 //  /* uint32_t */              ,electricity_long_failures
 //  /* String */                ,electricity_failure_log
-#ifdef POST_KEMP
   /* uint32_t */              ,electricity_sags_l1
   /* uint32_t */              ,electricity_sags_l2
   /* uint32_t */              ,electricity_sags_l3
   /* uint32_t */              ,electricity_swells_l1
   /* uint32_t */              ,electricity_swells_l2
   /* uint32_t */              ,electricity_swells_l3
-#endif
 //  /* String */                ,message_short
 //  /* String */                ,message_long
   /* FixedValue */            ,voltage_l1
@@ -589,11 +587,7 @@ int8_t      HanIO = -1;
 int8_t      button_io = IO_BUTTON;
 bool        bNRGMenabled = false;
 #ifdef NETSWITCH
-#ifdef POST_MEENT
-bool        bNETSWenabled = false;
-#else
 bool        bNETSWenabled = true;
-#endif
 #endif
 
 #ifdef UDP_BCAST
@@ -620,10 +614,25 @@ float     settingENBK = 29.62, settingGNBK = 17.30,settingWNBK = 55.05;
 uint16_t  settingOvervoltageThreshold = 253;
 uint16_t  settingCTFactor = 1;
 uint16_t  settingVTFactor = 1;
+bool      bMeentEnabled = false;
 uint16_t  settingMeentInterval = 300;
 // MEENT provisioning must survive a reboot: the provider returns each value once.
 char      settingMeentWebId[256] = "";
 char      settingMeentApiKey[128] = "";
+// Generic HTTP push connector.  Its connection details are provisioned by
+// /post.json and retained in NVS, rather than compiled into a build profile.
+enum HttpPostProvider : uint8_t { HTTP_POST_GENERIC = 0, HTTP_POST_KEMP, HTTP_POST_MEENT };
+bool      bHttpPostEnabled = false;
+uint8_t   settingHttpPostProvider = HTTP_POST_GENERIC;
+char      settingHttpPostUrl[192] = "";
+uint16_t  settingHttpPostInterval = 300;
+uint8_t   settingHttpPostPayload = 0; // 0 basic, 1 totals, 2 quality, 3 full
+uint8_t   settingHttpPostAuth = 0;    // 0 none, 1 Bearer, 2 header, 3 JSON body
+char      settingHttpPostAuthKey[128] = "";
+char      settingHttpPostAuthName[48] = "X-API-Key";
+char      settingHttpPostExtraHeaderName[48] = "";
+char      settingHttpPostExtraHeaderValue[128] = "";
+bool      settingHttpPostAcceptInterval = false;
 uint8_t   settingFuse = 25;
 uint8_t   settingPhases = 0;
 // uint8_t   settingSmHasFaseInfo = 1;
@@ -714,11 +723,7 @@ bool      StaticInfoSend = false;
 bool      bSendMQTT = false;
 volatile bool mqttPublishActive = false;
 volatile bool mqttConnectActive = false;
-#ifdef POST_MEENT
-bool      bMQTTenabled = false;
-#else
 bool      bMQTTenabled = true;
-#endif
 bool      bMQTToverTLS = false;
 
 bool      hideMQTTsettings = false;
@@ -751,18 +756,10 @@ inline bool isShellyPro3EmMimicSelected() {
 #ifndef OTAURL_PREFIX
   #define OTAURL_PREFIX ""
 #endif
-#ifdef POST_MEENT
-char      BaseOTAurl[45] = "http://ota.smart-stuff.nl/p1u/v5/me/";
-#else
 char      BaseOTAurl[45] = OTAURL OTAURL_PREFIX;
-#endif
 char      UpdateVersion[25] = "";
 bool      bUpdateSketch = true;
-#ifdef POST_MEENT
-bool      bAutoUpdate = true;
-#else
 bool      bAutoUpdate = false;
-#endif
 
 //udp
 bool New_P1_UDP = false;

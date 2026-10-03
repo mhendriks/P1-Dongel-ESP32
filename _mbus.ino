@@ -1,5 +1,3 @@
-#ifdef MBUS
-
 #define MBUS_DEV_ID       1
 #define MBUS_CLIENTS      4
 #define MBUS_TIMEOUT  10000
@@ -1066,8 +1064,6 @@ void mbusSetup(){
   MBserver.start(mb_config.port, MBUS_CLIENTS, MBUS_TIMEOUT);
 }
 
-#endif //MBUS
-
 #ifdef MB_RTU
 
 #define MBUS_RTU_TIMEOUT      2000
@@ -1111,7 +1107,6 @@ void MBSetTermination (bool value){}
 void updateModbusServerId(uint8_t oldId, uint8_t newId) {
   if (oldId == newId) return;
 
-#ifdef MBUS
   if (!skipNetwork) {
     MBserver.stop();
     MBserver.unregisterWorker(oldId);
@@ -1119,7 +1114,6 @@ void updateModbusServerId(uint8_t oldId, uint8_t newId) {
     MBserver.registerWorker(newId, READ_INPUT_REGISTER, &MBusHandleRequestTCP);
     MBserver.start(mb_config.port, MBUS_CLIENTS, MBUS_TIMEOUT);
   }
-#endif
 
 #ifdef MB_RTU
   if (MBserverRTU != nullptr) {

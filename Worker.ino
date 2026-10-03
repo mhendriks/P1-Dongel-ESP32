@@ -30,6 +30,7 @@ void P1StatusWriteDirect();
 void writeSettingsDirect();
 void ManifestCheckFromWorker();
 void PostWebhookFromWorker(const WorkerWebhookPayload& payload);
+void KempStartupConfigFromWorker();
 void MeentProvisionFromWorker();
 void RngWriteFromWorker(const WorkerRngPayload& payload);
 void GetSolarDataNFromWorker();
@@ -111,6 +112,7 @@ static bool workerSolarShouldDefer() {
 // is in progress; all short worker jobs remain watchdog-protected.
 static bool workerJobNeedsWatchdog(const WorkerJob& job) {
   return job.type != WORKER_JOB_HTTP_POST &&
+         job.type != WORKER_JOB_KEMP_CONFIG &&
          job.type != WORKER_JOB_MEENT_PROVISION;
 }
 
@@ -171,6 +173,10 @@ static void workerHandleJob(const WorkerJob& job) {
 
     case WORKER_JOB_HTTP_POST:
       PostWebhookFromWorker(job.data.webhook);
+      break;
+
+    case WORKER_JOB_KEMP_CONFIG:
+      KempStartupConfigFromWorker();
       break;
 
     case WORKER_JOB_MEENT_PROVISION:
