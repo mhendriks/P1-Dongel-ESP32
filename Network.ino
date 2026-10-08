@@ -194,7 +194,9 @@ static String wifiProvisioningSuccessPage() {
   page += F(".local/'>http://");
   page += hostname;
   page += F(".local/");
-  page += F("</a><small>Keep this page open until you have noted the addresses. Select Continue when you are ready to reconnect your phone to your normal Wi-Fi network.</small><form action='/provisioning-continue'><button id='continueButton' type='submit'>Continue (60)</button></form><script>let seconds=60;const button=document.getElementById('continueButton');setInterval(()=>{if(seconds>0){button.textContent='Continue ('+(--seconds)+')';}},1000);</script></body></html>");
+  page += F("</a><p>MAC address:</p><div class='address'>");
+  page += macStr;
+  page += F("</div><small>Keep this page open until you have noted the addresses. Select Continue when you are ready to reconnect your phone to your normal Wi-Fi network.</small><form action='/provisioning-continue'><button id='continueButton' type='submit'>Continue (60)</button></form><script>let seconds=60;const button=document.getElementById('continueButton');setInterval(()=>{if(seconds>0){button.textContent='Continue ('+(--seconds)+')';}},1000);</script></body></html>");
   return page;
 }
 
@@ -594,6 +596,7 @@ void startWiFi(const char* hostname, int timeOut) {
   manageWiFi.setRemoveDuplicateAPs(false);
   manageWiFi.setScanDispPerc(true);
   manageWiFi.setClass("invert");
+  manageWiFi.setAPStaticIPConfig(IPAddress(4,3,2,1), IPAddress(4,3,2,1), IPAddress(255,255,255,0)); //Samsung fix
   manageWiFi.setWebServerCallback(setupWifiProvisioningSuccessPage);
   manageWiFi.setPreSaveConfigCallback(wifiProvisioningConnectStarted);
   manageWiFi.setCustomHeadElement(WIFI_PROVISIONING_SUCCESS_SCRIPT);

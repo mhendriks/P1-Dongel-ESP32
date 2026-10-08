@@ -51,8 +51,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.10...
-- Normalise energy data (huge change)
+
+5.11.0
 - dynamic prices 
 - 3 button control (a-pair, b-reboot, c=factory reset)
 - installer web popup via branded popup
@@ -60,16 +60,14 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 - add wallbox mapping
 - extra report "jaarbalans": op basis van nog te verwachten maandnw ( Leo B )
 - max 3 solar systemen ondersteunen. Max 3 x zelfde of variaties zijn.  
-
-5.10.0
 - add option to see total counter remotely
 - stable or beta update option in settings
-- Add remote Proxy
 - tooltips bij de diverse settings (Gerben)
 - option for NRG Monitor to show small project image
 - control center which shows the status of a connection (MQTT/EID/P1/HAN/...)
 
 6.0.0 
+- Add remote Proxy
 - one hostname for all dongles
 - sources / targets setup - EMS structure
 - kWh meter als bron voor productie data gebruiken (Harrie)
@@ -86,7 +84,7 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
 // #define ULTRA            //ultra (mini) dongle
 // #define ETHERNET         //ethernet dongle
 // #define ETH_P1EP         //ethernet pro+ dongle
-// #define NRG_DONGLE       // + D1MC and NRGDH
+// #define NRG_DONGLE       // + D1MC + NRGDH + W1MC
 // #define _P1P
 
 //SPECIAL

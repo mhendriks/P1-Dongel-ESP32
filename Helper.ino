@@ -250,6 +250,9 @@ void DevTypeMapping(){
   UseRGB    = (dc.rgb >= 0);
   IOWater   = dc.water;
 
+  // W1MC data-out LED is active LOW; keep it off until UART TX takes over.
+  if (HardwareType == W1MC) pinWriteIfValid(TxO1, LOW);
+
   #ifndef ULTRA
   if (HardwareType == P1P) { // Check for legacy P1P versions
     switch ( P1Status.dev_type ) {

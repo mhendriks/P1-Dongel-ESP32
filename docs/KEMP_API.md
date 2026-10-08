@@ -59,7 +59,7 @@ to be HTTP 200 and must not contain a new command.
   "message_type": "config",
   "id": "123456789",
   "api_key": "...",
-  "firmware_version": "5.9.6",
+  "firmware_version": "5.10.1",
   "hardware": "NRGD",
   "smart_meter": "...",
   "uptime_s": 12,

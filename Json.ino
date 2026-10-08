@@ -167,9 +167,10 @@ ApiResponse dashLiveApiResponse() {
 String apiStatsJson() {
   return jsonResponse([&](JsonDocument& doc){
     
-    if ( GetMeterCurrent(1).present ) doc["I1piek"]  = outputCurrentMilliAmps(P1Stats.I1piek);
-    if ( GetMeterCurrent(2).present ) doc["I2piek"]  = outputCurrentMilliAmps(P1Stats.I2piek);
-    if ( GetMeterCurrent(3).present ) doc["I3piek"]  = outputCurrentMilliAmps(P1Stats.I3piek);
+    // Stats exposes current peaks in mA; Insights converts them to A.
+    if ( GetMeterCurrent(1).present ) doc["I1piek"]  = outputCurrent(P1Stats.I1piek);
+    if ( GetMeterCurrent(2).present ) doc["I2piek"]  = outputCurrent(P1Stats.I2piek);
+    if ( GetMeterCurrent(3).present ) doc["I3piek"]  = outputCurrent(P1Stats.I3piek);
     
     if ( DSMRdata.power_delivered_l1_present ) doc["P1max"]   = outputPowerInt(P1Stats.P1max);
     if ( DSMRdata.power_delivered_l2_present ) doc["P2max"]   = outputPowerInt(P1Stats.P2max);

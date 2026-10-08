@@ -186,6 +186,8 @@ static char kempUrl[192] = "";
 static uint16_t kempIntervalS = KEMP_DEFAULT_INTERVAL_S;
 static bool kempStartupConfigPending = false;
 static bool kempStartupConfigQueued = false;
+static uint32_t kempStartupConfigDeadlineMs = 0;
+static constexpr uint32_t KEMP_SMART_METER_WAIT_MS = 15000;
 
 static void kempLoadConnectionSettings() {
   strlcpy(kempApiKey, settingHttpPostAuthKey, sizeof(kempApiKey));
@@ -314,7 +316,9 @@ static String kempConfigJson(const char* ack = nullptr, const char* commandId = 
   }
   doc["firmware_version"] = _VERSION_ONLY;
   doc["hardware"] = kempHardwareName();
-  if (smID.length()) doc["smart_meter"] = smID;
+  // Keep the config schema stable, including during the bounded startup
+  // fallback when no P1 telegram has arrived yet.
+  doc["smart_meter"] = smID;
   doc["uptime_s"] = millis() / 1000UL;
   doc["reboot_count"] = P1Status.reboots;
   doc["last_reset_reason"] = kempResetReason();
@@ -378,9 +382,16 @@ static void kempApplyServerResponse(const String& response) {
     }
   } else if (!strcmp(command, "URLupdate")) {
     const char* candidate = doc["url_new"] | "";
-    if (kempIsValidUrl(candidate) &&
-        kempSendConfig(candidate, kempApiKey, command, commandId, true, "upload-url verified")) {
+    if (!kempIsValidUrl(candidate)) {
+      kempSendConfig(kempUrl, kempApiKey, command, commandId, false,
+                     "url_new must be a valid HTTPS URL");
+    } else if (kempSendConfig(candidate, kempApiKey, command, commandId, true, "upload-url verified")) {
       if (kempSaveConnectionSetting("url", candidate)) strlcpy(kempUrl, candidate, sizeof(kempUrl));
+    } else {
+      // The candidate endpoint did not validate the config acknowledgement;
+      // preserve the active endpoint and tell the server why it was rejected.
+      kempSendConfig(kempUrl, kempApiKey, command, commandId, false,
+                     "candidate upload URL verification failed");
     }
   } else if (!strcmp(command, "OTAupdate")) {
     const char* version = doc["firmware_version"] | "";
@@ -400,6 +411,10 @@ static void kempApplyServerResponse(const String& response) {
 
 static void kempQueueStartupConfig() {
   if (!kempStartupConfigPending || kempStartupConfigQueued || netw_state == NW_NONE) return;
+  // `smID` is populated while parsing the first P1 telegram. Wait briefly so
+  // the startup config can contain the actual smart-meter identification;
+  // still send a schema-complete config when no telegram arrives.
+  if (telegramCount == 0 && (int32_t)(millis() - kempStartupConfigDeadlineMs) < 0) return;
   if (WorkerEnqueueSimple(WORKER_JOB_KEMP_CONFIG, WORKER_PRIO_NORMAL)) kempStartupConfigQueued = true;
 }
 
@@ -957,6 +972,7 @@ void StartWebhook() {
   if (settingHttpPostProvider == HTTP_POST_KEMP && httpPostConfigured()) {
     kempLoadConnectionSettings();
     kempStartupConfigPending = true;
+    kempStartupConfigDeadlineMs = millis() + KEMP_SMART_METER_WAIT_MS;
     kempQueueStartupConfig();
   }
 }
