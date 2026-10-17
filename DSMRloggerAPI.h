@@ -170,16 +170,32 @@ class SmartMeterHandle {
 
   template<typename TData>
   bool parse(TData* data, String* err = nullptr) {
-    return isHan() ? han_.parse(data, err) : dsmr_.parse(data, err);
+    return isHan() ? parseHan(data, err) : dsmr_.parse(data, err);
   }
 
   template<typename TData>
   bool parse(TData* data, String* err, P1FieldWarning* fieldWarning) {
-    return isHan() ? han_.parse(data, err)
+    return isHan() ? parseHan(data, err)
                    : dsmr_.parse(data, err, false, fieldWarning);
   }
 
  private:
+  template<typename TData>
+  bool parseHan(TData* data, String* err) {
+    if (!han_.parse(data, err)) return false;
+    const han::HanData& effective = han_.state().effective;
+    // HAN uses VArh integers; DSMR FixedValue stores milli-kVArh.
+    if (effective.reactive_energy_delivered_total_varh.present()) {
+      data->reactive_energy_total_import._value = effective.reactive_energy_delivered_total_varh.val();
+      data->reactive_energy_total_import_present = true;
+    }
+    if (effective.reactive_energy_returned_total_varh.present()) {
+      data->reactive_energy_total_export._value = effective.reactive_energy_returned_total_varh.val();
+      data->reactive_energy_total_export_present = true;
+    }
+    return true;
+  }
+
   P1FixedReader<2500>& dsmr_;
   han::HanReader& han_;
   SmartMeterSource source_;
@@ -397,6 +413,8 @@ using MyData = ParsedData<
   /* FixedValue */            ,energy_returned_tariff2
   /* FixedValue */            ,energy_delivered_total
   /* FixedValue */            ,energy_returned_total
+  /* FixedValue */            ,reactive_energy_total_import
+  /* FixedValue */            ,reactive_energy_total_export
   /* String */                ,electricity_tariff
   /* FixedValue */            ,power_delivered
   /* FixedValue */            ,power_returned

@@ -1,4 +1,9 @@
 {
+  "sysinfo-hardware-revision": "Révision matérielle",
+  "sysinfo-fixed-interfaces": "Interfaces intégrées",
+  "sysinfo-slot": "Emplacement",
+  "sysinfo-slot-empty": "Vide",
+  "sysinfo-slot-unknown": "Inconnu",
   "accu-status-charging": "En charge",
   "accu-status-discharging": "En décharge",
   "accu-status-idle": "Inactif",

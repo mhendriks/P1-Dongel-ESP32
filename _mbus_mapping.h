@@ -173,6 +173,8 @@ static const ActiveRecipe kAbbB21Recipes[] = {
   {0x5B1A, 100, (uint8_t)MbSource::net_power_l3_kw,    (uint8_t)ModbusDataType::INT32,  0},
 };
 
+// Map 6: Phoenix Contact EEM-MA/MB3xx. Energy counters are Wh.
+// Reactive energy is NaN only when absent from the meter telegram.
 static const ActiveRecipe kMx3xxRecipes[] = {
   {32774, 1,    (uint8_t)MbSource::voltage_l1_v,             (uint8_t)ModbusDataType::FLOAT,  0},
   {32776, 1,    (uint8_t)MbSource::voltage_l2_v,             (uint8_t)ModbusDataType::FLOAT,  0},
@@ -192,8 +194,10 @@ static const ActiveRecipe kMx3xxRecipes[] = {
   {32818, 1,    (uint8_t)MbSource::direction_l2,           (uint8_t)ModbusDataType::FLOAT,  0},
   {32820, 1,    (uint8_t)MbSource::direction_l3,           (uint8_t)ModbusDataType::FLOAT,  0},
   {32780, 1,    (uint8_t)MbSource::constant,               (uint8_t)ModbusDataType::FLOAT,  50},
-  {33024, 1,    (uint8_t)MbSource::energy_delivered_total_kwh, (uint8_t)ModbusDataType::FLOAT,  0},
-  {33030, 1,    (uint8_t)MbSource::energy_returned_total_kwh,  (uint8_t)ModbusDataType::FLOAT,  0},
+  {33024, 1000, (uint8_t)MbSource::energy_delivered_total_kwh, (uint8_t)ModbusDataType::FLOAT,  0},
+  {33026, 1000, (uint8_t)MbSource::reactive_energy_import_kvarh,          (uint8_t)ModbusDataType::FLOAT,  0},
+  {33030, 1000, (uint8_t)MbSource::energy_returned_total_kwh,  (uint8_t)ModbusDataType::FLOAT,  0},
+  {33032, 1000, (uint8_t)MbSource::reactive_energy_export_kvarh,          (uint8_t)ModbusDataType::FLOAT,  0},
   {316,   1,    (uint8_t)MbSource::constant,               (uint8_t)ModbusDataType::UINT32, 909127987},
   {318,   1,    (uint8_t)MbSource::constant,               (uint8_t)ModbusDataType::UINT32, 942748210},
   {320,   1,    (uint8_t)MbSource::constant,               (uint8_t)ModbusDataType::UINT32, 14644},

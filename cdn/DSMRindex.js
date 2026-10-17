@@ -2027,6 +2027,36 @@ function addFirmwareUpdateAction(valueNode, channel) {
   valueNode.appendChild(link);
 }
 
+function deviceHardwareRevision(revision) {
+  const value = Number(revision);
+  return `${Math.floor(value / 100)}.${String(value % 100).padStart(2, "0")}`;
+}
+
+function deviceHardwareLabel(obj) {
+  if (obj.hardware === "W1MC" && obj.hardware_revision !== undefined) {
+    const revision = Number(obj.hardware_revision) > 0 ? deviceHardwareRevision(obj.hardware_revision) : "1";
+    return `${obj.hardware} V${revision}`;
+  }
+  return obj.hardware;
+}
+
+function addDeviceHardwareRows(container, obj) {
+  addDeviceInfoRow(container, td("hardware"), deviceHardwareLabel(obj));
+  if (obj.hardware !== "W1MC" && Number(obj.hardware_revision) > 0) {
+    addDeviceInfoRow(container, t("sysinfo-hardware-revision"), `V${deviceHardwareRevision(obj.hardware_revision)}`);
+  }
+  if (Array.isArray(obj.hardware_features) && obj.hardware_features.length) {
+    addDeviceInfoRow(container, t("sysinfo-fixed-interfaces"), obj.hardware_features.join(", "));
+  }
+  if (Array.isArray(obj.hardware_slots)) {
+    obj.hardware_slots.forEach((module, index) => {
+      const value = module === "NONE" ? t("sysinfo-slot-empty")
+        : module === "UNKNOWN" ? t("sysinfo-slot-unknown") : module;
+      addDeviceInfoRow(container, `${t("sysinfo-slot")} ${index + 1}`, value);
+    });
+  }
+}
+
 function renderDeviceInformation(obj, manifest) {
   const containers = {
     overview: document.getElementById("sysinfo_overview"),
@@ -2057,7 +2087,7 @@ function renderDeviceInformation(obj, manifest) {
   addDeviceInfoSummary(containers.overview, t("setting-smart-meter"), meterStatus, meterMeta);
   addDeviceInfoSummary(containers.overview, t("sysinfo-network"), obj.network, networkMeta);
   addDeviceInfoSummary(containers.overview, t("sysinfo-firmware"), shortFirmware, firmwareStatus);
-  addDeviceInfoSummary(containers.overview, t("sysinfo-hardware"), obj.hardware);
+  addDeviceInfoSummary(containers.overview, t("sysinfo-hardware"), deviceHardwareLabel(obj));
   addDeviceInfoSummary(containers.overview, td("uptime"), obj.uptime);
 
   addDeviceInfoRow(containers.update, td("fwversion"), obj.fwversion);
@@ -2089,7 +2119,8 @@ function renderDeviceInformation(obj, manifest) {
   addDeviceInfoRow(containers.network, td("network"), connection);
   ["hostname", "ipaddress", "macaddress"].forEach(key => addDeviceInfoRow(containers.network, td(key), obj[key]));
 
-  ["hardware", "chipid", "cpufreq", "freeheap"].forEach(key => addDeviceInfoRow(containers.hardware, td(key), obj[key]));
+  addDeviceHardwareRows(containers.hardware, obj);
+  ["chipid", "cpufreq", "freeheap"].forEach(key => addDeviceInfoRow(containers.hardware, td(key), obj[key]));
   const flashSizeKb = obj.flashchipsize?.value !== undefined ? Number(obj.flashchipsize.value) * 1024 : undefined;
   const storageValues = [flashSizeKb, obj.sketchsize?.value, obj.FSsize?.value];
   if (storageValues.every(value => value !== undefined)) {
@@ -2148,7 +2179,7 @@ function renderDeviceInformation(obj, manifest) {
   document.getElementById("sysinfo_connections_card")?.toggleAttribute("hidden", !containers.connections?.children.length);
 
   const groupedKeys = new Set([
-    "fwversion", "hardware", "meter_source", "p1_communication_mode", "smart_meter_version", "p1_diagnostics",
+    "fwversion", "hardware", "hardware_revision", "hardware_features", "hardware_slots", "meter_source", "p1_communication_mode", "smart_meter_version", "p1_diagnostics",
     "telegramcount", "telegramerrors", "network", "ssid", "wifirssi", "hostname", "ipaddress", "macaddress",
     "chipid", "cpufreq", "freeheap", "flashchipsize", "sketchsize", "freesketchspace", "FSsize", "uptime",
     "reboots", "lastreset", "mqttbroker", "mqttbroker_connected", "mqttinterval", "meent_webid_status", "meent_api_key_status", "meent_data_status", "meent_last_success", "http_post_enabled", "http_post_provider", "http_post_interval_s", "http_post_status", "http_post_http_status", "http_post_last_success", "eid_status", "paired"
@@ -3830,7 +3861,7 @@ function initModbusMonitorControls() {
 				{ v: 3, t: "Alfen / Socomec" },
 				{ v: 4, t: "EM330" },
 				{ v: 5, t: "ABB B21" },
-				{ v: 6, t: "MX3xx" },
+				{ v: 6, t: "Phoenix Contact EEM-MA/MB3xx" },
 				{ v: 7, t: "Default 2 - floats" },
 				{ v: 8, t: "KLEFR / INEPRO / Webasto Unite" },
 				{ v: 9, t: "Phoenix Contact EEM-XM3xx" },
@@ -4764,6 +4795,11 @@ function handle_menu_click()
 let translations = {};
 const FALLBACK_TRANSLATIONS = {
   nl: {
+    "sysinfo-hardware-revision": "Hardwarerevisie",
+    "sysinfo-fixed-interfaces": "Vaste aansluitingen",
+    "sysinfo-slot": "Slot",
+    "sysinfo-slot-empty": "Leeg",
+    "sysinfo-slot-unknown": "Onbekend",
     "accu-status-idle": "Inactief",
     "accu-status-charging": "Laden",
     "accu-status-discharging": "Ontladen",
@@ -4787,6 +4823,11 @@ const FALLBACK_TRANSLATIONS = {
     "tip-history-graph-old-to-new": "X-as: oud naar nieuw. Klik voor nieuw naar oud."
   },
   en: {
+    "sysinfo-hardware-revision": "Hardware revision",
+    "sysinfo-fixed-interfaces": "Built-in interfaces",
+    "sysinfo-slot": "Slot",
+    "sysinfo-slot-empty": "Empty",
+    "sysinfo-slot-unknown": "Unknown",
     "accu-status-idle": "Idle",
     "accu-status-charging": "Charging",
     "accu-status-discharging": "Discharging",
@@ -4810,6 +4851,11 @@ const FALLBACK_TRANSLATIONS = {
     "tip-history-graph-old-to-new": "X-axis: oldest to newest. Click for newest to oldest."
   },
   de: {
+    "sysinfo-hardware-revision": "Hardware-Revision",
+    "sysinfo-fixed-interfaces": "Integrierte Schnittstellen",
+    "sysinfo-slot": "Steckplatz",
+    "sysinfo-slot-empty": "Leer",
+    "sysinfo-slot-unknown": "Unbekannt",
     "accu-status-idle": "Inaktiv",
     "accu-status-charging": "Laden",
     "accu-status-discharging": "Entladen",
@@ -4833,6 +4879,11 @@ const FALLBACK_TRANSLATIONS = {
     "tip-history-graph-old-to-new": "X-Achse: alt nach neu. Klicken fur neu nach alt."
   },
   se: {
+    "sysinfo-hardware-revision": "Hårdvarurevision",
+    "sysinfo-fixed-interfaces": "Inbyggda gränssnitt",
+    "sysinfo-slot": "Kortplats",
+    "sysinfo-slot-empty": "Tom",
+    "sysinfo-slot-unknown": "Okänd",
     "accu-status-idle": "Inaktiv",
     "accu-status-charging": "Laddar",
     "accu-status-discharging": "Urladdning",
@@ -4856,6 +4907,11 @@ const FALLBACK_TRANSLATIONS = {
     "tip-history-graph-old-to-new": "X-axel: aldst till nyast. Klicka for nyast till aldst."
   },
   fr: {
+    "sysinfo-hardware-revision": "Révision matérielle",
+    "sysinfo-fixed-interfaces": "Interfaces intégrées",
+    "sysinfo-slot": "Emplacement",
+    "sysinfo-slot-empty": "Vide",
+    "sysinfo-slot-unknown": "Inconnu",
     "accu-status-idle": "Inactif",
     "accu-status-charging": "En charge",
     "accu-status-discharging": "En décharge",
@@ -4879,9 +4935,9 @@ const FALLBACK_TRANSLATIONS = {
     "tip-history-graph-old-to-new": "Axe X : du plus ancien au plus récent. Cliquez pour inverser l'ordre."
   }
 };
-const URL_I18N = typeof DEBUG !== 'undefined' && DEBUG
-  ? "http://localhost/~martijn/dsmr-api/v5/lang"
-  : "https://cdn.jsdelivr.net/gh/mhendriks/P1-Dongel-ESP32@latest/cdn/lang";
+// Resolve while this script executes: translations follow DSMRindex[.min].js,
+// both on the versioned CDN and when loading the script from localhost.
+const URL_I18N = new URL("lang", document.currentScript.src).href;
 
 function t(key) {
   return translations[key] || FALLBACK_TRANSLATIONS[locale]?.[key] || FALLBACK_TRANSLATIONS.en[key] || key;

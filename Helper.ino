@@ -97,11 +97,33 @@ void DetectHW() {
 
 enum ModuleType : int8_t { MOD_UNKNOWN=-1, MOD_NONE=0, MOD_IOP=1, MOD_H20=2, MOD_RS485=3 };
 
+// W1MC keeps hardware type 12; its revision identifies the fitted interfaces.
+// eFuse revisions use major * 100 + minor (102 = V1.02).
+// Revision 0 is the original, unversioned V1 hardware.
+static bool hardwareHasFixedRS485() {
+  return HardwareType == NRGDH || HardwareType == D1MC ||
+         (HardwareType == W1MC && HardwareVersion / 100 == 3);
+}
+
+static bool hardwareHasHanNve() {
+  return DEVCONF().han_io >= 0 && !(HardwareType == W1MC && HardwareVersion / 100 == 2);
+}
+
+static uint8_t hardwareSlotCount() {
+  switch (HardwareType) {
+    case NRGD: return 1;
+    case W1MC: return hardwareHasFixedRS485() ? 0 : 1;
+    case P1U:
+    case P1UX2: return 2;
+    default: return 0;
+  }
+}
+
 static inline const char* modName(int8_t t){
   switch(t){
     case MOD_NONE: return "NONE";
     case MOD_IOP:  return "IO+";
-    case MOD_H20:  return "H20";
+    case MOD_H20:  return "H2O";
     case MOD_RS485:return "RS485";
     default:       return "UNKNOWN";
   }
@@ -178,7 +200,9 @@ void DetectModule() {
             break;
     case W1MC:
             active_mod_conf = &module_config[4];
-            DetectModule(0); ActivateModule(0);
+            if (hardwareHasFixedRS485()) modType[0] = MOD_RS485;
+            else DetectModule(0);
+            ActivateModule(0);
             break;
 #ifdef ULTRA
     case P1UX2:
@@ -241,7 +265,7 @@ void DevTypeMapping(){
   rgbled_io = dc.rgb;
   RxP1      = dc.p1_in_rx;
   // DTR?      = dc.p1_in_dtr;
-  HanIO     = dc.han_io;
+  HanIO     = hardwareHasHanNve() ? dc.han_io : -1;
   statusled = dc.led;
   TxO1      = dc.p1_out_tx;
   DTR_out   = dc.p1_out_dtr;

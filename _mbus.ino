@@ -280,6 +280,8 @@ enum class MbSource : uint8_t {
   power_returned_l1_kw,
   power_returned_l2_kw,
   power_returned_l3_kw,
+  reactive_energy_import_kvarh,
+  reactive_energy_export_kvarh,
 };
 
 struct ActiveRecipe {
@@ -343,6 +345,10 @@ static float readMbSourceValue(MbSource source) {
       if (isnan(delivered) && isnan(returned)) return NAN;
       return (isnan(delivered) ? 0.0f : delivered) + (isnan(returned) ? 0.0f : returned);
     }
+    case MbSource::reactive_energy_import_kvarh:
+      return DSMRdata.reactive_energy_total_import_present ? outputEnergy(DSMRdata.reactive_energy_total_import.val()) : NAN;
+    case MbSource::reactive_energy_export_kvarh:
+      return DSMRdata.reactive_energy_total_export_present ? outputEnergy(DSMRdata.reactive_energy_total_export.val()) : NAN;
     case MbSource::reactive_energy_total_varh:
       return 0.0f;
     case MbSource::energy_net_total_kwh:

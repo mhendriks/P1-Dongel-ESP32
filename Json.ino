@@ -462,7 +462,16 @@ String deviceInfoJson()
   doc["macaddress"] = macStr; 
   doc["freeheap"] ["value"] = ESP.getFreeHeap();
   doc["freeheap"]["unit"] = "bytes";
-  doc["hardware"]= HWTypeNames[HardwareType];
+  doc["hardware"] = hwTypeNameSafe(HardwareType);
+  doc["hardware_revision"] = HardwareVersion;
+  JsonArray hardwareFeatures = doc["hardware_features"].to<JsonArray>();
+  if (hardwareHasFixedRS485()) hardwareFeatures.add("RS485");
+  if (hardwareHasHanNve()) hardwareFeatures.add("HAN-NVE");
+  if (HardwareType == D1MC) hardwareFeatures.add("Linky TIC");
+  JsonArray hardwareSlots = doc["hardware_slots"].to<JsonArray>();
+  for (uint8_t slot = 0; slot < hardwareSlotCount(); ++slot) {
+    hardwareSlots.add(modName(modType[slot]));
+  }
   esp_chip_info_t chip_info;
   esp_chip_info(&chip_info);
 

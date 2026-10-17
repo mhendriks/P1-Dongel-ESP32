@@ -489,6 +489,9 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "mqtt_toptopic")) {
     strCopy(settingMQTTtopTopic, sizeof(settingMQTTtopTopic), newValue);  
   }
+  if (!stricmp(field, "macid-topic")) {
+    MacIDinToptopic = (stricmp(newValue, "true") == 0);
+  }
   if (settingMQTTtopTopic[0] && settingMQTTtopTopic[strlen(settingMQTTtopTopic)-1] != '/') strlcat(settingMQTTtopTopic, "/", sizeof(settingMQTTtopTopic));
   CreateMacIDTopic();
 #endif
