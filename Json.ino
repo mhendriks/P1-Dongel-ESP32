@@ -405,8 +405,8 @@ struct buildJson {
     
     template<typename Item>
     void apply(Item &i) {
-     char Name[25];
-     strncpy(Name,String(Item::name).c_str(),25);
+     const String fieldName(Item::name);
+     const char* Name = fieldName.c_str();
 
       if (isInFieldsArray(Name)) {
         
