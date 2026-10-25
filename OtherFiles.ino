@@ -9,8 +9,9 @@
 */
 
 bool GetFile(String filename, String path ){
+  WiFiClient client;
   HTTPClient http;
-  if(wifiClient.connect(HOST_DATA_FILES, 443)) {
+  if(client.connect(HOST_DATA_FILES, 443)) {
     Debugln(path + filename);
       http.begin(path + filename);
       int httpResponseCode = http.GET();
@@ -24,13 +25,13 @@ bool GetFile(String filename, String path ){
           file.print(payload);
           file.close();
           http.end();
-          wifiClient.stop(); //end client connection to server
+          client.stop(); //end client connection to server
           return true;
         }
         file.close();
       }
       http.end(); 
-      wifiClient.stop(); //end client connection to server  
+      client.stop(); //end client connection to server
   } else {
     DebugTln(F("connection to server failed"));
   }

@@ -17,7 +17,7 @@
   HWCDC USBSerial;
 #endif
 
-#include "version.h" //first of all
+#include "version.h"
 #include "Config.h"
 #ifdef HAN_READER
   #include <han2.h>
@@ -32,7 +32,6 @@ bool                 WtrMtr         = false;
 #define              DEBOUNCETIMER 1700
 
 struct {
-  // uint8_t map = 0; = SelMap TODO
   uint8_t id = 1;
   uint16_t baud = 9600;
   uint32_t parity = SERIAL_8E1;

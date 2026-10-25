@@ -51,6 +51,8 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
+5.10.4
+- Fix Panic reboot in the night ( MQTT - update check only )
 
 5.11.0
 - dynamic prices 

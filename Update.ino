@@ -213,6 +213,8 @@ bool RemoteUpdateNow(const char* versie, bool sketch, String* errorDetail) {
 }
 
 bool ReadManifest(JsonDocument &manifest, const char* link) {
+  // The MQTT task owns the global wifiClient. HTTP must use its own socket.
+  WiFiClient client;
   HTTPClient http;
   String manifestUrl;
   if (link && strlen(link)) {
@@ -222,7 +224,7 @@ bool ReadManifest(JsonDocument &manifest, const char* link) {
   }
 
   Debugln(manifestUrl);
-  http.begin(wifiClient, manifestUrl.c_str());
+  if (!http.begin(client, manifestUrl.c_str())) return false;
   http.setConnectTimeout(4000);
   http.setTimeout(5000);
 

@@ -412,8 +412,9 @@ void GetMacAddress(){
 
 void PostMacIP() {
   if ( skipNetwork ) return;
+  WiFiClient client;
   HTTPClient http;
-  http.begin(wifiClient, APIURL);
+  if (!http.begin(client, APIURL)) return;
   http.setConnectTimeout(4000);
   http.setTimeout(5000);
   http.addHeader("Content-Type", "application/x-www-form-urlencoded");
