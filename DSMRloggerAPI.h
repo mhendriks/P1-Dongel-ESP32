@@ -252,6 +252,7 @@ uint32_t actueleOverspanningSeconden(uint32_t overspanningTotaal, unsigned long 
 void ResetOvervoltageStats();
 void UpdateCalculatedCurrents();
 MeterCurrent GetMeterCurrent(uint8_t phase);
+MeterCurrent GetTelegramCurrent(uint8_t phase);
 String smActualJsonDebug();
 
 class ApiWebSocketsServer : public WebSocketsServer {

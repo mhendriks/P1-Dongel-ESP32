@@ -261,9 +261,9 @@ static void ebUpdateDynamic(EB_Payload& p, uint64_t epochSeconds) {
   
   // ---- current ----
   const MeterCurrent currentL1 = GetMeterCurrent(1), currentL2 = GetMeterCurrent(2), currentL3 = GetMeterCurrent(3);
-  if (currentL1.present) p.dy.i1 = (p.dy.pactive1<0? -1 : 1) * (int32_t)lroundf(outputCurrentMilliAmps(currentL1.milliAmps));
-  if (currentL2.present) p.dy.i2 = (p.dy.pactive2<0? -1 : 1) * (int32_t)lroundf(outputCurrentMilliAmps(currentL2.milliAmps));
-  if (currentL3.present) p.dy.i3 = (p.dy.pactive3<0? -1 : 1) * (int32_t)lroundf(outputCurrentMilliAmps(currentL3.milliAmps));
+  if (currentL1.present) p.dy.i1 = (p.dy.pactive1<0? -1 : 1) * (int32_t)lroundf(outputCurrentMilliAmps(currentL1.milliAmps) * 1000.0f);
+  if (currentL2.present) p.dy.i2 = (p.dy.pactive2<0? -1 : 1) * (int32_t)lroundf(outputCurrentMilliAmps(currentL2.milliAmps) * 1000.0f);
+  if (currentL3.present) p.dy.i3 = (p.dy.pactive3<0? -1 : 1) * (int32_t)lroundf(outputCurrentMilliAmps(currentL3.milliAmps) * 1000.0f);
   p.dy.in = p.dy.i1 + p.dy.i2 + p.dy.i3;
 
   if (!ebSignRange(p.dy.ecdsa_md, &p.dy.seqno, (const uint8_t*)&p.dy.energyNeg + sizeof(p.dy.energyNeg))) {

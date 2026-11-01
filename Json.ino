@@ -409,7 +409,19 @@ struct buildJson {
      const char* Name = fieldName.c_str();
 
       if (isInFieldsArray(Name)) {
-        
+        uint8_t phase = 0;
+        if (!strcmp(Name, "current_l1")) phase = 1;
+        else if (!strcmp(Name, "current_l2")) phase = 2;
+        else if (!strcmp(Name, "current_l3")) phase = 3;
+        if (phase) {
+          const MeterCurrent current = GetMeterCurrent(phase);
+          if (current.present) {
+            jsonDoc[Name]["value"] = outputCurrentMilliAmps(current.milliAmps);
+            jsonDoc[Name]["unit"] = Item::unit();
+          } else if (!onlyIfPresent) jsonDoc[Name]["value"] = "-";
+          return;
+        }
+
         if (i.present()) {          
           jsonDoc[Name]["value"] = value_to_json(i.val(), outputFactorForField(Name));
           if (String(Item::unit()).length() > 0) jsonDoc[Name]["unit"]  = Item::unit();

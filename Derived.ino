@@ -20,7 +20,7 @@ static bool phaseCurrentCanBeCalculated(bool voltagePresent, float voltage,
 
 void UpdateCalculatedCurrents() {
   for (MeterCurrent& current : calculatedCurrents) current = MeterCurrent();
-  if (!try_calc_i) return;
+  // Keep both sources ready so changing try_calc_i takes effect immediately.
 
   phaseCurrentCanBeCalculated(DSMRdata.voltage_l1_present, DSMRdata.voltage_l1.val(),
     DSMRdata.power_delivered_l1_present, DSMRdata.power_delivered_l1.int_val(),
@@ -38,6 +38,10 @@ MeterCurrent GetMeterCurrent(uint8_t phase) {
   const uint8_t index = phase - 1;
   if (try_calc_i && calculatedCurrents[index].present) return calculatedCurrents[index];
 
+  return GetTelegramCurrent(phase);
+}
+
+MeterCurrent GetTelegramCurrent(uint8_t phase) {
   MeterCurrent current;
   switch (phase) {
     case 1: current.present = DSMRdata.current_l1_present; current.milliAmps = current.present ? DSMRdata.current_l1.int_val() : 0; break;

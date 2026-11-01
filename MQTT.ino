@@ -554,7 +554,7 @@ void MQTTSendVictronData(){
   };
   auto currentValue = [](uint8_t phase) -> float {
     const MeterCurrent current = GetMeterCurrent(phase);
-    return current.present ? roundf(outputCurrentMilliAmps(current.milliAmps)) : 0.0f;
+    return current.present ? outputCurrentMilliAmps(current.milliAmps) : 0.0f;
   };
   auto fixedValue = [](auto value, uint8_t decimals) -> float {
     float scaled = value.int_val() / 1000.0f;
