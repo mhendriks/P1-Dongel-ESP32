@@ -529,16 +529,68 @@ function visibilityListener() {
 document.addEventListener( "visibilitychange", visibilityListener );
 
 //============================================================================  
-// if the user uses the backbutton in the browser
-window.addEventListener('popstate', function (event) {
-	activeTab = "b" + location.hash.slice(1, location.hash.length);
-	openTab();
-});
+// Fragment navigation can reload the document in Safari. Select sections
+// directly, and use the History API only to keep bookmarks/back/forward working.
+let tabNavigationReady = false;
+let selectedTabId = null;
 
-window.addEventListener('hashchange', () => {
-  console.log('Hash changed:', window.location.hash);
-  // Handle the hash change here
-});
+function tabSectionFromHash(hash = location.hash) {
+  const id = hash.slice(1).split("?")[0] || "DashTab";
+  const section = document.getElementById(id);
+  return section?.matches("section.tabName") ? section : document.getElementById("DashTab");
+}
+
+function showTabSection(selected) {
+  document.querySelectorAll("section.tabName").forEach(section => {
+    const display = section === selected ? "block" : "none";
+    if (section.style.display !== display) section.style.display = display;
+  });
+}
+
+function closeTabMenu() {
+  document.getElementById("myTopnav").className = "main-navigation";
+  document.body.classList.remove("menu-open");
+  const menuIcon = document.getElementById("menuid");
+  menuIcon.classList.remove("mdi-close");
+  menuIcon.classList.add("mdi-menu");
+}
+
+function updateTabFromHash() {
+  if (!tabNavigationReady) return;
+  const section = tabSectionFromHash();
+  if (!section || selectedTabId === section.id) return;
+  showTabSection(section);
+  selectedTabId = section.id;
+  activeTab = "b" + section.id;
+
+  document.querySelectorAll("#myTopnav .active").forEach(item => item.classList.remove("active"));
+  document.querySelectorAll("#myTopnav a.nav-item").forEach(link => {
+    if (link.getAttribute("href") !== "#" + section.id) return;
+    link.classList.add("active");
+    const parentMenu = link.closest("ul");
+    if (parentMenu && parentMenu.id !== "myTopnav") parentMenu.previousElementSibling?.classList.add("active");
+  });
+  closeTabMenu();
+  openTab();
+}
+
+function handleTabLinkClick(event) {
+  if (!tabNavigationReady || event.defaultPrevented || event.button !== 0
+      || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const link = event.target.closest?.("a[href]");
+  const href = link?.getAttribute("href");
+  if (!href?.startsWith("#") || link.hasAttribute("download")
+      || (link.target && link.target !== "_self")) return;
+  const section = document.getElementById(href.slice(1));
+  if (!section?.matches("section.tabName")) return;
+  event.preventDefault();
+  if (location.hash !== href) window.history.pushState(null, "", href);
+  closeTabMenu();
+  updateTabFromHash();
+}
+
+window.addEventListener('popstate', updateTabFromHash);
+window.addEventListener('hashchange', updateTabFromHash);
 
 
 //============================================================================  
@@ -1426,6 +1478,7 @@ setTimeout(mijnFunctie, 2000);
 function bootsTrapMain() 
 {
   console.log("bootsTrapMain()");
+  showTabSection(tabSectionFromHash());
 //   loadIcons();
 
 	//get and set locale
@@ -1445,6 +1498,7 @@ function bootsTrapMain()
 	    setMonthTableType();
 	    initActualGraph();
 	    setPresentationType(presentationType);
+		tabNavigationReady = true;
 		
 	  //goto tab after reload FSExplorer
   	if ( location.hash ) {
@@ -1472,16 +1526,10 @@ function bootsTrapMain()
 				break;
 	
 				default:
-					//redirect to cmd
-					const btn = document.getElementById("b"+cmd);
-					if (btn) {
-					btn.click();
-						activeTab = btn.id;
-						openTab();
-					} else console.log("Button b"+cmd+" not found");
+					updateTabFromHash();
 			}
 		} else {
-			openTab();
+			updateTabFromHash();
 		}
     document.getElementById('dongle_io').addEventListener('input', NTSWupdateVisibility);
  	
@@ -4764,36 +4812,8 @@ function menu() {
 //============================================================================         
 // attach an onclick handler for all menuitems
 function handle_menu_click()
-{	
-	let btns = document.getElementsByClassName("nav-item");
-	for (let i = 0; i < btns.length; i++) {
-  		btns[i].addEventListener("click", function() {
-			//reset hamburger menu icon
-			let menu = document.getElementById("menuid");
-			menu.classList.remove("mdi-close");
-			menu.classList.add("mdi-menu");
-			document.body.classList.remove("menu-open");
-	
-			//remove active classes
-			let current = document.getElementById("myTopnav").getElementsByClassName("active");	
-			for (let j=current.length-1; j>=0; j--) {
-	// 					console.log("remove active ["+j+"] current:"+current[j]);
-				current[j].classList.remove("active");
-		}
-		//add new active classes
-			let closest = this.closest("ul");
-			if (closest && !closest.previousElementSibling.classList.contains("active","topcorner","mdi")) {
-				console.log("contains: subnav, closest:" +closest.className);
-				closest.previousElementSibling.classList.add("active");
-			}
-			if(!this.classList.contains("active","nav-img")) 
-			this.classList.add("active");
-
-			activeTab = this.id;
-			//console.log("ActiveID - " + activeTab );
-// 			openTab();  		
-  		});
-	}
+{
+  document.addEventListener("click", handleTabLinkClick);
 }
 
 //====== I18N.JS ====
