@@ -34,6 +34,7 @@ void KempStartupConfigFromWorker();
 void MeentProvisionFromWorker();
 void RngWriteFromWorker(const WorkerRngPayload& payload);
 void GetSolarDataNFromWorker();
+void FactoryResetFromWorker();
 
 static QueueHandle_t workerQueueForPriority(WorkerPriority priority) {
   switch (priority) {
@@ -151,7 +152,11 @@ static void workerWaitForTrigger() {
 }
 
 static void workerHandleJob(const WorkerJob& job) {
+  if (factoryResetPending && job.type != WORKER_JOB_FACTORY_RESET) return;
   switch (job.type) {
+    case WORKER_JOB_FACTORY_RESET:
+      FactoryResetFromWorker();
+      break;
     case WORKER_JOB_NONE:
       break;
 

@@ -58,6 +58,7 @@ void P1SetDevType(){
 }
 
 void P1StatusWriteDirect(){
+    if (factoryResetPending) return;
     strcpy(P1Status.timestamp, actTimestamp);
     preferences.putUInt("reboots", P1Status.reboots);
     preferences.putString("timestamp",P1Status.timestamp);

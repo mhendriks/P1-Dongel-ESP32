@@ -785,6 +785,12 @@ function powerUnit() {
 }
 
 function actualValueAndUnit(item, field) {
+	if (item === "electricity_tariff") {
+		return {
+			value: formatValueLocale(field?.value, 0, 0),
+			unit: field?.unit
+		};
+	}
 	if (field?.unit == "kW") {
 		return {
 			value: formatPowerValue(asNumber(field.value)),
@@ -3318,14 +3324,14 @@ function formatValue(value)
       tableCells[1].style.textAlign = "center";
       tableCells[1].innerHTML = "20"+data.data[i].date.substring(0,2);          // jaar
       tableCells[2].style.textAlign = "right";
-      tableCells[2].innerHTML = (data.data[i].costs_e *1).toFixed(2);            // kosten electra
+      tableCells[2].innerHTML = formatValueLocale(data.data[i].costs_e, 2, 2);            // kosten electra
       tableCells[3].style.textAlign = "right";
-      tableCells[3].innerHTML = (data.data[i].costs_g *1).toFixed(2);            // kosten gas
+      tableCells[3].innerHTML = formatValueLocale(data.data[i].costs_g, 2, 2);            // kosten gas
       tableCells[4].style.textAlign = "right";
-      tableCells[4].innerHTML = (data.data[i].costs_nw *1).toFixed(2);           // netw kosten
+      tableCells[4].innerHTML = formatValueLocale(data.data[i].costs_nw, 2, 2);           // netw kosten
       tableCells[5].style.textAlign = "right";
       tableCells[5].style.fontWeight = 'bold';
-      tableCells[5].innerHTML = "€ " + (data.data[i].costs_tt *1).toFixed(2);    // kosten totaal
+      tableCells[5].innerHTML = "€ " + formatValueLocale(data.data[i].costs_tt, 2, 2);    // kosten totaal
       //--- omdat de actuele maand net begonnen kan zijn tellen we deze
       //--- niet mee, maar tellen we de laatste maand van de voorgaand periode
       if (i > 0)
@@ -3335,14 +3341,14 @@ function formatValue(value)
       tableCells[6].style.textAlign = "center";
       tableCells[6].innerHTML = "20"+data.data[slotyearbefore].date.substring(0,2);         // jaar
       tableCells[7].style.textAlign = "right";
-      tableCells[7].innerHTML = (data.data[slotyearbefore].costs_e *1).toFixed(2);           // kosten electra
+      tableCells[7].innerHTML = formatValueLocale(data.data[slotyearbefore].costs_e, 2, 2);           // kosten electra
       tableCells[8].style.textAlign = "right";
-      tableCells[8].innerHTML = (data.data[slotyearbefore].costs_g *1).toFixed(2);           // kosten gas
+      tableCells[8].innerHTML = formatValueLocale(data.data[slotyearbefore].costs_g, 2, 2);           // kosten gas
       tableCells[9].style.textAlign = "right";
-      tableCells[9].innerHTML = (data.data[slotyearbefore].costs_nw *1).toFixed(2);          // netw kosten
+      tableCells[9].innerHTML = formatValueLocale(data.data[slotyearbefore].costs_nw, 2, 2);          // netw kosten
       tableCells[10].style.textAlign = "right";
       tableCells[10].style.fontWeight = 'bold';
-      tableCells[10].innerHTML = "€ " + (data.data[slotyearbefore].costs_tt *1).toFixed(2);  // kosten totaal
+      tableCells[10].innerHTML = "€ " + formatValueLocale(data.data[slotyearbefore].costs_tt, 2, 2);  // kosten totaal
       totalCost_1 += data.data[slotyearbefore].costs_tt;
 
     };
@@ -3372,11 +3378,11 @@ function formatValue(value)
     tableCells[1].style.textAlign = "right";
     tableCells[1].innerHTML = t("lbl-advance");
     tableCells[2].style.textAlign = "right";
-    tableCells[2].innerHTML = "€ " + (totalCost / 12).toFixed(2);
+    tableCells[2].innerHTML = "€ " + formatValueLocale(totalCost / 12, 2, 2);
     tableCells[3].style.textAlign = "right";
     tableCells[3].innerHTML = t("lbl-advance");
     tableCells[4].style.textAlign = "right";
-    tableCells[4].innerHTML = "€ " + (totalCost_1 / 12).toFixed(2);
+    tableCells[4].innerHTML = "€ " + formatValueLocale(totalCost_1 / 12, 2, 2);
 
     
     //--- hide canvas

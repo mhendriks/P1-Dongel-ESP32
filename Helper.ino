@@ -13,6 +13,7 @@
 #include "rom/rtc.h"
 #include "esp_efuse.h"
 #include "esp_efuse_table.h"
+#include "WifiIPConfig.h"
 
 #define P1P_H20_B   3
 #define P1P_H20_2   4
@@ -332,16 +333,55 @@ void SetConfig(){
 }
 
 void FacReset() {
-  DebugTln(F("/!\\ Factory reset"));
-//  bFacReset = false;
-  MeentClearClientSecret(); // A reset must not retain ownership of the old pod.
-  P1StatusClear();
-  LittleFS.remove("/DSMRsettings.json");
-  LittleFS.remove("/fixedip.json");
-  resetWifi();
+  if (factoryResetPending.exchange(true)) return;
+  if (!WorkerEnqueueSimple(WORKER_JOB_FACTORY_RESET, WORKER_PRIO_NORMAL)) {
+    factoryResetPending = false;
+    LogFile("Factory reset: worker busy; try again", true);
+  }
+}
+
+void FactoryResetFromWorker() {
+  bool cleared = true;
+  for (const char* path : {"/post.json", SETTINGS_FILE, "/fixedip.json", "/DSMRsettings.reset.tmp"}) {
+    if (LittleFS.exists(path) && !LittleFS.remove(path)) { cleared = false; break; }
+  }
+  if (cleared) cleared = ClearPostProvisioning() && WifiIPConfig::clear();
+  if (cleared) {
+    for (const char* key : {"direct_ap_ssid", "direct_ap_psk", "peers", "mac", "eid_state"}) {
+      if (preferences.isKey(key) && !preferences.remove(key)) { cleared = false; break; }
+    }
+  }
+  if (!cleared) {
+    factoryResetPending = false;
+    LogFile("Factory reset: storage error; reset cancelled", true);
+    return;
+  }
+#if !defined(ETHERNET) || defined(ULTRA)
+  WiFiManager wifiReset;
+  wifiReset.resetSettings();
+#endif
+  DebugTln(F("Factory reset complete; upload settings and post.json to reprovision"));
+  P1Reboot();
 }
 
 static bool ledOverrideOn = false;
+static byte monoLedLevel = LED_OFF;
+
+static PostLedState postLedState() {
+  // Keep the WiFi portal's blue feedback while its hotspot is active.
+  if (!isPowerCMode() || networkStarting || (WiFi.getMode() & WIFI_AP)) return POST_LED_NORMAL;
+  // Ethernet with an IP is sufficient; a disconnected WiFi must not signal
+  // an error on an otherwise connected Ultra. Link without an IP is not ready.
+  if (netw_state != NW_WIFI && netw_state != NW_ETH) return POST_LED_ERROR;
+  const int status = HttpPostLastStatus();
+  if (status == 404) return POST_LED_UNLINKED;
+  if (status != 0 && (status < 200 || status >= 300)) return POST_LED_ERROR;
+  return POST_LED_NORMAL; // Includes waiting for the first response.
+}
+
+static bool postLedBlinkOn() {
+  return (millis() / 500U) % 2U == 0;
+}
 
 void ToggleLED(byte mode) {
   if ( UseRGB ) { 
@@ -349,7 +389,11 @@ void ToggleLED(byte mode) {
     else { rgbLedWrite(rgbled_io,0,0,0); /*rgb.setPixel(LED_BLACK);*/ }; 
   } 
   else if ( ledOverrideOn ) return;
-  else if ( LEDenabled ) digitalWrite(statusled, !digitalRead(statusled)); else digitalWrite(statusled, LED_OFF);
+  else {
+    monoLedLevel = LEDenabled ? !digitalRead(statusled) : LED_OFF;
+    if (isPowerCMode()) HandleLED();
+    else digitalWrite(statusled, monoLedLevel);
+  }
 }
 
 void ClearRGB(){
@@ -362,7 +406,6 @@ static bool ledStatusOn = false;
 static uint32_t ledStatusColor = LED_BLACK;
 static bool ledActivityOn = false;
 static uint32_t ledOverrideColor = LED_BLACK;
-static byte monoLedLevel = LED_OFF;
 static bool monoOverrideState = false;
 static uint32_t monoOverrideLastToggleMs = 0;
 
@@ -379,15 +422,23 @@ static void setRgbColor(uint32_t color) {
 
 static void renderRgbLed() {
   if ( !UseRGB ) return;
+  const PostLedState postState = postLedState();
 
   if ( !LEDenabled ) {
     ClearRGB();
+  } else if ( bButtonPressed && (int32_t)(millis() - s_buttonIgnoreUntilMs) >= 0 ) {
+    setRgbColor(buttonFeedbackColor(millis(), Tpressed));
   } else if ( ledOverrideOn ) {
     setRgbColor(ledOverrideColor);
+  } else if ( postState == POST_LED_ERROR ) {
+    setRgbColor(LED_RED);
+  } else if ( postState == POST_LED_UNLINKED ) {
+    setRgbColor(postLedBlinkOn() ? LED_RED : LED_BLACK);
   } else if ( ledActivityOn ) {
     setRgbColor(LED_GREEN);
   } else if ( ledStatusOn ) {
-    setRgbColor(ledStatusColor);
+    // Network callbacks may leave a stale red status after a transport switch.
+    setRgbColor(isPowerCMode() && ledStatusColor == LED_RED ? LED_BLUE : ledStatusColor);
   } else {
     ClearRGB();
   }
@@ -403,7 +454,10 @@ void OverrideLED(bool enabled, uint32_t color) {
   } else {
     monoOverrideLastToggleMs = 0;
     monoOverrideState = false;
-    if ( !enabled ) digitalWrite(statusled, monoLedLevel);
+    if ( !enabled ) {
+      if (isPowerCMode()) HandleLED();
+      else digitalWrite(statusled, monoLedLevel);
+    }
   }
 }
 
@@ -419,15 +473,37 @@ void SwitchLED( byte mode, uint32_t color) {
   } else {
     if ( ledOverrideOn ) return;
     monoLedLevel = color==LED_RED?LED_OFF:mode;
-    digitalWrite(statusled, monoLedLevel);
+    if (isPowerCMode()) HandleLED();
+    else digitalWrite(statusled, monoLedLevel);
   }
 }
 
 void HandleLED() {
-  if ( UseRGB || !ledOverrideOn ) return;
+  if ( UseRGB ) {
+    // The auxiliary task calls this every 25 ms, independently of telegrams
+    // and POST intervals, so 404 blinking and network loss remain responsive.
+    if (isPowerCMode()) renderRgbLed();
+    return;
+  }
 
   if ( !LEDenabled ) {
     digitalWrite(statusled, LED_OFF);
+    return;
+  }
+
+  if (bButtonPressed && (int32_t)(millis() - s_buttonIgnoreUntilMs) >= 0 &&
+      (uint32_t)(millis() - Tpressed) > FACTORY_PRESS_MS) {
+    digitalWrite(statusled, buttonFeedbackColor(millis(), Tpressed) == LED_BLACK ? LED_OFF : LED_ON);
+    return;
+  }
+
+  if ( !ledOverrideOn ) {
+    if (isPowerCMode()) {
+      const PostLedState state = postLedState();
+      const byte level = state == POST_LED_ERROR ? LED_ON :
+          (state == POST_LED_UNLINKED ? (postLedBlinkOn() ? LED_ON : LED_OFF) : monoLedLevel);
+      digitalWrite(statusled, level);
+    }
     return;
   }
 

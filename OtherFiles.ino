@@ -75,6 +75,7 @@ void writeToJsonFile(const TSource &doc, File &_file)
 
 //=======================================================================
 void writeSettingsDirect() {
+  if (factoryResetPending) return;
   if ( !FSmounted ) return;
 
   DebugTln(F("Writing to [" SETTINGS_FILE "] ..."));

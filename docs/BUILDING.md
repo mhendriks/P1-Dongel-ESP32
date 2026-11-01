@@ -37,7 +37,7 @@ Notes:
 - `OTAURL_PREFIX` is used in `DSMRloggerAPI.h` to build `BaseOTAurl`.
 - HTTP POST is included in every build, but disabled until `/post.json` is
   placed on the dongle. It is consumed once at startup and stored in NVS.
-- Supported `provider` values are `generic`, `kemp`, and `meent`. KEMP uses
+- Supported `provider` values are `generic`, `kemp`, `meent`, and `powerc`. KEMP uses
   the sample/config contract in `docs/KEMP_API.md`; MEENT can also be selected
   from the settings page and is then provisioned through the same transport.
 - `post.json` contains `enabled`, `provider`, `url`, `interval`, `payload`,
@@ -122,6 +122,90 @@ Extra Arduino build properties can be passed through as well. For `compiler.cpp.
 ./build.sh ULTRA --extra-flags "-DWEBSOCKETS_TCP_TIMEOUT=2000"
 ./build.sh ULTRA --build-property compiler.cpp.extra_flags="-DWEBSOCKETS_TCP_TIMEOUT=2000"
 ```
+
+### Physical button: network reset and emergency factory reset
+
+WiFi portal IP settings are stored separately in NVS namespace `wifi-ip` as
+one versioned record containing IP, gateway, subnet and DNS. Settings are
+written only after a successful portal connection and restored before
+WiFiManager auto-connect. An empty IP field selects DHCP, including when
+switching back from a static address. DNS is optional. Existing installations
+without this record keep their existing startup behavior; previously entered
+static WiFi settings must be entered once again after updating. Legacy
+`/fixedip.json` takes precedence when present.
+
+Actions occur on release on every hardware/provider profile:
+
+- Up to five seconds: existing short-press behavior, green feedback.
+- More than five and up to fifteen seconds: network reset, steady red feedback.
+- More than fifteen seconds: emergency factory reset, red blinking at 250 ms
+  on / 250 ms off while held. This removes the customer configuration.
+
+The network reset:
+
+- Clear saved WiFi credentials on hardware with WiFi support.
+- Clear the WiFi IP settings from NVS (also on a web/factory WiFi reset).
+- Clear an active `skip-network` flag in `DSMRsettings.json`.
+- Remove `/fixedip.json` so WiFi/Ethernet use DHCP again.
+- Clear cached DirectAP SSID/password when that firmware mode is enabled.
+- Restart the dongle.
+
+The settings document is preserved; only `skip-network` is patched when
+needed. The update uses a temporary file and rename. If it cannot be saved,
+the reset is cancelled rather than discarding configuration. This network
+reset does not erase POST provisioning, MQTT settings, device credentials,
+counters, history or pairing. A short press keeps its existing behavior.
+
+The emergency factory reset removes `DSMRsettings.json`, pending `/post.json`,
+fixed-IP settings, WiFi credentials, cached AP credentials, POST NVS settings
+(including legacy KEMP settings), the MEENT client secret, pairing and the
+EnergyID enrollment state. It preserves hardware metadata, counters, history
+and frontend files. It is serialized through the worker; pending settings
+and status writes are blocked so they cannot restore deleted provisioning.
+After reboot the firmware creates standard settings. Upload the customer
+`DSMRsettings.json` and `post.json` again to restore that customer profile.
+Removing POST provisioning also restores the normal local web interface on
+standard firmware. Firmware-defined DirectAP/hardware choices remain in force.
+
+AP hotspot settings and DirectAP selection rules are firmware/provisioning
+choices, not a separately saved AP mode. They remain in force after reset;
+a DirectAP build scans for a matching AP again. The provisioning hotspot keeps
+its configured SSID/password. This change applies to the physical button;
+existing web/telnet reset actions keep their behavior.
+
+### PowerC provisioning (5.10.5)
+
+PowerC uses the standard firmware for each hardware profile. Include
+`post.json` in the LittleFS filesystem image when flashing the dongle, using
+`"provider": "powerc"` and `"enabled": true`. The file is imported
+before networking starts, saved in NVS and removed after successful storage.
+The profile remains active on subsequent boots and after a WiFi reset.
+No PowerC compiler define is needed.
+
+See `docs/POST_JSON.md` for the format. Customer-specific examples and tests
+are kept locally under the Git-ignored `private/` directory.
+Keep the real URL, interval, payload and authentication aligned
+with the server contract. A sketch binary alone does not include LittleFS;
+flash the filesystem image as well for factory provisioning.
+
+While this provider is enabled, WiFiManager uses `p1-hotspot` for both the
+hotspot SSID and password. The captive configuration portal remains available.
+The AP address is unchanged (`4.3.2.1`); `p1.local` is not configured for it.
+
+Release firmware does not start the normal HTTP server, REST API or browser
+WebSocket API, and does not advertise these services through mDNS. `DEBUG`
+firmware retains these local services for inspection.
+
+A five-to-fifteen-second button press follows the general network reset above.
+Holding for more than fifteen seconds performs the emergency factory reset,
+including removing the active POST profile.
+`DSMRsettings.json`, POST provisioning and device state are preserved; fixed
+IP settings and cached network credentials are cleared.
+
+To disable the profile, provision another `post.json` with `"enabled": false`,
+or select another provider, then reboot. In release firmware with local HTTP
+disabled, reprovision through flashing the filesystem rather than the web UI.
+This step does not implement MAC-derived IDs/passwords or new LED patterns.
 
 ### Sketch-local compiler options
 

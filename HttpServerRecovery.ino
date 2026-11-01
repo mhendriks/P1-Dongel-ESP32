@@ -10,12 +10,14 @@ static const uint32_t HTTP_RECOVERY_CHECK_INTERVAL_MS = 1000;
 static uint32_t httpRecoveryLastCheckMs = 0;
 
 void handleHttpServerClient() {
+  if (factoryResetPending || !localHttpEnabled()) return;
   httpServerHandleActive = true;
   httpServer.handleClient();
   httpServerHandleActive = false;
 }
 
 void serviceHttpServerRecovery() {
+  if (!localHttpEnabled()) return;
   if (httpServerHandleActive) return;
 
   uint32_t nowMs = millis();

@@ -44,6 +44,7 @@ struct VictronModbusConfig {
   uint8_t id = 100;
 } victronModbusConfig;
 
+#include <atomic>
 #include <WiFi.h>  
 // #include "Insights.h"
 #include <WiFiClientSecure.h>        
@@ -227,7 +228,10 @@ void writeRingFiles();
 void writeSettings();
 void writeSettingsDirect();
 void ProcessPostProvisioning();
+bool ClearPostProvisioning();
 void AppendHttpPostStatus(JsonDocument& doc);
+int HttpPostLastStatus();
+enum PostLedState : uint8_t { POST_LED_NORMAL, POST_LED_ERROR, POST_LED_UNLINKED };
 void MeentConfigChanged();
 void AppendMeentStatus(JsonDocument& doc);
 void MeentClearClientSecret();
@@ -638,8 +642,10 @@ char      settingMeentWebId[256] = "";
 char      settingMeentApiKey[128] = "";
 // Generic HTTP push connector.  Its connection details are provisioned by
 // /post.json and retained in NVS, rather than compiled into a build profile.
-enum HttpPostProvider : uint8_t { HTTP_POST_GENERIC = 0, HTTP_POST_KEMP, HTTP_POST_MEENT };
+// Append providers: the numeric values are retained in existing NVS records.
+enum HttpPostProvider : uint8_t { HTTP_POST_GENERIC = 0, HTTP_POST_KEMP, HTTP_POST_MEENT, HTTP_POST_POWERC };
 bool      bHttpPostEnabled = false;
+std::atomic<bool> factoryResetPending{false};
 uint8_t   settingHttpPostProvider = HTTP_POST_GENERIC;
 char      settingHttpPostUrl[192] = "";
 uint16_t  settingHttpPostInterval = 300;
@@ -650,6 +656,18 @@ char      settingHttpPostAuthName[48] = "X-API-Key";
 char      settingHttpPostExtraHeaderName[48] = "";
 char      settingHttpPostExtraHeaderValue[128] = "";
 bool      settingHttpPostAcceptInterval = false;
+
+inline bool isPowerCMode() {
+  return bHttpPostEnabled && settingHttpPostProvider == HTTP_POST_POWERC;
+}
+
+inline bool localHttpEnabled() {
+#ifdef DEBUG
+  return true;
+#else
+  return !isPowerCMode();
+#endif
+}
 uint8_t   settingFuse = 25;
 uint8_t   settingPhases = 0;
 // uint8_t   settingSmHasFaseInfo = 1;
@@ -658,6 +676,7 @@ char      settingHostname[32] = _DEFAULT_HOSTNAME;
 char      settingIndexPage[50] = _DEFAULT_HOMEPAGE;
 enum tNetwState { NW_NONE, NW_WIFI, NW_ETH, NW_ETH_LINK };
 uint8_t netw_state = NW_NONE;
+std::atomic<bool> networkStarting{true};
 bool      FSmounted = false;
 bool      skipNetwork = false;
 bool      allowSkipNetworkByButton = false;

@@ -51,9 +51,6 @@ Arduino-IDE settings for P1 Dongle hardware ESP32:
   - Upload Speed: "961600"                                                                                
   - Port: <select port>
 
-5.10.4
-- Fix Panic reboot in the night ( MQTT - update check only )
-
 5.11.0
 - dynamic prices 
 - 3 button control (a-pair, b-reboot, c=factory reset)
@@ -158,7 +155,7 @@ void setup()
   handleManifestCheckSchedule(true); // startup manifest check right after network and time init
   WDT_FEED();
 //================ Check necessary files ============================
-  if ( !skipNetwork ) {
+  if ( !skipNetwork && localHttpEnabled() ) {
 #if !DIRECT_AP_CONNECT
   if (!EnsureIndexFilePresent()) FSNotPopulated = true;
 #endif

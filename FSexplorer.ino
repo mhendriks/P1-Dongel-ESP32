@@ -123,6 +123,7 @@ static void handleHttpNotFound() {
 }
 
 void setupFSexplorer() { 
+  if (!localHttpEnabled()) return;
 
 #if !DIRECT_AP_CONNECT
   httpServer.on("/", HTTP_GET, handleRootGet);
@@ -366,8 +367,27 @@ bool freeSpace(uint16_t const& printsize)
   
 } // freeSpace()
 
+#include "WifiIPConfig.h"
+
 void resetWifi()
 {
+  if (isPowerCMode()) {
+    // The button must also work with no HTTP server or while skipping network.
+    // Persist before reboot; an asynchronous settings write could be lost.
+    if (skipNetwork) {
+      skipNetwork = false;
+      writeSettingsDirect();
+    }
+    if (!WifiIPConfig::clear()) {
+      LogFile("WiFi reset: cannot clear IP settings", true);
+      return;
+    }
+    WiFiManager wifiReset;
+    wifiReset.resetSettings();
+    LogFile("reboot: PowerC WiFi reset", false);
+    P1Reboot();
+    return;
+  }
   Debugf("\r\nConnect to AP [%s] and go to ip address shown in the AP-name\r\n", settingHostname);
   doRedirect("RebootResetWifi", 500, "/", true, true);
 }
@@ -394,6 +414,10 @@ void doRedirect(String msg, int wait, const char* URL, bool reboot, bool resetWi
     }
     if (resetWifi) 
     {   
+      if (!WifiIPConfig::clear()) {
+        LogFile("WiFi reset: cannot clear IP settings", true);
+        return;
+      }
       WiFiManager manageWiFi;
       manageWiFi.resetSettings();
 #if DIRECT_AP_CONNECT

@@ -1,3 +1,5 @@
+#include <atomic>
+
 #if __has_include("./../../_secrets/posts.h")
   #include "./../../_secrets/posts.h"
 #endif
@@ -8,8 +10,8 @@
 #define POST_KEMP
 #define POST_MEENT
 
-#ifndef URL_POWERCH
-  #define URL_POWERCH ""
+#ifndef URL_POWERC
+  #define URL_POWERC ""
 #endif
 #ifndef URL_KEMP
   #define URL_KEMP ""
@@ -40,8 +42,13 @@ static WiFiClient webhookPlainClient;
 uint32_t webhookPostErrors = 0;
 uint32_t webhookLastPostMs = 0;
 bool webhookPostPending = false;
-static int webhookLastHttpStatus = 0;
+// The HTTP worker writes this while the LED task and API read it.
+static std::atomic<int> webhookLastHttpStatus{0};
 static time_t webhookLastSuccessfulPost = 0;
+
+int HttpPostLastStatus() {
+  return webhookLastHttpStatus.load(std::memory_order_relaxed);
+}
 
 static constexpr const char* POST_NVS = "http_post";
 static constexpr const char* POST_FILE = "/post.json";
@@ -53,6 +60,7 @@ struct HttpPostSettings {
 };
 
 static bool savePostSettings() {
+  if (factoryResetPending) return false;
   HttpPostSettings s = { 2, settingHttpPostProvider, settingHttpPostPayload,
       settingHttpPostAuth, bHttpPostEnabled, settingHttpPostAcceptInterval,
       settingHttpPostInterval };
@@ -76,7 +84,7 @@ static bool loadPostSettings() {
   nvs.end();
   if (!loaded) return false;
   bHttpPostEnabled = s.enabled;
-  settingHttpPostProvider = constrain(s.provider, HTTP_POST_GENERIC, HTTP_POST_MEENT);
+  settingHttpPostProvider = constrain(s.provider, HTTP_POST_GENERIC, HTTP_POST_POWERC);
   settingHttpPostInterval = constrain(s.interval, 1, 3600);
   settingHttpPostPayload = constrain(s.payload, 0, 3);
   settingHttpPostAuth = constrain(s.auth, 0, 3);
@@ -137,6 +145,7 @@ void ProcessPostProvisioning() {
   uint8_t parsedProvider = HTTP_POST_GENERIC;
   if (!strcmp(provider, "kemp")) parsedProvider = HTTP_POST_KEMP;
   else if (!strcmp(provider, "meent")) parsedProvider = HTTP_POST_MEENT;
+  else if (!strcmp(provider, "powerc")) parsedProvider = HTTP_POST_POWERC;
   else if (strcmp(provider, "generic")) { LogFile("HTTP POST: ongeldige provider", true); return; }
   bHttpPostEnabled = enabled;
   settingHttpPostProvider = parsedProvider;
@@ -159,19 +168,21 @@ void ProcessPostProvisioning() {
 static bool httpPostConfigured() { return bHttpPostEnabled && strlen(settingHttpPostUrl); }
 
 void AppendHttpPostStatus(JsonDocument& doc) {
+  const int lastStatus = HttpPostLastStatus();
   doc["http_post_enabled"] = bHttpPostEnabled;
   if (bHttpPostEnabled) doc["http_post_interval_s"] = settingHttpPostInterval;
   doc["http_post_provider"] = settingHttpPostProvider == HTTP_POST_KEMP ? "kemp" :
-      (settingHttpPostProvider == HTTP_POST_MEENT ? "meent" : "generic");
+      (settingHttpPostProvider == HTTP_POST_MEENT ? "meent" :
+       (settingHttpPostProvider == HTTP_POST_POWERC ? "powerc" : "generic"));
   if (!bHttpPostEnabled) doc["http_post_status"] = "uitgeschakeld";
-  else if (webhookLastHttpStatus >= 200 && webhookLastHttpStatus < 300) doc["http_post_status"] = "verbonden";
-  else if (webhookLastHttpStatus < 0) doc["http_post_status"] = "verbindingsfout";
-  else if (webhookLastHttpStatus) {
+  else if (lastStatus >= 200 && lastStatus < 300) doc["http_post_status"] = "verbonden";
+  else if (lastStatus < 0) doc["http_post_status"] = "verbindingsfout";
+  else if (lastStatus) {
     char status[20];
-    snprintf(status, sizeof(status), "HTTP %d", webhookLastHttpStatus);
+    snprintf(status, sizeof(status), "HTTP %d", lastStatus);
     doc["http_post_status"] = status;
   } else doc["http_post_status"] = "wacht op verzending";
-  if (webhookLastHttpStatus) doc["http_post_http_status"] = webhookLastHttpStatus;
+  if (lastStatus) doc["http_post_http_status"] = lastStatus;
   if (webhookLastSuccessfulPost) doc["http_post_last_success"] = webhookLastSuccessfulPost;
 }
 
@@ -255,7 +266,7 @@ String JsonWebhook(const WorkerWebhookPayload& payload) {
     doc["message_type"] = "sample";
     doc["api_key"] = kempApiKey;
   }
-  if (settingHttpPostProvider == HTTP_POST_GENERIC && settingHttpPostAuth == 3 &&
+  if ((settingHttpPostProvider == HTTP_POST_GENERIC || settingHttpPostProvider == HTTP_POST_POWERC) && settingHttpPostAuth == 3 &&
       strlen(settingHttpPostAuthName) && strlen(settingHttpPostAuthKey)) {
     doc[settingHttpPostAuthName] = settingHttpPostAuthKey;
   }
@@ -289,7 +300,7 @@ String JsonWebhook(const WorkerWebhookPayload& payload) {
   serializeJson(doc, output);
 
 #ifdef DEBUG
-  Debugf("Webhook Json: %s\n", output.c_str());
+  DebugTracef("Webhook Json: %s\n", output.c_str());
 #endif  
 
   return output;
@@ -460,6 +471,7 @@ static bool meentClientSecretIsValid(const char* value) {
 // lives outside the LittleFS settings file, so a settings-file failure cannot
 // orphan a pod or API key. Factory reset explicitly removes this credential.
 static bool meentEnsureClientSecret() {
+  if (factoryResetPending) return false;
   if (meentClientSecretIsValid(meentClientSecret)) return true;
 
   preferences.getString(MEENT_CLIENT_SECRET_NVS_KEY, meentClientSecret, sizeof(meentClientSecret));
@@ -723,6 +735,7 @@ void PostWebhookFromWorker(const WorkerWebhookPayload& payload) {
   // KEMP keeps its agreed sample/config command contract, while the generic
   // connector uses the credentials and payload declared in post.json.
   if (settingHttpPostProvider == HTTP_POST_KEMP || settingHttpPostProvider == HTTP_POST_GENERIC ||
+      settingHttpPostProvider == HTTP_POST_POWERC ||
       (settingHttpPostProvider == HTTP_POST_MEENT && meentApiKey().length())) {
     HTTPClient http;
     const bool isKemp = settingHttpPostProvider == HTTP_POST_KEMP;
@@ -745,6 +758,7 @@ void PostWebhookFromWorker(const WorkerWebhookPayload& payload) {
       response = http.getString();
       http.end();
     }
+    if (factoryResetPending) { webhookPostPending = false; return; }
     const bool ok = status >= 200 && status < 300;
     webhookLastHttpStatus = status;
     if (ok) {
@@ -787,8 +801,8 @@ void PostWebhookFromWorker(const WorkerWebhookPayload& payload) {
   String kempResponseBody;
   bool kempResponseAccepted = false;
 #endif
-#ifdef POST_POWERCH
-  webhookUrl = URL_POWERCH;
+#ifdef POST_POWERC
+  webhookUrl = URL_POWERC;
 #elif defined(POST_MEENT)
   meentProvisionPending = !meentApiKey().length();
   if (!meentProvision()) {
@@ -940,6 +954,22 @@ void MeentClearClientSecret() {
   meentClientSecret[0] = '\0';
   meentResetStatus();
 #endif
+}
+
+bool ClearPostProvisioning() {
+  for (const char* name : {POST_NVS, KEMP_NVS_NAMESPACE}) {
+    Preferences storage;
+    if (!storage.begin(name, false)) return false;
+    const bool cleared = storage.clear();
+    storage.end();
+    if (!cleared) return false;
+  }
+  if (preferences.isKey(MEENT_CLIENT_SECRET_NVS_KEY) &&
+      !preferences.remove(MEENT_CLIENT_SECRET_NVS_KEY)) return false;
+  bHttpPostEnabled = bMeentEnabled = false;
+  settingHttpPostProvider = HTTP_POST_GENERIC;
+  meentClientSecret[0] = '\0';
+  return true;
 }
 
 void AppendMeentStatus(JsonDocument& doc) {

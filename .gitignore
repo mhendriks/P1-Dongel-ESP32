@@ -16,3 +16,4 @@ ap
 build
 *.zip
 .htaccess
+/private/

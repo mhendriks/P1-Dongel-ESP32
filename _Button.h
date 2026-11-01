@@ -2,13 +2,14 @@
 #define _BUTTON_H
 
 void P1Reboot();
+void ResetNetwork();
 void FacReset();
 void SwitchLED(byte mode, uint32_t color);
 void OverrideLED(bool enabled, uint32_t color);
 void HandleLED();
 
 enum btn_states { BTN_PRESSED, BTN_RELEASED };
-enum btn_types { BTN_NONE, BTN_LONG_PRESS, BTN_SHORT_PRESS };
+enum btn_types { BTN_NONE, BTN_LONG_PRESS, BTN_SHORT_PRESS, BTN_FACTORY_RESET };
 
 volatile btn_states lastState = BTN_RELEASED;
 volatile btn_types ButtonPressed = BTN_NONE;
@@ -18,6 +19,14 @@ volatile bool bButtonReleased = false;
 static uint32_t s_buttonIgnoreUntilMs = 0;
 static const uint32_t DEBOUNCE_MS = 30;
 static const uint32_t LONG_PRESS_MS = 5000;
+static const uint32_t FACTORY_PRESS_MS = 15000;
+
+static uint32_t buttonFeedbackColor(uint32_t now, uint32_t pressedAt) {
+  const uint32_t held = now - pressedAt;
+  if (held > FACTORY_PRESS_MS)
+    return ((held - FACTORY_PRESS_MS) / 250U) % 2U ? LED_BLACK : LED_RED;
+  return held > LONG_PRESS_MS ? LED_RED : LED_GREEN;
+}
 
 void IRAM_ATTR isrButton() {
   const uint32_t now = millis();
@@ -68,7 +77,11 @@ void handleButtonPressed(btn_types btn){
       Debugln(bPairingmode ? "ON" : "OFF");
     }
     else if ( btn == BTN_LONG_PRESS ) {
-      DebugTln(F("\n\nButton LONG Press = Factory Reset"));
+      DebugTln(F("\n\nButton LONG Press = Network Reset"));
+      ResetNetwork();
+    }
+    else if ( btn == BTN_FACTORY_RESET ) {
+      DebugTln(F("\n\nButton VERY LONG Press = Factory Reset"));
       FacReset();
     }
   }
@@ -88,7 +101,8 @@ void handleButton(){
 
   if (released) {
     uint32_t TimePressed = releasedAt - pressedAt;
-    ButtonPressed = (TimePressed > LONG_PRESS_MS) ? BTN_LONG_PRESS : BTN_SHORT_PRESS;
+    ButtonPressed = TimePressed > FACTORY_PRESS_MS ? BTN_FACTORY_RESET :
+        (TimePressed > LONG_PRESS_MS ? BTN_LONG_PRESS : BTN_SHORT_PRESS);
     handleButtonPressed(ButtonPressed);
     ButtonPressed = BTN_NONE;
   }
@@ -112,7 +126,7 @@ void handleButtonLedFeedback(){
     return;
   }
 
-  uint32_t color = ((uint32_t)(millis() - pressedAt) > LONG_PRESS_MS) ? LED_RED : LED_GREEN;
+  uint32_t color = buttonFeedbackColor(millis(), pressedAt);
   if (color != lastFeedbackColor) {
     OverrideLED(true, color);
     lastFeedbackColor = color;
@@ -132,9 +146,9 @@ void fAuxProc(void *pvParameters) {
 
   // Init lastState op basis van huidige level
   lastState = (btn_states)digitalRead(button_io);
-  Tpressed  = 0;
+  Tpressed  = lastState == BTN_PRESSED ? millis() : 0;
   Treleased = 0;
-  bButtonPressed = false;
+  bButtonPressed = lastState == BTN_PRESSED;
   bButtonReleased = false;
   s_buttonIgnoreUntilMs = millis() + 1500;
 

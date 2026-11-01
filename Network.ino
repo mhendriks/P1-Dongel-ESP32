@@ -4,6 +4,7 @@
 #include "DSMRloggerAPI.h"
 #include "esp_timer.h"
 #include "esp_mac.h"
+#include "WifiIPConfig.h"
 
 #ifdef ETHERNET
   #include <ETH.h>
@@ -144,8 +145,7 @@ static bool readPreferredEthMac(uint8_t *mac){
 
 WiFiManager manageWiFi;
 
-// Keep the provisioning access point active after a successful connection
-// until the user has confirmed they are ready to leave the portal.
+// Keep confirmation available until Continue, leaving the hotspot, or timeout.
 static const uint32_t WIFI_PROVISION_CONTINUE_TIMEOUT_MS = 60000;
 // Three 15-second connection attempts may be needed before WiFiManager gives
 // up, so keep the portal feedback pending a little longer than that.
@@ -164,10 +164,10 @@ static bool wifiAuthenticationFailed(uint8_t reason) {
 }
 
 static const char WIFI_PROVISIONING_DARK_STYLE[] PROGMEM =
-  "<style>body{font-family:verdana,sans-serif;text-align:center;margin:0;padding:1.5em;line-height:1.5;background:#060606;color:#fff}"
-  "h1{color:#fff}.address{display:block;margin:.7em 0;padding:.8em;background:#282828;color:#fff;border:1px solid #555;border-radius:.4em;font-size:1.05em;word-break:break-all;text-decoration:none}"
-  ".action,button{display:inline-block;margin-top:1em;padding:.8em 1em;border:0;border-radius:.3em;background:#1fa3ec;color:#fff;font-size:1em;text-decoration:none}"
-  "small{display:block;margin-top:1.5em;color:#ccc}</style></head><body>";
+  "<style>body{font-family:verdana,sans-serif;text-align:center;max-width:36em;margin:auto;padding:1em;line-height:1.5;background:#060606;color:#fff}"
+  "h1{font-size:1.6em;margin:0 0 .4em}p{margin:.4em 0}.address{display:block;margin:.2em 0 .6em;padding:.45em .6em;background:#282828;color:#fff;border:1px solid #555;border-radius:.4em;font-size:1.05em;word-break:break-all;text-decoration:none}"
+  ".action,button{display:inline-block;margin-top:.7em;padding:.8em 1em;border:0;border-radius:.3em;background:#1fa3ec;color:#fff;font-size:1em;text-decoration:none}"
+  "small{display:block;margin-top:.8em;color:#ccc}</style></head><body>";
 
 static String wifiProvisioningPageStart(const __FlashStringHelper* title, size_t capacity) {
   String page;
@@ -185,18 +185,23 @@ static String wifiProvisioningSuccessPage() {
 
   String page = wifiProvisioningPageStart(F("Wi-Fi connected"), 1400);
   page += F("<h1>Wi-Fi connected</h1><p>The dongle is connected to your Wi-Fi network.</p>");
-  page += F("<p>IP address:</p><a class='address' href='http://");
-  page += ipAddress;
-  page += F("/'>http://");
-  page += ipAddress;
-  page += F("/</a><p>Hostname:</p><a class='address' href='http://");
-  page += hostname;
-  page += F(".local/'>http://");
-  page += hostname;
-  page += F(".local/");
-  page += F("</a><p>MAC address:</p><div class='address'>");
+  if (localHttpEnabled()) {
+    page += F("<p>IP address:</p><a class='address' href='http://");
+    page += ipAddress;
+    page += F("/'>http://");
+    page += ipAddress;
+    page += F("/</a><p>Hostname:</p><a class='address' href='http://");
+    page += hostname;
+    page += F(".local/'>http://");
+    page += hostname;
+    page += F(".local/");
+    page += F("</a>");
+  }
+  page += F("<p>MAC address:</p><div class='address'>");
   page += macStr;
-  page += F("</div><small>Keep this page open until you have noted the addresses. Select Continue when you are ready to reconnect your phone to your normal Wi-Fi network.</small><form action='/provisioning-continue'><button id='continueButton' type='submit'>Continue (60)</button></form><script>let seconds=60;const button=document.getElementById('continueButton');setInterval(()=>{if(seconds>0){button.textContent='Continue ('+(--seconds)+')';}},1000);</script></body></html>");
+  page += F("</div><small>");
+  if (localHttpEnabled()) page += F("Keep this page open until you have noted the addresses. ");
+  page += F("Select Continue when you are ready to reconnect your device to your normal Wi-Fi network.</small><form action='/provisioning-continue'><button id='continueButton' type='submit'>Continue (60)</button></form><script>let seconds=60;const button=document.getElementById('continueButton');setInterval(()=>{if(seconds>0){button.textContent='Continue ('+(--seconds)+')';}},1000);</script></body></html>");
   return page;
 }
 
@@ -219,9 +224,50 @@ static void sendWifiProvisioningPage(const String& page) {
   manageWiFi.server->send(200, "text/html", page);
 }
 
+static WifiIPConfig::Record pendingWifiIP = WifiIPConfig::dhcp();
+static bool pendingWifiIPValid = false;
+
+static void restoreWifiIPConfig() {
+  WifiIPConfig::Record config;
+  if (!WifiIPConfig::load(config)) return;
+  // Keep legacy file-based configuration authoritative when present.
+  if (bFixedIP) return;
+  manageWiFi.setSTAStaticIPConfig(IPAddress(config.ip), IPAddress(config.gateway),
+                                IPAddress(config.subnet), IPAddress(config.dns));
+  LogFile(config.ip ? "WiFi: restored static IP from NVS" : "WiFi: using DHCP", true);
+}
+
+static void saveWifiIPConfig() {
+  if (!pendingWifiIPValid || WiFi.status() != WL_CONNECTED) return;
+  if (!WifiIPConfig::save(pendingWifiIP)) {
+    LogFile("WiFi: failed to save IP settings to NVS", true);
+  }
+  pendingWifiIPValid = false;
+}
+
 static void wifiProvisioningConnectStarted() {
   wifiProvisioningConnectStartedAt = millis();
   wifiProvisioningRetryPrepared = false;
+  // This callback runs while the submitted form is still available. Capture
+  // the user's choice, never the DHCP lease returned after connecting.
+  pendingWifiIP = WifiIPConfig::dhcp();
+  pendingWifiIPValid = false;
+  IPAddress ip, gw, sn, dnsIP;
+  const String ipText = manageWiFi.server->arg("ip");
+  if (ipText.length()) {
+    if (!ip.fromString(ipText) || !gw.fromString(manageWiFi.server->arg("gw")) ||
+        !sn.fromString(manageWiFi.server->arg("sn"))) return;
+    const String dnsText = manageWiFi.server->arg("dns");
+    if (dnsText.length() && !dnsIP.fromString(dnsText)) return;
+    pendingWifiIP = {1, uint32_t(ip), uint32_t(gw), uint32_t(sn), uint32_t(dnsIP)};
+    if (!ip || !WifiIPConfig::valid(pendingWifiIP)) return;
+  }
+  pendingWifiIPValid = true;
+  manageWiFi.setSTAStaticIPConfig(IPAddress(pendingWifiIP.ip), IPAddress(pendingWifiIP.gateway),
+                                IPAddress(pendingWifiIP.subnet), IPAddress(pendingWifiIP.dns));
+  // WiFiManager skips empty form fields and setSTAConfig skips a zero IP.
+  // Explicitly restart DHCP when a user removes a previous static address.
+  if (!pendingWifiIP.ip) WiFi.config(IPAddress(), IPAddress(), IPAddress());
 }
 
 static bool wifiProvisioningConnectionFailed() {
@@ -569,6 +615,7 @@ void startWiFi(const char* hostname, int timeOut) {
   WiFi.setMinSecurity(WIFI_AUTH_WPA_PSK);
   WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
   if ( bFixedIP ) WiFi.config(staticIP, gateway, subnet, dns);
+  restoreWifiIPConfig();
   LogFile("Wifi Starting",true);
   SwitchLED( LED_OFF, LED_BLUE );  
 
@@ -600,6 +647,7 @@ void startWiFi(const char* hostname, int timeOut) {
   manageWiFi.setAPStaticIPConfig(IPAddress(4,3,2,1), IPAddress(4,3,2,1), IPAddress(255,255,255,0)); //Samsung fix
   manageWiFi.setWebServerCallback(setupWifiProvisioningSuccessPage);
   manageWiFi.setPreSaveConfigCallback(wifiProvisioningConnectStarted);
+  manageWiFi.setSaveConfigCallback(saveWifiIPConfig);
   manageWiFi.setCustomHeadElement(WIFI_PROVISIONING_SUCCESS_SCRIPT);
   
   manageWiFi.setAPCallback(configModeCallback);
@@ -613,10 +661,12 @@ void startWiFi(const char* hostname, int timeOut) {
   wifiProvisioningRetryPrepared = false;
   wifiLastDisconnectReason = 0;
   bool wifiConnected = false;
+  const char* portalSsid = isPowerCMode() ? "p1-hotspot" : settingHostname;
+  const char* portalPassword = isPowerCMode() ? "p1-hotspot" : nullptr;
   manageWiFi.setEnableConfigPortal(false);
   for (uint8_t attempt = 1; attempt <= WIFI_BOOT_CONNECT_ATTEMPTS; attempt++) {
     DebugVerboseTf("WiFi boot connection attempt %u of %u\n", attempt, WIFI_BOOT_CONNECT_ATTEMPTS);
-    if (manageWiFi.autoConnect(settingHostname) || WiFi.status() == WL_CONNECTED) {
+    if (manageWiFi.autoConnect(portalSsid, portalPassword) || WiFi.status() == WL_CONNECTED) {
       wifiConnected = true;
       break;
     }
@@ -634,7 +684,7 @@ void startWiFi(const char* hostname, int timeOut) {
   }
   if (!wifiConnected) {
     manageWiFi.setEnableConfigPortal(true);
-    manageWiFi.startConfigPortal(settingHostname);
+    manageWiFi.startConfigPortal(portalSsid, portalPassword);
   }
 
   uint16_t i = 0;
@@ -653,8 +703,14 @@ void startWiFi(const char* hostname, int timeOut) {
     // Do not let the original portal timeout cut short the confirmation page.
     manageWiFi.setConfigPortalTimeout(0);
     const uint32_t continueWaitStartedAt = millis();
+    uint32_t noClientsSince = 0;
     while (!wifiProvisioningContinueRequested &&
            (uint32_t)(millis() - continueWaitStartedAt) < WIFI_PROVISION_CONTINUE_TIMEOUT_MS) {
+      // A phone switching back to its normal WiFi has left the hotspot.
+      if (WiFi.softAPgetStationNum() == 0) {
+        if (!noClientsSince) noClientsSince = millis();
+        if ((uint32_t)(millis() - noClientsSince) >= 1000) break;
+      } else noClientsSince = 0;
       manageWiFi.process();
       delay(10);
       esp_task_wdt_reset();
@@ -703,6 +759,64 @@ void WaitOnNetwork()
   Debugln("\nNetwork connected");
 }
 
+static bool clearSkipNetworkForReset() {
+  if (!skipNetwork) return true;
+
+  // Patch the saved document instead of regenerating it from runtime settings:
+  // preconfigured/unknown fields must survive a physical button reset.
+  File settings = LittleFS.open(SETTINGS_FILE, "r");
+  JsonDocument doc;
+  if (!settings || deserializeJson(doc, settings) || !doc.is<JsonObject>()) {
+    if (settings) settings.close();
+    LogFile("Network reset: cannot read settings; reset cancelled", true);
+    return false;
+  }
+  settings.close();
+  doc["skip-network"] = false;
+
+  const char* temporaryFile = "/DSMRsettings.reset.tmp";
+  File updated = LittleFS.open(temporaryFile, "w");
+  if (!updated) {
+    LogFile("Network reset: cannot save settings; reset cancelled", true);
+    return false;
+  }
+  const bool saved = serializeJson(doc, updated) == measureJson(doc);
+  updated.flush();
+  updated.close();
+  if (!saved || !LittleFS.rename(temporaryFile, SETTINGS_FILE)) {
+    LittleFS.remove(temporaryFile);
+    LogFile("Network reset: cannot replace settings; reset cancelled", true);
+    return false;
+  }
+  skipNetwork = false;
+  return true;
+}
+
+void ResetNetwork() {
+  if (!clearSkipNetworkForReset()) return;
+  if (LittleFS.exists("/fixedip.json") && !LittleFS.remove("/fixedip.json")) {
+    LogFile("Network reset: cannot remove fixed IP; reset cancelled", true);
+    return;
+  }
+  bFixedIP = false;
+
+  if (!WifiIPConfig::clear()) {
+    LogFile("Network reset: cannot clear WiFi IP settings; reset cancelled", true);
+    return;
+  }
+
+#if !defined(ETHERNET) || defined(ULTRA)
+  WiFiManager wifiReset;
+  wifiReset.resetSettings();
+#endif
+#if DIRECT_AP_CONNECT
+  preferences.remove("direct_ap_ssid");
+  preferences.remove("direct_ap_psk");
+#endif
+  LogFile("reboot: button network reset (keeping configuration)", true);
+  P1Reboot();
+}
+
 bool loadFixedIPConfig(const char *filename) {
 
   File file = LittleFS.open(filename, "r");
@@ -748,6 +862,7 @@ void startNetwork()
   SetupButton();
   startWiFi(settingHostname, 240);
   WaitOnNetwork();
+  networkStarting = false;
   USBPrint("Ip-addr: ");USBPrintln(IP_Address());
 }
 
@@ -761,7 +876,7 @@ void startTelnet()
 }
 
 void startMDNS(const char *Hostname) {
-  if ( skipNetwork ) return;
+  if ( skipNetwork || !localHttpEnabled() ) return;
   
   DebugTf("[1] mDNS setup as [%s.local]\r\n", Hostname);
   String lowerMACID = macID;

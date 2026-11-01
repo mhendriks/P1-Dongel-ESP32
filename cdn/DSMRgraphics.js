@@ -46,6 +46,7 @@ function createChartDataContainerWithStack()
 function createDatasetBAR(fill, color, label, stack)
 {
 	let ds = {};
+  ds.type = "bar";
 	ds.fill = fill;
 	ds.borderColor = color;
 	ds.backgroundColor = color;
@@ -148,9 +149,9 @@ function createChartsGRAPH()
   ctx = document.getElementById("dataChart").getContext("2d");
   myElectrChart = new Chart(ctx, { type: 'bar', data: [], options: optionsELEKTRA});
   ctx = document.getElementById("gasChart").getContext("2d");
-  myGasChart = new Chart(ctx, { type: 'line', data: [], options: optionsGAS });
+  myGasChart = new Chart(ctx, { type: 'bar', data: [], options: optionsGAS });
   ctx = document.getElementById("waterChart").getContext("2d");
-  myWaterChart = new Chart(ctx, { type: 'line', data: [], options: optionsWATER });
+  myWaterChart = new Chart(ctx, { type: 'bar', data: [], options: optionsWATER });
   ctx = document.getElementById("solarChart").getContext("2d");
   mySolarChart = new Chart(ctx, { type: 'line', data: [], options: optionsSOLAR });
   fGraphsReady = true;
@@ -280,11 +281,11 @@ function applyHistoryGraphOrder(chartData)
     var dsNET = createNetDataset(t("lbl-net-use"));
     
     // GAS
-    var dsG1 = createDatasetLINE('false', 'blue', t("lbl-gas-used"));
+    var dsG1 = createDatasetBAR('false', 'blue', t("lbl-gas-used"));
     if ( Dongle_Config == "p1-q") dsG1.label = t("lbl-heat-used");
    
     // WATER
-    var dsW1 = createDatasetLINE('false', 'blue', t("lbl-water-used"));
+    var dsW1 = createDatasetBAR('false', 'blue', t("lbl-water-used"));
     var dsS1 = createDatasetLINE('false', '#f7b638', 'Solar productie');
   
     var p = 0;
@@ -379,16 +380,16 @@ function applyHistoryGraphOrder(chartData)
     var dsNET = createNetDataset(t("lbl-net-use") + t("lbl-mth-current"));
 
     // GD this & prev
-    var dsGD1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", t("lbl-mth-gas") + t("lbl-mth-current"));
-    var dsGD2 =  createDatasetLINE('false', "rgba(0,128,255, 1)", t("lbl-mth-gas") + t("lbl-mth-prev"));
+    var dsGD1 =  createDatasetBAR('false', "rgba(0,  0,138, 1)", t("lbl-mth-gas") + t("lbl-mth-current"));
+    var dsGD2 =  createDatasetBAR('false', "rgba(0,128,255, 1)", t("lbl-mth-gas") + t("lbl-mth-prev"));
     if(Dongle_Config == "p1-q"){ 
       dsGD1.label = "Warmte deze periode";
       dsGD2.label = "Warmte vorige periode";
     }
 
     // WD
-    var dsW1 =  createDatasetLINE('false', "rgba(0,  0,138, 1)", t("lbl-mth-water") + t("lbl-mth-current"));
-    var dsW2 =  createDatasetLINE('false', "rgba(0,128,255, 1)", t("lbl-mth-water") + t("lbl-mth-prev"));
+    var dsW1 =  createDatasetBAR('false', "rgba(0,  0,138, 1)", t("lbl-mth-water") + t("lbl-mth-current"));
+    var dsW2 =  createDatasetBAR('false', "rgba(0,128,255, 1)", t("lbl-mth-water") + t("lbl-mth-prev"));
   
     //
     // fill datasets
@@ -647,9 +648,8 @@ function applyHistoryGraphOrder(chartData)
     var fReturned = false;
     
     //GD
-    var dsG1 = createDatasetLINE('false', 'blue', "Gasverbruik");
+    var dsG1 = createDatasetBAR(false, 'blue', "Gasverbruik");
     if(Dongle_Config == "p1-q") dsG1.label = "Warmteverbruik";
-    dsG1.spanGaps = true;
 
     // Fill datasets
     var gd_prev = "";

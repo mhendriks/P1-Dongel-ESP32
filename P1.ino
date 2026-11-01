@@ -349,6 +349,16 @@ static void logP1FieldWarning(const P1FieldWarning& warning) {
   Debugln(warning.line);
 }
 
+static bool hasP1Measurements(const MyData& data) {
+  // The parser skips malformed/unknown fields. A successful parse alone is
+  // insufficient to lock baud detection or publish an otherwise empty frame.
+  return data.power_delivered_present || data.power_returned_present ||
+         data.energy_delivered_tariff1_present || data.energy_delivered_tariff2_present ||
+         data.energy_returned_tariff1_present || data.energy_returned_tariff2_present ||
+         data.energy_delivered_total_present || data.energy_returned_total_present ||
+         data.mbus1_delivered_present; // Warmtelink can contain only this measurement.
+}
+
 static void handleParsedMeter(P1FixedReader<2500>& meter, bool isHan) {
   if (!meter.available()) return;
 
@@ -388,9 +398,10 @@ static void handleParsedMeter(P1FixedReader<2500>& meter, bool isHan) {
                                   Verbose2 ? &fieldWarning : NULL);
   logP1FieldWarning(fieldWarning);
 
-  if (parsed) {
+  if (parsed && (isHan || hasP1Measurements(DSMRdataNew))) {
     applyParsedSmartMeterData(DSMRdataNew, isHan);
   } else {
+    if (parsed) DSMRerror = F("No recognized P1 measurements in telegram");
     telegramErrors++;
     RecordP1ParseError(isHan, rawLen, DSMRerror);
     if (P1error_cnt_sequence++ > 3) bP1offline = true;
@@ -444,9 +455,10 @@ static void handleParsedMeter(SmartMeterHandle& meter, bool isHan) {
                                   Verbose2 ? &fieldWarning : NULL);
   logP1FieldWarning(fieldWarning);
 
-  if (parsed) {
+  if (parsed && (isHan || hasP1Measurements(DSMRdataNew))) {
     applyParsedSmartMeterData(DSMRdataNew, isHan);
   } else {
+    if (parsed) DSMRerror = F("No recognized P1 measurements in telegram");
     telegramErrors++;
     RecordP1ParseError(isHan, rawLen, DSMRerror);
     if (P1error_cnt_sequence++ > 3) bP1offline = true;

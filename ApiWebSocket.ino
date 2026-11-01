@@ -124,7 +124,7 @@ static void apiWsEvent(uint8_t clientNum, WStype_t type, uint8_t* payload, size_
 }
 
 void setupApiWebSocket() {
-  if (skipNetwork) return;
+  if (skipNetwork || !localHttpEnabled()) return;
   apiWs.onEvent(apiWsEvent);
   apiWs.enableHeartbeat(5000, 2000, 2);
   apiWs.begin();
@@ -136,7 +136,7 @@ void apiWsMarkLiveDirty() {
 }
 
 void handleApiWebSocket() {
-  if (skipNetwork) return;
+  if (skipNetwork || !localHttpEnabled()) return;
   apiWs.loop();
   if (!apiWs.connectedClients()) return;
 

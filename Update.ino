@@ -36,6 +36,7 @@ const char* LatestFirmwareVersion() {
 }
 
 void handleRemoteUpdate(){
+  if (factoryResetPending) return;
   if (UpdateRequested && millis() - remoteUpdateQueuedAt < 1500) return;
   if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
 }
