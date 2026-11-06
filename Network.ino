@@ -6,6 +6,10 @@
 #include "esp_mac.h"
 #include "WifiIPConfig.h"
 
+#if __has_include("private/wifi_branding.h")
+  #include "private/wifi_branding.h"
+#endif
+
 #ifdef ETHERNET
   #include <ETH.h>
   #include <SPI.h>
@@ -644,6 +648,9 @@ void startWiFi(const char* hostname, int timeOut) {
   manageWiFi.setRemoveDuplicateAPs(false);
   manageWiFi.setScanDispPerc(true);
   manageWiFi.setClass("invert");
+#ifdef POWERC_WIFI_PORTAL_TITLE
+  if (isPowerCMode()) manageWiFi.setTitle(POWERC_WIFI_PORTAL_TITLE);
+#endif
   manageWiFi.setAPStaticIPConfig(IPAddress(4,3,2,1), IPAddress(4,3,2,1), IPAddress(255,255,255,0)); //Samsung fix
   manageWiFi.setWebServerCallback(setupWifiProvisioningSuccessPage);
   manageWiFi.setPreSaveConfigCallback(wifiProvisioningConnectStarted);

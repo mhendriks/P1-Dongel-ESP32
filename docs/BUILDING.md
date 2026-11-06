@@ -190,6 +190,10 @@ flash the filesystem image as well for factory provisioning.
 
 While this provider is enabled, WiFiManager uses `p1-hotspot` for both the
 hotspot SSID and password. The captive configuration portal remains available.
+An optional local `private/wifi_branding.h` can define
+`POWERC_WIFI_PORTAL_TITLE` as a string literal to customize the header title
+for this provider. Without that header or define, the standard WiFiManager
+title is used. The `private/` directory is excluded from Git.
 The AP address is unchanged (`4.3.2.1`); `p1.local` is not configured for it.
 
 Release firmware does not start the normal HTTP server, REST API or browser

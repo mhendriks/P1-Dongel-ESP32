@@ -58,16 +58,18 @@ void SetupP1In(){
   vTaskDelay(50 / portTICK_PERIOD_MS);
   DebugT(F("P1 serial set to ")); 
   int8_t rxPin = RxP1;
+  bool isHan = false;
 #ifdef HAN_READER
-  if (smartMeter.isHan() && HanIO >= 0) rxPin = HanIO;
+  isHan = smartMeter.isHan();
+  if (isHan && HanIO >= 0) rxPin = HanIO;
 #endif
+  const uint32_t baud = isHan ? 2400 : (bPre40 ? 9600 : 115200);
+  const uint32_t serialConfig = isHan ? SERIAL_8N1 : (bPre40 ? SERIAL_7E1 : SERIAL_8N1);
   Serial1.setRxBufferSize(4096);
-  Serial1.begin(bPre40 ? 9600 : 115200,
-                bPre40 ? SERIAL_7E1 : SERIAL_8N1,
-                rxPin, TxO1);
+  Serial1.begin(baud, serialConfig, rxPin, TxO1);
 
-  Debugf("%u baud\n", (unsigned)(bPre40 ? 9600 : 115200));
-  Serial1.setRxInvert(true); //only Rx  
+  Debugf("%u baud\n", (unsigned)baud);
+  Serial1.setRxInvert(!isHan); // HAN TTL is non-inverted; P1 RX is inverted.
   smartMeter.doChecksum(!bPre40);
 
   // Drain: clear the last bytes / ISR-race

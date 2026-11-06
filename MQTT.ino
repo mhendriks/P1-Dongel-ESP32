@@ -11,6 +11,22 @@ static volatile bool haUpdateStatePending = true;
 static bool haUpdateInProgress = false;
 static uint8_t haUpdateProgress = 0;
 
+// Temporary payload diagnostics: enable verbose level 2 with V, disable with V again.
+// Keep the publish result unchanged; success means a local send, not a broker ACK.
+static bool MQTTPublishLogged(const char* topic, const char* payload, bool retained) {
+  const bool sent = MQTTclient.publish(topic, payload, retained);
+  if (Verbose2) {
+    const char* result = sent ? "OK" : "FAILED";
+    USBPrintf("MQTT TX %s [retain=%u] %s = %s\r\n",
+              result, (unsigned)retained, topic, payload);
+    if (!bHideP1Log) {
+      TelnetStream.printf("MQTT TX %s [retain=%u] %s = %s\r\n",
+                         result, (unsigned)retained, topic, payload);
+    }
+  }
+  return sent;
+}
+
 static bool MQTTPublishHAUpdateState() {
   if (!MQTTclient.connected()) return false;
 
@@ -27,7 +43,7 @@ static bool MQTTPublishHAUpdateState() {
 
   String payload;
   serializeJson(doc, payload);
-  if (MQTTclient.publish(stateTopic, payload.c_str(), true)) return true;
+  if (MQTTPublishLogged(stateTopic, payload.c_str(), true)) return true;
 
   DebugTf("Error publish HA update state (%s), MQTT state %d\r\n",
           stateTopic, MQTTclient.state());
@@ -135,7 +151,7 @@ void SendAutoDiscoverHA(const char* dev_name, const char* dev_class, const char*
   String msg_payload;
   serializeJson(doc, msg_payload);
 //  Debugln(msg_payload);
-  if (!MQTTclient.publish(msg_topic, msg_payload.c_str(), true)) {
+  if (!MQTTPublishLogged(msg_topic, msg_payload.c_str(), true)) {
     DebugTf("Error publish(%s) [%s] [%u bytes]\r\n",
             msg_topic, msg_payload.c_str(),
             (unsigned)(strlen(msg_topic) + msg_payload.length()));
@@ -177,7 +193,7 @@ static void SendAutoDiscoverHAUpdate() {
 
   String payload;
   serializeJson(doc, payload);
-  MQTTclient.publish(configTopic, payload.c_str(), true);
+  MQTTPublishLogged(configTopic, payload.c_str(), true);
 }
 
 void AutoDiscoverHA(){
@@ -235,7 +251,7 @@ void MQTTDisconnect(){
   if ( skipNetwork) return;
   if (MQTTclient.connected()) {
     sprintf(cMsg,"%sLWT",MQTopTopic);
-    MQTTclient.publish(cMsg,"Offline", true); //LWT status update
+    MQTTPublishLogged(cMsg,"Offline", true); //LWT status update
   }
   if ( MQTTclient.connected() ) MQTTclient.disconnect();
 }
@@ -390,7 +406,7 @@ void MQTTConnect() {
     mqttConnectActive = true;
     if ( MQTTclient.connect( MqttID, settingMQTTuser, settingMQTTpasswd ) ) {
       LogFile("MQTT: CONNECTED to broker", true);
-      MQTTclient.publish(cMsg,"Online", true); //LWT = online
+      MQTTPublishLogged(cMsg,"Online", true); //LWT = online
       StaticInfoSend = false; //resend
       MQTTclient.setCallback(MQTTcallback); //set listner update callback
       
@@ -449,7 +465,7 @@ struct buildJsonMQTT {
               if (bActJsonMQTT) jsonDoc[Name] = value;
               else if (MQTTclient.connected() && (!bActJsonMQTT || EnableHAdiscovery)) {
                 sprintf(cMsg, "%s%s", MQTopTopic, Name);
-                MQTTclient.publish(cMsg, String(value, 3).c_str());
+                MQTTPublishLogged(cMsg, String(value, 3).c_str(), false);
               }
             }
             return;
@@ -460,7 +476,7 @@ struct buildJsonMQTT {
           if ( bActJsonMQTT ) jsonDoc[Name] = value_to_json_mqtt(i.val(), factor);
           else if ( MQTTclient.connected() && (!bActJsonMQTT || EnableHAdiscovery) ) {
             sprintf(cMsg,"%s%s",MQTopTopic,Name);
-            MQTTclient.publish( cMsg, String(value_to_json(i.val(), factor)).c_str() );
+            MQTTPublishLogged(cMsg, String(value_to_json(i.val(), factor)).c_str(), false);
           }
     } // if present
     } // if isInFieldsArray
@@ -499,7 +515,7 @@ struct buildJsonMQTT {
 void MQTTSend(const char* item, String value, bool ret){
   if ( !bMQTTenabled || value.length()==0 || !MQTTclient.connected() ) return;
   sprintf(cMsg,"%s%s", MQTopTopic,item);
-  if (!MQTTclient.publish(cMsg, value.c_str(), ret )) {
+  if (!MQTTPublishLogged(cMsg, value.c_str(), ret )) {
     DebugTf("Error publish (%s) [%s] [%d bytes]\r\n", cMsg, value.c_str(), (strlen(cMsg) + value.length()));
     StaticInfoSend = false; //probeer het later nog een keer
     return;

@@ -275,14 +275,11 @@ String JsonWebhook(const WorkerWebhookPayload& payload) {
   doc["id"] = idbuf;
   doc["p_from_grid"] = payload.pFromGrid;
   doc["p_to_grid"] = payload.pToGrid;
-  if (settingHttpPostProvider == HTTP_POST_MEENT || settingHttpPostProvider == HTTP_POST_KEMP ||
-      settingHttpPostPayload == 1 || settingHttpPostPayload == 3) {
-    doc["t1"] = payload.t1; doc["t2"] = payload.t2;
-    doc["t1r"] = payload.t1r; doc["t2r"] = payload.t2r;
-  }
+  doc["t1"] = payload.t1; doc["t2"] = payload.t2;
+  doc["t1r"] = payload.t1r; doc["t2r"] = payload.t2r;
   if (settingHttpPostProvider == HTTP_POST_KEMP || settingHttpPostPayload == 2 || settingHttpPostPayload == 3) {
-  const char* voltageKeys[] = { "v_l1", "v_l2", "v_l3" };
-  const char* sagKeys[] = {
+    const char* voltageKeys[] = { "v_l1", "v_l2", "v_l3" };
+    const char* sagKeys[] = {
     "voltage_sag_l1_count", "voltage_sag_l2_count", "voltage_sag_l3_count"
   };
   const char* swellKeys[] = {

@@ -14,6 +14,70 @@ def function(source, signature):
 
 
 class P1DetectionTest(unittest.TestCase):
+    def test_uart_settings_for_han_and_p1(self):
+        p1 = (ROOT / 'P1.ino').read_text()
+        source = r'''
+#include <cstdint>
+#include <cassert>
+#define DebugT(...) ((void)0)
+#define Debugf(...) ((void)0)
+#define SERIAL_8N1 1
+#define SERIAL_7E1 2
+#define portTICK_PERIOD_MS 1
+void vTaskDelay(int) {}
+uint32_t esp_log_timestamp() { return 123; }
+bool bPre40 = false;
+int8_t RxP1 = 1, HanIO = 0, TxO1 = 4;
+uint32_t telegramCount = 0, telegramErrors = 0, SerialLastChecked = 0;
+struct SerialMock {
+  uint32_t baud = 0, config = 0;
+  int rx = -1, tx = -1;
+  bool inverted = false;
+  void end() {}
+  void setRxBufferSize(int) {}
+  void begin(uint32_t b, uint32_t c, int r, int t) { baud = b; config = c; rx = r; tx = t; }
+  void setRxInvert(bool value) { inverted = value; }
+  int available() { return 0; }
+  int read() { return -1; }
+} Serial1;
+struct MeterMock {
+  bool han = false;
+  bool isHan() { return han; }
+  void doChecksum(bool) {}
+  void clearAll() {}
+} smartMeter;
+'''
+        source += function(p1, 'void SetupP1In(')
+        source += r'''
+int main() {
+  for (int old = 0; old <= 1; ++old) {
+    bPre40 = old;
+    smartMeter.han = true;
+    SetupP1In();
+#ifdef HAN_READER
+    assert(Serial1.baud == 2400 && Serial1.config == SERIAL_8N1);
+    assert(Serial1.rx == 0 && !Serial1.inverted);
+#else
+    assert(Serial1.baud == (old ? 9600 : 115200));
+    assert(Serial1.rx == 1 && Serial1.inverted);
+#endif
+    smartMeter.han = false;
+    SetupP1In();
+    assert(Serial1.baud == (old ? 9600 : 115200));
+    assert(Serial1.config == (old ? SERIAL_7E1 : SERIAL_8N1));
+    assert(Serial1.rx == 1 && Serial1.inverted);
+    assert(Serial1.tx == 4);
+  }
+}
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            cpp = Path(tmp) / 'uart.cpp'
+            binary = Path(tmp) / 'uart'
+            cpp.write_text(source)
+            for flags in ([], ['-DHAN_READER']):
+                subprocess.run(['c++', '-std=c++11', *flags, str(cpp), '-o', str(binary)], check=True)
+                subprocess.run([str(binary)], check=True)
+
     def test_real_parser_noise_fallback_and_supported_meters(self):
         library = Path(os.environ.get('DSMR3LIB_PATH', Path.home() / 'Documents/Arduino/libraries/dsmr3Lib'))
         if not (library / 'tests/support/Arduino.h').exists():

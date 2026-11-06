@@ -20,9 +20,10 @@ and removed from the filesystem, so API keys are not left in LittleFS.
 }
 ```
 
-`provider` is `generic`, `kemp`, `meent`, or `powerc`. `payload` is `0` for the base
-message, `1` for totals, `2` for voltage and sag/swell counters, and `3` for
-all fields. `auth` is `0` (none), `1` (Bearer), `2` (named header), or `3`
+`provider` is `generic`, `kemp`, `meent`, or `powerc`. All payloads include
+cumulative energy readings (`t1`, `t2`, `t1r`, `t2r`) in Wh.
+`payload` values `0` and `1` select the base message; `2` and `3` additionally
+include voltage and sag/swell counters. `auth` is `0` (none), `1` (Bearer), `2` (named header), or `3`
 (JSON field). `{mac}` in the additional-header value is replaced by the
 dongle MAC ID.
 

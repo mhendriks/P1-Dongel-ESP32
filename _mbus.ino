@@ -775,7 +775,8 @@ static bool loadActiveRecipes(const ActiveRecipe* recipes, size_t recipeCount) {
 }
 
 static bool loadPresetRecipes(int mappingChoice) {
-  activeRecipeLswFirst = (mappingChoice == 4 || mappingChoice == kModbusMappingEm24Tcp);
+  // Phoenix EEM-MA/MB3xx uses the low 16-bit word first for 32-bit values.
+  activeRecipeLswFirst = (mappingChoice == 4 || mappingChoice == 6 || mappingChoice == kModbusMappingEm24Tcp);
   activeRecipeZeroFill = (mappingChoice == 1);
 
   switch (mappingChoice) {

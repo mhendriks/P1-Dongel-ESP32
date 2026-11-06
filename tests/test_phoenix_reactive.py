@@ -12,6 +12,55 @@ LIB = Path(os.environ.get('DSMR3_LIB_DIR', ROOT.parent / 'libraries/dsmr3Lib'))
 
 
 class PhoenixReactiveTest(unittest.TestCase):
+    def test_phoenix_word_order_on_wire(self):
+        firmware = (ROOT / '_mbus.ino').read_text()
+        selection = re.search(r'activeRecipeLswFirst = \(mappingChoice.*?;', firmware).group()
+        serializer = re.search(r'static void addMbU32\(.*?\n\}', firmware, re.S).group()
+        em24 = re.search(r'static constexpr int kModbusMappingEm24Tcp = \d+;', firmware).group()
+        emodbus = Path(os.environ.get('EMODBUS_LIB_DIR', ROOT.parent / 'libraries/eModbus'))
+        header = (emodbus / 'src/ModbusMessage.h').read_text()
+        # Use eModbus's real integer serializers, without Arduino networking.
+        add_methods = header.split('  template <class T> uint16_t add(T v) {')[1].split('// get()')[0]
+        add_methods = '  template <class T> uint16_t add(T v) {' + add_methods
+        source = '''#include <cstdint>
+#include <cassert>
+#include <vector>
+#include <type_traits>
+struct ModbusMessage {
+  std::vector<uint8_t> MM_data;
+''' + add_methods + '\n};\n' + em24 + '''
+bool activeRecipeLswFirst;
+void selectMapping(int mappingChoice) {
+''' + selection + '\n}\n' + serializer + '''
+int main() {
+  for (int mapping = 0; mapping <= 16; ++mapping) {
+    selectMapping(mapping);
+    ModbusMessage response;
+    // Phoenix documentation: FLOAT32 123.456 = 0x42F6E979.
+    addMbU32(response, 0x42F6E979u);
+    const std::vector<uint8_t> lowFirst = {0xE9, 0x79, 0x42, 0xF6};
+    const std::vector<uint8_t> highFirst = {0x42, 0xF6, 0xE9, 0x79};
+    assert(response.MM_data == ((mapping == 4 || mapping == 6 || mapping == 16) ? lowFirst : highFirst));
+  }
+  selectMapping(6);
+  ModbusMessage integer;
+  addMbU32(integer, 0x12345678u);
+  assert((integer.MM_data == std::vector<uint8_t>{0x56, 0x78, 0x12, 0x34}));
+  ModbusMessage frequency;
+  addMbU32(frequency, 0x42480000u); // FLOAT32 50 Hz at register 32780
+  assert((frequency.MM_data == std::vector<uint8_t>{0x00, 0x00, 0x42, 0x48}));
+  ModbusMessage singleRegister;
+  singleRegister.add((uint16_t)0x1234);
+  assert((singleRegister.MM_data == std::vector<uint8_t>{0x12, 0x34}));
+}
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'word_order.cpp'
+            path.write_text(source)
+            binary = Path(tmp) / 'word_order'
+            subprocess.run(['c++', '-std=c++11', str(path), '-o', str(binary)], check=True)
+            subprocess.run([str(binary)], check=True)
+
     def test_parsing_and_firmware_sources(self):
         firmware = (ROOT / '_mbus.ino').read_text()
         data_header = (ROOT / 'DSMRloggerAPI.h').read_text()
