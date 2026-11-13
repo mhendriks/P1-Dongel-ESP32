@@ -119,9 +119,24 @@ Add `--clear-cache` or `--clean` to remove the selected profile build directorie
 Extra Arduino build properties can be passed through as well. For `compiler.cpp.extra_flags`, the value is appended to the profile flags:
 
 ```bash
-./build.sh ULTRA --extra-flags "-DWEBSOCKETS_TCP_TIMEOUT=2000"
-./build.sh ULTRA --build-property compiler.cpp.extra_flags="-DWEBSOCKETS_TCP_TIMEOUT=2000"
+./build.sh ULTRA --extra-flags "-DDEBUG"
+./build.sh ULTRA --build-property compiler.cpp.extra_flags="-DDEBUG"
 ```
+
+### Network regression test with ESP32 core 3.3.12
+
+The custom WebSocket write-readiness check, forced disconnect on send failure,
+pong timeout, and HTTP stale-client recovery have been removed to test the core's
+network fixes. HTTP and WebSocket servers now use the standard library classes.
+The WebSocket library heartbeat, two-client limit, and slow-send logging remain.
+Use the default library timeouts for this test, without a
+`WEBSOCKETS_TCP_TIMEOUT` build override.
+
+On hardware, keep the live dashboard open, interrupt the browser's network
+connection without closing the tab, then reconnect and reopen the dashboard.
+Repeat with two tabs and with interrupted HTTP requests. Check that the dongle
+keeps processing meter readings, HTTP requests and live updates without a stall
+or reboot. A successful build alone does not verify recovery from these failures.
 
 ### Physical button: network reset and emergency factory reset
 

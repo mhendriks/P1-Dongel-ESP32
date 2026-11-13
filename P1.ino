@@ -26,7 +26,6 @@ void fP1Reader( void * pvParameters ){
     #else
       handleHanReader();
     #endif
-    serviceHttpServerRecovery();
     esp_task_wdt_reset();
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
