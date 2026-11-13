@@ -86,3 +86,9 @@ message.
 
 The first startup config after an OTA or reboot is the final confirmation: it
 reports the running firmware, boot counter, uptime, and reset reason.
+
+OTA downloads run in a separate task. The P1 reader, sample scheduling, POST
+worker and logging remain active while the OTA server is slow or unavailable.
+`ota update started` acknowledges the attempt, not a completed installation.
+On failure the current firmware keeps running and the OTA error is logged;
+the server can request another attempt through a later sample response.

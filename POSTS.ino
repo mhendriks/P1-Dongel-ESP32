@@ -404,11 +404,17 @@ static void kempApplyServerResponse(const String& response) {
   } else if (!strcmp(command, "OTAupdate")) {
     const char* version = doc["firmware_version"] | "";
     String error;
-    if (!RemoteUpdateAvailable(version, &error)) {
+    if (UpdateRequested) {
+      kempSendConfig(kempUrl, kempApiKey, command, commandId, false,
+                     "ota update already in progress", version);
+    } else if (!RemoteUpdateAvailable(version, &error)) {
       kempSendConfig(kempUrl, kempApiKey, command, commandId, false,
                      error.length() ? error.c_str() : "requested firmware version unavailable", version);
     } else if (kempSendConfig(kempUrl, kempApiKey, command, commandId, true, "ota update started", version)) {
-      RemoteUpdateNow(version, true, &error);
+      if (!QueueRemoteUpdate(version, true)) {
+        kempSendConfig(kempUrl, kempApiKey, command, commandId, false,
+                       "ota update could not be queued", version);
+      }
     }
   } else if (!strcmp(command, "REBOOT")) {
     if (kempSendConfig(kempUrl, kempApiKey, command, commandId, true, "rebooting")) P1Reboot();

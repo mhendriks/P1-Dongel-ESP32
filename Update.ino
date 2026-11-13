@@ -18,6 +18,13 @@ static uint32_t updateLedLastToggleMs = 0;
 static bool updateLedOn = false;
 static char latestFirmwareVersion[15] = _VERSION_ONLY;
 static const char* const ESPHOME_OTA_ROOT = "http://ota.smart-stuff.nl/esphome/";
+static volatile bool remoteUpdateTaskRunning = false;
+
+static void remoteUpdateTask(void* parameter) {
+  RemoteUpdate(UpdateVersion, bUpdateSketch);
+  remoteUpdateTaskRunning = false;
+  vTaskDelete(nullptr);
+}
 
 static void setRemoteUpdateStatus(const char* state, const char* detail = "") {
   strlcpy(remoteUpdateState, state ? state : "idle", sizeof(remoteUpdateState));
@@ -37,8 +44,19 @@ const char* LatestFirmwareVersion() {
 
 void handleRemoteUpdate(){
   if (factoryResetPending) return;
+  if (!UpdateRequested) return;
+  if (remoteUpdateTaskRunning) return;
   if (UpdateRequested && millis() - remoteUpdateQueuedAt < 1500) return;
-  if (UpdateRequested) RemoteUpdate(UpdateVersion,bUpdateSketch);
+  // Downloads must not block the loop (sample scheduling) or the worker
+  // (sample POSTs and logs). A slow OTA server may take minutes to return.
+  remoteUpdateTaskRunning = true;
+  if (xTaskCreate(remoteUpdateTask, "ota-update", 8192, nullptr, 1, nullptr) != pdPASS) {
+    remoteUpdateTaskRunning = false;
+    setRemoteUpdateStatus("error", "task_create_failed");
+    LogFile("OTA ERROR: could not start update task", true);
+    MQTTSetHAUpdateState(false);
+    UpdateRequested = false;
+  }
 }
 
 void RemoteUpdate() {
@@ -84,11 +102,11 @@ bool QueueRemoteUpdate(const char* versie, bool sketch) {
 
   strlcpy(UpdateVersion, versie, sizeof(UpdateVersion));
   bUpdateSketch = sketch;
-  UpdateRequested = true;
   remoteUpdateQueuedAt = millis();
   remoteUpdateProgress = 0;
   setRemoteUpdateStatus("queued", versie);
   MQTTSetHAUpdateState(true, 10);
+  UpdateRequested = true;
   return true;
 }
 
@@ -173,13 +191,15 @@ bool RemoteUpdateNow(const char* versie, bool sketch, String* errorDetail) {
     return false;
   }
 
-  vTaskSuspend(tP1Reader);
-  esp_task_wdt_delete(tP1Reader);
+  // Keep the reader alive, including on failed/stalled downloads. ESP32
+  // flash operations handle synchronization with the other tasks internally.
   
   Debugf("OTA versie: %s | flashsize: %lu Mb\n",
          _versie.c_str(),
          (unsigned long)(ESP.getFlashChipSize() / 1024UL / 1024UL));
   Debugln("OTA path: " + path);
+  const String downloadLog = "OTA download: " + otaFile;
+  LogFile(downloadLog.c_str(), true);
 
   httpUpdate.onStart(update_started);
   httpUpdate.onEnd(update_finished);
@@ -197,6 +217,8 @@ bool RemoteUpdateNow(const char* versie, bool sketch, String* errorDetail) {
 
       case HTTP_UPDATE_NO_UPDATES:
         Debugln("OTA ERROR: HTTP_UPDATE_NO_UPDATES");
+        setRemoteUpdateStatus("error", "no_updates");
+        LogFile("OTA ERROR: no_updates", true);
         if (errorDetail) *errorDetail = "no_updates";
         break;
 
@@ -208,8 +230,6 @@ bool RemoteUpdateNow(const char* versie, bool sketch, String* errorDetail) {
         break;
     }
   Debugln();
-  esp_task_wdt_add(tP1Reader);
-  vTaskResume(tP1Reader);
   return ok;
 }
 
@@ -400,8 +420,8 @@ void update_started() {
 }
 
 void update_progress(int cur, int total) {
-  Debugf( "HTTP update process at %d of %d bytes = %d%%\r", cur, total, (cur * 100) / total );
   if (total > 0) {
+    Debugf("HTTP update process at %d of %d bytes = %d%%\r", cur, total, (cur * 100) / total);
     uint8_t actualProgress = (uint8_t)((cur * 90) / total);
     remoteUpdateProgress = actualProgress > 90 ? 90 : actualProgress;
   }
@@ -411,12 +431,14 @@ void update_progress(int cur, int total) {
     updateLedOn = !updateLedOn;
     OverrideLED(true, updateLedOn ? LED_WHITE : LED_BLACK);
   }
-  esp_task_wdt_reset();
+  // The OTA task is intentionally not subscribed: network waits are allowed
+  // while the reader, worker and main loop continue independently.
 }
 
 void update_error(int err) {
   Debugf("HTTP update fatal error code %d | %s\n", err, httpUpdate.getLastErrorString().c_str());
-  LogFile("OTA ERROR: no update",false);
+  String message = "OTA ERROR: (" + String(err) + "): " + httpUpdate.getLastErrorString();
+  LogFile(message.c_str(), true);
   if (UseRGB) OverrideLED(false, LED_BLACK);
   setRemoteUpdateStatus("error", httpUpdate.getLastErrorString().c_str());
 }

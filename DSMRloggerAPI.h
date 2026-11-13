@@ -749,7 +749,7 @@ char      settingMQTTbroker[101], settingMQTTuser[75], settingMQTTpasswd[160], s
 uint32_t   settingMQTTbrokerPort = 1883;
 float     gasDelivered;
 String    gasDeliveredTimestamp;
-bool      UpdateRequested = false;
+volatile bool UpdateRequested = false;
 byte      mbusGas = 0;
 byte      mbusWater = 0;
 float     waterDelivered;
