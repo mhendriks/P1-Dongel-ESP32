@@ -2238,18 +2238,19 @@ function renderDeviceInformation(obj, manifest) {
     "chipid", "cpufreq", "freeheap", "flashchipsize", "sketchsize", "freesketchspace", "FSsize", "uptime",
     "reboots", "lastreset", "mqttbroker", "mqttbroker_connected", "mqttinterval", "meent_webid_status", "meent_api_key_status", "meent_data_status", "meent_last_success", "http_post_enabled", "http_post_provider", "http_post_interval_s", "http_post_status", "http_post_http_status", "http_post_last_success", "eid_status", "paired"
   ]);
-  ["coreversion", "sdkversion", "compileoptions", "indexfile"].forEach(key =>
+  ["coreversion", "sdkversion", "indexfile"].forEach(key =>
     addDeviceInfoRow(containers.technical, td(key), obj[key]));
-  Object.keys(obj).filter(key => !groupedKeys.has(key) && !["coreversion", "sdkversion", "compileoptions", "indexfile"].includes(key))
+  Object.keys(obj).filter(key => !groupedKeys.has(key) && !["coreversion", "sdkversion", "indexfile"].includes(key))
     .forEach(key => addDeviceInfoRow(containers.technical, td(key), obj[key]));
 }
 
-function parseDeviceInfo(obj) {
-  console.log("dev info compileoptions:", obj.compileoptions);
+function updateNetSwitchAvailability(settings = objDAL?.getDeviceSettings?.()) {
+  const button = document.getElementById("bNETSW");
+  if (button) button.style.display = settings && "netsw-enabled" in settings ? "block" : "none";
+}
 
-  // NETSW config
-  const showNetSw = String(obj.compileoptions || "").includes("[NETSW]");
-  document.getElementById("bNETSW").style.display = showNetSw ? "block" : "none";
+function parseDeviceInfo(obj) {
+  updateNetSwitchAvailability();
   updateSystemActionMenu(obj);
 
   const manifest = objDAL.version_manifest;
@@ -2360,8 +2361,7 @@ function deviceSupportsWifi(info) {
 	if (network) return !network.startsWith("ETHERNET");
 
 	const hardware = String(info?.hardware || "").toUpperCase();
-	const compileoptions = String(info?.compileoptions || "").toUpperCase();
-	return !(hardware === "P1E" || hardware === "P1EP" || (compileoptions.includes("[ETH]") || compileoptions.includes("[P1EP]")) && !compileoptions.includes("[ULTRA]"));
+	return hardware !== "P1E" && hardware !== "P1EP";
 }
 
 function updateSystemActionMenu(info) {
@@ -4119,6 +4119,7 @@ function initModbusMonitorControls() {
 	  }
 	}
 
+  updateNetSwitchAvailability(data);
   initSettingsSubTabsOnce();
   splitSettingsUI();
   updateBrowserSettingsControls();

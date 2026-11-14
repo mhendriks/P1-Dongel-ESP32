@@ -440,7 +440,6 @@
   "dict_flashchipspeed": "Flash-muistin nopeus",
   "dict_flashchipmode": "Flash-muistin tila",
   "dict_boardtype": "Piirilevyn tyyppi",
-  "dict_compileoptions": "Kääntäjän asetukset",
   "dict_ssid": "Wi-Fi-verkon SSID",
   "dict_wifirssi": "Wi-Fi-signaalin voimakkuus (RSSI)",
   "dict_uptime": "Käyntiaika [päivää] – [hh:mm]",

@@ -502,7 +502,6 @@ String deviceInfoJson()
   doc["flashchipsize"]["unit"] = "MB";
   doc["FSsize"] ["value"] = (uint32_t)(LittleFS.totalBytes() / (1024.0));
   doc["FSsize"]["unit"] = "kB";
-  doc["compileoptions"] = ALL_OPTIONS;
 
   if ( netw_state == NW_WIFI ) {
     doc["ssid"] = WiFi.SSID();
