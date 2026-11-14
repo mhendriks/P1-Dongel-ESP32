@@ -179,6 +179,7 @@ void setup()
   setupVictronModbus();
   SetupMB_RTU();
   ReadSolarConfigs();
+  setupModbusPv();
   delay(500);
   setCpuFrequencyMhz(Freq); //restore original clockspeed
 
@@ -209,6 +210,7 @@ void loop () {
   handleRemoteUpdate();
   handleWater();
   handleVictronModbus();
+  handleModbusPv();
   handleEnergyID();  
   GetSolarDataN();
   handleRawPort();

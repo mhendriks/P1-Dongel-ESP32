@@ -14,125 +14,36 @@ float calculateLineVoltage(float V1, float V2) {
 // Set up a Modbus server
 ModbusServerWiFi MBserver;
 
-// Dedicated client/socket for reading the system battery from a Victron GX.
-// This runs independently from MBserver, which keeps serving the grid mapping.
-static WiFiClient victronModbusSocket;
-static ModbusClientTCP victronModbusClient(victronModbusSocket, 2);
-static bool victronModbusClientStarted = false;
-static bool victronModbusTargetValid = false;
-static volatile bool victronModbusRequestPending = false;
-static volatile uint32_t victronModbusActiveToken = 0;
-static uint32_t victronModbusToken = 0;
-static uint32_t victronModbusLastPoll = 0;
-static constexpr uint32_t VICTRON_MODBUS_POLL_MS = 5000;
-static constexpr uint16_t VICTRON_MODBUS_POWER_REGISTER = 842;
-static constexpr uint16_t VICTRON_MODBUS_REGISTER_COUNT = 3;
-
-static portMUX_TYPE victronModbusDataMux = portMUX_INITIALIZER_UNLOCKED;
-static volatile bool victronModbusDataPending = false;
-static int16_t victronModbusPendingPower = 0;
-static uint16_t victronModbusPendingSoc = 0;
-static uint16_t victronModbusPendingState = 0;
-
-static void handleVictronModbusData(ModbusMessage response, uint32_t token) {
-  if (token != victronModbusActiveToken) return;
-  victronModbusRequestPending = false;
-
-  if (response.getServerID() != victronModbusConfig.id ||
-      response.getFunctionCode() != READ_HOLD_REGISTER ||
-      response.size() < 9 || response[2] != 6) {
-    DebugVerboseTln(F("Victron Modbus: invalid response"));
-    return;
-  }
-
-  int16_t powerW;
-  uint16_t soc;
-  uint16_t state;
-  response.get(3, powerW, soc, state);
-
-  portENTER_CRITICAL(&victronModbusDataMux);
-  victronModbusPendingPower = powerW;
-  victronModbusPendingSoc = soc;
-  victronModbusPendingState = state;
-  victronModbusDataPending = true;
-  portEXIT_CRITICAL(&victronModbusDataMux);
-}
-
-static void handleVictronModbusError(Error error, uint32_t token) {
-  if (token != victronModbusActiveToken) return;
-  victronModbusRequestPending = false;
-  DebugVerboseTf("Victron Modbus error: 0x%02X\r\n", (uint8_t)error);
-}
+#include "ModbusConnectorClient.h"
+static ModbusConnectorClient batteryModbusClient;
+static ModbusConnectorClient pvModbusClient;
 
 void victronModbusConfigChanged() {
-  victronModbusActiveToken = 0;
-  victronModbusRequestPending = false;
-  portENTER_CRITICAL(&victronModbusDataMux);
-  victronModbusDataPending = false;
-  portEXIT_CRITICAL(&victronModbusDataMux);
-  victronModbusTargetValid = false;
-  victronModbusSocket.stop();
-
-  IPAddress target;
-  if (!victronModbusConfig.enabled || !target.fromString(victronModbusConfig.ip)) {
-    invalidateVictronAccu();
-    return;
-  }
-
-  if (!victronModbusClientStarted) {
-    victronModbusClient.onDataHandler(&handleVictronModbusData);
-    victronModbusClient.onErrorHandler(&handleVictronModbusError);
-    victronModbusClient.setTimeout(1500, 200);
-    victronModbusClient.begin();
-    victronModbusClientStarted = true;
-  }
-
-  victronModbusClient.setTarget(target, 502);
-  victronModbusTargetValid = true;
-  victronModbusLastPoll = 0;
+  const ConnectorField fields[] = {victronModbusConfig.power, victronModbusConfig.soc, victronModbusConfig.state};
+  batteryModbusClient.configure(victronModbusConfig, fields, 3, false);
   invalidateVictronAccu();
-  DebugVerboseTf("Victron Modbus target: %s:502 id=%u\r\n",
-                 victronModbusConfig.ip, victronModbusConfig.id);
 }
-
-void setupVictronModbus() {
-  victronModbusConfigChanged();
-}
-
+void setupVictronModbus() { victronModbusConfigChanged(); }
 void handleVictronModbus() {
-  if (victronModbusDataPending) {
-    int16_t powerW;
-    uint16_t soc;
-    uint16_t state;
-    portENTER_CRITICAL(&victronModbusDataMux);
-    powerW = victronModbusPendingPower;
-    soc = victronModbusPendingSoc;
-    state = victronModbusPendingState;
-    victronModbusDataPending = false;
-    portEXIT_CRITICAL(&victronModbusDataMux);
-
-    if (victronModbusConfig.enabled) updateVictronAccu(powerW, soc, state);
+  double values[3];
+  if (batteryModbusClient.poll(netw_state == NW_ETH || netw_state == NW_WIFI, values)) {
+    if (fabs(values[0]) <= 1e9 && values[1] >= 0 && values[1] <= 100 &&
+        values[2] >= -32768 && values[2] <= 65535) {
+      updateVictronAccu(values[0], uint16_t(values[1]), uint16_t(int32_t(values[2])));
+    }
   }
-
-  if (!victronModbusConfig.enabled || !victronModbusTargetValid ||
-      (netw_state != NW_ETH && netw_state != NW_WIFI) ||
-      victronModbusRequestPending) return;
-
-  uint32_t nowMs = millis();
-  if (victronModbusLastPoll && nowMs - victronModbusLastPoll < VICTRON_MODBUS_POLL_MS) return;
-  victronModbusLastPoll = nowMs;
-
-  uint32_t token = ++victronModbusToken;
-  victronModbusActiveToken = token;
-  victronModbusRequestPending = true;
-  Error error = victronModbusClient.addRequest(token,
-                                               victronModbusConfig.id,
-                                               READ_HOLD_REGISTER,
-                                               VICTRON_MODBUS_POWER_REGISTER,
-                                               VICTRON_MODBUS_REGISTER_COUNT);
-  if (error != SUCCESS) {
-    victronModbusRequestPending = false;
-    DebugVerboseTf("Victron Modbus queue error: 0x%02X\r\n", (uint8_t)error);
+}
+void pvModbusConfigChanged() {
+  const ConnectorField fields[] = {pvModbusConfig.power, pvModbusConfig.energy};
+  pvModbusClient.configure(pvModbusConfig, fields, 2, true);
+  invalidateModbusPv();
+}
+void setupModbusPv() { pvModbusConfigChanged(); }
+void handleModbusPv() {
+  double values[3];
+  if (pvModbusClient.poll(netw_state == NW_ETH || netw_state == NW_WIFI, values)) {
+    if (values[0] >= 0 && values[0] <= UINT32_MAX && values[1] >= 0 && values[1] <= 1e15)
+      updateModbusPv(values[0], values[1]);
   }
 }
 

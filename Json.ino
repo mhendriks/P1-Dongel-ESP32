@@ -638,6 +638,7 @@ if ( !hideMQTTsettings) {
   ADD_SETTING("mb_map", "i", 0, 16, SelMap); //RTU+TCP
   ADD_SETTING("mb_id", "i", 1, 255, mb_config.id); //RTU+TCP
   ADD_SETTING("mb_port", "i", 0, 65535, mb_config.port); //TCP
+  fillConnectorSettingsJson(doc);
   doc["victron_accu_enabled"] = victronModbusConfig.enabled;
   ADD_SETTING("victron_accu_ip", "s", 0, sizeof(victronModbusConfig.ip) - 1, victronModbusConfig.ip);
   ADD_SETTING("victron_accu_id", "i", 1, 247, victronModbusConfig.id);
@@ -828,7 +829,7 @@ ApiResponse handleDevApi(const ApiRequestContext& request)
     {
       String jsonIn  = request.body;
       DebugT("json in :");Debugln(jsonIn);
-      char field[25] = "";
+      char field[64] = "";
       char newValue[101]="";
 
       JsonDocument doc;

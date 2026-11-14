@@ -144,6 +144,7 @@ void writeSettingsDirect() {
   docw["mb_baud"] = mb_config.baud;
   docw["mb_parity"] = mb_config.parity - 134217700;
   docw["mb_monitor"] = bModbusMonitor;
+  writeConnectorSettings(docw);
   docw["victron_accu_enabled"] = victronModbusConfig.enabled;
   docw["victron_accu_ip"] = victronModbusConfig.ip;
   docw["victron_accu_id"] = victronModbusConfig.id;
@@ -315,6 +316,7 @@ void readSettings(bool show)
   if (doc["mb_baud"].is<int>()) mb_config.baud = doc["mb_baud"];
   if (doc["mb_parity"].is<int>()) mb_config.parity = 134217700 + doc["mb_parity"].as<int>();
   if (doc["mb_monitor"].is<bool>()) bModbusMonitor = doc["mb_monitor"];
+  readConnectorSettings(doc);
   if (doc["victron_accu_enabled"].is<bool>()) victronModbusConfig.enabled = doc["victron_accu_enabled"];
   if (doc["victron_accu_ip"].is<const char*>()) strlcpy(victronModbusConfig.ip, doc["victron_accu_ip"].as<const char*>(), sizeof(victronModbusConfig.ip));
   if (doc["victron_accu_id"].is<int>()) victronModbusConfig.id = constrain(doc["victron_accu_id"].as<int>(), 1, 247);
@@ -571,6 +573,7 @@ void updateSetting(const char *field, const char *newValue)
   if (!stricmp(field, "mb_baud")) mb_config.baud = String(newValue).toInt();  
   if (!stricmp(field, "mb_parity")) mb_config.parity = String(newValue).toInt();  
   if (!stricmp(field, "mb_monitor")) bModbusMonitor = (stricmp(newValue, "true") == 0 ? true : false);
+  updateConnectorSetting(field, newValue);
   bool victronConfigChanged = false;
   if (!stricmp(field, "victron_accu_enabled")) {
     victronModbusConfig.enabled = (stricmp(newValue, "true") == 0);

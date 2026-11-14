@@ -38,11 +38,9 @@ struct {
   uint16_t port = 502;
 } mb_config;
 
-struct VictronModbusConfig {
-  bool enabled = false;
-  char ip[16] = "";
-  uint8_t id = 100;
-} victronModbusConfig;
+#include "ConnectorModel.h"
+BatteryConnectorConfig victronModbusConfig;
+PvConnectorConfig pvModbusConfig;
 
 #include <atomic>
 #include <WiFi.h>  
@@ -827,11 +825,21 @@ struct AccuPwrSystems {
 
 AccuPwrSystems* dashboardAccu();
 bool fillDashAccuJson(JsonDocument& doc);
-void updateVictronAccu(int16_t powerW, uint16_t chargeLevel, uint16_t state);
+void updateVictronAccu(float powerW, uint16_t chargeLevel, uint16_t state);
 void invalidateVictronAccu();
 void setupVictronModbus();
 void handleVictronModbus();
 void victronModbusConfigChanged();
+void pvModbusConfigChanged();
+void setupModbusPv();
+void handleModbusPv();
+void updateModbusPv(double powerW, double totalWh);
+void invalidateModbusPv();
+void writeConnectorSettings(JsonDocument& doc);
+void readConnectorSettings(const JsonDocument& doc);
+void fillConnectorSettingsJson(JsonDocument& doc);
+bool updateConnectorSetting(const char* field, const char* value);
+
 void sendHWapiJson();
 void sendDeviceSettingsJson();
 void sendSmActualJson();

@@ -21,6 +21,71 @@ SolarPwrSystems Enphase   = { false, 1, "https://envoy/ivp/pdm/energy", "", 0, 0
 SolarPwrSystems SolarEdge = { false, 1, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
 SolarPwrSystems SMAinv    = { false, 1, "http://192.168.1.231",      "", 0, 0, 0, 0, 0,  15, 0, "/sma.json" };
 SolarPwrSystems Omniksol  = { false, 1, "", "", 0, 0, 0, 0, 0,  15, 0, "/omniksol.json"  };
+// The TCP connector replaces the SolarEdge HTTP contribution while enabled.
+// Other existing PV integrations can continue to contribute to the total.
+static uint32_t modbusPvPower = 0, modbusPvDaily = 0, modbusPvLastUpdate = 0;
+static bool modbusPvValid = false;
+
+static uint32_t pvEnergySourceHash() {
+  uint32_t hash = 2166136261UL;
+  auto add = [&hash](const void* data, size_t size) {
+    const uint8_t* bytes = static_cast<const uint8_t*>(data);
+    while (size--) { hash ^= *bytes++; hash *= 16777619UL; }
+  };
+  add(pvModbusConfig.ip, strlen(pvModbusConfig.ip));
+  add(&pvModbusConfig.port, sizeof(pvModbusConfig.port));
+  add(&pvModbusConfig.id, sizeof(pvModbusConfig.id));
+  const ConnectorField& f = pvModbusConfig.energy;
+  add(&f.reg, sizeof(f.reg)); add(&f.type, sizeof(f.type));
+  add(&f.scale, sizeof(f.scale)); add(&f.swap, sizeof(f.swap)); add(&f.sf, sizeof(f.sf));
+  return hash;
+}
+
+void invalidateModbusPv() {
+  modbusPvValid = false;
+  modbusPvPower = modbusPvDaily = 0;
+  apiWsMarkLiveDirty();
+}
+
+void updateModbusPv(double powerW, double totalWh) {
+  modbusPvPower = uint32_t(powerW);
+  modbusPvLastUpdate = millis();
+  modbusPvValid = true;
+  // Only calculate today's yield after the clock is synchronized. Keep the
+  // baseline in NVS so a reboot does not erase production already observed.
+  if (year() >= 2024) {
+    static bool loaded = false;
+    static PvDailyBaseline baseline;
+    Preferences nvs;
+    if (!loaded && nvs.begin("pv-energy", true)) {
+      if (nvs.getBytesLength("baseline-v1") == sizeof(baseline))
+        nvs.getBytes("baseline-v1", &baseline, sizeof(baseline));
+      nvs.end();
+      loaded = true;
+    }
+    const uint32_t today = uint32_t(year()) * 10000 + month() * 100 + day();
+    if (baseline.observe(totalWh, today, pvEnergySourceHash())) {
+      if (nvs.begin("pv-energy", false)) {
+        nvs.putBytes("baseline-v1", &baseline, sizeof(baseline));
+        nvs.end();
+        loaded = true;
+      }
+    }
+    modbusPvDaily = baseline.yieldWh(totalWh);
+  }
+  apiWsMarkLiveDirty();
+}
+
+static bool modbusPvAvailable() {
+  return pvModbusConfig.enabled && modbusPvValid &&
+      uint32_t(millis() - modbusPvLastUpdate) <= max(20000UL, uint32_t(pvModbusConfig.interval) * 2000UL);
+}
+static uint32_t solarEdgeActualW() { return pvModbusConfig.enabled ? (modbusPvAvailable() ? modbusPvPower : 0) : SolarEdge.Actual; }
+static uint32_t solarEdgeDailyWh() { return pvModbusConfig.enabled ? modbusPvDaily : SolarEdge.Daily; }
+static uint32_t solarEdgeWp() { return pvModbusConfig.enabled ? pvModbusConfig.wp : SolarEdge.Wp; }
+static bool anySolarAvailable() { return Enphase.Available || SMAinv.Available || Omniksol.Available ||
+    (pvModbusConfig.enabled ? modbusPvAvailable() : SolarEdge.Available); }
+
 static uint16_t LastSolarFetchDurationMs = 0;
 
 static String   _sma_sid;
@@ -369,6 +434,7 @@ void ReadSolarConfigs() {
 void GetSolarData(SolarSource src, bool forceUpdate) {
   SolarPwrSystems* solarSystem = (SolarPwrSystems*)solarSystemForSource(src);
 
+  if (src == SOLAR_EDGE && pvModbusConfig.enabled) return;
   if (!solarSystem->Available) return;
   if (!forceUpdate && ((uptime() - solarSystem->LastRefresh) < solarSystem->Interval)) return;
   CrashLogMark(solarFetchTag(src), __LINE__);
@@ -574,16 +640,16 @@ void GetSolarDataN() {
 }
 
 uint32_t totalSolarDailyWh() {
-  return Enphase.Daily + SolarEdge.Daily + SMAinv.Daily + Omniksol.Daily;
+  return Enphase.Daily + solarEdgeDailyWh() + SMAinv.Daily + Omniksol.Daily;
 }
 
 ApiResponse solarApiResponse() {
-  bool any = Enphase.Available || SolarEdge.Available || SMAinv.Available || Omniksol.Available;
+  bool any = anySolarAvailable();
   if (!any) return {200, "application/json", "{\"active\":false}"};
 
   uint32_t totalDaily  = totalSolarDailyWh();
-  uint32_t totalActual = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual + Omniksol.Actual;
-  uint32_t totalWp     = Enphase.Wp     + SolarEdge.Wp     + SMAinv.Wp     + Omniksol.Wp;
+  uint32_t totalActual = Enphase.Actual + solarEdgeActualW() + SMAinv.Actual + Omniksol.Actual;
+  uint32_t totalWp     = Enphase.Wp + solarEdgeWp() + SMAinv.Wp + Omniksol.Wp;
 
   JsonDocument doc;
   doc["active"] = true;
@@ -607,15 +673,15 @@ ApiResponse solarApiResponse() {
 }
 
 bool fillDashSolarJson(JsonDocument& doc) {
-  bool any = Enphase.Available || SolarEdge.Available || SMAinv.Available || Omniksol.Available;
+  bool any = anySolarAvailable();
   if (!any) return false;
 
   JsonObject solar = doc["solar"].to<JsonObject>();
   solar["active"] = true;
   JsonObject total = solar["total"].to<JsonObject>();
   total["daily"] = totalSolarDailyWh();
-  total["actual"] = Enphase.Actual + SolarEdge.Actual + SMAinv.Actual + Omniksol.Actual;
-  solar["Wp"] = Enphase.Wp + SolarEdge.Wp + SMAinv.Wp + Omniksol.Wp;
+  total["actual"] = Enphase.Actual + solarEdgeActualW() + SMAinv.Actual + Omniksol.Actual;
+  solar["Wp"] = Enphase.Wp + solarEdgeWp() + SMAinv.Wp + Omniksol.Wp;
 
   return true;
 }

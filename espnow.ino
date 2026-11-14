@@ -397,10 +397,10 @@ void P2PSendActualData(){
   else ActualData.Gas = UINT32_MAX; 
   if ( WtrMtr ) ActualData.Water  = (waterDelivered * 1000) - dataYesterday.water;
   else ActualData.Water = UINT32_MAX;
-  ActualData.Esolar = Enphase.Daily + SolarEdge.Daily;
+  ActualData.Esolar = totalSolarDailyWh();
   
-  if ( !Enphase.Available && !SolarEdge.Available ) ActualData.Psolar = UINT32_MAX;
-  else ActualData.Psolar = Enphase.Actual + SolarEdge.Actual;
+  if (!anySolarAvailable()) ActualData.Psolar = UINT32_MAX;
+  else ActualData.Psolar = Enphase.Actual + solarEdgeActualW() + SMAinv.Actual + Omniksol.Actual;
   
   esp_err_t rs = esp_now_send(NULL, (uint8_t *) &ActualData, sizeof(ActualData));
   if (rs != ESP_OK) Debugf("P2P actual send failed: %d\n", (int)rs);

@@ -723,7 +723,7 @@ function updateFromDAL(source, json)
     case "devinfo": parseDeviceInfo(json); break;
     case "dev_settings":
 		ParseDevSettings();
-		if (!(activeTab == "bEditSettings" && hasDirtySettings())) refreshSettings();
+		if (!((activeTab == "bEditSettings" || activeTab == "bConnectors") && hasDirtySettings())) refreshSettings();
 		break;
     case "versionmanifest": parseVersionManifest(json); break;
 	case "esphomemanifest": renderESPHomeMigrationCard(); break;

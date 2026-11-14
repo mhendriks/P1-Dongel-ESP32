@@ -54,6 +54,7 @@
 			<li><a id='bNETSW'   	  data-i18n-key="mnu-netsw" class='tabButton nav-item' href="#NETSW" style="display:none" onclick="fetchNetSwitchConfig()">NetSwitch</a></li>
 			<li><a id='bEditSettings' data-i18n-key="mnu-settings" class='tabButton nav-item' href="#Settings" >Settings</a></li>
 			<li><a id='bEditMonths'   data-i18n-key="mnu-editmonths" class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
+            <li><a id="bConnectors" data-i18n-key="mnu-connectors" class="tabButton nav-item" href="#Connectors">Connectors</a></li>
 			<li><a id='bSolar'   	  data-i18n-key="mnu-solar" class='tabButton nav-item' href="#Solar" >Solar Setup</a></li>
 				<li><a id='bESPHome'   	  data-i18n-key="mnu-esphome" class='nav-item' href="javascript:void(0);" onclick="return openESPHomeMigrationFromMenu(event)" style="display:none">ESPHome</a></li>
 <!-- 			<li><a id='bAbout'   	  class='tabButton nav-item' href="#About" >About</a></li> -->
@@ -699,6 +700,35 @@
       </div>
   </section> <!-- end Settings Page -->
  
+  <section id="Connectors" class="tabName">
+    <h2 data-i18n-key="mnu-connectors">Connectors</h2>
+    <div class="outer-div"><div class="inner-div connector-shell">
+      <div id="connector_subtabs" class="settings-subtabs">
+        <button type="button" class="subtab-btn active" data-target="connector_battery" data-i18n-key="connector-battery">Accu</button>
+        <button type="button" class="subtab-btn" data-target="connector_pv" data-i18n-key="connector-pv">PV</button>
+      </div>
+      <div id="connector_battery" class="connector-pane active">
+        <h3>Victron · Modbus TCP</h3>
+        <p data-i18n-key="connector-battery-help">Lees de accu via Modbus TCP. De standaardmapping is voor Victron GX, unit-ID 100. Positief vermogen betekent laden, negatief ontladen.</p>
+        <div id="connector_battery_connection" class="settings-card"></div>
+        <div id="connector_battery_mapping" class="settings-card"></div>
+      </div>
+      <div id="connector_pv" class="connector-pane">
+        <h3>SolarEdge · SunSpec TCP</h3>
+        <p data-i18n-key="connector-pv-help">Schakel Modbus TCP in op de omvormer. Deze connector vervangt de SolarEdge HTTP-bijdrage zolang hij is ingeschakeld.</p>
+        <div id="connector_pv_connection" class="settings-card"></div>
+        <div id="connector_pv_mapping" class="settings-card"></div>
+        <p data-i18n-key="connector-pv-day-help">De dagproductie wordt berekend vanaf de eerste totaalstand van de dag en blijft behouden na een herstart. Op de eerste installatiedag telt alleen productie vanaf de eerste meting mee.</p>
+      </div>
+      <p data-i18n-key="connector-mapping-help">Gebruik nulgebaseerde holding-registeradressen (FC03), zonder adrescorrectie. SF-register 0 schakelt de SunSpec-exponent uit. Factor en woordvolgorde zijn instelbaar per meetwaarde.</p>
+      <p id="connector_save_status" role="status" aria-live="polite"></p>
+      <div class="connector-actions">
+        <button type="button" id="connector_undo" onclick="undoConnectorSettings()" data-i18n-key="btn-undo">Undo</button>
+        <button type="button" id="connector_save" onclick="saveConnectorSettings()" data-i18n-key="btn-save">Opslaan</button>
+      </div>
+    </div></div>
+  </section>
+
   <section id="EditMonths" class="tabName"> 
    <h2 data-i18n-key="tle-input-mtr-reading">Meterstanden invoeren</h2>
   <div id="tabEditMonths" class="tabName">

@@ -1627,3 +1627,24 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
   border: 1px solid rgba(0,0,0,0.10);
   background: #fff;
 }
+
+/* Connector settings use the same generated fields as the main settings page. */
+#Connectors .connector-shell { max-width: 900px; margin: 0 auto; }
+#Connectors .settings-subtabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+#Connectors .connector-pane { display: none; }
+#Connectors .connector-pane.active { display: block; }
+#Connectors .settings-card { padding: 16px 24px; margin: 16px 0; border: 1px solid #b7b7b7; border-radius: 12px; }
+#Connectors .settingDiv { display: grid; grid-template-columns: 1fr max-content; align-items: center; gap: 16px; padding: 10px 0; border-bottom: 1px solid #ddd; }
+#Connectors .settings-right { max-width: 100%; }
+#Connectors .settings-right input, #Connectors .settings-right select { max-width: 200px; }
+#Connectors .connector-actions { display: flex; justify-content: center; gap: 12px; }
+#Connectors .connector-actions button { padding: 10px 24px; cursor: pointer; }
+@media (max-width: 600px) {
+  #Connectors .settings-card { padding: 12px; }
+  #Connectors .settingDiv { grid-template-columns: 1fr; gap: 8px; }
+}
+
+#Connectors .subtab-btn { padding: 10px 20px; border: 1px solid #aaa; border-radius: 24px; cursor: pointer; }
+#Connectors .subtab-btn.active { border-color: #ff7800; background: #fff3e5; font-weight: 600; }
+#Connectors .settingDiv.is-dirty input, #Connectors .settingDiv.is-dirty select { outline: 2px solid #ff7800; }
+#Connectors button, #Connectors input, #Connectors select { scroll-margin-top: 70px; }

@@ -1799,6 +1799,9 @@ function SendNetSwitchJson() {
 				EditMonths();
 				objDAL.refreshHistoryMonths();
 				break;
+		case "bConnectors":
+			objDAL.ensureDeviceInformation(true);
+			break;
 		case "bSettings":
 		case "bEditSettings":
 			data = {};
@@ -3659,9 +3662,6 @@ function splitSettingsUI() {
     "mb_map",
     "mb_id",
     "mb_port",
-    "victron_accu_enabled",
-    "victron_accu_ip",
-    "victron_accu_id",
     "mb_parity",
     "mb_baud",
     "mb_bits",
@@ -3683,7 +3683,8 @@ function splitSettingsUI() {
     // id is "settingR_<key>"
     const key = id.startsWith("settingR_") ? id.substring("settingR_".length) : "";
 
-    if (MQTT_KEYS.has(key)) mqtt.appendChild(row);
+    if (connectorSettingPane(key)) document.getElementById(connectorSettingPane(key))?.appendChild(row);
+    else if (MQTT_KEYS.has(key)) mqtt.appendChild(row);
     else if (MEENT_KEYS.has(key)) meent.appendChild(row);
     else if (SMART_METER_KEY_SET.has(key)) smartMeter.appendChild(row);
     else if (TARIFF_KEYS.has(key)) tariff.appendChild(row);
@@ -3712,7 +3713,7 @@ function splitSettingsUI() {
   const modbusMonitorCard = document.getElementById("modbus_monitor_card");
   if (modbusMonitorCard) modbus.appendChild(modbusMonitorCard);
   updateMQTTSettingsVisibility();
-  updateVictronSettingsVisibility();
+  initConnectorUI();
 }
 
 function updateMQTTSettingsVisibility() {
@@ -3727,15 +3728,70 @@ function updateMQTTSettingsVisibility() {
   });
 }
 
-function updateVictronSettingsVisibility() {
-  const victronEnabled = document.getElementById("setFld_victron_accu_enabled");
-  if (!victronEnabled) return;
+function connectorSettingPane(key) {
+  if (key.startsWith("victron_accu_")) return "connector_battery_connection";
+  if (key.startsWith("battery_")) return "connector_battery_mapping";
+  if (key.startsWith("pv_modbus_")) return "connector_pv_connection";
+  if (key.startsWith("pv_power_") || key.startsWith("pv_energy_")) return "connector_pv_mapping";
+  return null;
+}
 
-  const showVictronFields = victronEnabled.checked;
-  ["victron_accu_ip", "victron_accu_id"].forEach(key => {
+function initConnectorUI() {
+  // Keep the legacy battery connection keys in a predictable order alongside
+  // the newly exposed settings, irrespective of JSON property order.
+  ["victron_accu_enabled", "victron_accu_ip", "victron_accu_port", "victron_accu_id", "victron_accu_interval"].forEach(key => {
     const row = document.getElementById(`settingR_${key}`);
-    if (row) row.style.display = showVictronFields ? "" : "none";
+    if (row) document.getElementById("connector_battery_connection")?.appendChild(row);
   });
+  const tabs = document.getElementById("connector_subtabs");
+  if (!tabs || tabs.dataset.bound) return;
+  tabs.dataset.bound = "1";
+  tabs.querySelectorAll("button").forEach(button => button.addEventListener("click", () => {
+    tabs.querySelectorAll("button").forEach(b => b.classList.toggle("active", b === button));
+    document.querySelectorAll("#Connectors .connector-pane").forEach(pane =>
+      pane.classList.toggle("active", pane.id === button.dataset.target));
+  }));
+}
+
+function undoConnectorSettings() {
+  document.querySelectorAll("#Connectors .is-dirty").forEach(row => row.classList.remove("is-dirty"));
+  objDAL.ensureDeviceInformation(true);
+}
+
+async function saveConnectorSettings() {
+  const status = document.getElementById("connector_save_status");
+  const button = document.getElementById("connector_save");
+  const controls = Array.from(document.querySelectorAll('#Connectors [id^="setFld_"]'));
+  if (controls.some(input => !input.reportValidity())) return;
+  const settings = objDAL.getDeviceSettings();
+  const changes = controls.map(input => {
+    const key = input.id.substring("setFld_".length);
+    const value = input.type === "checkbox" ? input.checked : input.value;
+    const original = settings[key]?.value ?? settings[key];
+    return {key, value, original};
+  }).filter(change => String(change.value) !== String(change.original));
+  // Save connection/mapping fields first, enable only after the complete mapping.
+  changes.sort((a, b) => Number(a.key.endsWith("_enabled")) - Number(b.key.endsWith("_enabled")));
+  button.disabled = true;
+  status.textContent = t("connector-saving");
+  try {
+    for (const {key, value} of changes) {
+      const response = await fetch(URL_DEVICE_SETTINGS, {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({name: key, value})
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await response.json();
+      const row = document.getElementById(`settingR_${key}`);
+      row?.classList.remove("is-dirty");
+    }
+    objDAL.ensureDeviceInformation(true);
+    status.textContent = t("connector-saved");
+  } catch (error) {
+    status.textContent = `${t("connector-save-error")}: ${error.message}`;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function markDirty(el) {
@@ -3751,7 +3807,7 @@ function clearDirtySettings(){
 }
 
 function hasDirtySettings() {
-  return !!document.querySelector('#Settings .settingDiv.is-dirty');
+  return !!document.querySelector('#Settings .settingDiv.is-dirty, #Connectors .settingDiv.is-dirty');
 }
 
 function getModbusMonitorSetting() {
@@ -3907,7 +3963,17 @@ function initModbusMonitorControls() {
 			const fldId = "setFld_" + i;
 			
 			// --- mb_map als dropdown ---
-			if (i === "mb_map") {
+			if (connectorSettingPane(i) && i.endsWith("_type")) {
+              sInput = document.createElement("select");
+              sInput.id = fldId;
+              ["uint16", "int16", "uint32", "int32", "float32"].forEach((name, value) => {
+                const option = document.createElement("option");
+                option.value = String(value); option.textContent = name;
+                option.selected = Number(data[i].value) === value;
+                sInput.appendChild(option);
+              });
+            }
+            else if (i === "mb_map") {
 			  const MAPS = [
 				{ v: 0, t: "Default - uint32" },
 				{ v: 1, t: "SDM630" },
@@ -4079,7 +4145,7 @@ function initModbusMonitorControls() {
 					sInput.setAttribute("type", "number");
 					sInput.max = data[i].max;
 					sInput.min = data[i].min;
-					sInput.step = (data[i].min + data[i].max) / 1000;
+					sInput.step = connectorSettingPane(i) ? "any" : (data[i].min + data[i].max) / 1000;
 					break;
 				  case "i":
 					sInput.setAttribute("type", "number");
@@ -4092,14 +4158,15 @@ function initModbusMonitorControls() {
 			  }
 			}
 			
-			// bestaande dirty-detectie behouden
+			if (connectorSettingPane(i)) {
+              sInput.setAttribute("aria-label", fldDiv.textContent);
+              if (sInput.type === "number") sInput.required = true;
+            }
+            // bestaande dirty-detectie behouden
 			sInput.addEventListener("change", () => markDirty(sInput));
 			sInput.addEventListener("input",  () => markDirty(sInput));
 			if (i === "mqtt_enabled") {
 			  sInput.addEventListener("change", updateMQTTSettingsVisibility);
-			}
-			if (i === "victron_accu_enabled") {
-			  sInput.addEventListener("change", updateVictronSettingsVisibility);
 			}
 			
 			inputDiv.appendChild(sInput);

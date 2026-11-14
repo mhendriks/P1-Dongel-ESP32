@@ -13,7 +13,7 @@ float SolarEdgeFlowPvPower = 0.0f;
 bool  SolarEdgeFlowPvValid = false;
 
 static bool victronAccuAvailable() {
-  return VictronAccu.Available && (millis() - victronAccuLastUpdate <= VICTRON_ACCU_STALE_MS);
+  return VictronAccu.Available && (millis() - victronAccuLastUpdate <= max(VICTRON_ACCU_STALE_MS, uint32_t(victronModbusConfig.interval) * 2000UL));
 }
 
 AccuPwrSystems* dashboardAccu() {
@@ -22,14 +22,13 @@ AccuPwrSystems* dashboardAccu() {
   return nullptr;
 }
 
-void updateVictronAccu(int16_t powerW, uint16_t chargeLevel, uint16_t state) {
+void updateVictronAccu(float powerW, uint16_t chargeLevel, uint16_t state) {
   VictronAccu.currentPower = powerW / 1000.0f;
   VictronAccu.chargeLevel = (uint8_t)constrain((int)chargeLevel, 0, 100);
-  switch (state) {
-    case 1: VictronAccu.status = "Charging"; break;
-    case 2: VictronAccu.status = "Discharging"; break;
-    default: VictronAccu.status = "Idle"; break;
-  }
+  if (state == uint16_t(victronModbusConfig.charging)) VictronAccu.status = "Charging";
+  else if (state == uint16_t(victronModbusConfig.discharging)) VictronAccu.status = "Discharging";
+  else if (state == uint16_t(victronModbusConfig.idle)) VictronAccu.status = "Idle";
+  else VictronAccu.status = "Unknown";
   VictronAccu.Available = true;
   victronAccuLastUpdate = millis();
   apiWsMarkLiveDirty();
