@@ -556,7 +556,7 @@
   "connector-battery-help": "Read a battery system over Modbus TCP. Configure the mapper manually or apply a preset. Positive power means charging; negative means discharging.",
   "connector-pv-help": "Read a PV system over Modbus TCP. Configure the mapper manually or apply a preset. The energy mapping expects cumulative lifetime energy in Wh.",
   "connector-pv-day-help": "Daily yield is calculated from the first lifetime reading of the day and survives a restart. On the first installation day, only production after the first reading is counted.",
-  "connector-mapping-help": "Use zero-based holding-register addresses (FC03), without address correction. SF register 0 disables the SunSpec exponent. Set the factor and word order for each measurement.",
+  "connector-mapping-help": "Use zero-based holding-register addresses (FC03), without address correction. Set the factor and word order for each measurement.",
   "connector-saving": "Saving…",
   "connector-saved": "Connector settings saved.",
   "connector-save-error": "Could not save all settings",
@@ -613,5 +613,6 @@
   "connector-preset-custom": "Custom",
   "connector-apply-preset": "Apply preset",
   "connector-preset-help": "Fills the port, unit ID and mapper fields. All fields remain editable. Click Save to activate the changes.",
-  "connector-preset-applied": "Preset applied to the form. Click Save to activate the changes."
+  "connector-preset-applied": "Preset applied to the form. Click Save to activate the changes.",
+  "connector-pv-scale-help": "SF register 0 disables the SunSpec exponent."
 }

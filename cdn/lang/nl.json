@@ -590,7 +590,7 @@
   "connector-battery-help": "Lees een accusysteem via Modbus TCP. Configureer de mapper handmatig of pas een preset toe. Positief vermogen betekent laden, negatief ontladen.",
   "connector-pv-help": "Lees een PV-systeem via Modbus TCP. Configureer de mapper handmatig of pas een preset toe. De energiemapping verwacht een cumulatieve totaalstand in Wh.",
   "connector-pv-day-help": "De dagproductie wordt berekend vanaf de eerste totaalstand van de dag en blijft behouden na een herstart. Op de eerste installatiedag telt alleen productie vanaf de eerste meting mee.",
-  "connector-mapping-help": "Gebruik nulgebaseerde holding-registeradressen (FC03), zonder adrescorrectie. SF-register 0 schakelt de SunSpec-exponent uit. Factor en woordvolgorde zijn instelbaar per meetwaarde.",
+  "connector-mapping-help": "Gebruik nulgebaseerde holding-registeradressen (FC03), zonder adrescorrectie. Factor en woordvolgorde zijn instelbaar per meetwaarde.",
   "connector-saving": "Bezig met opslaan…",
   "connector-saved": "Connectorinstellingen opgeslagen.",
   "connector-save-error": "Niet alle instellingen konden worden opgeslagen",
@@ -647,5 +647,6 @@
   "connector-preset-custom": "Aangepast",
   "connector-apply-preset": "Preset toepassen",
   "connector-preset-help": "Vult poort, unit-ID en mappervelden in. Je kunt alles daarna aanpassen. Klik op Opslaan om de wijzigingen actief te maken.",
-  "connector-preset-applied": "Preset ingevuld. Klik op Opslaan om de wijzigingen actief te maken."
+  "connector-preset-applied": "Preset ingevuld. Klik op Opslaan om de wijzigingen actief te maken.",
+  "connector-pv-scale-help": "SF-register 0 schakelt de SunSpec-exponent uit."
 }
