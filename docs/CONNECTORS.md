@@ -1,7 +1,7 @@
 # Modbus TCP connectors (5.11)
 
 Open **Connectors** in the web interface. This release has two tabs: **Battery**
-(Victron GX defaults) and **PV** (SolarEdge SunSpec defaults). Both connectors
+and **PV**, each with a universal Modbus TCP connection and editable mapper. Both connectors
 only read holding registers (FC03); they never write to the connected device.
 The dongle's existing Modbus server and its meter mapping remain independent.
 
@@ -10,6 +10,20 @@ interval. Each mapped value has a zero-based wire address, datatype (`uint16`,
 `int16`, `uint32`, `int32`, `float32`), multiplier and optional word swap.
 Address zero is a valid register. Word swap exchanges the two 16-bit words of a
 32-bit value; bytes within a register keep Modbus network order.
+
+## Presets
+
+Choose **Custom**, **Victron GX** (Battery), or **SolarEdge SunSpec** (PV).
+Selecting an option does not change the connection or mapper. Click **Apply
+preset** to fill the TCP port, unit ID, registers, types, factors, word swap,
+and battery state codes or PV exponent registers. The IP address, enabled
+state, poll interval and installed PV power are preserved.
+
+All mapper fields remain editable. Editing a preset value changes the selection
+to **Custom**; this keeps the edited values. **Save** persists and activates
+changes, while **Undo** restores the saved fields. Preset names are inferred
+from the current form values rather than saved as a separate device setting.
+Existing configurations are never overwritten when the page opens.
 
 ## Battery
 
@@ -32,7 +46,7 @@ The existing `/api/v2/accu`, dashboard and ESP-NOW battery consumers continue to
 use the battery data. A sample is published only after all three values have
 been read successfully. Invalid state-of-charge readings are rejected.
 
-## SolarEdge PV
+## PV
 
 Enable Modbus TCP on the inverter and use its configured port; the initial
 connector port is 1502 and unit ID is 1. The defaults use **base-0** addresses

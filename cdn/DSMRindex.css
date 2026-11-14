@@ -1737,3 +1737,9 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
   #Connectors .mapper-matrix { display: table; }
   #Connectors .settingDiv { grid-template-columns: 1fr; }
 }
+
+#Connectors .connector-preset-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+#Connectors .connector-preset-controls select { flex: 1 1 180px; max-width: 280px; }
+#Connectors .connector-preset-controls button { margin: 0; }
+#Connectors .connector-preset-controls button:disabled { opacity: .45; cursor: default; }
+#Connectors .connector-preset-card p { margin-bottom: 0; font-size: 14px; }

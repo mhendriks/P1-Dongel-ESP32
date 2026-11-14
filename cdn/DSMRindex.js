@@ -3792,6 +3792,88 @@ function buildConnectorMapper(containerId, fields, extraKeys) {
   }
 }
 
+function connectorPreset(kind) {
+  if (kind === "battery") return {
+    id: "victron-gx",
+    values: {
+      victron_accu_port: 502, victron_accu_id: 100,
+      battery_power_register: 842, battery_power_type: 1, battery_power_scale: 1, battery_power_swap: false,
+      battery_soc_register: 843, battery_soc_type: 0, battery_soc_scale: 1, battery_soc_swap: false,
+      battery_state_register: 844, battery_state_type: 0, battery_state_scale: 1, battery_state_swap: false,
+      battery_idle_code: 0, battery_charging_code: 1, battery_discharging_code: 2
+    }
+  };
+  if (kind === "pv") return {
+    id: "solaredge-sunspec",
+    values: {
+      pv_modbus_port: 1502, pv_modbus_id: 1,
+      pv_power_register: 40083, pv_power_type: 1, pv_power_scale: 1, pv_power_swap: false,
+      pv_energy_register: 40093, pv_energy_type: 2, pv_energy_scale: 1, pv_energy_swap: false,
+      pv_power_sf: 40084, pv_energy_sf: 40095
+    }
+  };
+  return null;
+}
+
+function connectorPresetFieldMatches(input, value) {
+  if (!input) return false;
+  return typeof value === "boolean" ? input.checked === value
+    : input.value !== "" && Number(input.value) === value;
+}
+
+function updateConnectorPresetSelection(kind) {
+  const preset = connectorPreset(kind);
+  const select = document.getElementById(`connector_${kind}_preset`);
+  if (!preset || !select) return;
+  const matches = Object.entries(preset.values).every(([key, value]) =>
+    connectorPresetFieldMatches(document.getElementById(`setFld_${key}`), value));
+  select.value = matches ? preset.id : "custom";
+  document.getElementById(`connector_${kind}_apply_preset`).disabled = !matches;
+}
+
+function applyConnectorPreset(kind) {
+  const preset = connectorPreset(kind);
+  if (!preset || document.getElementById(`connector_${kind}_preset`)?.value !== preset.id) return;
+  // Only edit the form. The ordinary Save button persists these values later.
+  // Keep IP, enabled state, poll interval and installed PV power untouched.
+  for (const [key, value] of Object.entries(preset.values)) {
+    const input = document.getElementById(`setFld_${key}`);
+    if (!input || connectorPresetFieldMatches(input, value)) continue;
+    if (typeof value === "boolean") input.checked = value;
+    else input.value = String(value);
+    markDirty(input);
+  }
+  updateConnectorPresetSelection(kind);
+  const status = document.getElementById("connector_save_status");
+  if (status) status.textContent = t("connector-preset-applied");
+}
+
+function initConnectorPresets() {
+  ["battery", "pv"].forEach(kind => {
+    const select = document.getElementById(`connector_${kind}_preset`);
+    const button = document.getElementById(`connector_${kind}_apply_preset`);
+    if (!select || !button) return;
+    if (!select.dataset.bound) {
+      select.dataset.bound = "1";
+      select.addEventListener("change", () => { button.disabled = select.value === "custom"; });
+      button.addEventListener("click", () => applyConnectorPreset(kind));
+    }
+    updateConnectorPresetSelection(kind);
+  });
+  const root = document.getElementById("Connectors");
+  if (root && !root.dataset.presetBound) {
+    root.dataset.presetBound = "1";
+    const onEdit = event => {
+      const key = event.target.id?.replace(/^setFld_/, "");
+      ["battery", "pv"].forEach(kind => {
+        if (Object.hasOwn(connectorPreset(kind).values, key)) updateConnectorPresetSelection(kind);
+      });
+    };
+    root.addEventListener("input", onEdit);
+    root.addEventListener("change", onEdit);
+  }
+}
+
 function initConnectorUI() {
   buildConnectorMapper("connector_battery_mapping", [
     {key: "battery_power", label: "connector-active-power"},
@@ -3808,6 +3890,7 @@ function initConnectorUI() {
     const row = document.getElementById(`settingR_${key}`);
     if (row) document.getElementById("connector_battery_connection")?.appendChild(row);
   });
+  initConnectorPresets();
   const tabs = document.getElementById("connector_subtabs");
   if (!tabs || tabs.dataset.bound) return;
   tabs.dataset.bound = "1";
@@ -3850,6 +3933,9 @@ async function saveConnectorSettings() {
       const row = document.getElementById(`settingR_${key}`);
       row?.classList.remove("is-dirty");
     }
+    // A preset can restore the already saved values. Clear those dirty rows
+    // too, otherwise an empty save keeps blocking the settings refresh.
+    document.querySelectorAll("#Connectors .is-dirty").forEach(row => row.classList.remove("is-dirty"));
     objDAL.ensureDeviceInformation(true);
     status.textContent = t("connector-saved");
   } catch (error) {
