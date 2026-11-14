@@ -58,3 +58,65 @@ assert.equal(context.connectorSettingPane('mb_map'),null);
   assert.equal(requests.length,0,'invalid input must not be sent');
   console.log('Connector routing, sequential saving, validation and failure handling passed');
 })().catch(error=>{console.error(error);process.exitCode=1;});
+
+// Moving mapper controls must preserve row IDs/listeners and remain idempotent
+// when settings arrive again; this is where the original branch lost fields.
+{
+  const byId = new Map();
+  class Element {
+    constructor(tag = 'div', id = '') {
+      this.tagName = tag; this.children = []; this.parent = null;
+      this.className = ''; this.dataset = {}; this.id = id;
+      if (id) byId.set(id, this);
+    }
+    appendChild(child) {
+      if (child.parent) child.parent.children.splice(child.parent.children.indexOf(child), 1);
+      this.children.push(child); child.parent = this;
+      return child;
+    }
+    querySelector(selector) {
+      const className = selector.substring(1);
+      for (const child of this.children) {
+        if (child.className.split(' ').includes(className)) return child;
+        const found = child.querySelector(selector);
+        if (found) return found;
+      }
+      return null;
+    }
+  }
+  const fields = [{key:'battery_power',label:'power'}, {key:'battery_soc',label:'soc'}, {key:'battery_state',label:'state'}];
+  const container = new Element('div','connector_battery_mapping');
+  const controls = [];
+  for (const field of fields) {
+    for (const suffix of ['register','type','scale','swap']) {
+      const row = new Element('div',`settingR_${field.key}_${suffix}`);
+      row.className = 'settingDiv';
+      const control = new Element('input',`setFld_${field.key}_${suffix}`);
+      control.listener = Symbol('original listener'); controls.push(control);
+      row.appendChild(control); container.appendChild(row);
+    }
+  }
+  const extra = new Element('div','settingR_battery_idle_code');
+  container.appendChild(extra);
+  const mapperContext = vm.createContext({
+    t:key=>key,
+    document:{getElementById:id=>byId.get(id),createElement:tag=>new Element(tag)}
+  });
+  vm.runInContext(functions, mapperContext);
+  mapperContext.buildConnectorMapper('connector_battery_mapping',fields,['battery_idle_code']);
+  const table = container.querySelector('.mapper-matrix');
+  assert.ok(table);
+  assert.equal(table.children[1].children.length,3);
+  assert.equal(table.children[0].children[0].children.length,6);
+  assert.equal(table.children[1].children[0].children.length,6);
+  for (const control of controls) {
+    assert.equal(byId.get(control.id),control);
+    assert.ok(control.listener);
+    assert.equal(control.parent.parent.tagName,'td');
+  }
+  assert.equal(extra.parent.className,'mapper-state-codes');
+  mapperContext.buildConnectorMapper('connector_battery_mapping',fields,['battery_idle_code']);
+  assert.equal(container.querySelector('.mapper-matrix'),table);
+  assert.equal(table.children[1].children.length,3);
+  console.log('Mapper keeps controls and rows intact across repeated refreshes');
+}

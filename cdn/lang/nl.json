@@ -626,5 +626,17 @@
   "dict_pv_energy_register": "Totaalenergie (Wh) · register",
   "dict_pv_energy_type": "Totaalenergie (Wh) · datatype",
   "dict_pv_energy_scale": "Totaalenergie (Wh) · factor",
-  "dict_pv_energy_swap": "Totaalenergie (Wh) · woorden omwisselen"
+  "dict_pv_energy_swap": "Totaalenergie (Wh) · woorden omwisselen",
+  "connector-mapper": "Mapper",
+  "connector-measurement": "Meetwaarde",
+  "connector-register": "Register",
+  "connector-datatype": "Datatype",
+  "connector-factor": "Factor",
+  "connector-word-swap": "Word swap",
+  "connector-active-power": "Actief vermogen (W)",
+  "connector-state-of-charge": "Laadpercentage (%)",
+  "connector-operating-state": "Bedrijfsstatus",
+  "connector-lifetime-energy": "Totaalenergie (Wh)",
+  "connector-source": "Bron",
+  "connector-holding-register": "Holding register"
 }

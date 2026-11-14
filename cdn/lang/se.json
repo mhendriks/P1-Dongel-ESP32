@@ -599,5 +599,17 @@
   "dict_pv_energy_register": "Lifetime energy (Wh) · register",
   "dict_pv_energy_type": "Lifetime energy (Wh) · data type",
   "dict_pv_energy_scale": "Lifetime energy (Wh) · factor",
-  "dict_pv_energy_swap": "Lifetime energy (Wh) · swap words"
+  "dict_pv_energy_swap": "Lifetime energy (Wh) · swap words",
+  "connector-mapper": "Mapper",
+  "connector-measurement": "Measurement",
+  "connector-register": "Register",
+  "connector-datatype": "Data type",
+  "connector-factor": "Factor",
+  "connector-word-swap": "Word swap",
+  "connector-active-power": "Active power (W)",
+  "connector-state-of-charge": "State of charge (%)",
+  "connector-operating-state": "Operating state",
+  "connector-lifetime-energy": "Lifetime energy (Wh)",
+  "connector-source": "Source",
+  "connector-holding-register": "Holding register"
 }

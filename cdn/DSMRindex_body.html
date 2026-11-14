@@ -710,14 +710,14 @@
       <div id="connector_battery" class="connector-pane active">
         <h3>Victron · Modbus TCP</h3>
         <p data-i18n-key="connector-battery-help">Lees de accu via Modbus TCP. De standaardmapping is voor Victron GX, unit-ID 100. Positief vermogen betekent laden, negatief ontladen.</p>
-        <div id="connector_battery_connection" class="settings-card"></div>
-        <div id="connector_battery_mapping" class="settings-card"></div>
+        <div id="connector_battery_connection" class="settings-card"><h3>Driver · Modbus TCP</h3></div>
+        <div id="connector_battery_mapping" class="settings-card"><h3 data-i18n-key="connector-mapper">Mapper</h3></div>
       </div>
       <div id="connector_pv" class="connector-pane">
         <h3>SolarEdge · SunSpec TCP</h3>
         <p data-i18n-key="connector-pv-help">Schakel Modbus TCP in op de omvormer. Deze connector vervangt de SolarEdge HTTP-bijdrage zolang hij is ingeschakeld.</p>
-        <div id="connector_pv_connection" class="settings-card"></div>
-        <div id="connector_pv_mapping" class="settings-card"></div>
+        <div id="connector_pv_connection" class="settings-card"><h3>Driver · SunSpec TCP</h3></div>
+        <div id="connector_pv_mapping" class="settings-card"><h3 data-i18n-key="connector-mapper">Mapper</h3></div>
         <p data-i18n-key="connector-pv-day-help">De dagproductie wordt berekend vanaf de eerste totaalstand van de dag en blijft behouden na een herstart. Op de eerste installatiedag telt alleen productie vanaf de eerste meting mee.</p>
       </div>
       <p data-i18n-key="connector-mapping-help">Gebruik nulgebaseerde holding-registeradressen (FC03), zonder adrescorrectie. SF-register 0 schakelt de SunSpec-exponent uit. Factor en woordvolgorde zijn instelbaar per meetwaarde.</p>

@@ -3736,7 +3736,72 @@ function connectorSettingPane(key) {
   return null;
 }
 
+function buildConnectorMapper(containerId, fields, extraKeys) {
+  const container = document.getElementById(containerId);
+  if (!container || container.querySelector(".mapper-matrix")) return;
+  // Wait until settings have arrived. Move complete rows, keeping their IDs
+  // and input listeners intact for refreshes, Undo and dirty tracking.
+  if (fields.some(field => !document.getElementById(`settingR_${field.key}_register`))) return;
+  const scroll = document.createElement("div");
+  scroll.className = "mapper-scroll";
+  const table = document.createElement("table");
+  table.className = "mapper-matrix";
+  const head = document.createElement("thead");
+  const headings = document.createElement("tr");
+  ["connector-measurement", "connector-source", "connector-register", "connector-datatype", "connector-factor", "connector-word-swap"].forEach(key => {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.dataset.i18nKey = key;
+    cell.textContent = t(key);
+    headings.appendChild(cell);
+  });
+  head.appendChild(headings);
+  table.appendChild(head);
+  const body = document.createElement("tbody");
+  fields.forEach(field => {
+    const row = document.createElement("tr");
+    const label = document.createElement("th");
+    label.scope = "row";
+    label.dataset.i18nKey = field.label;
+    label.textContent = t(field.label);
+    row.appendChild(label);
+    const source = document.createElement("td");
+    source.className = "mapper-source";
+    source.dataset.i18nKey = "connector-holding-register";
+    source.textContent = t("connector-holding-register");
+    row.appendChild(source);
+    ["register", "type", "scale", "swap"].forEach(suffix => {
+      const cell = document.createElement("td");
+      const setting = document.getElementById(`settingR_${field.key}_${suffix}`);
+      if (setting) cell.appendChild(setting);
+      row.appendChild(cell);
+    });
+    body.appendChild(row);
+  });
+  table.appendChild(body);
+  scroll.appendChild(table);
+  container.appendChild(scroll);
+  if (extraKeys.length) {
+    const extra = document.createElement("div");
+    extra.className = containerId.includes("battery") ? "mapper-state-codes" : "mapper-scale-factors";
+    extraKeys.forEach(key => {
+      const row = document.getElementById(`settingR_${key}`);
+      if (row) extra.appendChild(row);
+    });
+    container.appendChild(extra);
+  }
+}
+
 function initConnectorUI() {
+  buildConnectorMapper("connector_battery_mapping", [
+    {key: "battery_power", label: "connector-active-power"},
+    {key: "battery_soc", label: "connector-state-of-charge"},
+    {key: "battery_state", label: "connector-operating-state"}
+  ], ["battery_idle_code", "battery_charging_code", "battery_discharging_code"]);
+  buildConnectorMapper("connector_pv_mapping", [
+    {key: "pv_power", label: "connector-active-power"},
+    {key: "pv_energy", label: "connector-lifetime-energy"}
+  ], ["pv_power_sf", "pv_energy_sf"]);
   // Keep the legacy battery connection keys in a predictable order alongside
   // the newly exposed settings, irrespective of JSON property order.
   ["victron_accu_enabled", "victron_accu_ip", "victron_accu_port", "victron_accu_id", "victron_accu_interval"].forEach(key => {
@@ -5032,6 +5097,7 @@ const FALLBACK_TRANSLATIONS = {
 // Resolve while this script executes: translations follow DSMRindex[.min].js,
 // both on the versioned CDN and when loading the script from localhost.
 const URL_I18N = new URL("lang", document.currentScript.src).href;
+const I18N_ASSET_QUERY = new URL(document.currentScript.src).search;
 
 function t(key) {
   return translations[key] || FALLBACK_TRANSLATIONS[locale]?.[key] || FALLBACK_TRANSLATIONS.en[key] || key;
@@ -5067,7 +5133,7 @@ function changeLanguage(lang) {
 function loadTranslations(lang) {
   const languages = lang === 'en' ? ['en'] : ['en', lang];
   Promise.all(languages.map(language => {
-    const url = URL_I18N + `/${language}.json`;
+    const url = URL_I18N + `/${language}.json` + I18N_ASSET_QUERY;
     console.log(url);
     return fetch(url).then(response => {
       if (!response.ok) throw new Error(`Could not load ${language} translations`);
