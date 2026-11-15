@@ -2,7 +2,8 @@
 
 DSMR-API is firmware for ESP32-based Smartstuff energy dongles. It reads data from a smart meter through the P1 port and makes current and historical energy data available through a local web interface and open integrations.
 
-This README describes the functionality available in firmware version 5.9.0.
+This README describes the functionality available in firmware version 5.11.0.
+See the [release notes](CHANGELOG.md) for changes since 5.10.8.
 
 ## Features
 
