@@ -746,6 +746,15 @@
         <p data-i18n-key="connector-pv-day-help">De dagproductie wordt berekend vanaf de eerste totaalstand van de dag en blijft behouden na een herstart. Op de eerste installatiedag telt alleen productie vanaf de eerste meting mee.</p>
       </div>
       <p data-i18n-key="connector-mapping-help">Gebruik nulgebaseerde holding-registeradressen (FC03), zonder adrescorrectie. Factor en woordvolgorde zijn instelbaar per meetwaarde.</p>
+      <div class="settings-card connector-diagnostics">
+        <h3 data-i18n-key="connector-diag-title">Diagnose</h3>
+        <label class="connector-diag-toggle"><input id="connector_diagnostics_enabled" type="checkbox" onchange="setConnectorDiagnostics(this.checked)"> <span data-i18n-key="connector-diag-enable">Diagnose inschakelen</span></label>
+        <p data-i18n-key="connector-diag-help">Standaard uit. Bewaart tijdelijk maximaal 12 resultaten per connector in het geheugen. Na een herstart staat diagnose weer uit. Opslaan is niet nodig.</p>
+        <p id="connector_diagnostics_status" role="status" aria-live="polite"></p>
+        <div id="connector_diagnostics_results" hidden></div>
+        <button id="connector_diagnostics_copy" type="button" onclick="copyConnectorDiagnostics()" data-i18n-key="connector-diag-copy" disabled>Diagnose kopiëren</button>
+        <textarea id="connector_diagnostics_copy_text" aria-label="Diagnose" readonly hidden></textarea>
+      </div>
       <p id="connector_save_status" role="status" aria-live="polite"></p>
       <div class="connector-actions">
         <button type="button" id="connector_undo" onclick="undoConnectorSettings()" data-i18n-key="btn-undo">Undo</button>

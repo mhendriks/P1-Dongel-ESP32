@@ -79,12 +79,51 @@ Both connectors expire live readings after twice the configured interval, with
 a minimum grace period of 20 seconds. Connection and mapping settings are saved
 in `DSMRsettings.json`. They are preserved by a network reset.
 
+## Diagnostics
+
+Diagnostics are **off by default**. Enable **Diagnostics** on the Connectors
+page before reproducing a problem; no Save is needed. The switch applies to
+both connectors on this dongle, including when another browser opens the page.
+It does not change connection settings or enable either connector.
+
+While enabled, the page refreshes every two seconds and shows status, time since
+the last successful complete reading, the last error code/message and register,
+request/success/error counts, and up to 12 recent results per connector (newest
+first). Each result identifies its measurement and register, raw register words,
+any SunSpec exponent, and the calculated value or error. The value on a normal
+register row includes the manual multiplier; the following SF-register result
+includes the SunSpec exponent as well. Out-of-range measurements are rejected
+and reported rather than published as valid readings. Connection errors and
+Modbus exception codes remain available after communication recovers.
+
+**Copy diagnostics** copies a JSON report with the firmware version, capture
+timestamp, saved IP/port/unit ID, polling interval, mapper and recent results.
+It uses the saved configuration, not unsaved edits in the form. It does not
+include passwords or settings for unrelated integrations. Local HTTP browsers
+use a copy fallback; if copying is blocked, the report is selected for manual
+copying. Include the inverter model and the test time when sharing the report.
+
+Capture remains active when leaving the page until switched off or the dongle
+reboots. No diagnostic records or enable flag are written to flash. Switching
+off clears the records; changing a connector configuration starts a fresh capture
+for that connector. Closing the page stops browser polling but not Modbus polling.
+This is separate from the existing Modbus monitor for requests to the dongle's
+own server.
+
+The authenticated `/api/v2/connectors/diagnostics` endpoint supports `GET` for
+the current snapshot and `POST` with `{"enabled":true}` or `{"enabled":false}`
+to start or clear capture. Error messages preserve the underlying eModbus code;
+codes `0x100`–`0x103` describe invalid responses, invalid/unavailable values,
+invalid SunSpec exponents and rejected measurements respectively. Ages are in
+milliseconds relative to the snapshot, not inverter timestamps.
+
 ## Validation
 
 ```sh
 c++ -std=c++17 -Wall -Wextra -pedantic tests/modbus_connector_test.cpp -o /tmp/modbus_connector_test
 /tmp/modbus_connector_test
 node tests/test_connectors.cjs
+node tests/test_connector_diagnostics.cjs
 ./build.sh ULTRA P1P
 ```
 

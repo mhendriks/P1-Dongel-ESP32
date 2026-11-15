@@ -810,6 +810,8 @@ ApiResponse handleDevApi(const ApiRequestContext& request);
 ApiResponse handleSmApi(const ApiRequestContext& request);
 ApiResponse handleSmApiField(const ApiRequestContext& request);
 ApiResponse handleModbusMonitorApi(const ApiRequestContext& request);
+class ModbusConnectorClient;
+ApiResponse handleConnectorDiagnosticsApi(const ApiRequestContext& request);
 ApiResponse dashHistoryApiResponse();
 ApiResponse dashLiveApiResponse();
 ApiResponse historyMonthsApiResponse(const String& body);

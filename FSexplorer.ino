@@ -177,6 +177,16 @@ void setupFSexplorer() {
     if (!auth()) return;
     sendApiResponse(handleModbusMonitorApi(currentApiRequest()));
   });
+  httpServer.on("/api/v2/connectors/diagnostics", HTTP_GET, []() {
+    if (!auth()) return;
+    httpServer.sendHeader("Cache-Control", "no-store");
+    sendApiResponse(handleConnectorDiagnosticsApi(currentApiRequest()));
+  });
+  httpServer.on("/api/v2/connectors/diagnostics", HTTP_POST, []() {
+    if (!auth()) return;
+    httpServer.sendHeader("Cache-Control", "no-store");
+    sendApiResponse(handleConnectorDiagnosticsApi(currentApiRequest()));
+  });
 
   httpServer.on("/eid/getclaim", []() {
     if (!auth()) return;

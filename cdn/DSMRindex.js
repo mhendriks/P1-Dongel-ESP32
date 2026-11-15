@@ -1753,6 +1753,7 @@ function SendNetSwitchJson() {
     document.body.classList.remove("menu-open");
     clearInterval(tabTimer);  
     clearInterval(NRGStatusTimer);
+    stopConnectorDiagnosticsPolling();
 	if (objDAL) {
 		objDAL.stopDashLivePolling();
 		objDAL.stopDashHistPolling();
@@ -1801,6 +1802,7 @@ function SendNetSwitchJson() {
 				break;
 		case "bConnectors":
 			objDAL.ensureDeviceInformation(true);
+			startConnectorDiagnosticsPolling();
 			break;
 		case "bSettings":
 		case "bEditSettings":
@@ -3818,6 +3820,162 @@ function updateMQTTSettingsVisibility() {
     if (row.id === "settingR_mqtt_enabled") return;
     row.style.display = showMQTTFields ? "" : "none";
   });
+}
+
+let connectorDiagnosticsTimer = null;
+let connectorDiagnosticsGeneration = 0;
+let connectorDiagnosticsData = null;
+
+function stopConnectorDiagnosticsPolling() {
+  clearTimeout(connectorDiagnosticsTimer);
+  connectorDiagnosticsTimer = null;
+  ++connectorDiagnosticsGeneration;
+}
+
+function startConnectorDiagnosticsPolling() {
+  stopConnectorDiagnosticsPolling();
+  refreshConnectorDiagnostics(connectorDiagnosticsGeneration);
+}
+
+async function requestConnectorDiagnostics(enabled) {
+  const options = {cache: "no-store"};
+  if (typeof enabled === "boolean") {
+    options.method = "POST";
+    options.headers = {"Content-Type": "application/json"};
+    options.body = JSON.stringify({enabled});
+  }
+  const response = await fetch("/api/v2/connectors/diagnostics", options);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
+function scheduleConnectorDiagnostics(generation) {
+  if (generation === connectorDiagnosticsGeneration && activeTab === "bConnectors" && connectorDiagnosticsData?.enabled) {
+    connectorDiagnosticsTimer = setTimeout(() => refreshConnectorDiagnostics(generation), 2000);
+  }
+}
+
+async function refreshConnectorDiagnostics(generation) {
+  try {
+    const data = await requestConnectorDiagnostics();
+    if (generation !== connectorDiagnosticsGeneration || activeTab !== "bConnectors") return;
+    renderConnectorDiagnostics(data);
+  } catch (error) {
+    if (generation !== connectorDiagnosticsGeneration || activeTab !== "bConnectors") return;
+    document.getElementById("connector_diagnostics_status").textContent = `${t("connector-diag-unavailable")}: ${error.message}`;
+    document.getElementById("connector_diagnostics_copy").disabled = true;
+  }
+  scheduleConnectorDiagnostics(generation);
+}
+
+async function setConnectorDiagnostics(enabled) {
+  stopConnectorDiagnosticsPolling();
+  const generation = connectorDiagnosticsGeneration;
+  const toggle = document.getElementById("connector_diagnostics_enabled");
+  toggle.disabled = true;
+  document.getElementById("connector_diagnostics_copy").disabled = true;
+  try {
+    const data = await requestConnectorDiagnostics(enabled);
+    if (generation !== connectorDiagnosticsGeneration || activeTab !== "bConnectors") return;
+    renderConnectorDiagnostics(data);
+  } catch (error) {
+    if (generation !== connectorDiagnosticsGeneration || activeTab !== "bConnectors") return;
+    toggle.checked = Boolean(connectorDiagnosticsData?.enabled);
+    document.getElementById("connector_diagnostics_status").textContent = `${t("connector-diag-unavailable")}: ${error.message}`;
+  } finally {
+    toggle.disabled = false;
+    scheduleConnectorDiagnostics(generation);
+  }
+}
+
+function connectorDiagnosticAge(milliseconds) {
+  return milliseconds === null || milliseconds === undefined ? "—" : `${Math.floor(milliseconds / 1000)} s`;
+}
+
+function connectorDiagnosticField(kind, field) {
+  const keys = kind === "battery"
+    ? ["connector-active-power", "connector-state-of-charge", "connector-operating-state"]
+    : ["connector-active-power", "connector-lifetime-energy"];
+  return t(keys[field] || "connector-measurement");
+}
+
+function renderConnectorDiagnostics(data) {
+  connectorDiagnosticsData = {...data, captured_at: new Date().toISOString()};
+  const toggle = document.getElementById("connector_diagnostics_enabled");
+  toggle.checked = Boolean(data.enabled);
+  toggle.disabled = false;
+  document.getElementById("connector_diagnostics_copy").disabled = !data.enabled;
+  const manualCopy = document.getElementById("connector_diagnostics_copy_text");
+  if (!data.enabled) manualCopy.hidden = true;
+  if (manualCopy.hidden) document.getElementById("connector_diagnostics_status").textContent = t(data.enabled ? "connector-diag-active" : "connector-diag-off");
+  const results = document.getElementById("connector_diagnostics_results");
+  results.hidden = !data.enabled;
+  results.replaceChildren();
+  if (!data.enabled) return;
+  for (const kind of ["battery", "pv"]) {
+    const diagnostic = data[kind];
+    if (!diagnostic) continue;
+    const title = document.createElement("h4");
+    title.textContent = t(`connector-${kind}`);
+    const summary = document.createElement("dl");
+    summary.className = "connector-diag-summary";
+    const add = (label, value) => {
+      const term = document.createElement("dt"), description = document.createElement("dd");
+      term.textContent = t(label); description.textContent = value;
+      summary.append(term, description);
+    };
+    add("connector-diag-status", t(`connector-diag-state-${diagnostic.status}`));
+    if (diagnostic.connection) {
+      const connection = diagnostic.connection;
+      add("connector-connection", `${connection.ip || "—"}:${connection.port} · ID ${connection.unit_id} · ${connection.interval_s} s`);
+    }
+    add("connector-diag-last-success", connectorDiagnosticAge(diagnostic.last_success_age_ms));
+    const error = diagnostic.last_error;
+    add("connector-diag-last-error", error ? `${error.message} (0x${error.code.toString(16).toUpperCase()}, ${t("connector-register")} ${error.register}, ${connectorDiagnosticAge(error.age_ms)})` : "—");
+    add("connector-diag-counts", `${diagnostic.requests || 0} / ${diagnostic.successful_cycles || 0} / ${diagnostic.failures || 0}`);
+    results.append(title, summary);
+    if (!diagnostic.recent?.length) continue;
+    const scroll = document.createElement("div");
+    scroll.className = "connector-diag-scroll";
+    const table = document.createElement("table");
+    table.className = "connector-diag-table";
+    const head = document.createElement("thead"), header = document.createElement("tr");
+    for (const key of ["connector-diag-age", "connector-measurement", "connector-register", "connector-diag-raw", "connector-diag-exponent", "connector-diag-value", "connector-diag-error"]) {
+      const cell = document.createElement("th"); cell.scope = "col"; cell.textContent = t(key); header.appendChild(cell);
+    }
+    head.appendChild(header); table.appendChild(head);
+    const body = document.createElement("tbody");
+    for (const entry of diagnostic.recent || []) {
+      const row = document.createElement("tr");
+      const raw = entry.raw?.map(value => `0x${value.toString(16).toUpperCase().padStart(4, "0")}`).join(" ") || "—";
+      const values = [connectorDiagnosticAge(entry.age_ms), connectorDiagnosticField(kind, entry.field), entry.register, raw, entry.exponent ?? "—", entry.value ?? "—", entry.error ? `0x${entry.error_code.toString(16).toUpperCase()}: ${entry.error}` : "—"];
+      for (const value of values) {
+        const cell = document.createElement("td"); cell.textContent = value; row.appendChild(cell);
+      }
+      body.appendChild(row);
+    }
+    table.appendChild(body); scroll.appendChild(table); results.appendChild(scroll);
+  }
+}
+
+async function copyConnectorDiagnostics() {
+  if (!connectorDiagnosticsData?.enabled) return;
+  const report = JSON.stringify(connectorDiagnosticsData, null, 2);
+  const status = document.getElementById("connector_diagnostics_status");
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+    await navigator.clipboard.writeText(report);
+    document.getElementById("connector_diagnostics_copy_text").hidden = true;
+    status.textContent = t("connector-diag-copied");
+  } catch (error) {
+    // Local dongles normally use HTTP, where the Clipboard API is unavailable.
+    const text = document.getElementById("connector_diagnostics_copy_text");
+    text.value = report; text.hidden = false; text.focus(); text.select();
+    let copied = false;
+    try { copied = document.execCommand("copy"); } catch (ignored) {}
+    text.hidden = copied;
+    status.textContent = t(copied ? "connector-diag-copied" : "connector-diag-copy-manually");
+  }
 }
 
 function connectorSettingPane(key) {

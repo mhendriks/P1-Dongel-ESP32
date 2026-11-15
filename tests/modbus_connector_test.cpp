@@ -135,4 +135,89 @@ int main() {
   connector.configure(battery, fields, 3, false);
   connector.poll(true, output);
   assert(tcp.reg == 0);
+
+  // Diagnostics are opt-in, bounded, and never change the polling contract.
+  ModbusConnectorClient diagnosed;
+  auto& link = *ModbusClientTCP::instance;
+  ConnectorField batteryFields[] = {battery.power, battery.soc, battery.state};
+  diagnosed.configure(battery, batteryFields, 3, false);
+  assert(!diagnosed.diagnosticSnapshot().enabled);
+  diagnosed.poll(true, output);
+  link.error(FAILURE, link.token);
+  diagnosed.poll(true, output);
+  assert(diagnosed.diagnosticSnapshot().count == 0);
+  assert(diagnosed.diagnosticSnapshot().failures == 0);
+  diagnosed.setDiagnosticsEnabled(true);
+  assert(std::string(diagnosed.diagnosticStatus(false)) == "no_network");
+  nowMs += 5000;
+  diagnosed.poll(true, output);
+  link.error(static_cast<Error>(0xE0), link.token);
+  diagnosed.poll(true, output);
+  auto& diagnostic = diagnosed.diagnosticSnapshot();
+  assert(diagnostic.lastError == 0xE0 && diagnostic.lastErrorRegister == 842);
+  assert(diagnostic.failures == 1 && std::string(diagnosed.diagnosticStatus(true)) == "error");
+  nowMs += 5000;
+  diagnosed.poll(true, output);
+  link.reply(1200); diagnosed.poll(true, output);
+  link.reply(75); diagnosed.poll(true, output);
+  link.reply(1); assert(diagnosed.poll(true, output));
+  diagnosed.sampleAccepted();
+  assert(diagnostic.hasSuccess && diagnostic.cycles == 1);
+  assert(diagnostic.lastError == 0xE0); // Keep the previous error after recovery.
+  assert(std::string(diagnosed.diagnosticStatus(true)) == "ok");
+  nowMs += 21000;
+  assert(std::string(diagnosed.diagnosticStatus(true)) == "stale");
+  for (int i = 0; i < 20; ++i) diagnosed.sampleRejected(1);
+  assert(diagnostic.count == ConnectorDiagnostics::capacity);
+  assert(diagnostic.lastError == 0x103 && diagnostic.lastErrorRegister == 843);
+  diagnosed.setDiagnosticsEnabled(false);
+  assert(diagnostic.count == 0 && !diagnostic.hasSuccess && !diagnostic.hasError);
+  assert(std::string(diagnosed.diagnosticStatus(true)) == "off");
+
+  diagnosed.configure(pv, pvFields, 2, true);
+  diagnosed.setDiagnosticsEnabled(true);
+  diagnosed.poll(true, output);
+  const uint32_t obsolete = link.token;
+  link.reply(1000); diagnosed.poll(true, output);
+  link.reply(uint16_t(-1)); diagnosed.poll(true, output);
+  link.reply(1, 34464); diagnosed.poll(true, output); // 100000 Wh before scaling.
+  link.reply(0); assert(diagnosed.poll(true, output));
+  diagnosed.sampleAccepted();
+  const auto& pvDiagnostic = diagnosed.diagnosticSnapshot();
+  assert(pvDiagnostic.count == 4);
+  assert(pvDiagnostic.entries[1].exponent && pvDiagnostic.entries[1].reg == 40084);
+  assert(pvDiagnostic.entries[1].raw[0] == uint16_t(-1));
+  assert(pvDiagnostic.entries[1].hasValue && pvDiagnostic.entries[1].value == 100);
+  assert(pvDiagnostic.entries[3].value == 100000);
+  nowMs += 5000;
+  diagnosed.poll(true, output);
+  link.error(static_cast<Error>(2), obsolete); // Old callbacks must not corrupt diagnostics.
+  assert(pvDiagnostic.failures == 0);
+  link.error(static_cast<Error>(2), link.token);
+  diagnosed.poll(true, output);
+  assert(pvDiagnostic.lastError == 2 && pvDiagnostic.lastErrorRegister == 40083);
+  nowMs += 5000;
+  diagnosed.poll(true, output);
+  link.reply(100); diagnosed.poll(true, output);
+  link.reply(0x8000); diagnosed.poll(true, output);
+  assert(pvDiagnostic.lastError == 0x102 && pvDiagnostic.lastErrorRegister == 40084);
+  assert(!pvDiagnostic.entries[(pvDiagnostic.head + ConnectorDiagnostics::capacity - 1) % ConnectorDiagnostics::capacity].hasValue);
+  diagnosed.configure(pv, pvFields, 2, true);
+  assert(pvDiagnostic.enabled && pvDiagnostic.count == 0); // Reset capture on mapping changes.
+
+  nowMs += 5000;
+  link.queueResult = static_cast<Error>(0xE8);
+  diagnosed.poll(true, output);
+  assert(pvDiagnostic.lastError == 0xE8 && pvDiagnostic.lastErrorRegister == 40083);
+  link.queueResult = SUCCESS;
+  nowMs += 5000;
+  diagnosed.poll(true, output);
+  ModbusMessage malformed;
+  malformed.bytes = {uint8_t(link.id + 1), 3, 2, 0, 100};
+  link.data(malformed, link.token);
+  assert(!diagnosed.poll(true, output));
+  assert(pvDiagnostic.lastError == 0x100 && pvDiagnostic.lastErrorRegister == 40083);
+  const auto& malformedEntry = pvDiagnostic.entries[(pvDiagnostic.head + ConnectorDiagnostics::capacity - 1) % ConnectorDiagnostics::capacity];
+  assert(!malformedEntry.hasRaw && !malformedEntry.hasValue);
+
 }

@@ -30,7 +30,8 @@ void handleVictronModbus() {
     if (fabs(values[0]) <= 1e9 && values[1] >= 0 && values[1] <= 100 &&
         values[2] >= -32768 && values[2] <= 65535) {
       updateVictronAccu(values[0], uint16_t(values[1]), uint16_t(int32_t(values[2])));
-    }
+      batteryModbusClient.sampleAccepted();
+    } else batteryModbusClient.sampleRejected(fabs(values[0]) > 1e9 ? 0 : (values[1] < 0 || values[1] > 100 ? 1 : 2));
   }
 }
 void pvModbusConfigChanged() {
@@ -42,9 +43,87 @@ void setupModbusPv() { pvModbusConfigChanged(); }
 void handleModbusPv() {
   double values[3];
   if (pvModbusClient.poll(netw_state == NW_ETH || netw_state == NW_WIFI, values)) {
-    if (values[0] >= 0 && values[0] <= UINT32_MAX && values[1] >= 0 && values[1] <= 1e15)
+    if (values[0] >= 0 && values[0] <= UINT32_MAX && values[1] >= 0 && values[1] <= 1e15) {
       updateModbusPv(values[0], values[1]);
+      pvModbusClient.sampleAccepted();
+    } else pvModbusClient.sampleRejected(values[0] < 0 || values[0] > UINT32_MAX ? 0 : 1);
   }
+}
+
+void setConnectorDiagnosticsEnabled(bool enabled) {
+  batteryModbusClient.setDiagnosticsEnabled(enabled);
+  pvModbusClient.setDiagnosticsEnabled(enabled);
+}
+
+static const char* connectorDiagnosticErrorText(uint16_t code) {
+  switch (code) {
+    case 0x100: return "Invalid Modbus response";
+    case 0x101: return "Invalid or unavailable register value";
+    case 0x102: return "Invalid or unavailable SunSpec scale factor";
+    case 0x103: return "Measurement outside accepted range";
+    default: return static_cast<const char*>(ModbusError(static_cast<Error>(code)));
+  }
+}
+
+static void fillConnectorDiagnostics(JsonObject out, const ModbusConnectorClient& client, bool networkAvailable) {
+  const auto& capture = client.diagnosticSnapshot();
+  out["status"] = client.diagnosticStatus(networkAvailable);
+  if (!capture.enabled) return;
+  const uint32_t nowMs = millis();
+  const auto& config = client.configuration();
+  JsonObject connection = out["connection"].to<JsonObject>();
+  connection["enabled"] = config.enabled;
+  connection["ip"] = config.ip; connection["port"] = config.port;
+  connection["unit_id"] = config.id; connection["interval_s"] = config.interval;
+  out["capture_age_ms"] = uint32_t(nowMs - capture.startedMs);
+  out["requests"] = capture.requests; out["successful_cycles"] = capture.cycles;
+  out["failures"] = capture.failures;
+  if (capture.hasSuccess) out["last_success_age_ms"] = uint32_t(nowMs - capture.lastSuccessMs);
+  else out["last_success_age_ms"] = nullptr;
+  if (capture.hasError) {
+    JsonObject error = out["last_error"].to<JsonObject>();
+    error["age_ms"] = uint32_t(nowMs - capture.lastErrorMs);
+    error["register"] = capture.lastErrorRegister; error["code"] = capture.lastError;
+    error["message"] = connectorDiagnosticErrorText(capture.lastError);
+  }
+  JsonArray mapping = out["mapping"].to<JsonArray>();
+  for (uint8_t i = 0; i < client.mappingCount(); ++i) {
+    const auto& field = client.mapping(i);
+    JsonObject item = mapping.add<JsonObject>();
+    item["register"] = field.reg; item["type"] = field.type;
+    item["multiplier"] = field.scale; item["word_swap"] = field.swap;
+    item["sf_register"] = field.sf;
+  }
+  JsonArray recent = out["recent"].to<JsonArray>();
+  for (uint8_t i = 0; i < capture.count; ++i) {
+    const auto& entry = capture.entries[(capture.head + ConnectorDiagnostics::capacity - 1 - i) % ConnectorDiagnostics::capacity];
+    JsonObject item = recent.add<JsonObject>();
+    item["age_ms"] = uint32_t(nowMs - entry.atMs); item["register"] = entry.reg;
+    item["field"] = entry.field; item["is_sf"] = entry.exponent;
+    if (entry.hasRaw) {
+      JsonArray raw = item["raw"].to<JsonArray>();
+      for (uint8_t word = 0; word < entry.count; ++word) raw.add(entry.raw[word]);
+      if (entry.exponent) item["exponent"] = int16_t(entry.raw[0]);
+    }
+    if (entry.hasValue) item["value"] = entry.value;
+    if (entry.error) {
+      item["error_code"] = entry.error;
+      item["error"] = connectorDiagnosticErrorText(entry.error);
+    }
+  }
+}
+
+String connectorDiagnosticsJson() {
+  JsonDocument doc;
+  doc["enabled"] = batteryModbusClient.diagnosticSnapshot().enabled;
+  doc["firmware"] = _VERSION_ONLY;
+  doc["uptime_ms"] = millis();
+  const bool networkAvailable = netw_state == NW_ETH || netw_state == NW_WIFI;
+  fillConnectorDiagnostics(doc["battery"].to<JsonObject>(), batteryModbusClient, networkAvailable);
+  fillConnectorDiagnostics(doc["pv"].to<JsonObject>(), pvModbusClient, networkAvailable);
+  String json;
+  serializeJson(doc, json);
+  return json;
 }
 
 static constexpr uint8_t kModbusTransportTcp = 0;

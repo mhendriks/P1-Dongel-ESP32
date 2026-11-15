@@ -14,6 +14,13 @@ Changes since 5.10.8.
   register addresses, datatypes, multipliers and word order from the web interface.
 - SunSpec scale-factor registers for PV power and lifetime production, with
   daily production calculated from a baseline that survives a reboot.
+- Opt-in **Diagnostics** on the Connectors page, showing connection status,
+  the age of the last successful read, the last Modbus error and register,
+  raw register values, SunSpec exponents and calculated measurements.
+  **Copy diagnostics** exports the saved connection/mapping and recent results
+  for troubleshooting, including on local HTTP connections.
+  Capture is off by default, keeps at most 12 results per connector in RAM,
+  and is disabled and cleared after a reboot or when switched off.
 
 ### Changed
 
@@ -49,7 +56,8 @@ Changes since 5.10.8.
 ### Validation
 
 - Automated tests cover connector decoding, SunSpec scale factors, polling,
-  failure handling, daily baselines, frontend configuration and update dialogs.
+  failure handling, daily baselines, opt-in diagnostics and copy fallbacks,
+  frontend configuration and update dialogs.
 - Communication and displayed measurements still need validation against an
   actual SolarEdge inverter and Victron GX. For SolarEdge, enable Modbus TCP
   and select the inverter's configured port; the preset starts with port 1502

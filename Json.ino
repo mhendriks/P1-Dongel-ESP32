@@ -891,6 +891,16 @@ ApiResponse handleModbusMonitorApi(const ApiRequestContext& request) {
   return jsonOkResponse(modbusMonitorJson());
 }
 
+ApiResponse handleConnectorDiagnosticsApi(const ApiRequestContext& request) {
+  if (request.method == HTTP_POST) {
+    JsonDocument body;
+    if (deserializeJson(body, request.body) || !body["enabled"].is<bool>())
+      return {400, "application/json", "{\"error\":\"Expected a boolean enabled field\"}"};
+    setConnectorDiagnosticsEnabled(body["enabled"].as<bool>());
+  }
+  return jsonOkResponse(connectorDiagnosticsJson());
+}
+
 bool isInFieldsArray(const char* lookUp)
 {                        
 //    DebugTf("Elemts[%2d] | LookUp [%s] | LookUpType[%2d]\r\n", elemts, lookUp, LookUpType);
