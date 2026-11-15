@@ -1247,6 +1247,18 @@ input.ntsw, select.ntsw { width: 100%; padding: 8px; margin: 0px 0 10px; font-si
 .popup-actions { display: flex;justify-content: center;gap: 10px;margin-top: 20px; }
 .popup-actions button { margin-right: 0; }
 .popup-actions .button-secondary { background-color: #777; }
+#updatePopup .popup { position: relative;min-width: 0;width: calc(100% - 32px);max-width: 560px;box-sizing: border-box; }
+#updatePopup h2 { margin-left: 24px;margin-right: 24px; }
+#updatePopup button { text-transform: uppercase; }
+#updateChoices { flex-wrap: wrap; }
+#updateChoices[hidden] { display: none; }
+#updateChoices .update-download-action { background-color: #ff7800; }
+#updatePopup .update-cancel-action { position: absolute;top: 8px;right: 8px;width: 36px;height: 36px;padding: 0;margin: 0;background: transparent;color: #555;box-shadow: none;font-size: 28px;line-height: 1;cursor: pointer; }
+#updatePopup button:disabled { opacity: .6;cursor: wait; }
+@media (max-width: 600px) {
+  #updateChoices { flex-direction: column; }
+  #updateChoices button { width: 100%; }
+}
 .popup-spinner { width: 32px;height: 32px;margin: 15px auto;border: 5px solid #f3f3f3;border-radius: 50%;border-top: 5px solid #555;animation: spin 1s linear infinite; }
 .progress {	width: 100%;background: #ddd;border-radius: 5px;margin-top: 20px; }
 .progress-bar {	height: 20px;width: 0%;background: #4CAF50;border-radius: 5px; }

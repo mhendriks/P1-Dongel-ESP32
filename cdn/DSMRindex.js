@@ -2293,6 +2293,12 @@ function closeUpdate() {
 }    
 
 function showUpdateOverlay(statusText, progressWidth = 0, useSpinner = false) {
+	document.getElementById("updateTitle").innerText = t("lbl_update_title");
+	document.getElementById("updateChoices").hidden = true;
+	const closeButton = document.getElementById("updateCancel");
+	closeButton.hidden = false;
+	closeButton.disabled = false;
+	closeButton.setAttribute("aria-label", t("btn_update_close"));
 	document.getElementById("updatePopup").style.visibility = "visible";
 	progressBar = document.getElementById("progressBar");
 	const progressWrap = document.querySelector("#updatePopup .progress");
@@ -2595,19 +2601,99 @@ async function downloadFilesSequential(urls) {
   }
 }
 
-async function startUpdateFlow( type ) {
-  if (confirm( t("lbl-download-popup-1") )){
-  // 1) Start downloads (in dezelfde user-gesture context)
-  await downloadFilesSequential([
-    "/RNGdays.json",
-    "/RNGhours.json",
-    "/RNGmonths.json"
-  ]);
-}	
+let pendingUpdateType = null;
+let updateFlowBusy = false;
+let updateTrigger = null;
 
-  // 2) Tweede bevestiging voor de update
-  if (confirm(t("lbl-download-popup-2"))) {
-    RemoteUpdate( type );
+function startUpdateFlow(type) {
+  if (updateFlowBusy) return;
+  pendingUpdateType = type;
+  updateTrigger = document.activeElement;
+  showUpdateOverlay(t("txt-update-confirm"));
+  document.getElementById("updateTitle").innerText = t("tle-update-confirm");
+  document.querySelector("#updatePopup .progress").style.display = "none";
+  const choices = document.getElementById("updateChoices");
+  choices.hidden = false;
+  const cancel = document.getElementById("updateCancel");
+  cancel.hidden = false;
+  cancel.setAttribute("aria-label", t("btn_cancel"));
+  setUpdateFlowBusy(false);
+  choices.querySelector("button").focus();
+}
+
+function cancelUpdateFlow() {
+  if (pendingUpdateType === null) {
+    closeUpdate();
+    return;
+  }
+  if (updateFlowBusy) return;
+  pendingUpdateType = null;
+  document.getElementById("updatePopup").style.visibility = "hidden";
+  updateTrigger?.focus();
+}
+
+document.addEventListener("keydown", event => {
+  if (document.getElementById("updatePopup").style.visibility !== "visible") return;
+  if (event.key === "Tab") {
+    const choices = document.getElementById("updateChoices");
+    const buttons = [document.getElementById("updateCancel"), ...(choices.hidden ? [] : choices.querySelectorAll("button"))];
+    const first = buttons[0], last = buttons[buttons.length - 1];
+    if (updateFlowBusy && pendingUpdateType !== null) event.preventDefault();
+    else if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+  if (event.key === "Escape" && (pendingUpdateType === null || !updateFlowBusy)) {
+    event.preventDefault();
+    cancelUpdateFlow();
+  }
+});
+
+function setUpdateFlowBusy(busy) {
+  updateFlowBusy = busy;
+  document.getElementById("updateChoices").querySelectorAll("button").forEach(button => { button.disabled = busy; });
+  document.getElementById("updateCancel").disabled = busy;
+}
+
+async function downloadUpdateData() {
+  if (updateFlowBusy || pendingUpdateType === null) return;
+  setUpdateFlowBusy(true);
+  document.getElementById("updatestatus").innerText = t("txt-update-download-start");
+  try {
+    await downloadFilesSequential([
+      "/RNGdays.json",
+      "/RNGhours.json",
+      "/RNGmonths.json"
+    ]);
+    document.getElementById("updatestatus").innerText = t("txt-update-download-check");
+  } catch (error) {
+    document.getElementById("updatestatus").innerText = t("txt-update-download-error");
+  } finally {
+    setUpdateFlowBusy(false);
+  }
+}
+
+function confirmUpdateFlow() {
+  if (updateFlowBusy || pendingUpdateType === null) return;
+  setUpdateFlowBusy(true);
+  const type = pendingUpdateType;
+  const choices = document.getElementById("updateChoices");
+  choices.querySelectorAll("button").forEach(button => { button.disabled = true; });
+  try {
+    pendingUpdateType = null;
+    showUpdateOverlay(t("lbl_update_start"));
+    RemoteUpdate(type);
+  } catch (error) {
+    pendingUpdateType = type;
+    document.getElementById("updatestatus").innerText = t("txt-update-start-error");
+    choices.hidden = false;
+    document.getElementById("updateCancel").hidden = false;
+    document.querySelector("#updatePopup .progress").style.display = "none";
+    setUpdateFlowBusy(false);
   }
 }
 
