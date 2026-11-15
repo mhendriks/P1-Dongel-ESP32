@@ -461,7 +461,7 @@
   "sysinfo-storage-breakdown": "Stockage (mémoire flash/micrologiciel/données)",
   "sysinfo-system-status": "État du système",
   "sysinfo-technical-details": "Détails techniques",
-  "sysinfo-telegrams-breakdown": "Télégrammes (lecture/erreurs)",
+  "sysinfo-telegrams-breakdown": "Télégrammes (OK/erreur)",
   "sysinfo-update-action": "Installer",
   "sysinfo-update-available": "mise à jour disponible",
   "tbl-mtr-readering": "relevé de compteur :",

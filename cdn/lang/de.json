@@ -453,7 +453,7 @@
   "sysinfo-system-status": "Systemstatus",
   "sysinfo-connections": "Verbindungen",
   "sysinfo-technical-details": "Technische Details",
-  "sysinfo-telegrams-breakdown": "Telegramme (gelesen/Fehler)",
+  "sysinfo-telegrams-breakdown": "Telegramme (OK/Fehler)",
   "sysinfo-mqtt-breakdown": "MQTT (Host/Status/Intervall)",
   "sysinfo-connected": "verbunden",
   "sysinfo-disconnected": "getrennt",

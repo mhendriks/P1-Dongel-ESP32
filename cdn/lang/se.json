@@ -226,7 +226,7 @@
   "sysinfo-system-status": "Systemstatus",
   "sysinfo-connections": "Anslutningar",
   "sysinfo-technical-details": "Tekniska detaljer",
-  "sysinfo-telegrams-breakdown": "Telegram (lästa/fel)",
+  "sysinfo-telegrams-breakdown": "Telegram (OK/fel)",
   "sysinfo-mqtt-breakdown": "MQTT (värd/status/intervall)",
   "sysinfo-connected": "ansluten",
   "sysinfo-disconnected": "frånkopplad",

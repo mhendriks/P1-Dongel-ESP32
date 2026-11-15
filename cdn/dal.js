@@ -723,6 +723,8 @@ function updateFromDAL(source, json)
     case "devinfo": parseDeviceInfo(json); break;
     case "dev_settings":
 		ParseDevSettings();
+		// Settings and device info arrive independently; refresh the source label once both are available.
+		if (objDAL?.devinfo && Object.keys(objDAL.devinfo).length) renderDeviceInformation(objDAL.devinfo, objDAL.version_manifest);
 		if (!((activeTab == "bEditSettings" || activeTab == "bConnectors") && hasDirtySettings())) refreshSettings();
 		break;
     case "versionmanifest": parseVersionManifest(json); break;

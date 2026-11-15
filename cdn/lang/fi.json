@@ -240,7 +240,7 @@
   "sysinfo-system-status": "Järjestelmän tila",
   "sysinfo-connections": "Yhteydet",
   "sysinfo-technical-details": "Tekniset tiedot",
-  "sysinfo-telegrams-breakdown": "Raakadata (luetut/virheet)",
+  "sysinfo-telegrams-breakdown": "Sanomat (OK/virhe)",
   "sysinfo-mqtt-breakdown": "MQTT (palvelin/tila/väli)",
   "sysinfo-connected": "yhdistetty",
   "sysinfo-disconnected": "ei yhteyttä",

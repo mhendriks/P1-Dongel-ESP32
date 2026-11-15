@@ -2041,7 +2041,12 @@ function deviceInfoNumber(value) {
   return Number.isFinite(number) ? number.toLocaleString(numberLocale) : String(value ?? 0);
 }
 
+function isVirtualP1Configured(settings = objDAL?.getDeviceSettings?.()) {
+  return meterString(settings?.virtual_p1_ip).trim().length > 0;
+}
+
 function p1ProtocolLabel(obj) {
+  if (isVirtualP1Configured()) return "Virtual P1";
   if (obj.meter_source === "HAN") return "HAN";
   const mode = String(obj.p1_communication_mode || "");
   if (mode.includes("9600")) return "DSMR 2/3";
@@ -2160,8 +2165,9 @@ function renderDeviceInformation(obj, manifest) {
   updateCard?.classList.toggle("has-update", latestVersion > installedVersion);
   updateCard?.classList.toggle("is-current", latestVersion > 0 && latestVersion <= installedVersion);
 
-  ["meter_source", "p1_communication_mode"].forEach(key =>
-    addDeviceInfoRow(containers.smartMeter, td(key), obj[key]));
+  const virtualP1 = isVirtualP1Configured();
+  addDeviceInfoRow(containers.smartMeter, td("meter_source"), virtualP1 ? "Virtual P1" : obj.meter_source);
+  if (!virtualP1) addDeviceInfoRow(containers.smartMeter, td("p1_communication_mode"), obj.p1_communication_mode);
   addDeviceInfoPartsRow(containers.smartMeter, td("p1_diagnostics"), conciseP1Diagnostics(obj.p1_diagnostics).split("·").map(part => part.trim()));
   if (obj.telegramcount !== undefined || obj.telegramerrors !== undefined) {
     addDeviceInfoRow(

@@ -528,7 +528,7 @@
   "sysinfo-system-status": "Systeemstatus",
   "sysinfo-connections": "Koppelingen",
   "sysinfo-technical-details": "Technische details",
-  "sysinfo-telegrams-breakdown": "Telegrammen (gelezen/fouten)",
+  "sysinfo-telegrams-breakdown": "Telegrammen (goed/fout)",
   "sysinfo-mqtt-breakdown": "MQTT (host/status/interval)",
   "sysinfo-connected": "connected",
   "sysinfo-disconnected": "disconnected",

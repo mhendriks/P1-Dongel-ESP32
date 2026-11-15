@@ -240,7 +240,7 @@
   "sysinfo-system-status": "System status",
   "sysinfo-connections": "Connections",
   "sysinfo-technical-details": "Technical details",
-  "sysinfo-telegrams-breakdown": "Telegrams (read/errors)",
+  "sysinfo-telegrams-breakdown": "Telegrams (OK/error)",
   "sysinfo-mqtt-breakdown": "MQTT (host/status/interval)",
   "sysinfo-connected": "connected",
   "sysinfo-disconnected": "disconnected",
