@@ -341,7 +341,7 @@ TaskHandle_t tP1Reader; //  own proces for P1 reading
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS};
-enum  SolarSource { ENPHASE, SOLAR_EDGE, SMA, OMNIKSOL };
+enum  SolarSource { ENPHASE, SOLAR_EDGE, SMA, OMNIKSOL, SOLPLANET };
 
 //test
 struct RingRecord {

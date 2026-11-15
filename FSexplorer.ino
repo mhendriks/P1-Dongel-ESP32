@@ -336,7 +336,7 @@ void handleFileUpload()
       else DebugTln(F("Day history reload after RNGdays upload failed"));
     }
     if (upload.filename == "DSMRsettings.json") readSettings(false);
-    if (upload.filename == "enphase.json" || upload.filename == "solaredge.json") ReadSolarConfigs();
+    if (upload.filename == "enphase.json" || upload.filename == "solaredge.json" || upload.filename == "solplanet.json") ReadSolarConfigs();
 #ifdef NETSWITCH
     if (upload.filename == "netswitch.json") readtriggers();
 #endif    

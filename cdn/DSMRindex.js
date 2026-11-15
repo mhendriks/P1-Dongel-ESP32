@@ -310,6 +310,7 @@ cfgGaugeWATER.options.title.text = "Liter";
 cfgGaugeWATER.options.plugins.labels.render = renderLabelWater;
 
 function ShowHidePV(){
+	document.getElementById('solplanet_sn').style.display = "none";
 	if ( document.getElementById('pv_enphase').checked ) {
 		document.getElementById('conf_token').style.display = "none";
 		document.getElementById('enphase_token').style.display = "block";
@@ -320,7 +321,29 @@ function ShowHidePV(){
 		document.getElementById('enphase_token').style.display = "none";
 		document.getElementById('gw_url').value = "";
 	}
+	if ( document.getElementById('pv_solplanet').checked ) {
+		document.getElementById('conf_token').style.display = "none";
+		document.getElementById('enphase_token').style.display = "none";
+		document.getElementById('solplanet_sn').style.display = "block";
+		document.getElementById('gw_url').value = "http://192.168.1.100:8484";
+		document.getElementById('interval').value = 60;
+		LoadSolplanetConfig();
+	}
 	UpdateSolarEdgeApiFields();
+}
+
+// fill the form with the stored /solplanet.json (if present)
+function LoadSolplanetConfig() {
+	fetch("/solplanet.json")
+	.then(response => response.ok ? response.json() : null)
+	.then(cfg => {
+		if ( !cfg || !document.getElementById('pv_solplanet').checked ) return;
+		if ( cfg["gateway-url"] ) document.getElementById('gw_url').value = cfg["gateway-url"];
+		document.getElementById('sn').value = cfg.sn || "";
+		if ( cfg.wp !== undefined ) document.getElementById('wp').value = cfg.wp;
+		if ( cfg["refresh-interval"] ) document.getElementById('interval').value = cfg["refresh-interval"];
+	})
+	.catch(() => {});
 }
 
 function UpdateSolarEdgeApiFields(){
@@ -475,8 +498,14 @@ function InsightData(data){
 
 function SolarSendData() {
 	const isSolarEdge = document.getElementById('pv_solaredge').checked;
+	const isSolplanet = document.getElementById('pv_solplanet').checked;
 
-	const jsonData = {
+	const jsonData = isSolplanet ? {
+		"gateway-url"     : document.getElementById('gw_url').value,
+		sn                : document.getElementById('sn').value.trim(),
+		wp                : parseInt(document.getElementById('wp').value),
+		"refresh-interval": parseInt(document.getElementById('interval').value)
+	} : {
 		"gateway-url"     : document.getElementById('gw_url').value,
 		wp                : parseInt(document.getElementById('wp').value),
 		"refresh-interval": parseInt(document.getElementById('interval').value),
@@ -488,6 +517,7 @@ function SolarSendData() {
 
 	var filename = "solaredge.json";
 	if ( document.getElementById('pv_enphase').checked ) filename = "enphase.json"
+	if ( isSolplanet ) filename = "solplanet.json"
 
 	let jsonBlob = new Blob([JSON.stringify(jsonData, null, 2)], { type: "application/json" });
     let formData = new FormData();
