@@ -21,6 +21,11 @@ SolarPwrSystems Enphase   = { false, 1, "https://envoy/ivp/pdm/energy", "", 0, 0
 SolarPwrSystems SolarEdge = { false, 1, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
 SolarPwrSystems SMAinv    = { false, 1, "http://192.168.1.231",      "", 0, 0, 0, 0, 0,  15, 0, "/sma.json" };
 SolarPwrSystems Omniksol  = { false, 1, "", "", 0, 0, 0, 0, 0,  15, 0, "/omniksol.json"  };
+// Solplanet (AISWEI): Token holds the inverter serial number ("sn" in /solplanet.json)
+SolarPwrSystems Solplanet = { false, 1, "http://192.168.1.100:8484", "", 0, 0, 0, 0, 0, 60, 0, "/solplanet.json" };
+static uint8_t  _sp_fails = 0;
+static uint8_t  _sp_day = 0;
+static const uint8_t SOLPLANET_MAX_FAILS = 3;
 // The TCP connector replaces the SolarEdge HTTP contribution while enabled.
 // Other existing PV integrations can continue to contribute to the total.
 static uint32_t modbusPvPower = 0, modbusPvDaily = 0, modbusPvLastUpdate = 0;
@@ -83,7 +88,7 @@ static bool modbusPvAvailable() {
 static uint32_t solarEdgeActualW() { return pvModbusConfig.enabled ? (modbusPvAvailable() ? modbusPvPower : 0) : SolarEdge.Actual; }
 static uint32_t solarEdgeDailyWh() { return pvModbusConfig.enabled ? modbusPvDaily : SolarEdge.Daily; }
 static uint32_t solarEdgeWp() { return pvModbusConfig.enabled ? pvModbusConfig.wp : SolarEdge.Wp; }
-static bool anySolarAvailable() { return Enphase.Available || SMAinv.Available || Omniksol.Available ||
+static bool anySolarAvailable() { return Enphase.Available || SMAinv.Available || Omniksol.Available || Solplanet.Available ||
     (pvModbusConfig.enabled ? modbusPvAvailable() : SolarEdge.Available); }
 
 static uint16_t LastSolarFetchDurationMs = 0;
@@ -100,6 +105,7 @@ static void* solarSystemForSource(SolarSource src) {
     case SOLAR_EDGE: return &SolarEdge;
     case SMA:        return &SMAinv;
     case OMNIKSOL:   return &Omniksol;
+    case SOLPLANET:  return &Solplanet;
   }
   return &Omniksol;
 }
@@ -110,6 +116,7 @@ static uint32_t defaultSolarRefreshInterval(SolarSource src) {
     case SOLAR_EDGE: return 300;
     case SMA:        return 15;
     case OMNIKSOL:   return 15;
+    case SOLPLANET:  return 60;
   }
   return 15;
 }
@@ -120,6 +127,7 @@ static const char* solarFetchTag(SolarSource src) {
     case SOLAR_EDGE: return "solar-solaredge";
     case SMA:        return "solar-sma";
     case OMNIKSOL:   return "solar-omnik";
+    case SOLPLANET:  return "solar-solplanet";
   }
   return "solar-fetch";
 }
@@ -379,6 +387,80 @@ static bool smaGetPacAndDay(const String& baseUrl, long& pac_W, long& day_Wh) {
   return true;
 }
 
+// getdevdata.cgi: pac = AC power (W), etd = energy today (0.1 kWh)
+static bool solplanetParse(const String& payload, uint32_t& pac_W, uint32_t& day_Wh) {
+  JsonDocument doc;
+  if (deserializeJson(doc, payload)) return false;
+  if (doc["pac"].isNull() || doc["etd"].isNull()) return false;
+  long pac = doc["pac"].as<long>();
+  long etd = doc["etd"].as<long>();
+  pac_W  = pac > 0 ? (uint32_t)pac : 0;
+  day_Wh = etd > 0 ? (uint32_t)etd * 100UL : 0;
+  return true;
+}
+
+static bool solplanetHttpGet(const String& url, String& out) {
+  HTTPClient http;
+  WiFiClient client;
+  WiFiClientSecure clientTLS;
+  out = "";
+  if (!solarHttpBegin(http, client, clientTLS, url)) return false;
+  WDT_FEED();
+  int rc = http.GET();
+  DebugVerboseT(F("Solplanet HTTP response: ")); DebugVerboseLn(rc);
+  if (rc == 200) out = http.getString();
+  http.end();
+  WDT_FEED();
+  return (rc == 200 && out.length() > 0);
+}
+
+static void getSolplanetData() {
+  SolarPwrSystems* s = &Solplanet;
+  String base = s->Url;
+  base.trim();
+  while (base.endsWith("/")) base.remove(base.length() - 1);
+
+  // new day: reset the daily counter (inverter is offline at night, last value would be kept otherwise)
+  if (now() > 1700000000 && _sp_day != (uint8_t)day()) {
+    if (_sp_day != 0) s->Daily = 0;
+    _sp_day = (uint8_t)day();
+  }
+
+  String payload;
+  uint32_t pac = 0, dayWh = 0;
+  bool ok = false;
+
+  // auto-discover serial number (and Wp when not configured) via getdev.cgi
+  if (s->Token.isEmpty() && solplanetHttpGet(base + "/getdev.cgi?device=2", payload)) {
+    JsonDocument doc;
+    if (!deserializeJson(doc, payload)) {
+      JsonObject inv = doc["inv"][0];
+      if (!inv.isNull() && inv["isn"].is<const char*>()) {
+        s->Token = inv["isn"].as<String>();
+        if (s->Wp == 0) s->Wp = inv["rate"].as<uint32_t>();
+        DebugVerboseT(F("Solplanet sn: ")); DebugVerboseLn(s->Token);
+      }
+    }
+  }
+
+  if (!s->Token.isEmpty() && solplanetHttpGet(base + "/getdevdata.cgi?device=2&sn=" + s->Token, payload)) {
+    ok = solplanetParse(payload, pac, dayWh);
+  }
+
+  if (ok) {
+    _sp_fails = 0;
+    s->Actual = pac;
+    s->Daily  = dayWh;
+#ifdef DEBUG
+    Debug("Solplanet Daily > ");  Debugln(s->Daily);
+    Debug("Solplanet Actual > "); Debugln(s->Actual);
+#endif
+  } else if (_sp_fails < 255 && ++_sp_fails >= SOLPLANET_MAX_FAILS) {
+    // stick/inverter unreachable (night, wifi): do not show stale power, keep Daily until midnight
+    s->Actual = 0;
+  }
+}
+
 void ReadSolarConfig(SolarSource src) {
   SolarPwrSystems* solarSystem = (SolarPwrSystems*)solarSystemForSource(src);
 
@@ -397,6 +479,7 @@ void ReadSolarConfig(SolarSource src) {
   solarSystem->Token = doc["token"].as<String>();    // SMA uses this as the inverter password.
   solarSystem->Wp    = doc["wp"].as<uint32_t>();
   solarSystem->SiteID= doc["siteid"].as<uint32_t>();
+  if (src == SOLPLANET) solarSystem->Token = doc["sn"].as<String>();  // inverter serial, empty = auto-discover
   uint32_t ri        = doc["refresh-interval"].as<uint32_t>();
   uint32_t def = defaultSolarRefreshInterval(src);
 
@@ -420,12 +503,14 @@ void ReadSolarConfigs() {
   ReadSolarConfig(SOLAR_EDGE);
   ReadSolarConfig(SMA);
   ReadSolarConfig(OMNIKSOL);
+  ReadSolarConfig(SOLPLANET);
 
   if (telegramCount == 0) {
     GetSolarData(ENPHASE, true);
     GetSolarData(SOLAR_EDGE, true);
     GetSolarData(SMA, true);
     GetSolarData(OMNIKSOL, true);
+    GetSolarData(SOLPLANET, true);
   } else {
     WorkerEnqueueSolarFetch();
   }
@@ -440,6 +525,12 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   CrashLogMark(solarFetchTag(src), __LINE__);
   solarSystem->LastRefresh = uptime();
   uint32_t fetchStartMs = millis();
+
+  if (src == SOLPLANET) {
+    getSolplanetData();
+    noteSolarFetchDuration(fetchStartMs);
+    return;
+  }
 
   if (src == SMA) {
     long pac, day;
@@ -627,6 +718,8 @@ void GetSolarDataNFromWorker() {
   WDT_FEED();
   GetSolarData(OMNIKSOL,   false);
   WDT_FEED();
+  GetSolarData(SOLPLANET,  false);
+  WDT_FEED();
 }
 
 void GetSolarDataN() {
@@ -640,7 +733,7 @@ void GetSolarDataN() {
 }
 
 uint32_t totalSolarDailyWh() {
-  return Enphase.Daily + solarEdgeDailyWh() + SMAinv.Daily + Omniksol.Daily;
+  return Enphase.Daily + solarEdgeDailyWh() + SMAinv.Daily + Omniksol.Daily + Solplanet.Daily;
 }
 
 ApiResponse solarApiResponse() {
@@ -648,8 +741,8 @@ ApiResponse solarApiResponse() {
   if (!any) return {200, "application/json", "{\"active\":false}"};
 
   uint32_t totalDaily  = totalSolarDailyWh();
-  uint32_t totalActual = Enphase.Actual + solarEdgeActualW() + SMAinv.Actual + Omniksol.Actual;
-  uint32_t totalWp     = Enphase.Wp + solarEdgeWp() + SMAinv.Wp + Omniksol.Wp;
+  uint32_t totalActual = Enphase.Actual + solarEdgeActualW() + SMAinv.Actual + Omniksol.Actual + Solplanet.Actual;
+  uint32_t totalWp     = Enphase.Wp + solarEdgeWp() + SMAinv.Wp + Omniksol.Wp + Solplanet.Wp;
 
   JsonDocument doc;
   doc["active"] = true;
@@ -680,8 +773,8 @@ bool fillDashSolarJson(JsonDocument& doc) {
   solar["active"] = true;
   JsonObject total = solar["total"].to<JsonObject>();
   total["daily"] = totalSolarDailyWh();
-  total["actual"] = Enphase.Actual + solarEdgeActualW() + SMAinv.Actual + Omniksol.Actual;
-  solar["Wp"] = Enphase.Wp + solarEdgeWp() + SMAinv.Wp + Omniksol.Wp;
+  total["actual"] = Enphase.Actual + solarEdgeActualW() + SMAinv.Actual + Omniksol.Actual + Solplanet.Actual;
+  solar["Wp"] = Enphase.Wp + solarEdgeWp() + SMAinv.Wp + Omniksol.Wp + Solplanet.Wp;
 
   return true;
 }

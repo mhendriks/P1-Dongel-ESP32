@@ -908,6 +908,8 @@
  		  <label for="enphase">Enphase</label><br>
 		  <input type="radio" id="pv_solaredge" name="solar_system" value="SolarEdge" onClick="ShowHidePV();">
 		  <label for="solaredge">SolarEdge</label><br>
+		  <input type="radio" id="pv_solplanet" name="solar_system" value="Solplanet" onClick="ShowHidePV();">
+		  <label for="solplanet">Solplanet (AISWEI)</label><br>
 		<br> 
 			<label for="wp" data-i18n-key="sol-wp">Systeemvermogen (Wp):</label><br>
 			<input type="number" id="wp" name="wp" value=3500><br><br>
@@ -926,6 +928,10 @@
 				<label id="solaredge_token_label" for="token">Legacy API key:</label><br>
 				<input type="text" id="token" name="token" placeholder="eg L4QLVQ1LOKCQX2193VSEICXW61NP6B1O" style="width: 100%"><br>
 				<small id="solaredge_api_help">Use an existing Monitoring API key. SolarEdge no longer issues new legacy keys.</small><br><br>
+			</div>
+			<div id="solplanet_sn" style="display: none">
+				<label for="sn" data-i18n-key="sol-sn">Serienummer omvormer (leeg = automatisch):</label><br>
+				<input type="text" id="sn" name="sn" placeholder="eg RG50006xxxxxxxxx" style="width: 100%"><br><br>
 			</div>
 			<div id="enphase_token">
 			<label for="token_enphase" data-i18n-key="sol-token">Token:</label><br>

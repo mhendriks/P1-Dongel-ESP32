@@ -163,6 +163,7 @@
   "sol-url": "Gateway url or ip address:",
   "sol-token": "Token:",
   "sol-siteid": "SiteID:",
+  "sol-sn": "Inverter serial number (empty = automatic):",
   "net-action-on": "Switch action",
   "net-action-off": "Switch-back action",
   "net-direction": "Respond to",

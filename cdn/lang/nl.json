@@ -172,6 +172,7 @@
   "sol-url": "Gateway url of ip-adres:",
   "sol-token": "Token:",
   "sol-siteid": "SiteID:",
+  "sol-sn": "Serienummer omvormer (leeg = automatisch):",
   "lbl-fm-files": "Aantal bestanden",
   "lbl-fm-storage": "Opslag",
   "lbl-fm-total": "totaal",
