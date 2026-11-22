@@ -67,9 +67,14 @@ to be HTTP 200 and must not contain a new command.
   "last_reset_reason": "ESP_RST_SW",
   "p1_count": 111,
   "p1_error": 1,
-  "interval_s": 60
+  "interval_s": 60,
+  "wifi_rssi": -67
 }
 ```
+
+`wifi_rssi` is the current Wi-Fi signal strength in dBm (a negative integer;
+closer to zero means stronger reception). It is included only when the active
+network connection is Wi-Fi and omitted for Ethernet.
 
 An acknowledgement adds `ack`, `command_id`, `success`, and `msg` to this
 message.

@@ -482,7 +482,7 @@ String deviceInfoJson()
   if (HardwareType == D1MC) hardwareFeatures.add("Linky TIC");
   JsonArray hardwareSlots = doc["hardware_slots"].to<JsonArray>();
   for (uint8_t slot = 0; slot < hardwareSlotCount(); ++slot) {
-    hardwareSlots.add(modName(modType[slot]));
+    hardwareSlots.add(moduleSlotName(slot));
   }
   esp_chip_info_t chip_info;
   esp_chip_info(&chip_info);

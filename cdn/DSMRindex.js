@@ -309,30 +309,6 @@ let cfgGaugeWATER = structuredClone(cfgDefaultTREND);
 cfgGaugeWATER.options.title.text = "Liter";
 cfgGaugeWATER.options.plugins.labels.render = renderLabelWater;
 
-function ShowHidePV(){
-	if ( document.getElementById('pv_enphase').checked ) {
-		document.getElementById('conf_token').style.display = "none";
-		document.getElementById('enphase_token').style.display = "block";
-		document.getElementById('gw_url').value = "https://envoy/api/v1/production";
-	}
-	if ( document.getElementById('pv_solaredge').checked ) {
-		document.getElementById('conf_token').style.display = "block";
-		document.getElementById('enphase_token').style.display = "none";
-		document.getElementById('gw_url').value = "";
-	}
-	UpdateSolarEdgeApiFields();
-}
-
-function UpdateSolarEdgeApiFields(){
-	const version = document.getElementById('solaredge_api_version')?.value || '1';
-	const isV2 = version === '2';
-	document.getElementById('solaredge_token_label').textContent = isV2 ? 'SolarEdge API V2 key or Client Secret:' : 'Legacy API key:';
-	document.getElementById('token').placeholder = isV2 ? 'Value issued by the SolarEdge Developer Platform' : 'eg L4QLVQ1LOKCQX2193VSEICXW61NP6B1O';
-	document.getElementById('solaredge_api_help').textContent = isV2
-		? 'V2 sends this value as an X-API-Key header. Do not share it with anyone.'
-		: 'Use an existing Monitoring API key. SolarEdge no longer issues new legacy keys.';
-}
-  
 let latestInsightData = null;
 
 const insightUnits = {
@@ -471,36 +447,6 @@ function InsightData(data){
                 row.appendChild(eenheidCell);
                 tbody.appendChild(row);
             }
-}
-
-function SolarSendData() {
-	const isSolarEdge = document.getElementById('pv_solaredge').checked;
-
-	const jsonData = {
-		"gateway-url"     : document.getElementById('gw_url').value,
-		wp                : parseInt(document.getElementById('wp').value),
-		"refresh-interval": parseInt(document.getElementById('interval').value),
-		token             : document.getElementById(isSolarEdge ? 'token' : 'token_enphase').value,
-		"api-version"    : isSolarEdge ? parseInt(document.getElementById('solaredge_api_version').value) : 1,
-		expire            : 0,
-		siteid            : parseInt(document.getElementById('siteid').value)
-	};
-
-	var filename = "solaredge.json";
-	if ( document.getElementById('pv_enphase').checked ) filename = "enphase.json"
-
-	let jsonBlob = new Blob([JSON.stringify(jsonData, null, 2)], { type: "application/json" });
-    let formData = new FormData();
-    formData.append("file", jsonBlob, filename );
-		
-	fetch("/upload", {
-        method: "POST",
-        body: formData
-    })
-    .then(response => response.text())
-    .then(result => window.alert("Solar config saved"))
-    .catch(error => console.error("Error:", error));
-
 }
 
 //entry point 
@@ -1801,6 +1747,7 @@ function SendNetSwitchJson() {
 				objDAL.refreshHistoryMonths();
 				break;
 		case "bConnectors":
+			loadSolarConnectors();
 			objDAL.ensureDeviceInformation(true);
 			startConnectorDiagnosticsPolling();
 			break;
@@ -4042,7 +3989,17 @@ function buildConnectorMapper(containerId, fields, extraKeys) {
   }
 }
 
-function connectorPreset(kind) {
+function connectorPreset(kind, id) {
+  if (kind === "battery" && id === "solaredge-battery") return {
+    id: "solaredge-battery",
+    values: {
+      victron_accu_port: 1502, victron_accu_id: 1,
+      battery_power_register: 57716, battery_power_type: 4, battery_power_scale: 1, battery_power_swap: true,
+      battery_soc_register: 57732, battery_soc_type: 4, battery_soc_scale: 1, battery_soc_swap: true,
+      battery_state_register: 57734, battery_state_type: 2, battery_state_scale: 1, battery_state_swap: true,
+      battery_idle_code: 7, battery_charging_code: 3, battery_discharging_code: 4
+    }
+  };
   if (kind === "battery") return {
     id: "victron-gx",
     values: {
@@ -4065,6 +4022,11 @@ function connectorPreset(kind) {
   return null;
 }
 
+function connectorPresets(kind) {
+  return kind === "battery" ? [connectorPreset(kind), connectorPreset(kind, "solaredge-battery")]
+    : [connectorPreset(kind)].filter(Boolean);
+}
+
 function connectorPresetFieldMatches(input, value) {
   if (!input) return false;
   return typeof value === "boolean" ? input.checked === value
@@ -4072,18 +4034,18 @@ function connectorPresetFieldMatches(input, value) {
 }
 
 function updateConnectorPresetSelection(kind) {
-  const preset = connectorPreset(kind);
   const select = document.getElementById(`connector_${kind}_preset`);
-  if (!preset || !select) return;
-  const matches = Object.entries(preset.values).every(([key, value]) =>
-    connectorPresetFieldMatches(document.getElementById(`setFld_${key}`), value));
-  select.value = matches ? preset.id : "custom";
-  document.getElementById(`connector_${kind}_apply_preset`).disabled = !matches;
+  if (!select) return;
+  const preset = connectorPresets(kind).find(candidate => Object.entries(candidate.values).every(([key, value]) =>
+    connectorPresetFieldMatches(document.getElementById(`setFld_${key}`), value)));
+  select.value = preset ? preset.id : "custom";
+  document.getElementById(`connector_${kind}_apply_preset`).disabled = !preset;
 }
 
 function applyConnectorPreset(kind) {
-  const preset = connectorPreset(kind);
-  if (!preset || document.getElementById(`connector_${kind}_preset`)?.value !== preset.id) return;
+  const selected = document.getElementById(`connector_${kind}_preset`)?.value;
+  const preset = connectorPresets(kind).find(candidate => candidate.id === selected);
+  if (!preset) return;
   // Only edit the form. The ordinary Save button persists these values later.
   // Keep IP, enabled state, poll interval and installed PV power untouched.
   for (const [key, value] of Object.entries(preset.values)) {
@@ -4124,6 +4086,64 @@ function initConnectorPresets() {
   }
 }
 
+function solarConnectorConfig(form) {
+  const fields = form.elements;
+  return {
+    enabled: fields.namedItem("enabled").checked,
+    "gateway-url": fields.namedItem("gateway-url").value.trim(),
+    token: fields.namedItem("token").value,
+    wp: Number(fields.namedItem("wp").value),
+    "refresh-interval": Number(fields.namedItem("refresh-interval").value)
+  };
+}
+
+function fillSolarConnector(form, config) {
+  for (const [key, value] of Object.entries(config)) {
+    const input = form.elements.namedItem(key);
+    if (!input) continue;
+    if (input.type === "checkbox") input.checked = value;
+    else input.value = value;
+  }
+  form.dataset.saved = JSON.stringify(config);
+  form.classList.remove("is-dirty");
+  form.querySelector("fieldset").disabled = false;
+}
+
+async function loadSolarConnectors() {
+  for (const form of document.querySelectorAll("[data-solar-source]")) {
+    if (!form.dataset.bound) {
+      form.addEventListener("input", () => form.classList.add("is-dirty"));
+      form.addEventListener("change", () => form.classList.add("is-dirty"));
+      form.addEventListener("submit", event => event.preventDefault());
+      form.dataset.bound = "1";
+    }
+    try {
+      const response = await fetch(`/api/v2/connectors/solar/${form.dataset.solarSource}`, {cache: "no-store"});
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const config = await response.json();
+      // A slow response must never replace edits made after the request began.
+      if (!form.classList.contains("is-dirty")) fillSolarConnector(form, config);
+    } catch (error) {
+      document.getElementById("connector_save_status").textContent = `${form.dataset.solarSource}: ${error.message}`;
+    }
+  }
+}
+
+async function saveSolarConnectors() {
+  for (const form of document.querySelectorAll("[data-solar-source]")) {
+    if (!form.classList.contains("is-dirty")) continue;
+    const config = solarConnectorConfig(form);
+    const response = await fetch(`/api/v2/connectors/solar/${form.dataset.solarSource}`, {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(config)
+    });
+    if (!response.ok) throw new Error(`${form.dataset.solarSource}: HTTP ${response.status}`);
+    // Keep changes typed while the save was in flight for the next save.
+    const saved = await response.json();
+    form.dataset.saved = JSON.stringify(saved);
+    if (JSON.stringify(solarConnectorConfig(form)) === JSON.stringify(config)) fillSolarConnector(form, saved);
+  }
+}
+
 function initConnectorUI() {
   buildConnectorMapper("connector_battery_mapping", [
     {key: "battery_power", label: "connector-active-power"},
@@ -4148,10 +4168,15 @@ function initConnectorUI() {
     tabs.querySelectorAll("button").forEach(b => b.classList.toggle("active", b === button));
     document.querySelectorAll("#Connectors .connector-pane").forEach(pane =>
       pane.classList.toggle("active", pane.id === button.dataset.target));
+    const modbus = ["connector_battery", "connector_pv"].includes(button.dataset.target);
+    document.querySelectorAll("#Connectors .connector-modbus-only").forEach(element => { element.hidden = !modbus; });
   }));
 }
 
 function undoConnectorSettings() {
+  for (const form of document.querySelectorAll("[data-solar-source]")) {
+    if (form.dataset.saved) fillSolarConnector(form, JSON.parse(form.dataset.saved));
+  }
   document.querySelectorAll("#Connectors .is-dirty").forEach(row => row.classList.remove("is-dirty"));
   objDAL.ensureDeviceInformation(true);
 }
@@ -4161,6 +4186,11 @@ async function saveConnectorSettings() {
   const button = document.getElementById("connector_save");
   const controls = Array.from(document.querySelectorAll('#Connectors [id^="setFld_"]'));
   if (controls.some(input => !input.reportValidity())) return;
+  for (const form of document.querySelectorAll("[data-solar-source]")) {
+    if (!form.classList.contains("is-dirty")) continue;
+    form.elements.namedItem("gateway-url").required = form.elements.namedItem("enabled").checked;
+    if (!form.reportValidity()) return;
+  }
   const settings = objDAL.getDeviceSettings();
   const changes = controls.map(input => {
     const key = input.id.substring("setFld_".length);
@@ -4183,9 +4213,10 @@ async function saveConnectorSettings() {
       const row = document.getElementById(`settingR_${key}`);
       row?.classList.remove("is-dirty");
     }
+    await saveSolarConnectors();
     // A preset can restore the already saved values. Clear those dirty rows
     // too, otherwise an empty save keeps blocking the settings refresh.
-    document.querySelectorAll("#Connectors .is-dirty").forEach(row => row.classList.remove("is-dirty"));
+    document.querySelectorAll('#Connectors .settingDiv.is-dirty').forEach(row => row.classList.remove("is-dirty"));
     objDAL.ensureDeviceInformation(true);
     status.textContent = t("connector-saved");
   } catch (error) {
@@ -4208,7 +4239,7 @@ function clearDirtySettings(){
 }
 
 function hasDirtySettings() {
-  return !!document.querySelector('#Settings .settingDiv.is-dirty, #Connectors .settingDiv.is-dirty');
+  return !!document.querySelector('#Settings .settingDiv.is-dirty, #Connectors .is-dirty');
 }
 
 function getModbusMonitorSetting() {

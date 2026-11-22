@@ -9,6 +9,7 @@
 */
 
 bool GetFile(String filename, String path ){
+  if (!RngFileWriteAllowed(filename.c_str())) return false;
   WiFiClient client;
   HTTPClient http;
   if(client.connect(HOST_DATA_FILES, 443)) {
@@ -19,6 +20,11 @@ bool GetFile(String filename, String path ){
       if (httpResponseCode == 200 ){
         String payload = http.getString();
   //      Serial.println(payload);
+        if (!RngFileWriteAllowed(filename.c_str())) {
+          http.end();
+          client.stop();
+          return false;
+        }
         File file = LittleFS.open(filename, "w"); // open for reading and writing
         if (!file) DebugTln(F("open file FAILED!!!\r\n"));
         else {

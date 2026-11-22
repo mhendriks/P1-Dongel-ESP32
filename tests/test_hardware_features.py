@@ -20,6 +20,7 @@ class HardwareFeaturesTest(unittest.TestCase):
 #define ULTRA
 #define INPUT 0
 #define OUTPUT 1
+#define INPUT_PULLUP 2
 #define LOW 0
 #define RXPIN 18
 #define TXPIN 19
@@ -27,8 +28,11 @@ class HardwareFeaturesTest(unittest.TestCase):
 int IOWater = -1, mb_rx = -1, mb_tx = -1, mb_rts = -1;
 bool WtrMtr = false;
 int senseReads = 0;
-void pinMode(int, int) {}
-int digitalRead(int) { ++senseReads; return 0; }
+int readValues[49] = {};
+int pinModes[49] = {};
+void delay(int) {}
+void pinMode(int pin, int mode) { assert(pin >= 0 && pin < 49); pinModes[pin] = mode; }
+int digitalRead(int pin) { ++senseReads; return readValues[pin]; }
 void digitalWrite(int, int) {}
 void MBSetTermination(int) {}
 """
@@ -66,6 +70,39 @@ int main() {
   DetectModule();
   assert(senseReads == 6);
   assert(modType[0] == MOD_NONE && modType[1] == MOD_NONE);
+  // Each actual slot uses connector pin 4 (mb_tx), not the water/RX pin.
+  for (int configIndex : {0, 1, 2, 4}) {
+    active_mod_conf = &module_config[configIndex];
+    for (int slot = 0; slot < active_mod_conf->mod_ports; ++slot) {
+      const mod_io& pins = active_mod_conf->io_conf[slot];
+      readValues[pins.sense1] = 1;
+      readValues[pins.sense2] = 0;
+      readValues[pins.mb_tx] = 1;
+      DetectModule(slot);
+      assert(modType[slot] == MOD_H20 && h2oVersion[slot] == 1);
+      assert(pinModes[pins.mb_tx] == INPUT_PULLUP);
+      assert(!strcmp(moduleSlotName(slot), "H2O V1"));
+      IOWater = -1; WtrMtr = false;
+      ActivateModule(slot);
+      assert(IOWater == pins.wtr_s0 && WtrMtr);
+      readValues[pins.mb_tx] = 0;
+      DetectModule(slot);
+      assert(modType[slot] == MOD_H20 && h2oVersion[slot] == 2);
+      assert(!strcmp(moduleSlotName(slot), "H2O V2 (H2O-LED)"));
+      IOWater = -1; WtrMtr = false;
+      ActivateModule(slot);
+      assert(IOWater == -1 && !WtrMtr);
+      // Other sense codes retain their meaning and never probe pin 4.
+      for (int code : {0, 1, 3}) {
+        readValues[pins.sense1] = code >> 1;
+        readValues[pins.sense2] = code & 1;
+        int before = senseReads;
+        DetectModule(slot);
+        assert(senseReads == before + 2);
+        assert(modType[slot] == code && h2oVersion[slot] == 0);
+      }
+    }
+  }
   assert(!strcmp(modName(MOD_UNKNOWN), "UNKNOWN"));
   assert(!strcmp(modName(MOD_NONE), "NONE"));
   assert(!strcmp(modName(MOD_IOP), "IO+"));

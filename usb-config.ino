@@ -36,16 +36,15 @@ void fillSysInfo(JsonDocument& out){
   sys["wifi"]["ip"] = WiFi.localIP().toString();
 
   sys["hw"]["type"] = HardwareType ? HWTypeNames[HardwareType] : PROFILE;
-  #ifdef NRGD
-    sys["hw"]["module"] = ModTypeNames[modType[0]];
-  #else 
-    #ifdef ULTRA 
-        if ( HardwareType == P1UX2 ||  HardwareType == P1U ) sys["hw"]["module"] = String(ModTypeNames[modType[0]]) + String(ModTypeNames[modType[1]]);
-        else sys["hw"]["module"] = "P1U V1 modules";
-    #else 
-        sys["hw"]["module"] = "-";
-    #endif
-  #endif
+  if (hardwareSlotCount() == 1) {
+    sys["hw"]["module"] = moduleSlotName(0);
+  } else if (hardwareSlotCount() == 2) {
+    sys["hw"]["module"] = String(moduleSlotName(0)) + " / " + moduleSlotName(1);
+  } else if (HardwareType == P1UM) {
+    sys["hw"]["module"] = "P1U V1 modules";
+  } else {
+    sys["hw"]["module"] = "-";
+  }
 
   sys["uptime_ms"]        = uptime();
   sys["reset_reason"]     = getResetReason();

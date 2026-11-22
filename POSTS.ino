@@ -333,6 +333,9 @@ static String kempConfigJson(const char* ack = nullptr, const char* commandId = 
   doc["p1_count"] = telegramCount;
   doc["p1_error"] = telegramErrors;
   doc["interval_s"] = kempIntervalS;
+  if (netw_state == NW_WIFI) {
+    doc["wifi_rssi"] = WiFi.RSSI();
+  }
   String output;
   serializeJson(doc, output);
   return output;

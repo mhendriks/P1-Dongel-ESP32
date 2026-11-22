@@ -1,7 +1,3 @@
-AccuPwrSystems SolarEdgeAccu = {
-  false, "", "", 0.0, 0
-};
-
 AccuPwrSystems VictronAccu = {
   false, "kW", "", 0.0, 0
 };
@@ -9,16 +5,12 @@ AccuPwrSystems VictronAccu = {
 static uint32_t victronAccuLastUpdate = 0;
 static const uint32_t VICTRON_ACCU_STALE_MS = 20000;
 
-float SolarEdgeFlowPvPower = 0.0f;
-bool  SolarEdgeFlowPvValid = false;
-
 static bool victronAccuAvailable() {
   return VictronAccu.Available && (millis() - victronAccuLastUpdate <= max(VICTRON_ACCU_STALE_MS, uint32_t(victronModbusConfig.interval) * 2000UL));
 }
 
 AccuPwrSystems* dashboardAccu() {
   if (victronAccuAvailable()) return &VictronAccu;
-  if (SolarEdgeAccu.Available) return &SolarEdgeAccu;
   return nullptr;
 }
 

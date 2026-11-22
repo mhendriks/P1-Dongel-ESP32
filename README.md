@@ -2,7 +2,7 @@
 
 DSMR-API is firmware for ESP32-based Smartstuff energy dongles. It reads data from a smart meter through the P1 port and makes current and historical energy data available through a local web interface and open integrations.
 
-This README describes the functionality available in firmware version 5.11.0.
+This README describes the functionality available in firmware version 5.11.1.
 See the [release notes](CHANGELOG.md) for changes since 5.10.8.
 
 ## Features
@@ -61,7 +61,7 @@ Development builds require the Arduino ESP32 core, `arduino-cli` and several ext
 
 The device exposes versioned HTTP endpoints under `/api/v1` and `/api/v2`, together with a WebSocket feed for live data. MQTT publishing, Home Assistant discovery, Modbus and external integrations can be configured from the device web interface where supported.
 
-Version 5.11 adds a **Connectors** page for universal battery and PV readings over Modbus TCP, with Victron GX and SolarEdge SunSpec presets. See [connector setup and mapping](docs/CONNECTORS.md).
+Version 5.11 adds a **Connectors** page for universal battery and PV readings over Modbus TCP, with Victron GX and SolarEdge SunSpec presets, plus configuration for Enphase, SMA and Omniksol HTTP sources. See [connector setup and mapping](docs/CONNECTORS.md).
 
 Interface behaviour may change between development versions. Consumers should prefer documented, versioned endpoints.
 

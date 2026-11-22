@@ -177,6 +177,11 @@ void setupFSexplorer() {
     if (!auth()) return;
     sendApiResponse(handleModbusMonitorApi(currentApiRequest()));
   });
+  httpServer.on(UriBraces("/api/v2/connectors/solar/{}"), []() {
+    if (!auth()) return;
+    httpServer.sendHeader("Cache-Control", "no-store");
+    sendApiResponse(handleSolarConnectorApi(currentApiRequest(httpServer.pathArg(0))));
+  });
   httpServer.on("/api/v2/connectors/diagnostics", HTTP_GET, []() {
     if (!auth()) return;
     httpServer.sendHeader("Cache-Control", "no-store");
@@ -310,13 +315,25 @@ void handleFileUpload()
 {
   if (!auth()) return;
   static File fsUploadFile;
+  static bool rngUploadBlocked = false;
   HTTPUpload& upload = httpServer.upload();
-  if (upload.status == UPLOAD_FILE_START) 
-  {
-    if (upload.filename.length() > 30) 
-    {
+  if (upload.status == UPLOAD_FILE_START) {
+    rngUploadBlocked = false;
+    if (upload.filename.length() > 30) {
       upload.filename = upload.filename.substring(upload.filename.length() - 30, upload.filename.length());
     }
+  }
+  String uploadPath = httpServer.urlDecode(upload.filename);
+  if (!RngFileWriteAllowed(uploadPath.c_str())) rngUploadBlocked = true;
+  if (rngUploadBlocked) {
+    if (fsUploadFile) fsUploadFile.close();
+    if (upload.status == UPLOAD_FILE_END) {
+      httpServer.send(403, "text/plain", "History storage is disabled");
+    }
+    return;
+  }
+  if (upload.status == UPLOAD_FILE_START)
+  {
     Debugln("FileUpload Name: " + upload.filename);
     fsUploadFile = LittleFS.open("/" + httpServer.urlDecode(upload.filename), "w");
   } 
@@ -336,7 +353,9 @@ void handleFileUpload()
       else DebugTln(F("Day history reload after RNGdays upload failed"));
     }
     if (upload.filename == "DSMRsettings.json") readSettings(false);
-    if (upload.filename == "enphase.json" || upload.filename == "solaredge.json") ReadSolarConfigs();
+    if (uploadedFilename == "enphase.json" || uploadedFilename == "/enphase.json" ||
+        uploadedFilename == "sma.json" || uploadedFilename == "/sma.json" ||
+        uploadedFilename == "omniksol.json" || uploadedFilename == "/omniksol.json") ReadSolarConfigs();
 #ifdef NETSWITCH
     if (upload.filename == "netswitch.json") readtriggers();
 #endif    

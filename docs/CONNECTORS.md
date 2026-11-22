@@ -1,8 +1,9 @@
 # Modbus TCP connectors (5.11)
 
-Open **Connectors** in the web interface. This release has two tabs: **Battery**
-and **PV**, each with a universal Modbus TCP connection and editable mapper. Both connectors
+Open **Connectors** in the web interface. **Battery** and **PV · Modbus TCP**
+provide a universal Modbus TCP connection and editable mapper. These two connectors
 only read holding registers (FC03); they never write to the connected device.
+Separate **Enphase**, **SMA** and **Omniksol** tabs configure the HTTP PV sources.
 The dongle's existing Modbus server and its meter mapping remain independent.
 
 Each connector has an enable switch, IPv4 address, TCP port, unit ID and poll
@@ -13,7 +14,8 @@ Address zero is a valid register. Word swap exchanges the two 16-bit words of a
 
 ## Presets
 
-Choose **Custom**, **Victron GX** (Battery), or **SolarEdge SunSpec** (PV).
+Choose **Custom**, **Victron GX** or **SolarEdge** (Battery), or
+**SolarEdge SunSpec** (PV).
 Selecting an option does not change the connection or mapper. Click **Apply
 preset** to fill the TCP port, unit ID, registers, types, factors, word swap,
 and battery state codes or PV exponent registers. The IP address, enabled
@@ -46,6 +48,28 @@ The existing `/api/v2/accu`, dashboard and ESP-NOW battery consumers continue to
 use the battery data. A sample is published only after all three values have
 been read successfully. Invalid state-of-charge readings are rejected.
 
+### SolarEdge battery preset
+
+The **SolarEdge** battery preset reads battery 1 through the inverter's Modbus
+TCP connection, initially port 1502 and unit ID 1. Enable Modbus TCP on the
+inverter and adjust these connection values to match its configuration.
+
+| Measurement | Base-0 address | Type | Multiplier | Word swap |
+| --- | --- | --- | --- | --- |
+| Active power | 57716 (0xE174) | float32 | 1 | Yes |
+| State of charge (SOE) | 57732 (0xE184) | float32 | 1 | Yes |
+| Operating state | 57734 (0xE186) | uint32 | 1 | Yes |
+
+The addresses and state codes (idle=7, charging=3, discharging=4) follow the
+[SolarEdge Power Control Protocol, pages 19–20](https://www.haroldhalewijn.nl/wp-content/uploads/2023/08/Power-Control-Open-Protocol-for-SolarEdge-Inverters.pdf).
+The little-word-first decoding follows the
+[SolarEdge Modbus battery implementation](https://github.com/nmakel/solaredge_modbus/blob/master/src/solaredge_modbus/__init__.py).
+Other state codes retain the existing unknown-state behavior. This preset
+requires hardware validation, including the power sign while charging and
+discharging; reverse the power multiplier if necessary. The inverter must
+expose these battery registers. This reads one battery, not an aggregate of
+multiple batteries.
+
 ## PV
 
 Enable Modbus TCP on the inverter and use its configured port; the initial
@@ -70,14 +94,40 @@ counter creates a new baseline. On installation day, and if the dongle was off
 at the start of a day, production before the first reading is not recoverable.
 The clock must be synchronized before daily yield can be calculated.
 
-While enabled, the TCP connector replaces the SolarEdge HTTP contribution to
-the PV API, dashboard, daily history total and ESP-NOW output. Other existing
-PV sources continue to contribute. Disable the TCP connector to resume the
-existing SolarEdge HTTP integration configured through Solar Setup.
+The Modbus TCP connector contributes alongside enabled Enphase, SMA and Omniksol
+sources to the PV API, dashboard, daily history total and ESP-NOW output.
+SolarEdge HTTP support (including the experimental V2 route) and Solar Setup have
+been removed. SolarEdge uses the PV Modbus TCP connector; disabling it stops its
+contribution without starting any HTTP requests. Old `solaredge.json` files are
+ignored and are not deleted.
 
 Both connectors expire live readings after twice the configured interval, with
 a minimum grace period of 20 seconds. Connection and mapping settings are saved
 in `DSMRsettings.json`. They are preserved by a network reset.
+
+## HTTP PV sources
+
+Enphase, SMA and Omniksol each have an independent enable switch, gateway URL,
+credential, installed power (Wp) and polling interval. Supply a full `http://`
+or `https://` URL. SMA uses the inverter base URL and its user password;
+Enphase uses the Envoy production endpoint and bearer token. Omniksol retains
+its existing URL, X-API-Key and response handling. Multiple sources can remain
+active together. Configure each physical source once to avoid counting it twice.
+
+**Save** activates changes; **Undo** restores the last loaded/saved values.
+Existing `enphase.json`, `sma.json` and `omniksol.json` configurations remain in
+use. A missing `enabled` property means enabled for compatibility. Saving adds
+an explicit boolean. Disabled sources retain their configuration and do not
+contribute power, daily production or installed Wp. Minimum intervals are 60
+seconds for Enphase and 15 seconds for SMA/Omniksol.
+
+The authenticated `/api/v2/connectors/solar/{source}` endpoint supports `GET`
+and `POST`, where source is `enphase`, `sma` or `omniksol`. POST accepts the
+complete configuration: `enabled`, `gateway-url`, `token`, `wp` and
+`refresh-interval`. Invalid configurations are rejected before writing. Files
+are replaced via a temporary file so a failed write preserves the saved config.
+GET returns credentials for editing; responses use `Cache-Control: no-store`.
+The Modbus diagnostics below apply to the two Modbus connectors.
 
 ## Diagnostics
 
@@ -123,6 +173,8 @@ milliseconds relative to the snapshot, not inverter timestamps.
 c++ -std=c++17 -Wall -Wextra -pedantic tests/modbus_connector_test.cpp -o /tmp/modbus_connector_test
 /tmp/modbus_connector_test
 node tests/test_connectors.cjs
+node tests/test_solar_connectors.cjs
+python3 tests/test_solar_connector_api.py
 node tests/test_connector_diagnostics.cjs
 ./build.sh ULTRA P1P
 ```

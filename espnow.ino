@@ -330,7 +330,7 @@ void sendStroomPlanner(){
 
 void sendStatic() {
   Static.msgType = NRGSTATIC;
-  Static.WpSolar = Enphase.Wp + SolarEdge.Wp;
+  Static.WpSolar = totalSolarInstalledWp();
   esp_now_send(NULL, (uint8_t *) &Static, sizeof(Static));
 }
 
@@ -400,7 +400,7 @@ void P2PSendActualData(){
   ActualData.Esolar = totalSolarDailyWh();
   
   if (!anySolarAvailable()) ActualData.Psolar = UINT32_MAX;
-  else ActualData.Psolar = Enphase.Actual + solarEdgeActualW() + SMAinv.Actual + Omniksol.Actual;
+  else ActualData.Psolar = Enphase.Actual + modbusPvActualW() + SMAinv.Actual + Omniksol.Actual;
   
   esp_err_t rs = esp_now_send(NULL, (uint8_t *) &ActualData, sizeof(ActualData));
   if (rs != ESP_OK) Debugf("P2P actual send failed: %d\n", (int)rs);

@@ -10,26 +10,11 @@ static const uint32_t API_WS_LIVE_MIN_INTERVAL_MS = 1000;
 static const uint32_t API_WS_TIME_INTERVAL_MS = 5000;
 static const uint32_t API_WS_HIST_INTERVAL_MS = 3600000;
 static const uint32_t API_WS_SEND_WARN_MS = 500;
-static const uint32_t API_WS_WRITE_READY_TIMEOUT_MS = 20;
-static const uint32_t API_WS_PONG_TIMEOUT_MS = 10000;
 static const uint8_t API_WS_MAX_CLIENTS = 2;
 static volatile bool apiWsLiveDirty = false;
 static uint32_t apiWsLastLive = 0;
 static uint32_t apiWsLastTime = 0;
 static uint32_t apiWsLastHist = 0;
-static uint32_t apiWsLastPong[WEBSOCKETS_SERVER_CLIENT_MAX] = {0};
-
-static void apiWsMarkPong(uint8_t clientNum) {
-  if (clientNum < WEBSOCKETS_SERVER_CLIENT_MAX) apiWsLastPong[clientNum] = millis();
-}
-
-static void apiWsDropClient(uint8_t clientNum, const char* reason) {
-  if (clientNum >= WEBSOCKETS_SERVER_CLIENT_MAX) return;
-  if (!apiWs.clientIsConnected(clientNum)) return;
-
-  DebugTf("API WS client disconnecting: slot=%u reason=%s\r\n", clientNum, reason);
-  apiWs.forceDisconnect(clientNum);
-}
 
 static String apiWsMessage(const char* source, const String& body) {
   String out;
@@ -43,11 +28,6 @@ static String apiWsMessage(const char* source, const String& body) {
 }
 
 static bool apiWsSend(uint8_t clientNum, const char* source, const String& body) {
-  if (!apiWs.clientCanWrite(clientNum, API_WS_WRITE_READY_TIMEOUT_MS)) {
-    apiWsDropClient(clientNum, "not-writable");
-    return false;
-  }
-
   String msg = apiWsMessage(source, body);
   uint32_t started = millis();
   bool sent = apiWs.sendTXT(clientNum, msg);
@@ -56,11 +36,7 @@ static bool apiWsSend(uint8_t clientNum, const char* source, const String& body)
   if (elapsed > API_WS_SEND_WARN_MS) {
     DebugTf("API WS send slow: slot=%u source=%s ms=%lu sent=%d\r\n", clientNum, source, elapsed, sent);
   }
-  if (!sent) {
-    apiWsDropClient(clientNum, "send-failed");
-    return false;
-  }
-  return true;
+  return sent;
 }
 
 static bool apiWsBroadcast(const char* source, const String& body) {
@@ -71,11 +47,6 @@ static bool apiWsBroadcast(const char* source, const String& body) {
   for (uint8_t clientNum = 0; clientNum < WEBSOCKETS_SERVER_CLIENT_MAX; clientNum++) {
     if (!apiWs.clientIsConnected(clientNum)) continue;
 
-    if (!apiWs.clientCanWrite(clientNum, API_WS_WRITE_READY_TIMEOUT_MS)) {
-      apiWsDropClient(clientNum, "not-writable");
-      continue;
-    }
-
     uint32_t started = millis();
     bool clientSent = apiWs.sendTXT(clientNum, msg);
     uint32_t elapsed = millis() - started;
@@ -83,11 +54,7 @@ static bool apiWsBroadcast(const char* source, const String& body) {
     if (elapsed > API_WS_SEND_WARN_MS) {
       DebugTf("API WS send slow: slot=%u source=%s ms=%lu sent=%d\r\n", clientNum, source, elapsed, clientSent);
     }
-    if (!clientSent) {
-      apiWsDropClient(clientNum, "send-failed");
-      continue;
-    }
-    sent = true;
+    sent = clientSent || sent;
   }
   return sent;
 }
@@ -112,14 +79,10 @@ static void apiWsEvent(uint8_t clientNum, WStype_t type, uint8_t* payload, size_
       apiWs.disconnect(clientNum);
       return;
     }
-    apiWsMarkPong(clientNum);
     DebugTf("API WS client connected: slot=%u clients=%d\r\n", clientNum, apiWs.connectedClients());
     apiWsSendSnapshot(clientNum);
   } else if (type == WStype_DISCONNECTED) {
-    if (clientNum < WEBSOCKETS_SERVER_CLIENT_MAX) apiWsLastPong[clientNum] = 0;
     DebugTf("API WS client disconnected: slot=%u clients=%d\r\n", clientNum, apiWs.connectedClients());
-  } else if (type == WStype_PONG) {
-    apiWsMarkPong(clientNum);
   }
 }
 
@@ -141,15 +104,6 @@ void handleApiWebSocket() {
   if (!apiWs.connectedClients()) return;
 
   uint32_t nowMs = millis();
-  for (uint8_t clientNum = 0; clientNum < WEBSOCKETS_SERVER_CLIENT_MAX; clientNum++) {
-    if (!apiWs.clientIsConnected(clientNum)) continue;
-
-    uint32_t lastPong = apiWsLastPong[clientNum];
-    if (lastPong && nowMs - lastPong > API_WS_PONG_TIMEOUT_MS) {
-      apiWsDropClient(clientNum, "pong-timeout");
-    }
-  }
-
   if (apiWsLiveDirty && nowMs - apiWsLastLive >= API_WS_LIVE_MIN_INTERVAL_MS) {
     apiWsLastLive = nowMs;
     bool sent = apiWsBroadcast("dash_live", dashLiveApiResponse().body);

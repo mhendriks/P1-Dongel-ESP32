@@ -591,8 +591,8 @@
   "setting-mimics": "Mimics",
   "tle-web-settings": "Inställningar för webbsida",
   "mnu-connectors": "Connectors",
-  "connector-battery": "Battery",
-  "connector-pv": "PV",
+  "connector-battery": "Battery · Modbus TCP",
+  "connector-pv": "PV · Modbus TCP",
   "connector-battery-help": "Read a battery system over Modbus TCP. Configure the mapper manually or apply a preset. Positive power means charging; negative means discharging.",
   "connector-pv-help": "Read a PV system over Modbus TCP. Configure the mapper manually or apply a preset. The energy mapping expects cumulative lifetime energy in Wh.",
   "connector-pv-day-help": "Daily yield is calculated from the first lifetime reading of the day and survives a restart. On the first installation day, only production after the first reading is counted.",
@@ -654,5 +654,7 @@
   "connector-apply-preset": "Apply preset",
   "connector-preset-help": "Fills the port, unit ID and mapper fields. All fields remain editable. Click Save to activate the changes.",
   "connector-preset-applied": "Preset applied to the form. Click Save to activate the changes.",
-  "connector-pv-scale-help": "SF register 0 disables the SunSpec exponent."
+  "connector-pv-scale-help": "SF register 0 disables the SunSpec exponent.",
+  "connector-password": "Lösenord",
+  "connector-enabled": "Aktiverad"
 }

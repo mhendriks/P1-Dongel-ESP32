@@ -130,6 +130,15 @@ static inline const char* modName(int8_t t){
   }
 }
 
+static inline const char* moduleSlotName(int8_t slot) {
+  if (slot < 0 || slot >= 2) return "UNKNOWN";
+  if (modType[slot] == MOD_H20) {
+    if (h2oVersion[slot] == 1) return "H2O V1";
+    if (h2oVersion[slot] == 2) return "H2O V2 (H2O-LED)";
+  }
+  return modName(modType[slot]);
+}
+
 void DetectModule(int8_t slot){
   /* check slot module
   S1 S2
@@ -147,9 +156,21 @@ void DetectModule(int8_t slot){
   int s1 = digitalRead(active_mod_conf->io_conf[slot].sense1) ? 1 : 0;
   int s2 = digitalRead(active_mod_conf->io_conf[slot].sense2) ? 1 : 0;
   modType[slot] = (s1 << 1) | s2;
+  h2oVersion[slot] = 0;
+  if (modType[slot] == MOD_H20) {
+    // Connector pin 4 is unused on V1; V2 has 4.7k to GND.
+    // Probe only after H2O detection: this pin is UART TX on RS485 modules.
+    const int8_t idPin = active_mod_conf->io_conf[slot].mb_tx;
+    if (idPin >= 0) {
+      pinMode(idPin, INPUT_PULLUP);
+      delay(2);
+      h2oVersion[slot] = digitalRead(idPin) ? 1 : 2;
+      // Keep the pull-up enabled so an unused V1 input does not float.
+    }
+  }
 
 #ifdef DEBUG  
-  Debugf("\n-- MODULE slot %d: S1=%d S2=%d -> type=%s (%d)\n", slot, s1, s2, modName(modType[slot]), modType[slot]);
+  Debugf("\n-- MODULE slot %d: S1=%d S2=%d -> type=%s (%d)\n", slot, s1, s2, moduleSlotName(slot), modType[slot]);
 #endif  
 }
 
@@ -162,6 +183,8 @@ void ActivateModule( int8_t slot ){
   case 1: //IO+ Do Nothing for now
           break;              
   case 2: //H20
+          // V2 detection only: do not count its serial edges as water pulses.
+          if (h2oVersion[slot] == 2) break;
           IOWater = active_mod_conf->io_conf[slot].wtr_s0;
           WtrMtr = true;
           break;              

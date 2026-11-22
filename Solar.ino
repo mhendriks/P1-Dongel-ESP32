@@ -1,10 +1,7 @@
 struct SolarPwrSystems {
   bool      Available;
-  uint8_t   ApiVersion;
   String    Url;
   String    Token;
-  uint64_t  TokenExpire;
-  uint32_t  SiteID;
   uint32_t  Wp;
   uint32_t  Actual;
   uint32_t  Daily;
@@ -13,15 +10,17 @@ struct SolarPwrSystems {
   char    file_name[20];
 };
 
-extern float SolarEdgeFlowPvPower;
-extern bool  SolarEdgeFlowPvValid;
-extern AccuPwrSystems SolarEdgeAccu;
+SolarPwrSystems Enphase  = { false, "https://envoy/ivp/pdm/energy", "", 0, 0, 0, 60, 0, "/enphase.json" };
+SolarPwrSystems SMAinv   = { false, "http://192.168.1.231", "", 0, 0, 0, 15, 0, "/sma.json" };
+SolarPwrSystems Omniksol = { false, "", "", 0, 0, 0, 15, 0, "/omniksol.json" };
+// Local dongle day belonging to the last accepted Envoy day counter.
+static uint32_t enphaseDailyDay = 0;
 
-SolarPwrSystems Enphase   = { false, 1, "https://envoy/ivp/pdm/energy", "", 0, 0, 0, 0, 0,  60, 0, "/enphase.json"  };
-SolarPwrSystems SolarEdge = { false, 1, "", "", 0, 0, 0, 0, 0, 300, 0, "/solaredge.json"  };
-SolarPwrSystems SMAinv    = { false, 1, "http://192.168.1.231",      "", 0, 0, 0, 0, 0,  15, 0, "/sma.json" };
-SolarPwrSystems Omniksol  = { false, 1, "", "", 0, 0, 0, 0, 0,  15, 0, "/omniksol.json"  };
-// The TCP connector replaces the SolarEdge HTTP contribution while enabled.
+static uint32_t enphaseDailyAt(time_t timestamp) {
+  return Enphase.Url.indexOf("CMD=inv_query") > 0 || timestamp / SECS_PER_DAY == enphaseDailyDay
+      ? Enphase.Daily : 0;
+}
+// Modbus TCP and the HTTP PV connectors contribute independently.
 // Other existing PV integrations can continue to contribute to the total.
 static uint32_t modbusPvPower = 0, modbusPvDaily = 0, modbusPvLastUpdate = 0;
 static bool modbusPvValid = false;
@@ -80,11 +79,11 @@ static bool modbusPvAvailable() {
   return pvModbusConfig.enabled && modbusPvValid &&
       uint32_t(millis() - modbusPvLastUpdate) <= max(20000UL, uint32_t(pvModbusConfig.interval) * 2000UL);
 }
-static uint32_t solarEdgeActualW() { return pvModbusConfig.enabled ? (modbusPvAvailable() ? modbusPvPower : 0) : SolarEdge.Actual; }
-static uint32_t solarEdgeDailyWh() { return pvModbusConfig.enabled ? modbusPvDaily : SolarEdge.Daily; }
-static uint32_t solarEdgeWp() { return pvModbusConfig.enabled ? pvModbusConfig.wp : SolarEdge.Wp; }
+static uint32_t modbusPvActualW() { return modbusPvAvailable() ? modbusPvPower : 0; }
+static uint32_t modbusPvDailyWh() { return pvModbusConfig.enabled ? modbusPvDaily : 0; }
+static uint32_t modbusPvWp() { return pvModbusConfig.enabled ? pvModbusConfig.wp : 0; }
 static bool anySolarAvailable() { return Enphase.Available || SMAinv.Available || Omniksol.Available ||
-    (pvModbusConfig.enabled ? modbusPvAvailable() : SolarEdge.Available); }
+    modbusPvAvailable(); }
 
 static uint16_t LastSolarFetchDurationMs = 0;
 
@@ -97,7 +96,6 @@ static const uint16_t SOLAR_HTTP_TIMEOUT_MS = 5000;
 static void* solarSystemForSource(SolarSource src) {
   switch (src) {
     case ENPHASE:    return &Enphase;
-    case SOLAR_EDGE: return &SolarEdge;
     case SMA:        return &SMAinv;
     case OMNIKSOL:   return &Omniksol;
   }
@@ -107,7 +105,6 @@ static void* solarSystemForSource(SolarSource src) {
 static uint32_t defaultSolarRefreshInterval(SolarSource src) {
   switch (src) {
     case ENPHASE:    return 60;
-    case SOLAR_EDGE: return 300;
     case SMA:        return 15;
     case OMNIKSOL:   return 15;
   }
@@ -117,7 +114,6 @@ static uint32_t defaultSolarRefreshInterval(SolarSource src) {
 static const char* solarFetchTag(SolarSource src) {
   switch (src) {
     case ENPHASE:    return "solar-enphase";
-    case SOLAR_EDGE: return "solar-solaredge";
     case SMA:        return "solar-sma";
     case OMNIKSOL:   return "solar-omnik";
   }
@@ -154,88 +150,6 @@ uint16_t SolarEnphaseAgeSec() {
   time_t age = uptime() - Enphase.LastRefresh;
   if (age < 0) return 0;
   return age > UINT16_MAX ? UINT16_MAX : (uint16_t)age;
-}
-
-static void resetSolarEdgeRuntimeState() {
-  SolarEdgeAccu.Available = false;
-  SolarEdgeAccu.unit = "";
-  SolarEdgeAccu.status = "";
-  SolarEdgeAccu.currentPower = 0.0f;
-  SolarEdgeAccu.chargeLevel = 0;
-  SolarEdgeFlowPvPower = 0.0f;
-  SolarEdgeFlowPvValid = false;
-}
-
-// SolarEdge V2 authenticates requests with an API key in a header.  V1 uses the
-// same value as a query parameter, so keep the two paths deliberately separate.
-static bool solarEdgeV2FetchJson(const String& url, const String& apiKey, JsonDocument& doc) {
-  HTTPClient http;
-  WiFiClient client;
-  WiFiClientSecure clientTLS;
-  if (!solarHttpBegin(http, client, clientTLS, url)) return false;
-  http.addHeader("Accept", "application/json");
-  http.addHeader("X-API-Key", apiKey);
-  int rc = http.GET();
-  DebugVerboseT(F("SolarEdge V2 HTTP response: ")); DebugVerboseLn(rc);
-  if (rc != 200) {
-    String response = http.getString();
-    if (response.length()) { DebugTraceT(F("SolarEdge V2 response body: ")); DebugTraceLn(response); }
-    http.end();
-    return false;
-  }
-  String payload = http.getString();
-  http.end();
-  return !deserializeJson(doc, payload);
-}
-
-static bool solarEdgeV2LastValue(JsonVariant source, float& value) {
-  if (source.is<float>() || source.is<int>() || source.is<long>()) {
-    value = source.as<float>();
-    return true;
-  }
-  JsonArray values = source["values"].as<JsonArray>();
-  for (int i = (int)values.size() - 1; i >= 0; --i) {
-    if (!values[i]["value"].isNull()) {
-      value = values[i]["value"].as<float>();
-      return true;
-    }
-  }
-  return false;
-}
-
-static void getSolarEdgeV2Data() {
-  SolarPwrSystems* solarSystem = &SolarEdge;
-  const String baseUrl = "https://monitoringapi.solaredge.com/v2/sites/" + String(SolarEdge.SiteID);
-  const String apiKey = solarSystem->Token;
-  JsonDocument doc;
-  solarSystem->Actual = 0;
-  solarSystem->Daily = 0;
-  resetSolarEdgeRuntimeState();
-
-  // Overview is the V2 running production total for today (Wh).
-  if (solarEdgeV2FetchJson(baseUrl + "/overview", apiKey, doc)) {
-    JsonVariant total = doc["production"]["total"];
-    if (!total.isNull()) solarSystem->Daily = (uint32_t)total.as<float>();
-    doc.clear();
-  }
-
-  // /power/live is the documented live endpoint. Some currently deployed V2
-  // accounts expose the same data at /power, so use it as a compatibility fallback.
-  bool gotPower = solarEdgeV2FetchJson(baseUrl + "/power/live", apiKey, doc);
-  if (!gotPower) {
-    doc.clear();
-    gotPower = solarEdgeV2FetchJson(baseUrl + "/power", apiKey, doc);
-  }
-  if (!gotPower) return;
-
-  float power = 0.0f;
-  if (solarEdgeV2LastValue(doc["power"], power) ||
-      solarEdgeV2LastValue(doc["currentPower"], power) ||
-      solarEdgeV2LastValue(doc.as<JsonVariant>(), power)) {
-    solarSystem->Actual = (uint32_t)power;
-    SolarEdgeFlowPvPower = power;
-    SolarEdgeFlowPvValid = true;
-  }
 }
 
 static bool smaReadMetricValue(JsonObject dev, const char* key, long& out) {
@@ -391,39 +305,82 @@ void ReadSolarConfig(SolarSource src) {
   if (deserializeJson(doc, f)) { Debugln("Error deserialize SolarFile"); f.close(); return; }
   f.close();
 
-  solarSystem->Available = true;
-  solarSystem->ApiVersion = doc["api-version"] | 1;  // Missing in existing files means legacy SolarEdge V1.
+  solarSystem->Available = doc["enabled"] | true;
   solarSystem->Url   = doc["gateway-url"].as<String>();
   solarSystem->Token = doc["token"].as<String>();    // SMA uses this as the inverter password.
   solarSystem->Wp    = doc["wp"].as<uint32_t>();
-  solarSystem->SiteID= doc["siteid"].as<uint32_t>();
   uint32_t ri        = doc["refresh-interval"].as<uint32_t>();
   uint32_t def = defaultSolarRefreshInterval(src);
 
-  if (ri > def) solarSystem->Interval = ri;
+  solarSystem->Interval = max(ri, def);
+  solarSystem->Actual = solarSystem->Daily = 0;
+  if (src == SMA) _sma_sid = "";
 
 #ifdef DEBUG
   Debug("url > "); Debugln(solarSystem->Url);
   Debug("token > "); Debugln(solarSystem->Token.length() ? F("<set>") : F("<empty>"));
   Debug("wp > "); Debugln(solarSystem->Wp);
   Debug("interval > "); Debugln(solarSystem->Interval);
-  Debug("siteid > "); Debugln(solarSystem->SiteID);
-  Debug("api-version > "); Debugln(solarSystem->ApiVersion);
 #endif
 
   solarSystem->LastRefresh = 0;
 }
 
+// Preserve the existing per-brand files; old files without enabled remain active.
+ApiResponse handleSolarConnectorApi(const ApiRequestContext& request) {
+  SolarSource src;
+  if (request.pathArg == "enphase") src = ENPHASE;
+  else if (request.pathArg == "sma") src = SMA;
+  else if (request.pathArg == "omniksol") src = OMNIKSOL;
+  else return {404, "application/json", "{\"error\":\"Unknown PV connector\"}"};
+  SolarPwrSystems* system = (SolarPwrSystems*)solarSystemForSource(src);
+  if (request.method == HTTP_POST) {
+    JsonDocument input;
+    if (deserializeJson(input, request.body) || !input["enabled"].is<bool>() ||
+        !input["gateway-url"].is<const char*>() || !input["token"].is<const char*>() ||
+        !input["wp"].is<uint32_t>() || !input["refresh-interval"].is<uint32_t>())
+      return {400, "application/json", "{\"error\":\"Invalid PV configuration\"}"};
+    String url = input["gateway-url"].as<String>();
+    uint32_t interval = input["refresh-interval"].as<uint32_t>();
+    if ((input["enabled"].as<bool>() && !url.startsWith("http://") && !url.startsWith("https://")) ||
+        url.length() > 512 || input["token"].as<String>().length() > 4096 ||
+        interval < defaultSolarRefreshInterval(src) || interval > 86400)
+      return {400, "application/json", "{\"error\":\"Invalid URL or interval\"}"};
+    if (!FSmounted) return {503, "application/json", "{\"error\":\"Storage unavailable\"}"};
+    String temporary = String(system->file_name) + ".tmp";
+    File file = LittleFS.open(temporary, "w");
+    if (!file) return {500, "application/json", "{\"error\":\"Cannot save PV configuration\"}"};
+    size_t written = serializeJson(input, file);
+    file.close();
+    if (written != measureJson(input) || !LittleFS.rename(temporary, system->file_name)) {
+      LittleFS.remove(temporary);
+      return {500, "application/json", "{\"error\":\"Cannot save PV configuration\"}"};
+    }
+    ReadSolarConfig(src);
+    apiWsMarkLiveDirty();
+    if (!skipNetwork) WorkerEnqueueSolarFetch();
+  } else if (request.method != HTTP_GET) {
+    return {405, "application/json", "{\"error\":\"Method not allowed\"}"};
+  }
+  JsonDocument output;
+  output["enabled"] = system->Available;
+  output["gateway-url"] = system->Url;
+  output["token"] = system->Token;
+  output["wp"] = system->Wp;
+  output["refresh-interval"] = system->Interval;
+  String body;
+  serializeJson(output, body);
+  return {200, "application/json", body};
+}
+
 void ReadSolarConfigs() {
   if ( skipNetwork ) return;
   ReadSolarConfig(ENPHASE);
-  ReadSolarConfig(SOLAR_EDGE);
   ReadSolarConfig(SMA);
   ReadSolarConfig(OMNIKSOL);
 
   if (telegramCount == 0) {
     GetSolarData(ENPHASE, true);
-    GetSolarData(SOLAR_EDGE, true);
     GetSolarData(SMA, true);
     GetSolarData(OMNIKSOL, true);
   } else {
@@ -434,9 +391,15 @@ void ReadSolarConfigs() {
 void GetSolarData(SolarSource src, bool forceUpdate) {
   SolarPwrSystems* solarSystem = (SolarPwrSystems*)solarSystemForSource(src);
 
-  if (src == SOLAR_EDGE && pvModbusConfig.enabled) return;
   if (!solarSystem->Available) return;
   if (!forceUpdate && ((uptime() - solarSystem->LastRefresh) < solarSystem->Interval)) return;
+  const time_t fetchTime = now();
+  if (src == ENPHASE && solarSystem->Url.indexOf("CMD=inv_query") <= 0 &&
+      (year(fetchTime) < 2024 || hour(fetchTime) >= 23 || hour(fetchTime) < 5)) {
+    // Keep the final day counter through midnight; resume after Envoy's reset.
+    solarSystem->Actual = 0;
+    return;
+  }
   CrashLogMark(solarFetchTag(src), __LINE__);
   solarSystem->LastRefresh = uptime();
   uint32_t fetchStartMs = millis();
@@ -455,113 +418,6 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
     return;
   }
 
-  if (src == SOLAR_EDGE) {
-    if (solarSystem->ApiVersion >= 2) {
-      getSolarEdgeV2Data();
-      noteSolarFetchDuration(fetchStartMs);
-      return;
-    }
-    String baseUrl = "https://monitoringapi.solaredge.com/site/" + String(SolarEdge.SiteID);
-    String token = solarSystem->Token;
-    token.trim();
-    String today;
-    if (strlen(actTimestamp) > 10) {
-      today = buildDateTimeString(actTimestamp, strlen(actTimestamp)).substring(0, 10);
-    } else {
-      today = "1970-01-01";
-    }
-    String timeFrameUrl = baseUrl + "/timeFrameEnergy?startDate=" + today + "&endDate=" + today;
-    String powerFlowUrl = baseUrl + "/currentPowerFlow.json";
-    if (token.length() > 0) {
-      timeFrameUrl += "&api_key=" + token;
-      powerFlowUrl += "?api_key=" + token;
-    }
-
-    String payload;
-    JsonDocument solarDoc;
-    solarSystem->Actual = 0;
-    solarSystem->Daily = 0;
-    resetSolarEdgeRuntimeState();
-
-    auto fetchJson = [&](const String& url) -> bool {
-      HTTPClient http;
-      WiFiClient client;
-      WiFiClientSecure clientTLS;
-      if (!solarHttpBegin(http, client, clientTLS, url)) return false;
-      http.addHeader("Accept", "application/json");
-      int rc = http.GET();
-      DebugVerboseLn(F("Solaredge request"));
-      DebugVerboseT(F("HTTP Response code: ")); DebugVerboseLn(rc);
-      if (rc != 200) {
-        payload = http.getString();
-        if (payload.length()) {
-          DebugTraceT(F("Solaredge response body: ")); DebugTraceLn(payload);
-        }
-        http.end();
-        return false;
-      }
-      payload = http.getString();
-      http.end();
-      DeserializationError err = deserializeJson(solarDoc, payload);
-      return !err;
-    };
-
-    if (fetchJson(timeFrameUrl)) {
-      JsonObject timeFrame = solarDoc["timeFrameEnergy"];
-      if (!timeFrame.isNull()) {
-        JsonVariant energy;
-        if (!timeFrame["energy"].isNull()) energy = timeFrame["energy"];
-        if (energy.isNull() && !timeFrame["totalEnergy"].isNull()) energy = timeFrame["totalEnergy"];
-        if (energy.isNull() && timeFrame["meters"].is<JsonArray>()) {
-          JsonArray meters = timeFrame["meters"];
-          if (meters.size() > 0 && !meters[0]["energy"].isNull()) {
-            energy = meters[0]["energy"];
-          }
-        }
-        if (!energy.isNull()) {
-          solarSystem->Daily = (uint32_t)energy.as<float>();
-        }
-      }
-      solarDoc.clear();
-    }
-
-    if (fetchJson(powerFlowUrl)) {
-      JsonObject flow = solarDoc["siteCurrentPowerFlow"];
-      if (!flow.isNull()) {
-        String flowUnit = flow["unit"].as<const char*>();
-        JsonObject pv = flow["PV"];
-        if (!pv.isNull()) {
-          float pvPower = pv["currentPower"].as<float>();
-          SolarEdgeFlowPvPower = pvPower;
-          SolarEdgeFlowPvValid = true;
-          if (flowUnit == "kW") {
-            solarSystem->Actual = (uint32_t)(pvPower * 1000.0f);
-          } else {
-            solarSystem->Actual = (uint32_t)(pvPower);
-          }
-        } else {
-          SolarEdgeFlowPvPower = 0.0f;
-          SolarEdgeFlowPvValid = false;
-        }
-
-        JsonObject storage = flow["STORAGE"];
-        if (!storage.isNull()) {
-          SolarEdgeAccu.Available = true;
-          SolarEdgeAccu.unit = flowUnit;
-          SolarEdgeAccu.status = storage["status"].as<const char*>();
-          SolarEdgeAccu.currentPower = storage["currentPower"].as<float>();
-          SolarEdgeAccu.chargeLevel = storage["chargeLevel"].as<uint8_t>();
-        }
-      } else {
-        SolarEdgeFlowPvValid = false;
-      }
-    } else {
-      SolarEdgeFlowPvValid = false;
-    }
-
-    noteSolarFetchDuration(fetchStartMs);
-    return;
-  }
 
   HTTPClient http;
   WiFiClient client;
@@ -578,7 +434,7 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
 
   int httpResponseCode = http.GET();
   DebugVerboseT(F("HTTP Response code: ")); DebugVerboseLn(httpResponseCode);
-  if (httpResponseCode <= 0) { http.end(); noteSolarFetchDuration(fetchStartMs); return; }
+  if (httpResponseCode != 200) { http.end(); noteSolarFetchDuration(fetchStartMs); return; }
 
   String payload = http.getString();
   #ifdef DEBUG
@@ -593,21 +449,31 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
   JsonDocument solarDoc;
   if (deserializeJson(solarDoc, payload)) { Debugln("Error deserialisation solarDoc"); noteSolarFetchDuration(fetchStartMs); return; }
 
+  if (src == ENPHASE && !bSolis) {
+    JsonVariantConst production = solarSystem->Url.endsWith("energy")
+        ? solarDoc["production"]["pcu"].as<JsonVariantConst>() : solarDoc.as<JsonVariantConst>();
+    JsonVariantConst watts = production["wattsNow"], wh = production["wattHoursToday"];
+    if (fetchTime / SECS_PER_DAY != now() / SECS_PER_DAY ||
+        !watts.is<double>() || !wh.is<double>() ||
+        !isfinite(watts.as<double>()) || !isfinite(wh.as<double>()) ||
+        fabs(watts.as<double>()) > UINT32_MAX || wh.as<double>() < 0 || wh.as<double>() > UINT32_MAX) {
+      DebugTln(F("Enphase: ignored invalid reading"));
+      noteSolarFetchDuration(fetchStartMs);
+      return;
+    }
+    solarSystem->Actual = watts.as<double>() > 0 ? uint32_t(watts.as<double>()) : 0;
+    solarSystem->Daily = wh.as<uint32_t>();
+    enphaseDailyDay = fetchTime / SECS_PER_DAY;
+    noteSolarFetchDuration(fetchStartMs);
+    return;
+  }
+
   if (bSolis) {
     solarSystem->Actual = solarDoc["i_pow_n"].as<uint32_t>();
     solarSystem->Daily  = (uint32_t)((float)solarDoc["i_eday"] * 1000.0f);
   } else {
-    if (solarSystem->Url.endsWith("energy")) {
-      solarSystem->Actual = (src == ENPHASE) ? solarDoc["production"]["pcu"]["wattsNow"].as<uint32_t>()
-                                             : solarDoc["overview"]["currentPower"]["power"].as<uint32_t>();
-      solarSystem->Daily  = (src == ENPHASE) ? solarDoc["production"]["pcu"]["wattHoursToday"].as<uint32_t>()
-                                             : solarDoc["overview"]["lastDayData"]["energy"].as<uint32_t>();
-    } else {
-      solarSystem->Actual = (src == ENPHASE) ? solarDoc["wattsNow"].as<uint32_t>()
-                                             : solarDoc["overview"]["currentPower"]["power"].as<uint32_t>();
-      solarSystem->Daily  = (src == ENPHASE) ? solarDoc["wattHoursToday"].as<uint32_t>()
-                                             : solarDoc["overview"]["lastDayData"]["energy"].as<uint32_t>();
-    }
+    solarSystem->Actual = solarDoc["overview"]["currentPower"]["power"].as<uint32_t>();
+    solarSystem->Daily  = solarDoc["overview"]["lastDayData"]["energy"].as<uint32_t>();
   }
 
 #ifdef DEBUG
@@ -620,8 +486,6 @@ void GetSolarData(SolarSource src, bool forceUpdate) {
 void GetSolarDataNFromWorker() {
   if ( skipNetwork ) return;
   GetSolarData(ENPHASE,    false);
-  WDT_FEED();
-  GetSolarData(SOLAR_EDGE, false);
   WDT_FEED();
   GetSolarData(SMA,        false);
   WDT_FEED();
@@ -640,7 +504,17 @@ void GetSolarDataN() {
 }
 
 uint32_t totalSolarDailyWh() {
-  return Enphase.Daily + solarEdgeDailyWh() + SMAinv.Daily + Omniksol.Daily;
+  return enphaseDailyAt(now()) + modbusPvDailyWh() + SMAinv.Daily + Omniksol.Daily;
+}
+
+uint32_t totalSolarDailyWhForTimestamp(const char* timestamp) {
+  return enphaseDailyAt(epoch(timestamp, strlen(timestamp), false)) +
+      modbusPvDailyWh() + SMAinv.Daily + Omniksol.Daily;
+}
+
+uint32_t totalSolarInstalledWp() {
+  return (Enphase.Available ? Enphase.Wp : 0) + modbusPvWp() +
+      (SMAinv.Available ? SMAinv.Wp : 0) + (Omniksol.Available ? Omniksol.Wp : 0);
 }
 
 ApiResponse solarApiResponse() {
@@ -648,8 +522,8 @@ ApiResponse solarApiResponse() {
   if (!any) return {200, "application/json", "{\"active\":false}"};
 
   uint32_t totalDaily  = totalSolarDailyWh();
-  uint32_t totalActual = Enphase.Actual + solarEdgeActualW() + SMAinv.Actual + Omniksol.Actual;
-  uint32_t totalWp     = Enphase.Wp + solarEdgeWp() + SMAinv.Wp + Omniksol.Wp;
+  uint32_t totalActual = Enphase.Actual + modbusPvActualW() + SMAinv.Actual + Omniksol.Actual;
+  uint32_t totalWp     = totalSolarInstalledWp();
 
   JsonDocument doc;
   doc["active"] = true;
@@ -680,8 +554,8 @@ bool fillDashSolarJson(JsonDocument& doc) {
   solar["active"] = true;
   JsonObject total = solar["total"].to<JsonObject>();
   total["daily"] = totalSolarDailyWh();
-  total["actual"] = Enphase.Actual + solarEdgeActualW() + SMAinv.Actual + Omniksol.Actual;
-  solar["Wp"] = Enphase.Wp + solarEdgeWp() + SMAinv.Wp + Omniksol.Wp;
+  total["actual"] = Enphase.Actual + modbusPvActualW() + SMAinv.Actual + Omniksol.Actual;
+  solar["Wp"] = totalSolarInstalledWp();
 
   return true;
 }

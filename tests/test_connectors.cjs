@@ -21,7 +21,7 @@ const context = vm.createContext({
   objDAL:{getDeviceSettings:()=>settings, ensureDeviceInformation:()=>refreshed++},
   document:{
     getElementById:id=>id==='connector_save' ? button : id==='connector_save_status' ? status : null,
-    querySelectorAll:selector=>selector.includes('[id^="setFld_"') ? inputs : selector === "#Connectors .is-dirty" && rowIsDirty ? [dirtyRow] : []
+    querySelectorAll:selector=>selector.includes('[id^="setFld_"') ? inputs : (selector === "#Connectors .is-dirty" || selector === "#Connectors .settingDiv.is-dirty") && rowIsDirty ? [dirtyRow] : []
   },
   fetch:async (_url, options)=>{
     assert.equal(activeRequests++,0,'writes must be sequential');
@@ -171,8 +171,8 @@ assert.equal(context.connectorSettingPane('mb_map'),null);
   }
   presetContext.initConnectorPresets();
   assert.equal(dirty.size,0,'opening the page must not apply defaults');
-  for (const kind of ['battery','pv']) {
-    const preset = presetContext.connectorPreset(kind);
+  for (const [kind, presetId] of [['battery','victron-gx'], ['battery','solaredge-battery'], ['pv','solaredge-sunspec']]) {
+    const preset = presetContext.connectorPreset(kind, presetId);
     const select = nodes.get(`connector_${kind}_preset`);
     const button = nodes.get(`connector_${kind}_apply_preset`);
     assert.equal(select.value,'custom');
@@ -196,6 +196,13 @@ assert.equal(context.connectorSettingPane('mb_map'),null);
     assert.equal(button.disabled,true);
     select.events.change();
     assert.equal(input.value,'123','Custom must keep manual values');
+    // Saved values must also identify this preset when the page is reopened.
+    select.value=preset.id;
+    button.events.click();
+    presetContext.initConnectorPresets();
+    assert.equal(select.value,preset.id);
+    input.value='123';
+    rootEvents.input({target:input});
   }
   for (const [key,value] of Object.entries(preserved)) {
     const input=nodes.get(`setFld_${key}`);

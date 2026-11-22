@@ -2,6 +2,18 @@
 
 This project expects a few local/private headers outside the repo and a compatible `dsmr3Lib` version.
 
+Firmware 5.11.1 targets **ESP32 Arduino core 3.3.13** (ESP-IDF 5.5.6+).
+Install this version through the Arduino IDE Boards Manager or with:
+
+```bash
+arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+arduino-cli core install esp32:esp32@3.3.13 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+```
+
+After upgrading the core, use `./build.sh --clear-cache` to rebuild all profiles.
+See the [3.3.13 release notes](https://github.com/espressif/arduino-esp32/releases/tag/3.3.13)
+for upstream network, HTTP client and WebServer fixes.
+
 ## 1) Local `_secrets` headers (optional but expected by default)
 
 Some source files include headers from:
@@ -119,9 +131,25 @@ Add `--clear-cache` or `--clean` to remove the selected profile build directorie
 Extra Arduino build properties can be passed through as well. For `compiler.cpp.extra_flags`, the value is appended to the profile flags:
 
 ```bash
-./build.sh ULTRA --extra-flags "-DWEBSOCKETS_TCP_TIMEOUT=2000"
-./build.sh ULTRA --build-property compiler.cpp.extra_flags="-DWEBSOCKETS_TCP_TIMEOUT=2000"
+./build.sh ULTRA --extra-flags "-DDEBUG"
+./build.sh ULTRA --build-property compiler.cpp.extra_flags="-DDEBUG"
 ```
+
+### Network regression test with ESP32 core 3.3.13
+
+The network-unfix changes from `sdk-3.3.12---network-unfix` are included in
+5.11.1. HTTP and WebSocket servers use the standard library classes, without
+the custom WebSocket write-readiness check, forced disconnect on send failure,
+pong timeout, or HTTP stale-client recovery from the meter reader task.
+The WebSocket library heartbeat, two-client limit, and slow-send logging remain.
+Use the default library timeouts, without a `WEBSOCKETS_TCP_TIMEOUT` override.
+
+On hardware, keep the live dashboard open, interrupt the browser's network
+connection without closing the tab, then reconnect and reopen the dashboard.
+Repeat with two tabs and with interrupted HTTP requests, on both WiFi and
+Ethernet hardware. Check that the dongle keeps processing meter readings,
+HTTP requests and live updates without a stall or reboot. A successful build
+alone does not verify recovery from these failures.
 
 ### Physical button: network reset and emergency factory reset
 

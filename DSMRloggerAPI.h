@@ -222,6 +222,7 @@ void P1StatusWrite();
 void P1StatusWriteDirect();
 bool RngWritePending();
 void RngInvalidateHeaderCache(const char* filename);
+bool RngFileWriteAllowed(const char* filename);
 void writeRingFiles();
 void writeSettings();
 void writeSettingsDirect();
@@ -253,60 +254,8 @@ MeterCurrent GetMeterCurrent(uint8_t phase);
 MeterCurrent GetTelegramCurrent(uint8_t phase);
 String smActualJsonDebug();
 
-class ApiWebSocketsServer : public WebSocketsServer {
- public:
-  ApiWebSocketsServer(uint16_t port, const String& origin = "", const String& protocol = "arduino")
-      : WebSocketsServer(port, origin, protocol) {}
-
-  void forceDisconnect(uint8_t clientNum) {
-    if (clientNum >= WEBSOCKETS_SERVER_CLIENT_MAX) return;
-    WSclient_t* client = &_clients[clientNum];
-    if (clientIsConnected(client)) WebSocketsServerCore::clientDisconnect(client);
-  }
-
-  bool clientCanWrite(uint8_t clientNum, uint32_t timeoutMs) {
-    if (clientNum >= WEBSOCKETS_SERVER_CLIENT_MAX) return false;
-    WSclient_t* client = &_clients[clientNum];
-    if (!clientIsConnected(client) || !client->tcp) return false;
-
-    int fd = client->tcp->fd();
-    if (fd < 0) return false;
-
-    fd_set writeSet;
-    FD_ZERO(&writeSet);
-    FD_SET(fd, &writeSet);
-
-    struct timeval timeout;
-    timeout.tv_sec = timeoutMs / 1000;
-    timeout.tv_usec = (timeoutMs % 1000) * 1000;
-
-    int res = select(fd + 1, nullptr, &writeSet, nullptr, &timeout);
-    return res > 0 && FD_ISSET(fd, &writeSet);
-  }
-};
-
-class RecoverableWebServer : public WebServer {
- public:
-  RecoverableWebServer(int port) : WebServer(port) {}
-
-  bool recoverStaleWaitRead(uint32_t minAgeMs) {
-    if (_currentStatus != HC_WAIT_READ) return false;
-    if ((uint32_t)(millis() - _statusChange) < minAgeMs) return false;
-
-    int fd = _currentClient.fd();
-    if (fd >= 0 && _currentClient.connected()) return false;
-
-    if (fd >= 0) _currentClient.stop();
-    _currentClient = NetworkClient();
-    _currentStatus = HC_NONE;
-    _statusChange = millis();
-    return true;
-  }
-};
-
-RecoverableWebServer httpServer(80);
-volatile bool httpServerHandleActive = false;
-ApiWebSocketsServer apiWs(81);
+WebServer httpServer(80);
+WebSocketsServer apiWs(81);
 NetServer ws_raw(82);
 
 // time_t tWifiLost        = 0;
@@ -341,7 +290,7 @@ TaskHandle_t tP1Reader; //  own proces for P1 reading
 
 enum  { PERIOD_UNKNOWN, HOURS, DAYS, MONTHS, YEARS };
 enum  E_ringfiletype {RINGHOURS, RINGDAYS, RINGMONTHS};
-enum  SolarSource { ENPHASE, SOLAR_EDGE, SMA, OMNIKSOL };
+enum  SolarSource { ENPHASE, SMA, OMNIKSOL };
 
 //test
 struct RingRecord {
@@ -365,6 +314,7 @@ bool loadRingfile(E_ringfiletype type);
 bool loadRNGDaysHistory();
 void updateDashDayHistoryFromSnapshot(const char* prevTimestamp, const char* currentTimestamp, const float* values);
 uint32_t totalSolarDailyWh();
+uint32_t totalSolarDailyWhForTimestamp(const char* timestamp);
 
 typedef struct {
     char filename[17];
@@ -856,7 +806,6 @@ void setupApiWebSocket();
 void handleApiWebSocket();
 void apiWsMarkLiveDirty();
 void handleHttpServerClient();
-void serviceHttpServerRecovery();
 void handleRawPort();
 void SyncESPNOW();
 void SetNRGMPairingMode(bool enabled);

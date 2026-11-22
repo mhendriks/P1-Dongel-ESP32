@@ -55,7 +55,6 @@
 			<li><a id='bEditSettings' data-i18n-key="mnu-settings" class='tabButton nav-item' href="#Settings" >Settings</a></li>
 			<li><a id='bEditMonths'   data-i18n-key="mnu-editmonths" class='tabButton nav-item' href="#EditMonths" >Meterstanden</a></li>
             <li><a id="bConnectors" data-i18n-key="mnu-connectors" class="tabButton nav-item" href="#Connectors">Connectors</a></li>
-			<li><a id='bSolar'   	  data-i18n-key="mnu-solar" class='tabButton nav-item' href="#Solar" >Solar Setup</a></li>
 				<li><a id='bESPHome'   	  data-i18n-key="mnu-esphome" class='nav-item' href="javascript:void(0);" onclick="return openESPHomeMigrationFromMenu(event)" style="display:none">ESPHome</a></li>
 <!-- 			<li><a id='bAbout'   	  class='tabButton nav-item' href="#About" >About</a></li> -->
 		</ul></li>
@@ -704,8 +703,11 @@
     <h2 data-i18n-key="mnu-connectors">Connectors</h2>
     <div class="outer-div"><div class="inner-div connector-shell">
       <div id="connector_subtabs" class="settings-subtabs">
-        <button type="button" class="subtab-btn active" data-target="connector_battery" data-i18n-key="connector-battery">Accu</button>
-        <button type="button" class="subtab-btn" data-target="connector_pv" data-i18n-key="connector-pv">PV</button>
+        <button type="button" class="subtab-btn active" data-target="connector_battery" data-i18n-key="connector-battery">Accu · Modbus TCP</button>
+        <button type="button" class="subtab-btn" data-target="connector_pv" data-i18n-key="connector-pv">PV · Modbus TCP</button>
+        <button type="button" class="subtab-btn" data-target="connector_enphase">Enphase</button>
+        <button type="button" class="subtab-btn" data-target="connector_sma">SMA</button>
+        <button type="button" class="subtab-btn" data-target="connector_omniksol">Omniksol</button>
       </div>
       <div id="connector_battery" class="connector-pane active">
         <h3 data-i18n-key="connector-battery-title">Accu · Modbus TCP</h3>
@@ -717,6 +719,7 @@
             <select id="connector_battery_preset">
               <option value="custom" data-i18n-key="connector-preset-custom">Aangepast</option>
               <option value="victron-gx">Victron GX</option>
+              <option value="solaredge-battery">SolarEdge</option>
             </select>
             <button type="button" id="connector_battery_apply_preset" data-i18n-key="connector-apply-preset" disabled>Preset toepassen</button>
           </div>
@@ -745,8 +748,44 @@
         <p data-i18n-key="connector-pv-scale-help">SF-register 0 schakelt de SunSpec-exponent uit.</p>
         <p data-i18n-key="connector-pv-day-help">De dagproductie wordt berekend vanaf de eerste totaalstand van de dag en blijft behouden na een herstart. Op de eerste installatiedag telt alleen productie vanaf de eerste meting mee.</p>
       </div>
-      <p data-i18n-key="connector-mapping-help">Gebruik nulgebaseerde holding-registeradressen (FC03), zonder adrescorrectie. Factor en woordvolgorde zijn instelbaar per meetwaarde.</p>
-      <div class="settings-card connector-diagnostics">
+      <div id="connector_enphase" class="connector-pane">
+        <h3>PV · Enphase</h3>
+        <form class="settings-card" data-solar-source="enphase" autocomplete="off">
+          <fieldset disabled>
+            <div class="settingDiv"><label for="enphase_enabled" data-i18n-key="connector-enabled">Ingeschakeld</label><input id="enphase_enabled" name="enabled" type="checkbox"></div>
+            <div class="settingDiv"><label for="enphase_url" data-i18n-key="sol-url">Gateway URL:</label><input id="enphase_url" name="gateway-url" type="url" maxlength="512"></div>
+            <div class="settingDiv"><label for="enphase_token" data-i18n-key="sol-token">Token</label><input id="enphase_token" name="token" type="password" maxlength="4096" autocomplete="new-password" spellcheck="false" autocapitalize="none"></div>
+            <div class="settingDiv"><label for="enphase_wp" data-i18n-key="sol-wp">Systeemvermogen (Wp):</label><input id="enphase_wp" name="wp" type="number" min="0" max="4294967295" step="1" required></div>
+            <div class="settingDiv"><label for="enphase_interval" data-i18n-key="sol-interval">Update interval (seconden):</label><input id="enphase_interval" name="refresh-interval" type="number" min="60" max="86400" step="1" required></div>
+          </fieldset>
+        </form>
+      </div>
+      <div id="connector_sma" class="connector-pane">
+        <h3>PV · SMA</h3>
+        <form class="settings-card" data-solar-source="sma" autocomplete="off">
+          <fieldset disabled>
+            <div class="settingDiv"><label for="sma_enabled" data-i18n-key="connector-enabled">Ingeschakeld</label><input id="sma_enabled" name="enabled" type="checkbox"></div>
+            <div class="settingDiv"><label for="sma_url" data-i18n-key="sol-url">Gateway URL:</label><input id="sma_url" name="gateway-url" type="url" maxlength="512"></div>
+            <div class="settingDiv"><label for="sma_token" data-i18n-key="connector-password">Wachtwoord</label><input id="sma_token" name="token" type="password" maxlength="4096" autocomplete="new-password" spellcheck="false" autocapitalize="none"></div>
+            <div class="settingDiv"><label for="sma_wp" data-i18n-key="sol-wp">Systeemvermogen (Wp):</label><input id="sma_wp" name="wp" type="number" min="0" max="4294967295" step="1" required></div>
+            <div class="settingDiv"><label for="sma_interval" data-i18n-key="sol-interval">Update interval (seconden):</label><input id="sma_interval" name="refresh-interval" type="number" min="15" max="86400" step="1" required></div>
+          </fieldset>
+        </form>
+      </div>
+      <div id="connector_omniksol" class="connector-pane">
+        <h3>PV · Omniksol</h3>
+        <form class="settings-card" data-solar-source="omniksol" autocomplete="off">
+          <fieldset disabled>
+            <div class="settingDiv"><label for="omniksol_enabled" data-i18n-key="connector-enabled">Ingeschakeld</label><input id="omniksol_enabled" name="enabled" type="checkbox"></div>
+            <div class="settingDiv"><label for="omniksol_url" data-i18n-key="sol-url">Gateway URL:</label><input id="omniksol_url" name="gateway-url" type="url" maxlength="512"></div>
+            <div class="settingDiv"><label for="omniksol_token" data-i18n-key="sol-token">Token</label><input id="omniksol_token" name="token" type="password" maxlength="4096" autocomplete="new-password" spellcheck="false" autocapitalize="none"></div>
+            <div class="settingDiv"><label for="omniksol_wp" data-i18n-key="sol-wp">Systeemvermogen (Wp):</label><input id="omniksol_wp" name="wp" type="number" min="0" max="4294967295" step="1" required></div>
+            <div class="settingDiv"><label for="omniksol_interval" data-i18n-key="sol-interval">Update interval (seconden):</label><input id="omniksol_interval" name="refresh-interval" type="number" min="15" max="86400" step="1" required></div>
+          </fieldset>
+        </form>
+      </div>
+      <p class="connector-modbus-only" data-i18n-key="connector-mapping-help">Gebruik nulgebaseerde holding-registeradressen (FC03), zonder adrescorrectie. Factor en woordvolgorde zijn instelbaar per meetwaarde.</p>
+      <div class="settings-card connector-diagnostics connector-modbus-only">
         <h3 data-i18n-key="connector-diag-title">Diagnose</h3>
         <label class="connector-diag-toggle"><input id="connector_diagnostics_enabled" type="checkbox" onchange="setConnectorDiagnostics(this.checked)"> <span data-i18n-key="connector-diag-enable">Diagnose inschakelen</span></label>
         <p data-i18n-key="connector-diag-help">Standaard uit. Bewaart tijdelijk maximaal 12 resultaten per connector in het geheugen. Na een herstart staat diagnose weer uit. Opslaan is niet nodig.</p>
@@ -894,49 +933,6 @@
 	<hr>Indien de pagina niet automatisch getoond wordt klik dan op <a href='/'>Home pagina</a></div>
     </section>  
 
-	<section id="Solar" class="tabName">
-		<div id=eid-setup>
-		<i id=pulse_ico class="iconify" data-icon="mdi-pulse"></i>
-		<h1 class=align-c>Solar Setup</h1><br>
-		<div data-i18n-key="sol-intro-1">Instellen van de koppeling met de PV omvormer om de opbrengst zichtbaar te maken in NRG Monitor. Deze configuratie is in te zien en te wijzigen via het bestandsbeheer van de dongle.<br>
-		<br>
-		</div>
-		<hr>
-		<form id="dataForm">
-		<p data-i18n-key="sol-sys">Welk systeem dient gekoppeld te worden?</p>
- 		  <input type="radio" id="pv_enphase" name="solar_system" value="Enphase" onClick="ShowHidePV();" checked="checked">
- 		  <label for="enphase">Enphase</label><br>
-		  <input type="radio" id="pv_solaredge" name="solar_system" value="SolarEdge" onClick="ShowHidePV();">
-		  <label for="solaredge">SolarEdge</label><br>
-		<br> 
-			<label for="wp" data-i18n-key="sol-wp">Systeemvermogen (Wp):</label><br>
-			<input type="number" id="wp" name="wp" value=3500><br><br>
-			<label for="Interval" data-i18n-key="sol-interval">Update interval (seconden):</label><br>
-			<input type="number" id="interval" name="interval" value=10><br><br>
-			<label for="gw_url" data-i18n-key="sol-url">Gateway url of ip-adres:</label><br>
-			<input type="text" id="gw_url" name="gw_url" value="https://envoy/api/v1/production" style="width: 100%"><br><br>
-			<div id="conf_token" style="display: none">
-				<label for="siteid" data-i18n-key="sol-siteid">SiteID:</label><br>
-				<input type="number" id="siteid" name="siteid" placeholder="eg 125231"><br><br>
-				<label for="solaredge_api_version">SolarEdge API:</label><br>
-				<select id="solaredge_api_version" onchange="UpdateSolarEdgeApiFields()">
-					<option value="1">Legacy API (V1)</option>
-					<option value="2">Developer Platform API (V2)</option>
-				</select><br><br>
-				<label id="solaredge_token_label" for="token">Legacy API key:</label><br>
-				<input type="text" id="token" name="token" placeholder="eg L4QLVQ1LOKCQX2193VSEICXW61NP6B1O" style="width: 100%"><br>
-				<small id="solaredge_api_help">Use an existing Monitoring API key. SolarEdge no longer issues new legacy keys.</small><br><br>
-			</div>
-			<div id="enphase_token">
-			<label for="token_enphase" data-i18n-key="sol-token">Token:</label><br>
-			<input type="text" id="token_enphase" name="token_enphase" placeholder="eg eyJraWQiOiI3ZDEwMDA1ZC03ODk5LTRk" style="width: 100%"><br><br>
-			</div>
-		<hr>						
-			<div class=align-c><button type="button" onclick="SolarSendData()" data-i18n-key="btn-save">Opslaan</button></div>
-		</form>    
-		</div>
-    </section>  
-	
 		<section id="NETSW" class="tabName">
 			<div id=eid-setup>
 			<h1 class=align-c>NetSwitch</h1>

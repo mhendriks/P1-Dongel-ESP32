@@ -52,6 +52,17 @@ void RngInvalidateHeaderCache(const char* filename) {
   if (index >= 0) rngInvalidateHeader((E_ringfiletype)index);
 }
 
+// Generic file writers must also respect disabled history storage.
+bool RngFileWriteAllowed(const char* filename) {
+  if (!filename) return false;
+  if (EnableHistory) return true;
+  while (filename[0] == '/') filename++;
+  if (ringFileIndexByName(filename) >= 0) return false;
+  const char* backupName = RNG_DAYS_BACKUP_FILE;
+  if (backupName[0] == '/') backupName++;
+  return strcmp(filename, backupName) != 0;
+}
+
 static void clearRingRecord(RingRecord& record) {
   strlcpy(record.date, "20000000", sizeof(record.date));
   for (int i = 0; i < RNG_DAYS_VALUE_COUNT; i++) {
@@ -93,6 +104,7 @@ void updateDashDayHistoryFromSnapshot(const char* prevTimestamp, const char* cur
   RingRecord currentDay;
   fillRingRecordFromSnapshot(previousDay, prevTimestamp, values);
   fillRingRecordFromSnapshot(currentDay, currentTimestamp, values);
+  currentDay.values[6] = totalSolarDailyWhForTimestamp(currentTimestamp) / 1000.0f;
   if (isEmptyRingRecord(currentDay)) return;
 
   if (isEmptyRingRecord(DashDayHistory[0])) {
@@ -102,11 +114,14 @@ void updateDashDayHistoryFromSnapshot(const char* prevTimestamp, const char* cur
   }
 
   if (strncmp(DashDayHistory[0].date, currentDay.date, 6) == 0) {
+    currentDay.values[6] = fmaxf(currentDay.values[6], DashDayHistory[0].values[6]);
     copyRingRecord(DashDayHistory[0], currentDay);
     DashDayHistoryReady = true;
     return;
   }
 
+  if (strncmp(DashDayHistory[0].date, previousDay.date, 6) == 0)
+    previousDay.values[6] = fmaxf(previousDay.values[6], DashDayHistory[0].values[6]);
   copyRingRecord(DashDayHistory[3], DashDayHistory[2]);
   copyRingRecord(DashDayHistory[2], DashDayHistory[1]);
   copyRingRecord(DashDayHistory[1], previousDay);
@@ -152,6 +167,7 @@ static size_t finishRingRecord(E_ringfiletype type, uint8_t slot, char* buffer, 
 }
 
 static bool writeRingfileRecords(const char* filename, E_ringfiletype type, uint8_t actSlotValue, const RingRecord* records, uint16_t recordCount) {
+  if (!EnableHistory || !FSmounted) return false;
   File fout = LittleFS.open(filename, "w");
   if (!fout) {
     DebugT(F("writeRingfileRecords: open failed for "));
@@ -174,6 +190,7 @@ static bool writeRingfileRecords(const char* filename, E_ringfiletype type, uint
 }
 
 static bool migrateLegacyRNGdaysFile(const char* sourceFile) {
+  if (!EnableHistory || !FSmounted) return false;
   File fin = LittleFS.open(sourceFile, "r");
   if (!fin) {
     DebugT(F("RNGdays migration: source open failed for "));
@@ -231,6 +248,7 @@ static bool migrateLegacyRNGdaysFile(const char* sourceFile) {
 }
 
 static bool ensureRNGdaysLayout() {
+  if (!EnableHistory) return false;
   if (!FSmounted || !LittleFS.exists(RingFiles[RINGDAYS].filename)) return true;
 
   File f = LittleFS.open(RingFiles[RINGDAYS].filename, "r");
@@ -381,6 +399,7 @@ time_t date2epoch(const char* date){
 }
 
 void CheckRingExists(){
+  if (!EnableHistory || !FSmounted) return;
   ensureRNGdaysLayout();
 
   for (byte i = 0; i< 3; i++){
@@ -393,6 +412,7 @@ void CheckRingExists(){
 }
 void createRingFile(E_ringfiletype ringfiletype) 
 {
+  if (!EnableHistory || !FSmounted) return;
   File RingFile = LittleFS.open(RingFiles[ringfiletype].filename, "w");
   if (!RingFile) {
     DebugT(F("open ring file FAILED!!! --> Bailout\r\n"));Debugln(RingFiles[ringfiletype].filename);
@@ -593,6 +613,7 @@ bool writeRingFileAtSlot(E_ringfiletype ringfiletype, uint8_t slot, const char *
 
 
 bool writeRingFile(E_ringfiletype ringfiletype, const char *JsonRec, bool bPrev) {
+  if (!EnableHistory || !FSmounted) return false;
   if (JsonRec && strlen(JsonRec) > 1) {
     JsonDocument rec;
     if (deserializeJson(rec, JsonRec)) return false;
@@ -645,6 +666,28 @@ static bool writeRingValuesAtSlot(E_ringfiletype ringfiletype,
 #endif
     RingFile.close();
     return false;
+  }
+
+  // Automatic history updates must never lower an already saved daily yield.
+  // Read the actual slot: this also works after reboot and for FirstUse backfill.
+  // Explicit API edits use writeRingFileAtSlot() and remain editable.
+  if (ringfiletype == RINGDAYS) {
+    const uint16_t offset = slot * ringRecordLen(ringfiletype) + JSON_HEADER_LEN;
+    char stored[DATA_RECLEN_7] = {};
+    const size_t objectLen = ringRecordLen(ringfiletype) - 2;
+    JsonDocument oldRecord;
+    if (!RingFile.seek(offset, SeekSet) ||
+        RingFile.readBytes(stored, objectLen) != objectLen ||
+        deserializeJson(oldRecord, stored)) {
+      RingFile.close();
+      DebugTln(F("RNG: cannot read day slot; preserving existing history"));
+      return false;
+    }
+    const char* oldDate = oldRecord["date"] | "";
+    if (strlen(oldDate) == 8 && strncmp(key, oldDate, 6) == 0) {
+      values[6] = fmaxf(values[6], oldRecord["values"][6] | 0.0f);
+    }
+    RingFile.seek(0, SeekSet);
   }
 
   uint8_t actSlot = CalcSlotAt(ringfiletype, actSlotTime, false);
@@ -819,7 +862,7 @@ void writeRingFiles() {
   snapshot.values[4] = (float)gasDelivered;
   snapshot.values[5] = mbusWater ? (float)waterDelivered
                                  : (float)P1Status.wtr_m3 + (float)P1Status.wtr_l / 1000.0f;
-  snapshot.values[6] = currentSolarDailyKwh();
+  snapshot.values[6] = totalSolarDailyWhForTimestamp(snapshot.actTimestamp) / 1000.0f;
   updateDashDayHistoryFromSnapshot(snapshot.actTimestamp, snapshot.dsmrTimestamp, snapshot.values);
 
   RngWorkerMode modes[7];

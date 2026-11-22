@@ -618,8 +618,8 @@
   "setting-mimics": "Mimics",
   "tle-web-settings": "Webpagina Instellingen",
   "mnu-connectors": "Connectors",
-  "connector-battery": "Accu",
-  "connector-pv": "PV",
+  "connector-battery": "Accu · Modbus TCP",
+  "connector-pv": "PV · Modbus TCP",
   "connector-battery-help": "Lees een accusysteem via Modbus TCP. Configureer de mapper handmatig of pas een preset toe. Positief vermogen betekent laden, negatief ontladen.",
   "connector-pv-help": "Lees een PV-systeem via Modbus TCP. Configureer de mapper handmatig of pas een preset toe. De energiemapping verwacht een cumulatieve totaalstand in Wh.",
   "connector-pv-day-help": "De dagproductie wordt berekend vanaf de eerste totaalstand van de dag en blijft behouden na een herstart. Op de eerste installatiedag telt alleen productie vanaf de eerste meting mee.",
@@ -681,5 +681,7 @@
   "connector-apply-preset": "Preset toepassen",
   "connector-preset-help": "Vult poort, unit-ID en mappervelden in. Je kunt alles daarna aanpassen. Klik op Opslaan om de wijzigingen actief te maken.",
   "connector-preset-applied": "Preset ingevuld. Klik op Opslaan om de wijzigingen actief te maken.",
-  "connector-pv-scale-help": "SF-register 0 schakelt de SunSpec-exponent uit."
+  "connector-pv-scale-help": "SF-register 0 schakelt de SunSpec-exponent uit.",
+  "connector-password": "Wachtwoord",
+  "connector-enabled": "Ingeschakeld"
 }

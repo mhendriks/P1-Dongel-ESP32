@@ -1765,3 +1765,14 @@ select#languageSelector {background-color: unset; color: #fff; border: none;colo
 #Connectors .connector-preset-controls button { margin: 0; }
 #Connectors .connector-preset-controls button:disabled { opacity: .45; cursor: default; }
 #Connectors .connector-preset-card p { margin-bottom: 0; font-size: 14px; }
+
+/* HTTP PV connectors share Save/Undo while retaining separate configurations. */
+#Connectors [data-solar-source] fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+#Connectors [data-solar-source] label { color: #111; font-size: 16px; }
+#Connectors [data-solar-source] input:not([type="checkbox"]) { width: 250px; max-width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #bbb; border-radius: 6px; }
+#Connectors [data-solar-source].is-dirty { border-color: rgba(255,120,0,.7); }
+#Connectors .connector-modbus-only[hidden] { display: none; }
+#Connectors .settings-subtabs { flex-wrap: wrap; border-radius: 20px; }
+@media (max-width: 700px) {
+  #Connectors [data-solar-source] input:not([type="checkbox"]) { width: 100%; }
+}

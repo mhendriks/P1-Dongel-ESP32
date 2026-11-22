@@ -123,6 +123,7 @@ dev_conf device_config[] = {
 };
 
 int8_t modType[2] = {-1,-1};
+uint8_t h2oVersion[2] = {0, 0}; // 0 = not H2O, 1 = pulse, 2 = H2O-LED
 mod_conf *active_mod_conf = &module_config[0];
 
 //FETAURES
